@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+/*
+ * בסיס העיצוב של Beautiq.
+ * פלטה רכה, מודרנית ופרימיום שמתאימה לעולם היופי והטיפוח —
+ * ללא עומס, עם הרבה מרחב נשימה וצבעוניות מינימלית.
+ * הממשק עברי-תחילה ו-RTL כברירת מחדל.
+ */
+
+:root {
+  /* רקעים ומשטחים */
+  --background: #faf7f5; /* רקע כללי חמים ועדין */
+  --surface: #ffffff; /* משטח עליון (כרטיסים, סרגלים) */
+  --card: #ffffff;
+
+  /* טקסט */
+  --foreground: #2b2530; /* טקסט ראשי כהה ורך */
+  --muted: #8a8190; /* טקסט משני */
+
+  /* צבע מותג ראשי — ורוד-מוב עדין ופרימיום */
+  --primary: #b86b8c;
+  --primary-foreground: #ffffff;
+
+  /* גבולות עדינים */
+  --border: #ece4e8;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-card: var(--card);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-border: var(--border);
+
+  --font-sans: var(--font-sans), system-ui, sans-serif;
+
+  /* פינות מעוגלות רכות כברירת מחדל */
+  --radius-lg: 1rem;
+  --radius-xl: 1.25rem;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+}

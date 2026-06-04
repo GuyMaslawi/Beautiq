@@ -1,0 +1,34 @@
+# Local development infrastructure for Beautiq.
+# Spins up a PostgreSQL instance for local dev only — not for production.
+#
+# Usage:
+#   npm run docker:db:up      # start Postgres in the background
+#   npm run docker:db:logs    # follow the logs
+#   npm run docker:db:down    # stop the container (data is kept in the volume)
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: beautiq-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: beautiq_dev
+      POSTGRES_USER: beautiq_user
+      POSTGRES_PASSWORD: beautiq_password
+    ports:
+      # Host port 5433 by default to avoid clashing with a native Postgres that
+      # may already own 5432 on macOS/Linux. Override with DB_PORT if needed.
+      # The container always listens on 5432 internally.
+      - "${DB_PORT:-5433}:5432"
+    volumes:
+      - beautiq_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      # Considered healthy once Postgres is ready to accept connections.
+      test: ["CMD-SHELL", "pg_isready -U beautiq_user -d beautiq_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  beautiq_postgres_data:
+    name: beautiq_postgres_data
