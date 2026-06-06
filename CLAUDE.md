@@ -1,5 +1,75 @@
 # Beautiq — Claude Code Project Rules
 
+## Product Focus Clarification
+
+Beautiq is primarily a CRM and internal business management system for beauty and wellness business owners.
+
+Beautiq is not primarily a customer-facing platform.
+
+The main product experience is the authenticated business dashboard used by the business owner.
+
+The core product should focus on:
+- Services and pricing
+- Availability
+- Bookings
+- Clients
+- Client history
+- Deposits
+- Cancellations and no-shows
+- WhatsApp-ready messages
+- Client retention
+- Empty time slots
+- Business insights
+- Rule-based recommendations
+
+Public/client-facing pages are secondary supporting tools only.
+
+A public booking page or public service page may exist in the future, but it should stay simple and serve the business owner’s workflow.
+
+Do not overbuild:
+- Customer accounts
+- Customer dashboards
+- Marketplace
+- Social features
+- Discovery platform
+- Client-side product experience
+
+Always prioritize the business owner’s CRM, daily workflow, and operational pain points.
+
+## Playwright / E2E Testing Rules
+
+Do not use Playwright by default.
+
+During active MVP development, prioritize fast implementation and validation.
+
+For each feature, normally run only:
+- npm run typecheck
+- npm run lint
+- npm run build
+
+Manual browser checks are enough unless the user explicitly asks for Playwright.
+
+Do not:
+- Create Playwright tests automatically
+- Run Playwright after every change
+- Spend time debugging Playwright unless requested
+- Add E2E test infrastructure unless explicitly requested
+
+Use Playwright only when:
+- The user explicitly asks for E2E tests
+- A flow is critical and stable enough to justify E2E coverage
+- We are near a release/stabilization phase
+
+For now, prefer:
+- TypeScript validation
+- Lint
+- Build
+- Focused manual test checklist
+- Simple unit tests only if they are directly useful for business logic
+
+If a feature prompt mentions manual tests, perform them manually or describe how to verify them.
+Do not interpret manual tests as a request to write or run Playwright.
+
 ## 1. Product Context
 
 We are building **Beautiq**, a Hebrew-only multi-tenant SaaS product for beauty and wellness businesses.

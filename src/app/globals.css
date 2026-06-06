@@ -1,49 +1,140 @@
 @import "tailwindcss";
 
 /*
- * בסיס העיצוב של Beautiq.
- * פלטה רכה, מודרנית ופרימיום שמתאימה לעולם היופי והטיפוח —
- * ללא עומס, עם הרבה מרחב נשימה וצבעוניות מינימלית.
- * הממשק עברי-תחילה ו-RTL כברירת מחדל.
+ * Beautiq Design System
+ * פלטה פרימיום, נקייה ואלגנטית לעסקי יופי וטיפוח.
+ * עברית-תחילה, RTL כברירת מחדל.
  */
 
 :root {
-  /* רקעים ומשטחים */
-  --background: #faf7f5; /* רקע כללי חמים ועדין */
-  --surface: #ffffff; /* משטח עליון (כרטיסים, סרגלים) */
-  --card: #ffffff;
+  /* ── Backgrounds ─────────────────────────────────────── */
+  --background: #faf7f5;        /* warm off-white page background */
+  --background-alt: #f5f0f3;    /* slightly deeper, for hover/nested surfaces */
+  --surface: #ffffff;            /* cards, panels, sidebar */
 
-  /* טקסט */
-  --foreground: #2b2530; /* טקסט ראשי כהה ורך */
-  --muted: #8a8190; /* טקסט משני */
+  /* ── Text ────────────────────────────────────────────── */
+  --foreground: #2b2530;        /* rich dark charcoal — main text */
+  --foreground-soft: #3d3545;   /* slightly lighter headings */
+  --muted: #8a8190;              /* secondary / placeholder text */
+  --muted-light: #bbb3c2;       /* very subtle text */
 
-  /* צבע מותג ראשי — ורוד-מוב עדין ופרימיום */
+  /* ── Brand primary — rose-mauve ─────────────────────── */
   --primary: #b86b8c;
+  --primary-hover: #a55c7e;
   --primary-foreground: #ffffff;
+  --primary-light: #f7eef3;     /* subtle tinted background */
+  --primary-mid: #ddb5ca;       /* mid-range for borders/dividers */
 
-  /* גבולות עדינים */
+  /* ── Accent — champagne gold (sparingly) ─────────────── */
+  --accent: #c09560;
+  --accent-foreground: #ffffff;
+  --accent-light: #f7f1e8;
+
+  /* ── Semantic colors ─────────────────────────────────── */
+  --success: #3d8b6e;
+  --success-light: #e8f5f0;
+  --warning: #b87c1e;
+  --warning-light: #fef6e4;
+  --error: #be4a4a;
+  --error-light: #fdf0f0;
+  --info: #3b7ab5;
+  --info-light: #eef4fb;
+
+  /* ── Borders ─────────────────────────────────────────── */
   --border: #ece4e8;
+  --border-strong: #d8ccd4;
+
+  /* ── Shadows ─────────────────────────────────────────── */
+  --shadow-xs: 0 1px 2px rgba(43, 37, 48, 0.05);
+  --shadow-sm: 0 1px 4px rgba(43, 37, 48, 0.07), 0 1px 2px rgba(43, 37, 48, 0.04);
+  --shadow-md: 0 4px 12px rgba(43, 37, 48, 0.08), 0 2px 4px rgba(43, 37, 48, 0.04);
+  --shadow-lg: 0 8px 28px rgba(43, 37, 48, 0.10), 0 4px 8px rgba(43, 37, 48, 0.05);
+  --shadow-xl: 0 16px 48px rgba(43, 37, 48, 0.13), 0 6px 12px rgba(43, 37, 48, 0.06);
 }
 
 @theme inline {
+  /* Backgrounds */
   --color-background: var(--background);
+  --color-background-alt: var(--background-alt);
   --color-surface: var(--surface);
-  --color-card: var(--card);
-  --color-foreground: var(--foreground);
-  --color-muted: var(--muted);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-border: var(--border);
 
+  /* Text */
+  --color-foreground: var(--foreground);
+  --color-foreground-soft: var(--foreground-soft);
+  --color-muted: var(--muted);
+  --color-muted-light: var(--muted-light);
+
+  /* Brand */
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-light: var(--primary-light);
+  --color-primary-mid: var(--primary-mid);
+
+  /* Accent */
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent-light: var(--accent-light);
+
+  /* Semantic */
+  --color-success: var(--success);
+  --color-success-light: var(--success-light);
+  --color-warning: var(--warning);
+  --color-warning-light: var(--warning-light);
+  --color-error: var(--error);
+  --color-error-light: var(--error-light);
+  --color-info: var(--info);
+  --color-info-light: var(--info-light);
+
+  /* Borders */
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+
+  /* Shadows as box-shadow utilities */
+  --shadow-xs: var(--shadow-xs);
+  --shadow-sm: var(--shadow-sm);
+  --shadow-md: var(--shadow-md);
+  --shadow-lg: var(--shadow-lg);
+  --shadow-xl: var(--shadow-xl);
+
+  /* Typography */
   --font-sans: var(--font-sans), system-ui, sans-serif;
 
-  /* פינות מעוגלות רכות כברירת מחדל */
+  /* Radius */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.75rem;
   --radius-lg: 1rem;
   --radius-xl: 1.25rem;
+  --radius-2xl: 1.5rem;
+  --radius-full: 9999px;
 }
 
+/* ── Base styles ──────────────────────────────────────── */
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Scrollbar hide ───────────────────────────────────── */
+.scrollbar-hide {
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ── Focus ring ───────────────────────────────────────── */
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* ── Reduced motion ───────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

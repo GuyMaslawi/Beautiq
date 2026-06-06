@@ -9,7 +9,8 @@ export function Textarea({ className, rows = 4, ...props }: TextareaProps) {
     <textarea
       rows={rows}
       className={cn(
-        "bg-surface border-border text-foreground placeholder:text-muted focus:border-primary w-full rounded-xl border px-4 py-3 text-base outline-none transition-colors",
+        "bg-surface border-border text-foreground placeholder:text-muted-light h-auto w-full rounded-xl border px-4 py-3 text-base outline-none",
+        "transition-all duration-150 focus:border-primary focus:ring-2 focus:ring-primary/15",
         className,
       )}
       {...props}

@@ -1,0 +1,249 @@
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import { requireCurrentBusiness } from "@/server/auth/session";
+import { getBooking } from "@/server/bookings/queries";
+import {
+  approveBookingAction,
+  cancelBookingAction,
+  completeBookingAction,
+  noShowBookingAction,
+  updateBookingNotesAction,
+} from "@/server/bookings/actions";
+import { updateDepositStatusAction } from "@/server/deposits/actions";
+import { getBookingDepositPayment } from "@/server/deposits/queries";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { BookingStatusBadge } from "@/components/bookings/booking-status-badge";
+import { BookingNotesForm } from "@/components/bookings/booking-notes-form";
+import { BookingActions } from "@/components/bookings/booking-actions";
+import { BookingDepositCard } from "@/components/deposits/booking-deposit-card";
+import { BookingSmartMessagesCard } from "@/components/messages/booking-smart-messages-card";
+import { BOOKINGS } from "@/lib/constants/he";
+
+function formatDetailDate(date: Date): string {
+  const d = new Date(date);
+  const now = new Date();
+
+  const todayStart = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  );
+  const tomorrowStart = new Date(todayStart);
+  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
+  const bookingDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+
+  const timeStr = d.toLocaleTimeString("he-IL", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+
+  if (bookingDay.getTime() === todayStart.getTime()) {
+    return `היום · ${timeStr}`;
+  }
+  if (bookingDay.getTime() === tomorrowStart.getTime()) {
+    return `מחר · ${timeStr}`;
+  }
+
+  const dateStr = d.toLocaleDateString("he-IL", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  return `${dateStr} · ${timeStr}`;
+}
+
+function formatCreatedAt(date: Date): string {
+  return new Date(date).toLocaleDateString("he-IL", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function formatMsgDate(date: Date): string {
+  return new Date(date).toLocaleDateString("he-IL", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
+
+function formatMsgTime(date: Date): string {
+  return new Date(date).toLocaleTimeString("he-IL", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
+}
+
+export default async function BookingDetailPage({
+  params,
+}: {
+  params: Promise<{ bookingId: string }>;
+}) {
+  const { bookingId } = await params;
+  const business = await requireCurrentBusiness();
+  const tenant = { businessId: business.id };
+  const [booking, depositPayment] = await Promise.all([
+    getBooking(tenant, bookingId),
+    getBookingDepositPayment(tenant, bookingId),
+  ]);
+
+  if (!booking) notFound();
+
+  const approveAction = approveBookingAction.bind(null, bookingId);
+  const completeAction = completeBookingAction.bind(null, bookingId);
+  const cancelAction = cancelBookingAction.bind(null, bookingId);
+  const noShowAction = noShowBookingAction.bind(null, bookingId);
+  const notesAction = updateBookingNotesAction.bind(null, bookingId);
+  const updateDepositAction = updateDepositStatusAction.bind(null, bookingId);
+
+  const price = Number(booking.priceSnapshot);
+  const duration = booking.durationMinutesSnapshot;
+  const depositAmount = booking.depositAmountSnapshot
+    ? Number(booking.depositAmountSnapshot)
+    : null;
+
+  return (
+    <div className="mx-auto w-full max-w-2xl space-y-4">
+      {/* Back navigation */}
+      <div>
+        <Link href="/bookings">
+          <Button variant="ghost" size="sm" className="text-muted -ms-2">
+            → {BOOKINGS.detail.backLink}
+          </Button>
+        </Link>
+      </div>
+
+      {/* Top profile card */}
+      <Card className="space-y-4 p-5">
+        {/* Client name + status */}
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-foreground text-xl font-bold leading-tight">
+              {booking.client.fullName}
+            </p>
+            <p className="text-muted mt-0.5 text-sm">{booking.service.name}</p>
+          </div>
+          <BookingStatusBadge status={booking.status} />
+        </div>
+
+        <div className="border-border border-t" />
+
+        {/* Date/time + meta */}
+        <div className="space-y-2.5">
+          <div className="flex items-center gap-3">
+            <span className="text-muted w-4 shrink-0 text-center text-sm">📅</span>
+            <span className="text-foreground text-sm font-medium">
+              {formatDetailDate(booking.startTime)}
+            </span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-muted w-4 shrink-0 text-center text-sm">⏱</span>
+            <span className="text-foreground text-sm">
+              {duration} {BOOKINGS.card.minutesShort}
+            </span>
+          </div>
+          {price > 0 && (
+            <div className="flex items-center gap-3">
+              <span className="text-muted w-4 shrink-0 text-center text-sm">💰</span>
+              <span className="text-foreground text-sm font-medium">
+                {BOOKINGS.card.price}
+                {price.toLocaleString("he-IL")}
+              </span>
+            </div>
+          )}
+        </div>
+      </Card>
+
+      {/* Status actions */}
+      <BookingActions
+        status={booking.status}
+        approveAction={approveAction}
+        completeAction={completeAction}
+        cancelAction={cancelAction}
+        noShowAction={noShowAction}
+      />
+
+      {/* Deposit card */}
+      <BookingDepositCard
+        depositStatus={booking.depositStatus}
+        depositAmountSnapshot={depositAmount}
+        depositPayment={depositPayment}
+        updateDepositAction={updateDepositAction}
+      />
+
+      {/* Client contact card */}
+      <Card className="space-y-1 p-5">
+        <p className="text-muted mb-3 text-xs font-semibold uppercase tracking-wider">
+          {BOOKINGS.detail.contactSection}
+        </p>
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-muted text-sm">{BOOKINGS.detail.clientName}</span>
+          <span className="text-foreground text-sm font-medium">
+            {booking.client.fullName}
+          </span>
+        </div>
+        <div className="border-border border-t my-2" />
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-muted text-sm">{BOOKINGS.detail.phone}</span>
+          <span className="text-foreground text-sm font-medium" dir="ltr">
+            {booking.client.phone}
+          </span>
+        </div>
+        <div className="border-border border-t my-2" />
+        <div className="flex items-center justify-between gap-4">
+          <span className="text-muted text-sm">{BOOKINGS.detail.createdAt}</span>
+          <span className="text-muted text-sm">
+            {formatCreatedAt(booking.createdAt)}
+          </span>
+        </div>
+        {booking.source === "public" && (
+          <>
+            <div className="border-border border-t my-2" />
+            <div className="flex items-center justify-end gap-4">
+              <span
+                className="rounded-full px-2.5 py-1 text-xs font-medium"
+                style={{ background: "rgba(184,107,140,0.08)", color: "#b86b8c" }}
+              >
+                {BOOKINGS.detail.sourcePublic}
+              </span>
+            </div>
+          </>
+        )}
+      </Card>
+
+      {/* Notes card */}
+      <Card className="p-5">
+        <p className="text-muted mb-4 text-xs font-semibold uppercase tracking-wider">
+          {BOOKINGS.detail.notesLabel}
+        </p>
+        <BookingNotesForm
+          action={notesAction}
+          initialNotes={booking.notes ?? ""}
+        />
+      </Card>
+
+      {/* Smart WhatsApp messages card */}
+      <BookingSmartMessagesCard
+        businessName={business.name}
+        clientName={booking.client.fullName}
+        serviceName={booking.service.name}
+        bookingDate={formatMsgDate(booking.startTime)}
+        bookingTime={formatMsgTime(booking.startTime)}
+        price={price > 0 ? `₪${price.toLocaleString("he-IL")}` : undefined}
+        depositAmount={
+          depositAmount != null
+            ? `₪${depositAmount.toLocaleString("he-IL")}`
+            : undefined
+        }
+        depositStatus={booking.depositStatus}
+        bookingStatus={booking.status}
+      />
+    </div>
+  );
+}

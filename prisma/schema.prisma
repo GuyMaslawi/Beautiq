@@ -195,6 +195,7 @@ model Business {
   timezone    String   @default("Asia/Jerusalem")
   city        String?
   area        String?
+  addressNote String?
   /// Flexible, non-core business settings only (branding, preferences, etc.).
   settings    Json?
   createdAt   DateTime @default(now())

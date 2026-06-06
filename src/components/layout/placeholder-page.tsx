@@ -1,9 +1,5 @@
 import { Card } from "@/components/ui/card";
 
-/**
- * A clean, friendly empty state for modules that arrive in later phases
- * (CLAUDE.md §19). Keeps navigation working without broken links.
- */
 export function PlaceholderPage({
   title,
   message,
@@ -14,10 +10,30 @@ export function PlaceholderPage({
   return (
     <div className="mx-auto w-full max-w-2xl">
       <Card className="py-16 text-center">
-        <h1 className="text-foreground text-2xl font-bold tracking-tight">
-          {title}
-        </h1>
-        <p className="text-muted mt-3 leading-7">{message}</p>
+        {/* Visual indicator */}
+        <div
+          className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl text-xl"
+          style={{
+            background:
+              "linear-gradient(135deg, rgba(201,120,152,0.12) 0%, rgba(184,107,140,0.18) 100%)",
+            border: "1px solid rgba(184,107,140,0.15)",
+          }}
+        >
+          ✦
+        </div>
+
+        <h1 className="text-foreground text-xl font-bold tracking-tight">{title}</h1>
+        <p className="text-muted mx-auto mt-3 max-w-sm text-sm leading-7">{message}</p>
+
+        <span
+          className="mt-6 inline-block rounded-full px-3 py-1 text-xs font-medium"
+          style={{
+            background: "rgba(43,37,48,0.05)",
+            color: "#8a8190",
+          }}
+        >
+          בקרוב
+        </span>
       </Card>
     </div>
   );
