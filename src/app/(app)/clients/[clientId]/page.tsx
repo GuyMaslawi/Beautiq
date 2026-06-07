@@ -8,6 +8,9 @@ import { Button } from "@/components/ui/button";
 import { ClientNotesForm } from "@/components/clients/client-notes-form";
 import { ClientBookingHistory } from "@/components/clients/client-booking-history";
 import { ClientSmartMessagesCard } from "@/components/messages/client-smart-messages-card";
+import { ClientRetentionCard } from "@/components/retention/client-retention-card";
+import { ClientReputationCard } from "@/components/reputation/client-reputation-card";
+import { getClientLatestCompletedBooking } from "@/server/reputation/queries";
 import { CLIENTS } from "@/lib/constants/he";
 
 function formatDate(date: Date): string {
@@ -93,7 +96,10 @@ export default async function ClientDetailPage({
   const { clientId } = await params;
   const business = await requireCurrentBusiness();
   const tenant = { businessId: business.id };
-  const client = await getClientDetail(tenant, clientId);
+  const [client, recentReputationBooking] = await Promise.all([
+    getClientDetail(tenant, clientId),
+    getClientLatestCompletedBooking(tenant, clientId),
+  ]);
 
   if (!client) notFound();
 
@@ -313,6 +319,27 @@ export default async function ClientDetailPage({
         </p>
         <ClientBookingHistory clientId={client.id} bookings={client.bookings} />
       </Card>
+
+      {/* Retention card — shown when client hasn't returned in 30+ days */}
+      {stats.lastVisitAt !== null &&
+        new Date(stats.lastVisitAt) < thirtyDaysAgo &&
+        !stats.upcomingBooking && (
+          <ClientRetentionCard
+            clientName={client.fullName}
+            businessName={business.name}
+            lastServiceName={recentCompletedBooking?.service.name}
+          />
+        )}
+
+      {/* Reputation card — shown when client has a recently completed booking */}
+      {recentReputationBooking && (
+        <ClientReputationCard
+          clientName={client.fullName}
+          serviceName={recentReputationBooking.serviceName}
+          businessName={business.name}
+          isToday={recentReputationBooking.isToday}
+        />
+      )}
 
       {/* Smart WhatsApp messages */}
       <ClientSmartMessagesCard

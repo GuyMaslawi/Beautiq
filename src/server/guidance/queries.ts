@@ -1,5 +1,7 @@
 import { prisma } from "@/server/db/prisma";
 import type { TenantContext } from "@/server/db/tenant";
+import { RECENT_COMPLETED_BOOKINGS_DAYS } from "@/lib/reputation/constants";
+import { getPricingConcernCount } from "@/server/pricing/queries";
 
 export const RETURNING_CLIENT_THRESHOLD_DAYS = 30;
 
@@ -12,6 +14,8 @@ export interface GuidanceQueryData {
   lostClientsCount: number;
   noShowClientsCount: number;
   upcomingBookingsCount: number;
+  recentCompletedBookingsCount: number;
+  pricingConcernCount: number;
 }
 
 const TZ = "Asia/Jerusalem";
@@ -49,6 +53,9 @@ export async function getGuidanceData(
   const thresholdDate = new Date(
     now.getTime() - RETURNING_CLIENT_THRESHOLD_DAYS * 24 * 60 * 60 * 1000,
   );
+  const reputationSinceDate = new Date(
+    now.getTime() - RECENT_COMPLETED_BOOKINGS_DAYS * 24 * 60 * 60 * 1000,
+  );
 
   const [
     activeServicesCount,
@@ -59,6 +66,8 @@ export async function getGuidanceData(
     lostClientsCount,
     noShowClientsCount,
     upcomingBookingsCount,
+    recentCompletedBookingsCount,
+    pricingConcernCount,
   ] = await Promise.all([
     prisma.service.count({
       where: { businessId: tenant.businessId, isActive: true },
@@ -126,6 +135,16 @@ export async function getGuidanceData(
         startTime: { gt: now },
       },
     }),
+
+    prisma.booking.count({
+      where: {
+        businessId: tenant.businessId,
+        status: "completed",
+        startTime: { gte: reputationSinceDate },
+      },
+    }),
+
+    getPricingConcernCount(tenant),
   ]);
 
   return {
@@ -137,5 +156,7 @@ export async function getGuidanceData(
     lostClientsCount,
     noShowClientsCount,
     upcomingBookingsCount,
+    recentCompletedBookingsCount,
+    pricingConcernCount,
   };
 }

@@ -85,6 +85,54 @@ npm run dev
 > רוצים בכל זאת להשתמש ב-5432? אפשר להגדיר `DB_PORT=5432` בסביבה לפני
 > `docker compose up`, אבל רק אם אין Postgres אחר שתופס את הפורט.
 
+## דמו מקומי (Local demo)
+
+הדמו יוצר עסק מלא עם לקוחות, תורים ונתונים ריאליים שמפעילים את כל כרטיסי ההנחיה בדשבורד.
+
+### הרצה מהירה (DB ריק / לאחר reset)
+
+```bash
+# זריעת נתוני ייחוס (קטגוריות + תבניות הודעה)
+npm run db:seed
+
+# זריעת נתוני הדמו (משתמש + עסק + תורים)
+npm run db:demo
+```
+
+### איפוס מלא + זריעה מחדש
+
+> ⚠️ **הרסני** — מוחק את כל נתוני הפיתוח ומתחיל מחדש.
+
+```bash
+npm run db:reset   # מבקש אישור לפני המחיקה
+npm run db:seed
+npm run db:demo
+```
+
+### פרטי כניסה לדמו
+
+| שדה | ערך |
+|---|---|
+| Email | `demo@beautiq.local` |
+| Password | `Demo123456!` |
+
+### לינק הזמנה ציבורי
+
+```
+http://localhost:3000/b/yael-studio
+```
+
+### מה כלול בדמו
+
+- עסק: **הסטודיו של יעל** (פתח תקווה)
+- 4 שירותים: לק ג'ל, עיצוב גבות, טיפול פנים, הסרת לק ג'ל
+- 6 לקוחות: נועה כהן, מיה לוי, שירה אברהם, דנה ביטון, רוני מזרחי, ליאור פרץ
+- 12 תורים: תורים להיום, עתידיים, תורים שהושלמו, ביטול, אי-הגעה, הזמנה ציבורית
+
+סקריפט הדמו בטוח להרצה חוזרת — הוא מנקה ומייצר מחדש את נתוני העסק `yael-studio` בלבד.
+
+---
+
 ## Scripts
 
 | Script | Description |
@@ -97,6 +145,7 @@ npm run dev
 | `npm run db:generate` | Generate Prisma Client |
 | `npm run db:migrate` | Run Prisma migrations (dev) |
 | `npm run db:seed` | Seed reference data (categories + system templates) |
+| `npm run db:demo` | Seed local demo business, clients, and bookings |
 | `npm run db:studio` | Open Prisma Studio |
 | `npm run db:reset` | **Destructive, local only** — drop DB, re-run migrations + seed |
 | `npm run docker:db:up` | Start local PostgreSQL (Docker) |

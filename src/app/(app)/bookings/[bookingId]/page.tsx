@@ -18,6 +18,7 @@ import { BookingNotesForm } from "@/components/bookings/booking-notes-form";
 import { BookingActions } from "@/components/bookings/booking-actions";
 import { BookingDepositCard } from "@/components/deposits/booking-deposit-card";
 import { BookingSmartMessagesCard } from "@/components/messages/booking-smart-messages-card";
+import { BookingReputationCard } from "@/components/reputation/booking-reputation-card";
 import { BOOKINGS } from "@/lib/constants/he";
 
 function formatDetailDate(date: Date): string {
@@ -78,6 +79,16 @@ function formatMsgTime(date: Date): string {
     minute: "2-digit",
     hour12: false,
   });
+}
+
+function isBookingToday(date: Date): boolean {
+  const now = new Date();
+  const d = new Date(date);
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
 }
 
 export default async function BookingDetailPage({
@@ -244,6 +255,16 @@ export default async function BookingDetailPage({
         depositStatus={booking.depositStatus}
         bookingStatus={booking.status}
       />
+
+      {/* Reputation actions — only for completed bookings */}
+      {booking.status === "completed" && (
+        <BookingReputationCard
+          clientName={booking.client.fullName}
+          serviceName={booking.service.name}
+          businessName={business.name}
+          isToday={isBookingToday(booking.startTime)}
+        />
+      )}
     </div>
   );
 }

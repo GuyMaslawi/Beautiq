@@ -266,6 +266,10 @@ model Service {
   bufferAfterMinutes  Int                  @default(0)
   requiresDeposit     Boolean              @default(false)
   depositAmount       Decimal?             @db.Decimal(10, 2)
+  /// Optional manual market price range set by the business owner (no external market data).
+  marketMinPrice      Decimal?             @db.Decimal(10, 2)
+  marketAveragePrice  Decimal?             @db.Decimal(10, 2)
+  marketMaxPrice      Decimal?             @db.Decimal(10, 2)
   isActive            Boolean              @default(true)
   createdAt           DateTime             @default(now())
   updatedAt           DateTime             @updatedAt

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Clock } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { requireTenant } from "@/server/auth/session";
 import { getWeeklyRules, getAvailabilityExceptions } from "@/server/availability/queries";
 import { WeeklyAvailabilityForm } from "@/components/availability/weekly-availability-form";
@@ -31,12 +32,11 @@ export default async function AvailabilityPage() {
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
       {/* Page header */}
-      <div>
-        <h1 className="text-foreground text-2xl font-bold tracking-tight">
-          {AVAILABILITY.pageTitle}
-        </h1>
-        <p className="text-muted mt-1 text-sm">{AVAILABILITY.pageSubtitle}</p>
-      </div>
+      <PageHeader
+        icon={Clock}
+        title={AVAILABILITY.pageTitle}
+        subtitle={AVAILABILITY.pageSubtitle}
+      />
 
       {/* Empty state guidance — shown only when no rules are configured yet */}
       {!hasRules && (

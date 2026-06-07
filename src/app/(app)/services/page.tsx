@@ -5,6 +5,7 @@ import { getServices } from "@/server/services/queries";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { ServiceCard } from "@/components/services/service-card";
+import { PageHeader } from "@/components/ui/page-header";
 import { SERVICES } from "@/lib/constants/he";
 
 export default async function ServicesPage() {
@@ -14,27 +15,16 @@ export default async function ServicesPage() {
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
       {/* Page header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="mb-1 flex items-center gap-2.5">
-            <div
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-              style={{ background: "rgba(184,107,140,0.10)" }}
-            >
-              <Sparkles className="h-4 w-4" style={{ color: "#b86b8c" }} />
-            </div>
-            <h1 className="text-foreground text-2xl font-bold tracking-tight">
-              {SERVICES.pageTitle}
-            </h1>
-          </div>
-          <p className="text-muted text-sm leading-6">
-            {SERVICES.pageSubtitle}
-          </p>
-        </div>
-        <Link href="/services/new">
-          <Button size="sm">{SERVICES.addButton}</Button>
-        </Link>
-      </div>
+      <PageHeader
+        icon={Sparkles}
+        title={SERVICES.pageTitle}
+        subtitle="כאן מגדירים את השירותים שהעסק מציע, משך הטיפול, מחיר ומקדמה."
+        action={
+          <Link href="/services/new">
+            <Button size="sm">{SERVICES.addButton}</Button>
+          </Link>
+        }
+      />
 
       {/* Empty state */}
       {services.length === 0 && (

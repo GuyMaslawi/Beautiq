@@ -36,6 +36,9 @@ export const NAV = {
   services: "שירותים",
   availability: "שעות פעילות",
   messages: "הודעות",
+  retention: "שימור לקוחות",
+  reputation: "מוניטין",
+  pricing: "תובנות מחיר",
   settings: "הגדרות",
 } as const;
 
@@ -930,6 +933,257 @@ export const PUBLIC_BOOKING = {
     serviceUnavailable: "השירות שנבחר אינו זמין",
     overlap: "המועד הזה כבר תפוס, יש לבחור מועד אחר",
     generic: "משהו השתבש. יש לנסות שוב בעוד רגע",
+  },
+} as const;
+
+/** טקסטים לפיצ׳ר חלונות פנויים בלוח הבקרה */
+export const EMPTY_SLOTS = {
+  sectionTitle: "חלונות פנויים",
+  sectionSubtitle:
+    "זיהינו שעות פנויות שאפשר לנסות למלא עם לקוחות קיימות.",
+  noSlots: "אין חלונות פנויים משמעותיים בימים הקרובים",
+  noSlotsSubtitle: "כל הזמן הקרוב תפוס. כל הכבוד!",
+  freeWindow: "חלון פנוי",
+  prepareMessage: "הכנת הודעה",
+  suggestedClients: "לקוחות מומלצות:",
+  genericMessage: "הודעה כללית",
+  noSuggestedClients:
+    "אין כרגע לקוחות מתאימות להצעה, אבל אפשר לשלוח הודעה ידנית.",
+  copyButton: "העתקת הודעה",
+  copiedSuccess: "ההודעה הועתקה",
+  lastVisit: "ביקור אחרון",
+  noVisit: "טרם ביקרה",
+  guidance: {
+    title: "יש חלונות פנויים ביומן",
+    body: "אפשר לנסות למלא שעות פנויות עם לקוחות קיימות.",
+    action: "צפייה בחלונות פנויים",
+  },
+} as const;
+
+/** טקסטים לעמוד שימור לקוחות */
+export const RETENTION = {
+  nav: "שימור לקוחות",
+
+  pageTitle: "שימור לקוחות",
+  pageSubtitle:
+    "כאן אפשר לזהות לקוחות שלא חזרו לאחרונה ולהכין הודעה מתאימה.",
+
+  summary: {
+    notReturned: "לקוחות שלא חזרו",
+    withUpcoming: "לקוחות עם תור עתידי",
+    messagesToSend: "הודעות שאפשר לשלוח",
+  },
+
+  card: {
+    daysSince: (days: number) => `לא חזרה כבר ${days} ימים`,
+    lastService: "הטיפול האחרון",
+    lastVisit: "ביקור אחרון",
+    totalVisits: "ביקורים",
+    noShowHint: "הלקוחה לא הגיעה בעבר",
+    cancellationHint: "ביטולים קודמים",
+    prepareMessage: "הכנת הודעה",
+    newBooking: "תור חדש",
+    viewDetails: "פרטים",
+  },
+
+  message: {
+    sectionTitle: "הודעה מוכנה לשליחה בוואטסאפ",
+    withService: (clientName: string, serviceName: string, businessName: string) =>
+      `היי ${clientName}, עבר זמן מה מאז התור האחרון שלך ל־${serviceName} אצל ${businessName}.\nאם תרצי לקבוע תור נוסף, אשמח למצוא לך מועד שמתאים לך ❤️`,
+    withoutService: (clientName: string, businessName: string) =>
+      `היי ${clientName}, עבר זמן מה מאז התור האחרון שלך אצל ${businessName}.\nאם תרצי לקבוע תור נוסף, אשמח למצוא לך מועד שמתאים לך ❤️`,
+    copyButton: "העתקת הודעה",
+    copied: "ההודעה הועתקה",
+    close: "סגירה",
+  },
+
+  emptyState: {
+    title: "אין כרגע לקוחות שדורשים מעקב",
+    body: "לקוחות שלא חזרו תקופה ארוכה יופיעו כאן, כדי שיהיה קל לחזור אליהן בזמן הנכון.",
+    cta: "צפייה בכל הלקוחות",
+    ctaHref: "/clients",
+  },
+
+  clientProfileCard: {
+    title: "הלקוחה לא חזרה לאחרונה",
+    body: "אפשר לשלוח הודעה קצרה ולהציע לקבוע תור נוסף.",
+    action: "הכנת הודעת חזרה",
+  },
+
+  guidance: {
+    title: "יש לקוחות שלא חזרו לאחרונה",
+    body: "אפשר לשלוח הודעה קצרה ולהציע לקבוע תור נוסף.",
+    action: "מעבר לשימור לקוחות",
+  },
+} as const;
+
+/** טקסטים לעמוד מוניטין וביקורות */
+export const REPUTATION = {
+  pageTitle: "מוניטין וביקורות",
+  pageSubtitle:
+    "כאן אפשר להכין הודעות תודה ובקשות ביקורת אחרי טיפולים שהושלמו.",
+
+  summary: {
+    recentCompleted: "טיפולים שהושלמו לאחרונה",
+    thankyouReady: "הודעות תודה שאפשר לשלוח",
+    reviewReady: "בקשות ביקורת שאפשר להכין",
+  },
+
+  card: {
+    completedBadge: "הושלם",
+    completedDate: "תאריך הטיפול",
+    price: "מחיר",
+    thankyouButton: "הודעת תודה",
+    reviewButton: "בקשת ביקורת",
+    bookingDetails: "פרטי תור",
+    clientDetails: "פרטי לקוחה",
+  },
+
+  message: {
+    thankyouTitle: "הודעת תודה",
+    reviewTitle: "בקשת ביקורת",
+    copyButton: "העתקת הודעה",
+    copied: "ההודעה הועתקה",
+    close: "סגירה",
+  },
+
+  thankyou: {
+    today: (clientName: string, serviceName: string, businessName: string) =>
+      `היי ${clientName}, תודה שהגעת היום ל־${serviceName} אצל ${businessName}.\nנשמח לראות אותך שוב ❤️`,
+    other: (clientName: string, serviceName: string, businessName: string) =>
+      `היי ${clientName}, תודה שהגעת ל־${serviceName} אצל ${businessName}.\nנשמח לראות אותך שוב ❤️`,
+  },
+
+  review: (clientName: string, businessName: string) =>
+    `היי ${clientName}, תודה שבחרת ב־${businessName}.\nאם נהנית מהטיפול, נשמח מאוד לביקורת קצרה או המלצה. זה מאוד עוזר לעסק ❤️`,
+
+  emptyState: {
+    title: "אין טיפולים שהושלמו לאחרונה",
+    body: "טיפולים שהושלמו ב־14 הימים האחרונים יופיעו כאן — כדי שיהיה קל לשלוח הודעת תודה או לבקש ביקורת.",
+    cta: "צפייה בתורים",
+    ctaHref: "/bookings",
+  },
+
+  clientCard: {
+    title: "טיפול שהושלם לאחרונה",
+    body: "אפשר לשלוח הודעת תודה או לבקש ביקורת מהלקוחה.",
+    thankyouAction: "הודעת תודה",
+    reviewAction: "בקשת ביקורת",
+    close: "סגירה",
+    copyButton: "העתקת הודעה",
+    copied: "ההודעה הועתקה",
+    goToReputation: "כל הטיפולים שהושלמו",
+  },
+
+  guidance: {
+    title: "יש טיפולים שהושלמו לאחרונה",
+    body: "אפשר לשלוח הודעת תודה או בקשת ביקורת כדי לחזק את הקשר עם הלקוחות.",
+    action: "מעבר למוניטין",
+  },
+} as const;
+
+/** טקסטים לעמוד תובנות מחיר */
+export const PRICING = {
+  nav: "תובנות מחיר",
+
+  pageTitle: "תובנות מחיר",
+  pageSubtitle:
+    "כאן אפשר להבין טוב יותר כמה כל שירות מכניס ביחס לזמן, למקדמות ולטווחי מחיר שהוגדרו.",
+
+  summary: {
+    servicesCount: "שירותים פעילים",
+    avgPricePerHour: "ממוצע לשעה",
+    servicesWithRange: "עם טווח מחיר",
+  },
+
+  card: {
+    pricePerHour: "לשעה",
+    duration: "משך טיפול",
+    price: "מחיר",
+    deposit: "מקדמה",
+    noDeposit: "ללא מקדמה",
+    completedBookings: "תורים שהושלמו",
+    editRange: "עריכת טווח",
+    cancelEdit: "ביטול",
+    editService: "עריכת השירות",
+    noRange: "לא הוגדר טווח להשוואה",
+    inactiveNote: "השירות לא פעיל ולכן לא נכלל בהשוואות.",
+    rangeMin: "מינימום בטווח",
+    rangeAvg: "ממוצע בטווח",
+    rangeMax: "מקסימום בטווח",
+  },
+
+  insights: {
+    lowHourlyValue: {
+      title: "מחיר נמוך יחסית לשעה",
+      body: "השירות הזה מכניס פחות לשעה ביחס לשאר השירותים בעסק.",
+    },
+    highHourlyValue: {
+      title: "מחיר גבוה יחסית לשעה",
+      body: "השירות הזה מכניס יותר לשעה ביחס לשאר השירותים בעסק.",
+    },
+    longLowPrice: {
+      title: "שירות ארוך עם מחיר נמוך לשעה",
+      body: "זה שירות ארוך יחסית עם מחיר נמוך לשעה. כדאי לבדוק אם המחיר עדיין משתלם.",
+    },
+    noDepositLong: {
+      title: "שירות ארוך ללא מקדמה",
+      body: "שירותים ארוכים בלי מקדמה עלולים להיות חשופים יותר לביטולים.",
+    },
+    popularService: {
+      title: "שירות מבוקש",
+      body: "זה אחד השירותים המבוקשים בעסק. אם הביקוש גבוה, ייתכן שכדאי לבדוק את המחיר.",
+    },
+    belowRange: {
+      title: "נמוך מהטווח שהוגדר",
+      body: "המחיר של השירות נמוך מהטווח שהוגדר. ייתכן שיש מקום לבדוק העלאת מחיר, במיוחד אם השירות מבוקש ולוקח זמן.",
+    },
+    withinRange: {
+      title: "בטווח שהוגדר",
+      body: "המחיר נמצא בטווח שהוגדר לשירותים דומים.",
+    },
+    aboveRange: {
+      title: "גבוה מהטווח שהוגדר",
+      body: "המחיר גבוה מהטווח שהוגדר. כדאי לוודא שהתיאור, התוצאה והערך ללקוחה ברורים.",
+    },
+  },
+
+  marketRange: {
+    sectionTitle: "טווח מחיר מקובל",
+    sectionOptional: "אופציונלי",
+    hint: "אפשר להזין טווח ידני לפי מה שמוכר לך מהאזור או מהתחום. Beautiq לא מושכת מחירי שוק אוטומטית בשלב הזה.",
+    minLabel: "מחיר נמוך בטווח",
+    avgLabel: "מחיר ממוצע בטווח",
+    maxLabel: "מחיר גבוה בטווח",
+    minPlaceholder: "לדוגמה: 150",
+    avgPlaceholder: "לדוגמה: 200",
+    maxPlaceholder: "לדוגמה: 280",
+    saveButton: "שמירת טווח",
+    saving: "שומר…",
+    saved: "טווח המחיר נשמר",
+    clear: "מחיקת טווח",
+  },
+
+  emptyState: {
+    title: "אין שירותים פעילים",
+    body: "כדי לראות תובנות מחיר, כדאי להוסיף לפחות שירות אחד.",
+    cta: "הוספת שירות",
+    ctaHref: "/services/new",
+  },
+
+  errors: {
+    minInvalid: "המחיר המינימלי אינו תקין",
+    avgInvalid: "המחיר הממוצע אינו תקין",
+    maxInvalid: "המחיר המקסימלי אינו תקין",
+    rangeInvalid: "הטווח אינו תקין — מינימום חייב להיות קטן ממקסימום",
+    avgOutOfRange: "המחיר הממוצע חייב להיות בין המינימום למקסימום",
+    generic: "משהו השתבש. יש לנסות שוב בעוד רגע",
+  },
+
+  guidance: {
+    title: "יש שירותים שכדאי לבדוק את המחיר שלהם",
+    body: "מצאנו שירותים שאולי מתומחרים נמוך ביחס לזמן או לטווח שהוגדר.",
+    action: "מעבר לתובנות מחיר",
   },
 } as const;
 

@@ -1,4 +1,5 @@
 import { MessageCircle } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { requireCurrentBusiness } from "@/server/auth/session";
 import { getSystemTemplates, getComposerData } from "@/server/messages/queries";
 import { SmartComposer } from "@/components/messages/smart-composer";
@@ -17,10 +18,11 @@ export default async function MessagesPage() {
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-foreground text-2xl font-bold">{MESSAGES.pageTitle}</h1>
-        <p className="text-muted mt-1 text-sm">{MESSAGES.pageSubtitle}</p>
-      </div>
+      <PageHeader
+        icon={MessageCircle}
+        title={MESSAGES.pageTitle}
+        subtitle={MESSAGES.pageSubtitle}
+      />
 
       {/* Explanation banner */}
       <div

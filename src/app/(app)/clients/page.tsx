@@ -7,6 +7,7 @@ import { ClientCard } from "@/components/clients/client-card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui/page-header";
 import { CLIENTS } from "@/lib/constants/he";
 
 interface SummaryCardProps {
@@ -82,22 +83,11 @@ export default async function ClientsPage({
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
       {/* Page header */}
-      <div>
-        <div className="mb-1 flex items-center gap-2.5">
-          <div
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-            style={{ background: "rgba(184,107,140,0.10)" }}
-          >
-            <Users2 className="h-4 w-4" style={{ color: "#b86b8c" }} />
-          </div>
-          <h1 className="text-foreground text-2xl font-bold tracking-tight">
-            {CLIENTS.pageTitle}
-          </h1>
-        </div>
-        <p className="text-muted text-sm leading-6">
-          {CLIENTS.pageSubtitle}
-        </p>
-      </div>
+      <PageHeader
+        icon={Users2}
+        title={CLIENTS.pageTitle}
+        subtitle="כאן מנהלים את הלקוחות, ההיסטוריה והקשר איתם."
+      />
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">

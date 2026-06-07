@@ -1,4 +1,4 @@
-import { GUIDANCE } from "@/lib/constants/he";
+import { GUIDANCE, EMPTY_SLOTS, RETENTION, REPUTATION, PRICING } from "@/lib/constants/he";
 import type { GuidanceQueryData } from "@/server/guidance/queries";
 
 export type GuidancePriority = "important" | "recommended" | "info";
@@ -20,7 +20,10 @@ const PRIORITY_ORDER: Record<GuidancePriority, number> = {
   info: 2,
 };
 
-export function generateGuidanceItems(data: GuidanceQueryData): GuidanceItem[] {
+export function generateGuidanceItems(
+  data: GuidanceQueryData,
+  emptySlotCount = 0,
+): GuidanceItem[] {
   const items: GuidanceItem[] = [];
 
   // A. No active services — setup blocker
@@ -83,15 +86,15 @@ export function generateGuidanceItems(data: GuidanceQueryData): GuidanceItem[] {
     });
   }
 
-  // F. Clients who have not returned in 30+ days
+  // F. Clients who have not returned in 30+ days → link to retention center
   if (data.lostClientsCount > 0) {
     items.push({
       id: "clients-not-returned",
-      title: GUIDANCE.rules.clientsNotReturned.title,
-      description: GUIDANCE.rules.clientsNotReturned.body,
+      title: RETENTION.guidance.title,
+      description: RETENTION.guidance.body,
       priority: "recommended",
-      actionLabel: GUIDANCE.rules.clientsNotReturned.action,
-      href: "/clients",
+      actionLabel: RETENTION.guidance.action,
+      href: "/retention",
     });
   }
 
@@ -120,6 +123,46 @@ export function generateGuidanceItems(data: GuidanceQueryData): GuidanceItem[] {
       priority: "info",
       actionLabel: GUIDANCE.rules.noShowClients.action,
       href: "/clients",
+    });
+  }
+
+  // I. Empty slots in the next 7 days (only when setup is complete)
+  if (
+    emptySlotCount > 0 &&
+    data.activeServicesCount > 0 &&
+    data.activeAvailabilityCount > 0
+  ) {
+    items.push({
+      id: "empty-slots",
+      title: EMPTY_SLOTS.guidance.title,
+      description: EMPTY_SLOTS.guidance.body,
+      priority: "recommended",
+      actionLabel: EMPTY_SLOTS.guidance.action,
+      href: "/dashboard#empty-slots",
+    });
+  }
+
+  // J. Recent completed bookings — opportunity for thank-you / review request
+  if (data.recentCompletedBookingsCount > 0) {
+    items.push({
+      id: "reputation",
+      title: REPUTATION.guidance.title,
+      description: REPUTATION.guidance.body,
+      priority: "recommended",
+      actionLabel: REPUTATION.guidance.action,
+      href: "/reputation",
+    });
+  }
+
+  // K. Pricing concerns — long services without deposit or price below manual range
+  if (data.pricingConcernCount > 0) {
+    items.push({
+      id: "pricing-concerns",
+      title: PRICING.guidance.title,
+      description: PRICING.guidance.body,
+      priority: "info",
+      actionLabel: PRICING.guidance.action,
+      href: "/pricing",
     });
   }
 

@@ -1,4 +1,5 @@
 import { Store, Tag, ShieldCheck, Link2, SlidersHorizontal } from "lucide-react";
+import { PageHeader } from "@/components/ui/page-header";
 import { requireCurrentBusiness } from "@/server/auth/session";
 import {
   getBusinessSettings,
@@ -66,20 +67,11 @@ export default async function SettingsPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
-      <div>
-        <div className="mb-1 flex items-center gap-2.5">
-          <div
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-            style={{ background: "rgba(184,107,140,0.10)" }}
-          >
-            <SlidersHorizontal className="h-4 w-4" style={{ color: "#b86b8c" }} />
-          </div>
-          <h1 className="text-foreground text-2xl font-bold tracking-tight">
-            {SETTINGS.pageTitle}
-          </h1>
-        </div>
-        <p className="text-muted text-sm">{SETTINGS.pageSubtitle}</p>
-      </div>
+      <PageHeader
+        icon={SlidersHorizontal}
+        title={SETTINGS.pageTitle}
+        subtitle={SETTINGS.pageSubtitle}
+      />
 
       <div className="space-y-6">
         {/* Section 1 — Business details */}

@@ -1,0 +1,1 @@
+export const RECENT_COMPLETED_BOOKINGS_DAYS = 14;

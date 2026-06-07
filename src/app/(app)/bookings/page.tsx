@@ -6,6 +6,7 @@ import { getBookings, getBookingSummary } from "@/server/bookings/queries";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { BookingCard } from "@/components/bookings/booking-card";
+import { PageHeader } from "@/components/ui/page-header";
 import { BOOKINGS } from "@/lib/constants/he";
 import type { BookingFilter, BookingStatusFilter } from "@/server/bookings/queries";
 
@@ -118,27 +119,16 @@ export default async function BookingsPage({
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
       {/* Page header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <div className="mb-1 flex items-center gap-2.5">
-            <div
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-              style={{ background: "rgba(184,107,140,0.10)" }}
-            >
-              <CalendarDays className="h-4 w-4" style={{ color: "#b86b8c" }} />
-            </div>
-            <h1 className="text-foreground text-2xl font-bold tracking-tight">
-              {BOOKINGS.pageTitle}
-            </h1>
-          </div>
-          <p className="text-muted text-sm leading-6">
-            {BOOKINGS.pageSubtitle}
-          </p>
-        </div>
-        <Link href="/bookings/new">
-          <Button size="sm">{BOOKINGS.addButton}</Button>
-        </Link>
-      </div>
+      <PageHeader
+        icon={CalendarDays}
+        title={BOOKINGS.pageTitle}
+        subtitle={BOOKINGS.pageSubtitle}
+        action={
+          <Link href="/bookings/new">
+            <Button size="sm">{BOOKINGS.addButton}</Button>
+          </Link>
+        }
+      />
 
       {/* Success banner */}
       {created === "true" && (
