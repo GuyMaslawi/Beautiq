@@ -7,6 +7,7 @@ import {
 } from "@/server/admin/queries";
 import { getAdminAutomationInfo } from "@/server/win-back-automation/queries";
 import { SubscriptionForm } from "./_components/subscription-form";
+import { RunWinBackButton } from "./_components/run-win-back-button";
 import type { SubscriptionStatus, SubscriptionPlan } from "@prisma/client";
 
 const STATUS_LABELS: Record<SubscriptionStatus, string> = {
@@ -381,6 +382,24 @@ export default async function AdminBusinessDetailPage({
         )}
       </div>
 
+      {/* Win-back manual trigger */}
+      <div
+        className="rounded-2xl border p-6"
+        style={{
+          background: "#fff",
+          borderColor: "rgba(0,0,0,0.07)",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+        }}
+      >
+        <h2 className="mb-1 text-sm font-bold" style={{ color: "#1a1a2e" }}>
+          הפעלת Win-Back ידנית
+        </h2>
+        <p className="mb-4 text-xs" style={{ color: "#888" }}>
+          מריץ את אוטומציית החזרת הלקוחות עבור עסק זה עכשיו, ללא המתנה לשעת הקרון. כל שאר ההגנות (cooldown, test mode) פעילות.
+        </p>
+        <RunWinBackButton businessId={biz.id} />
+      </div>
+
       {/* Edit subscription form */}
       <div
         className="rounded-2xl border p-6"
@@ -393,7 +412,24 @@ export default async function AdminBusinessDetailPage({
         <h2 className="mb-5 text-sm font-bold" style={{ color: "#1a1a2e" }}>
           עדכון מנוי ופרטים פנימיים
         </h2>
-        <SubscriptionForm businessId={biz.id} subscription={sub} />
+        <SubscriptionForm
+          businessId={biz.id}
+          subscription={
+            sub
+              ? {
+                  plan: sub.plan,
+                  status: sub.status,
+                  monthlyPrice: Number(sub.monthlyPrice),
+                  discountType: sub.discountType,
+                  discountValue: sub.discountValue != null ? Number(sub.discountValue) : null,
+                  discountNote: sub.discountNote,
+                  trialStartedAt: sub.trialStartedAt?.toISOString() ?? null,
+                  trialEndsAt: sub.trialEndsAt?.toISOString() ?? null,
+                  adminNotes: sub.adminNotes,
+                }
+              : null
+          }
+        />
       </div>
     </div>
   );

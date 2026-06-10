@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from "react";
 import { updateBusinessSubscription } from "@/server/admin/actions";
-import type { BusinessSubscription } from "@prisma/client";
+import type { SubscriptionStatus, SubscriptionPlan, DiscountType } from "@prisma/client";
 
 const STATUS_OPTIONS = [
   { value: "trial", label: "בתקופת ניסיון" },
@@ -29,9 +29,21 @@ function toDateInputValue(d: Date | null | undefined): string {
   return new Date(d).toISOString().slice(0, 10);
 }
 
+interface SerializableSubscription {
+  plan: SubscriptionPlan;
+  status: SubscriptionStatus;
+  monthlyPrice: number;
+  discountType: DiscountType;
+  discountValue: number | null;
+  discountNote: string | null;
+  trialStartedAt: string | null;
+  trialEndsAt: string | null;
+  adminNotes: string | null;
+}
+
 interface Props {
   businessId: string;
-  subscription: BusinessSubscription | null;
+  subscription: SerializableSubscription | null;
 }
 
 export function SubscriptionForm({ businessId, subscription }: Props) {
@@ -42,18 +54,18 @@ export function SubscriptionForm({ businessId, subscription }: Props) {
   const [plan, setPlan] = useState(subscription?.plan ?? "basic");
   const [status, setStatus] = useState(subscription?.status ?? "trial");
   const [monthlyPrice, setMonthlyPrice] = useState(
-    String(Number(subscription?.monthlyPrice ?? 149)),
+    String(subscription?.monthlyPrice ?? 149),
   );
   const [discountType, setDiscountType] = useState(subscription?.discountType ?? "none");
   const [discountValue, setDiscountValue] = useState(
-    subscription?.discountValue ? String(Number(subscription.discountValue)) : "",
+    subscription?.discountValue != null ? String(subscription.discountValue) : "",
   );
   const [discountNote, setDiscountNote] = useState(subscription?.discountNote ?? "");
   const [trialStartedAt, setTrialStartedAt] = useState(
-    toDateInputValue(subscription?.trialStartedAt),
+    toDateInputValue(subscription?.trialStartedAt ? new Date(subscription.trialStartedAt) : null),
   );
   const [trialEndsAt, setTrialEndsAt] = useState(
-    toDateInputValue(subscription?.trialEndsAt),
+    toDateInputValue(subscription?.trialEndsAt ? new Date(subscription.trialEndsAt) : null),
   );
   const [adminNotes, setAdminNotes] = useState(subscription?.adminNotes ?? "");
 
