@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { User, Mail, Lock } from "lucide-react";
 import { signupAction, type SignupState } from "@/server/auth/actions";
 import type { SignupField } from "@/lib/validation/auth";
 import { AUTH } from "@/lib/constants/he";
@@ -74,6 +75,7 @@ export function SignupForm() {
           value={values.name}
           onChange={(e) => update("name")(e.target.value)}
           placeholder={AUTH.signup.namePlaceholder}
+          iconRight={<User className="h-4 w-4" />}
         />
       </Field>
 
@@ -91,6 +93,7 @@ export function SignupForm() {
           value={values.email}
           onChange={(e) => update("email")(e.target.value)}
           placeholder={AUTH.signup.emailPlaceholder}
+          iconRight={<Mail className="h-4 w-4" />}
         />
       </Field>
 
@@ -107,6 +110,7 @@ export function SignupForm() {
           autoComplete="new-password"
           value={values.password}
           onChange={(e) => update("password")(e.target.value)}
+          iconRight={<Lock className="h-4 w-4" />}
         />
       </Field>
 
@@ -123,6 +127,7 @@ export function SignupForm() {
           autoComplete="new-password"
           value={values.confirmPassword}
           onChange={(e) => update("confirmPassword")(e.target.value)}
+          iconRight={<Lock className="h-4 w-4" />}
         />
       </Field>
 

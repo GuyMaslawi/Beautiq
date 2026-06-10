@@ -39,6 +39,35 @@ const bookingInclude = {
   service: { select: { id: true, name: true, durationMinutes: true } },
 } as const;
 
+export interface ActiveCancellationPolicy {
+  enabled: boolean;
+  lateCancellationHours: number | null;
+  lateCancellationFeeType: string;
+  lateCancellationFeeAmount: string | null;
+  lateCancellationFeePercentage: string | null;
+}
+
+export async function getActiveCancellationPolicy(
+  tenant: TenantContext,
+): Promise<ActiveCancellationPolicy | null> {
+  const policy = await prisma.cancellationPolicy.findUnique({
+    where: { businessId: tenant.businessId },
+    select: {
+      enabled: true,
+      lateCancellationHours: true,
+      lateCancellationFeeType: true,
+      lateCancellationFeeAmount: true,
+      lateCancellationFeePercentage: true,
+    },
+  });
+  if (!policy || !policy.enabled) return null;
+  return {
+    ...policy,
+    lateCancellationFeeAmount: policy.lateCancellationFeeAmount?.toString() ?? null,
+    lateCancellationFeePercentage: policy.lateCancellationFeePercentage?.toString() ?? null,
+  };
+}
+
 export type BookingWithRelations = Awaited<
   ReturnType<typeof getBooking>
 > extends infer T
@@ -52,21 +81,97 @@ export type BookingListItem = Awaited<
 >[number];
 
 export type BookingFilter = "today" | "week" | "all";
-export type BookingStatusFilter = "all" | "active" | "completed" | "cancelled";
+export type BookingStatusFilter = "all" | "pending" | "active" | "completed" | "cancelled";
+export type BookingSortField =
+  | "startTime"
+  | "price"
+  | "duration"
+  | "status"
+  | "createdAt"
+  | "clientName";
+export type BookingSortDir = "asc" | "desc";
 
-const STATUS_FILTER_MAP: Record<BookingStatusFilter, BookingStatus[] | undefined> =
-  {
-    all: undefined,
-    active: ["pending", "approved"],
-    completed: ["completed"],
-    cancelled: ["cancelled", "no_show"],
-  };
+export interface GetBookingsParams {
+  filter?: BookingFilter;
+  statusFilter?: BookingStatusFilter;
+  search?: string;
+  serviceId?: string;
+  depositStatusFilter?: string;
+  sortField?: BookingSortField;
+  sortDir?: BookingSortDir;
+  smartSort?: boolean;
+}
+
+// Smart default sort: today → future requiring action → future → history (desc)
+function applySmartSort<T extends { startTime: Date; status: string; depositStatus: string }>(
+  bookings: T[],
+): T[] {
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: TZ });
+
+  function ds(d: Date) {
+    return new Date(d).toLocaleDateString("en-CA", { timeZone: TZ });
+  }
+
+  function getGroup(b: T): number {
+    const day = ds(b.startTime);
+    if (day === todayStr) return 0;
+    const isActive = b.status === "pending" || b.status === "approved";
+    const needsAction = b.status === "pending" || (b.depositStatus === "pending" && isActive);
+    const isFuture = day > todayStr;
+    if (isFuture && needsAction) return 1;
+    if (isFuture) return 2;
+    return 3; // history
+  }
+
+  return [...bookings].sort((a, b) => {
+    const ga = getGroup(a);
+    const gb = getGroup(b);
+    if (ga !== gb) return ga - gb;
+    const ta = new Date(a.startTime).getTime();
+    const tb = new Date(b.startTime).getTime();
+    // history: most recent first; all others: ascending
+    return ga === 3 ? tb - ta : ta - tb;
+  });
+}
+
+const STATUS_FILTER_MAP: Record<BookingStatusFilter, BookingStatus[] | undefined> = {
+  all: undefined,
+  pending: ["pending"],
+  active: ["pending", "approved"],
+  completed: ["completed"],
+  cancelled: ["cancelled", "no_show"],
+};
+
+// Maps sort field to Prisma orderBy key
+const DB_SORT_FIELD: Partial<Record<BookingSortField, string>> = {
+  startTime: "startTime",
+  price: "priceSnapshot",
+  duration: "durationMinutesSnapshot",
+  status: "status",
+  createdAt: "createdAt",
+};
+
+const VALID_DEPOSIT_STATUSES = ["not_required", "pending", "paid", "failed", "refunded"];
 
 export async function getBookings(
   tenant: TenantContext,
-  filter: BookingFilter = "all",
-  statusFilter: BookingStatusFilter = "all",
+  params: GetBookingsParams = {},
 ) {
+  const {
+    filter = "all",
+    statusFilter = "all",
+    search,
+    serviceId,
+    depositStatusFilter,
+    sortField = "startTime",
+    sortDir,
+    smartSort = false,
+  } = params;
+
+  // Default sort direction: future-focused views go ascending, history goes newest-first
+  const resolvedSortDir: BookingSortDir =
+    sortDir ?? (filter === "all" && sortField === "startTime" ? "desc" : "asc");
+
   let startTimeFilter: { gte?: Date; lte?: Date } | undefined;
 
   if (filter === "today") {
@@ -79,17 +184,53 @@ export async function getBookings(
   }
 
   const statuses = STATUS_FILTER_MAP[statusFilter];
+  const validDeposit =
+    depositStatusFilter && VALID_DEPOSIT_STATUSES.includes(depositStatusFilter)
+      ? depositStatusFilter
+      : undefined;
 
-  return prisma.booking.findMany({
+  // Smart sort and clientName sort are handled at app level; use startTime for DB ordering
+  const dbSortKey =
+    smartSort || sortField === "clientName"
+      ? "startTime"
+      : (DB_SORT_FIELD[sortField] ?? "startTime");
+  const dbSortDir: BookingSortDir = smartSort ? "asc" : resolvedSortDir;
+
+  const bookings = await prisma.booking.findMany({
     where: {
       businessId: tenant.businessId,
       ...(startTimeFilter ? { startTime: startTimeFilter } : {}),
       ...(statuses ? { status: { in: statuses } } : {}),
+      ...(search
+        ? {
+            client: {
+              OR: [
+                { fullName: { contains: search, mode: "insensitive" } },
+                { phone: { contains: search } },
+              ],
+            },
+          }
+        : {}),
+      ...(serviceId ? { serviceId } : {}),
+      ...(validDeposit
+        ? { depositStatus: validDeposit as "not_required" | "pending" | "paid" | "failed" | "refunded" }
+        : {}),
     },
     include: bookingInclude,
-    // upcoming views stay chronological; "all" shows newest first
-    orderBy: { startTime: filter === "all" ? "desc" : "asc" },
+    orderBy: { [dbSortKey]: dbSortDir },
   });
+
+  if (smartSort) return applySmartSort(bookings);
+
+  // App-level sort for client name (Hebrew-aware)
+  if (sortField === "clientName") {
+    bookings.sort((a, b) => {
+      const cmp = a.client.fullName.localeCompare(b.client.fullName, "he");
+      return resolvedSortDir === "asc" ? cmp : -cmp;
+    });
+  }
+
+  return bookings;
 }
 
 export async function getBooking(tenant: TenantContext, bookingId: string) {
@@ -143,6 +284,46 @@ export interface BookingSummary {
   pendingCount: number;
   cancelledCount: number;
   pendingDepositCount: number;
+}
+
+export async function getLateCancellationsThisWeek(
+  tenant: TenantContext,
+): Promise<number> {
+  const policy = await prisma.cancellationPolicy.findUnique({
+    where: { businessId: tenant.businessId },
+    select: { enabled: true, lateCancellationHours: true },
+  });
+
+  if (!policy?.enabled || !policy.lateCancellationHours) return 0;
+
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+  const recentCancelled = await prisma.booking.findMany({
+    where: {
+      businessId: tenant.businessId,
+      status: { in: ["cancelled", "no_show"] },
+      OR: [
+        { cancelledAt: { gte: weekAgo } },
+        { noShowAt: { gte: weekAgo } },
+      ],
+    },
+    select: {
+      cancelledAt: true,
+      noShowAt: true,
+      startTime: true,
+    },
+  });
+
+  const hours = policy.lateCancellationHours;
+  let count = 0;
+  for (const b of recentCancelled) {
+    const cancelTime = b.cancelledAt ?? b.noShowAt;
+    if (!cancelTime) continue;
+    const deadline = new Date(b.startTime.getTime() - hours * 60 * 60 * 1000);
+    if (cancelTime >= deadline) count++;
+  }
+
+  return count;
 }
 
 export async function getBookingSummary(

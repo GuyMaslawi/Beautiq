@@ -115,5 +115,5 @@ export async function loginAction(
 
 /** Sign the current user out and return to the home page. */
 export async function signOutAction(): Promise<void> {
-  await signOut({ redirectTo: "/" });
+  await signOut({ redirectTo: "/login" });
 }

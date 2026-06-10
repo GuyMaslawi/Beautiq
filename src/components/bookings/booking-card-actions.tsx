@@ -32,7 +32,10 @@ export function BookingCardActions({
     status === "rescheduled";
 
   return (
-    <div className="border-border mt-3 flex flex-wrap gap-2 border-t pt-3">
+    <div
+      className="flex flex-wrap gap-2 px-4 py-3"
+      style={{ borderTop: "1px solid var(--border)", background: "rgba(43,37,48,0.02)" }}
+    >
       <Link href={`/bookings/${bookingId}`}>
         <Button size="sm" variant="secondary" className="h-8 px-3 text-xs">
           {BOOKINGS.card.viewDetails}

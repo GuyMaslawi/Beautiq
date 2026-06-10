@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import { Mail, Lock } from "lucide-react";
 import { loginAction, type LoginState } from "@/server/auth/actions";
 import { AUTH } from "@/lib/constants/he";
 import { Field } from "@/components/ui/field";
@@ -53,6 +54,7 @@ export function LoginForm() {
           value={values.email}
           onChange={(e) => update("email")(e.target.value)}
           placeholder={AUTH.login.emailPlaceholder}
+          iconRight={<Mail className="h-4 w-4" />}
         />
       </Field>
 
@@ -65,6 +67,7 @@ export function LoginForm() {
           autoComplete="current-password"
           value={values.password}
           onChange={(e) => update("password")(e.target.value)}
+          iconRight={<Lock className="h-4 w-4" />}
         />
       </Field>
 

@@ -12,6 +12,7 @@ import { ClientRetentionCard } from "@/components/retention/client-retention-car
 import { ClientReputationCard } from "@/components/reputation/client-reputation-card";
 import { getClientLatestCompletedBooking } from "@/server/reputation/queries";
 import { CLIENTS } from "@/lib/constants/he";
+import { ClientOptInForm } from "@/components/clients/client-opt-in-form";
 
 function formatDate(date: Date): string {
   return new Date(date).toLocaleDateString("he-IL", {
@@ -134,7 +135,7 @@ export default async function ClientDetailPage({
   }
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-4">
+    <div className="mx-auto w-full max-w-3xl space-y-4">
       {/* Back */}
       <div>
         <Link href="/clients">
@@ -296,6 +297,15 @@ export default async function ClientDetailPage({
             </span>
           </div>
         </div>
+      </Card>
+
+      {/* WhatsApp opt-in */}
+      <Card className="p-5">
+        <ClientOptInForm
+          clientId={client.id}
+          whatsappOptIn={client.whatsappOptIn}
+          marketingOptIn={client.marketingOptIn}
+        />
       </Card>
 
       {/* Notes */}

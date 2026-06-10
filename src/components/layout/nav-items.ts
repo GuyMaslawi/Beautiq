@@ -17,10 +17,10 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/clients", label: NAV.clients },
   { href: "/services", label: NAV.services },
   { href: "/availability", label: NAV.availability },
-  { href: "/messages", label: NAV.messages },
-  { href: "/retention", label: NAV.retention },
-  { href: "/reputation", label: NAV.reputation },
-  { href: "/pricing", label: NAV.pricing },
+  { href: "/bring-back", label: NAV.bringBack },
+  { href: "/automations", label: NAV.automations },
+  { href: "/finance", label: NAV.finance },
+  { href: "/public-page", label: NAV.publicPage },
   { href: "/settings", label: NAV.settings },
 ];
 
@@ -39,19 +39,21 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     items: [
       { href: "/services", label: NAV.services },
       { href: "/availability", label: NAV.availability },
-      { href: "/messages", label: NAV.messages },
+      { href: "/public-page", label: NAV.publicPage },
     ],
   },
   {
-    label: "צמיחה",
+    label: "הגדלת הכנסות",
     items: [
-      { href: "/retention", label: NAV.retention },
-      { href: "/reputation", label: NAV.reputation },
-      { href: "/pricing", label: NAV.pricing },
+      { href: "/bring-back", label: NAV.bringBack },
+      { href: "/automations", label: NAV.automations },
+      { href: "/finance", label: NAV.finance },
     ],
   },
   {
     label: "מערכת",
-    items: [{ href: "/settings", label: NAV.settings }],
+    items: [
+      { href: "/settings", label: NAV.settings },
+    ],
   },
 ];

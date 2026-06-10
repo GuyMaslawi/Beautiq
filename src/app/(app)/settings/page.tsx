@@ -66,7 +66,7 @@ export default async function SettingsPage() {
   if (!settings) return null;
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6">
+    <div className="mx-auto w-full max-w-5xl space-y-6">
       <PageHeader
         icon={SlidersHorizontal}
         title={SETTINGS.pageTitle}

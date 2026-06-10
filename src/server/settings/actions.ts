@@ -121,9 +121,14 @@ export async function updateCancellationPolicyAction(
   const tenant = await requireTenant();
 
   const raw: Record<string, string> = {
+    enabled: String(formData.get("enabled") ?? ""),
     policyText: String(formData.get("policyText") ?? ""),
     minNoticeHours: String(formData.get("minNoticeHours") ?? ""),
     requireDepositToBook: String(formData.get("requireDepositToBook") ?? ""),
+    lateCancellationHours: String(formData.get("lateCancellationHours") ?? ""),
+    lateCancellationFeeType: String(formData.get("lateCancellationFeeType") ?? "none"),
+    lateCancellationFeeAmount: String(formData.get("lateCancellationFeeAmount") ?? ""),
+    lateCancellationFeePercentage: String(formData.get("lateCancellationFeePercentage") ?? ""),
   };
 
   const result = validateCancellationPolicy(raw);
@@ -136,14 +141,36 @@ export async function updateCancellationPolicyAction(
       where: { businessId: tenant.businessId },
       create: {
         businessId: tenant.businessId,
+        enabled: value.enabled,
         policyText: value.policyText ?? null,
         minNoticeHours: value.minNoticeHours ?? null,
         requireDepositToBook: value.requireDepositToBook,
+        lateCancellationHours: value.lateCancellationHours ?? null,
+        lateCancellationFeeType: value.lateCancellationFeeType,
+        lateCancellationFeeAmount:
+          value.lateCancellationFeeAmount != null
+            ? value.lateCancellationFeeAmount
+            : null,
+        lateCancellationFeePercentage:
+          value.lateCancellationFeePercentage != null
+            ? value.lateCancellationFeePercentage
+            : null,
       },
       update: {
+        enabled: value.enabled,
         policyText: value.policyText ?? null,
         minNoticeHours: value.minNoticeHours ?? null,
         requireDepositToBook: value.requireDepositToBook,
+        lateCancellationHours: value.lateCancellationHours ?? null,
+        lateCancellationFeeType: value.lateCancellationFeeType,
+        lateCancellationFeeAmount:
+          value.lateCancellationFeeAmount != null
+            ? value.lateCancellationFeeAmount
+            : null,
+        lateCancellationFeePercentage:
+          value.lateCancellationFeePercentage != null
+            ? value.lateCancellationFeePercentage
+            : null,
       },
     });
   } catch {

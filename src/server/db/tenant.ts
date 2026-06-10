@@ -1,7 +1,7 @@
 /**
  * Tenant-scoping helpers.
  *
- * Beautiq is a multi-tenant SaaS: almost every business-owned row carries a
+ * Allura is a multi-tenant SaaS: almost every business-owned row carries a
  * `businessId`, and every read/write of business data MUST be scoped to the
  * current business (see CLAUDE.md §10). These helpers make that intent explicit
  * and hard to forget. This is intentionally minimal — the full data-access /

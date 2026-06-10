@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { BadgeCheck, CalendarDays } from "lucide-react";
+import { BadgeCheck, CalendarDays, CheckCircle2, MessageCircle } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireCurrentBusiness } from "@/server/auth/session";
 import {
@@ -48,7 +48,7 @@ export default async function ReputationPage() {
   ]);
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-6" dir="rtl">
+    <div className="mx-auto w-full max-w-3xl space-y-6" dir="rtl">
       {/* Page header */}
       <PageHeader
         icon={BadgeCheck}
@@ -58,30 +58,74 @@ export default async function ReputationPage() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-3">
-        <Card className="p-4 text-center">
-          <p className="text-foreground text-2xl font-bold tabular-nums">
+        {/* הושלמו לאחרונה */}
+        <div
+          className="rounded-2xl px-5 py-4 transition-shadow hover:shadow-md"
+          style={{
+            background: summary.recentCompletedCount > 0 ? "rgba(247,238,243,0.85)" : "rgba(255,255,255,0.90)",
+            border: `1px solid ${summary.recentCompletedCount > 0 ? "rgba(184,107,140,0.22)" : "var(--border)"}`,
+            boxShadow: "0 1px 6px rgba(43,37,48,0.06)",
+          }}
+        >
+          <div
+            className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl"
+            style={{ background: summary.recentCompletedCount > 0 ? "rgba(184,107,140,0.13)" : "rgba(184,107,140,0.08)" }}
+          >
+            <CheckCircle2 className="h-4 w-4" style={{ color: "#b86b8c" }} />
+          </div>
+          <p className="text-2xl font-bold tabular-nums" style={{ color: summary.recentCompletedCount > 0 ? "#b86b8c" : "#2b2530" }}>
             {summary.recentCompletedCount}
           </p>
-          <p className="text-muted mt-1 text-xs leading-tight">
+          <p className="mt-1 text-xs font-medium leading-tight" style={{ color: "#8a8190" }}>
             {REPUTATION.summary.recentCompleted}
           </p>
-        </Card>
-        <Card className="p-4 text-center">
-          <p className="text-foreground text-2xl font-bold tabular-nums">
+        </div>
+
+        {/* מוכנים להודעת תודה */}
+        <div
+          className="rounded-2xl px-5 py-4 transition-shadow hover:shadow-md"
+          style={{
+            background: "rgba(255,255,255,0.90)",
+            border: "1px solid var(--border)",
+            boxShadow: "0 1px 6px rgba(43,37,48,0.06)",
+          }}
+        >
+          <div
+            className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl"
+            style={{ background: "rgba(184,107,140,0.08)" }}
+          >
+            <MessageCircle className="h-4 w-4" style={{ color: "#b86b8c" }} />
+          </div>
+          <p className="text-2xl font-bold tabular-nums" style={{ color: "#2b2530" }}>
             {bookings.length}
           </p>
-          <p className="text-muted mt-1 text-xs leading-tight">
+          <p className="mt-1 text-xs font-medium leading-tight" style={{ color: "#8a8190" }}>
             {REPUTATION.summary.thankyouReady}
           </p>
-        </Card>
-        <Card className="p-4 text-center">
-          <p className="text-foreground text-2xl font-bold tabular-nums">
+        </div>
+
+        {/* מוכנים לבקשת ביקורת */}
+        <div
+          className="rounded-2xl px-5 py-4 transition-shadow hover:shadow-md"
+          style={{
+            background: "rgba(255,255,255,0.90)",
+            border: "1px solid var(--border)",
+            boxShadow: "0 1px 6px rgba(43,37,48,0.06)",
+          }}
+        >
+          <div
+            className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl"
+            style={{ background: "rgba(184,107,140,0.08)" }}
+          >
+            <BadgeCheck className="h-4 w-4" style={{ color: "#b86b8c" }} />
+          </div>
+          <p className="text-2xl font-bold tabular-nums" style={{ color: "#2b2530" }}>
             {bookings.length}
           </p>
-          <p className="text-muted mt-1 text-xs leading-tight">
+          <p className="mt-1 text-xs font-medium leading-tight" style={{ color: "#8a8190" }}>
             {REPUTATION.summary.reviewReady}
           </p>
-        </Card>
+        </div>
       </div>
 
       {/* Booking list or empty state */}

@@ -25,13 +25,18 @@ export interface UpcomingBookingItem {
   clientName: string;
   serviceName: string;
   startTimeISO: string;
-  status: "pending" | "approved";
+  status: "pending" | "approved" | "completed";
 }
 
 export interface DashboardData {
   metrics: DashboardMetrics;
   setup: SetupState;
+  /** All bookings for today (pending, approved, completed) — source of truth for "today" count */
+  todayBookings: UpcomingBookingItem[];
+  /** Upcoming bookings from tomorrow onwards — for the week calendar */
   upcomingBookings: UpcomingBookingItem[];
+  /** Accurate count of all future pending bookings (not capped) */
+  pendingApprovalCount: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -116,24 +121,16 @@ export async function getDashboardData(
   const now = new Date();
 
   const [
-    bookingsToday,
     totalClients,
     activeServicesCount,
     monthRevenueAgg,
     categoriesCount,
     availabilityCount,
     totalBookingsCount,
+    todayBookingsRaw,
     upcomingRaw,
+    pendingApprovalCount,
   ] = await Promise.all([
-    // תורים להיום — pending, approved, completed only
-    prisma.booking.count({
-      where: {
-        businessId: tenant.businessId,
-        startTime: { gte: todayStart, lte: todayEnd },
-        status: { in: ["pending", "approved", "completed"] },
-      },
-    }),
-
     // סך לקוחות
     prisma.client.count({
       where: { businessId: tenant.businessId },
@@ -169,21 +166,48 @@ export async function getDashboardData(
       where: { businessId: tenant.businessId },
     }),
 
-    // תורים קרובים — next 3 upcoming (pending or approved)
+    // תורים להיום — כל הסטטוסים הרלוונטיים, כולל עבר היום
+    // זוהי מקור האמת היחיד ל"פגישות היום"
     prisma.booking.findMany({
       where: {
         businessId: tenant.businessId,
-        status: { in: ["pending", "approved"] },
-        startTime: { gt: now },
+        startTime: { gte: todayStart, lte: todayEnd },
+        status: { in: ["pending", "approved", "completed"] },
       },
       orderBy: { startTime: "asc" },
-      take: 3,
       select: {
         id: true,
         startTime: true,
         status: true,
         client: { select: { fullName: true } },
         service: { select: { name: true } },
+      },
+    }),
+
+    // תורים עתידיים מחר ואילך — למיני לוח שנה שבועי
+    prisma.booking.findMany({
+      where: {
+        businessId: tenant.businessId,
+        status: { in: ["pending", "approved"] },
+        startTime: { gt: todayEnd },
+      },
+      orderBy: { startTime: "asc" },
+      take: 30,
+      select: {
+        id: true,
+        startTime: true,
+        status: true,
+        client: { select: { fullName: true } },
+        service: { select: { name: true } },
+      },
+    }),
+
+    // ספירה מדויקת של תורים ממתינים לאישור (עתידיים)
+    prisma.booking.count({
+      where: {
+        businessId: tenant.businessId,
+        status: "pending",
+        startTime: { gt: now },
       },
     }),
   ]);
@@ -198,9 +222,23 @@ export async function getDashboardData(
     businessProfile.addressNote
   );
 
+  const mapBooking = (b: {
+    id: string;
+    startTime: Date;
+    status: string;
+    client: { fullName: string };
+    service: { name: string };
+  }): UpcomingBookingItem => ({
+    id: b.id,
+    clientName: b.client.fullName,
+    serviceName: b.service.name,
+    startTimeISO: b.startTime.toISOString(),
+    status: b.status as UpcomingBookingItem["status"],
+  });
+
   return {
     metrics: {
-      bookingsToday,
+      bookingsToday: todayBookingsRaw.length,
       totalClients,
       activeServices: activeServicesCount,
       monthRevenue,
@@ -212,12 +250,8 @@ export async function getDashboardData(
       hasProfileDetails,
       hasAnyBookings: totalBookingsCount > 0,
     },
-    upcomingBookings: upcomingRaw.map((b) => ({
-      id: b.id,
-      clientName: b.client.fullName,
-      serviceName: b.service.name,
-      startTimeISO: b.startTime.toISOString(),
-      status: b.status as "pending" | "approved",
-    })),
+    todayBookings: todayBookingsRaw.map(mapBooking),
+    upcomingBookings: upcomingRaw.map(mapBooking),
+    pendingApprovalCount,
   };
 }

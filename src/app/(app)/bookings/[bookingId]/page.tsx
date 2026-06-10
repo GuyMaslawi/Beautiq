@@ -1,16 +1,19 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { requireCurrentBusiness } from "@/server/auth/session";
-import { getBooking } from "@/server/bookings/queries";
+import { getBooking, getActiveCancellationPolicy } from "@/server/bookings/queries";
 import {
   approveBookingAction,
   cancelBookingAction,
   completeBookingAction,
   noShowBookingAction,
   updateBookingNotesAction,
+  markLateCancellationFeePendingAction,
+  markLateCancellationFeePaidAction,
 } from "@/server/bookings/actions";
 import { updateDepositStatusAction } from "@/server/deposits/actions";
 import { getBookingDepositPayment } from "@/server/deposits/queries";
+import { isLateCancellation, computeLateCancellationFee } from "@/lib/cancellation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BookingStatusBadge } from "@/components/bookings/booking-status-badge";
@@ -99,9 +102,10 @@ export default async function BookingDetailPage({
   const { bookingId } = await params;
   const business = await requireCurrentBusiness();
   const tenant = { businessId: business.id };
-  const [booking, depositPayment] = await Promise.all([
+  const [booking, depositPayment, cancellationPolicy] = await Promise.all([
     getBooking(tenant, bookingId),
     getBookingDepositPayment(tenant, bookingId),
+    getActiveCancellationPolicy(tenant),
   ]);
 
   if (!booking) notFound();
@@ -112,6 +116,8 @@ export default async function BookingDetailPage({
   const noShowAction = noShowBookingAction.bind(null, bookingId);
   const notesAction = updateBookingNotesAction.bind(null, bookingId);
   const updateDepositAction = updateDepositStatusAction.bind(null, bookingId);
+  const markFeePendingAction = markLateCancellationFeePendingAction.bind(null, bookingId);
+  const markFeePaidAction = markLateCancellationFeePaidAction.bind(null, bookingId);
 
   const price = Number(booking.priceSnapshot);
   const duration = booking.durationMinutesSnapshot;
@@ -119,8 +125,33 @@ export default async function BookingDetailPage({
     ? Number(booking.depositAmountSnapshot)
     : null;
 
+  const isCancelled =
+    booking.status === "cancelled" || booking.status === "no_show";
+  const cancelledAt = booking.cancelledAt ?? booking.noShowAt ?? null;
+  const lateCancelled = isCancelled
+    ? isLateCancellation(
+        cancelledAt,
+        booking.startTime,
+        cancellationPolicy?.lateCancellationHours ?? null,
+      )
+    : null;
+
+  const computedFee =
+    lateCancelled && cancellationPolicy
+      ? computeLateCancellationFee(
+          cancellationPolicy.lateCancellationFeeType,
+          cancellationPolicy.lateCancellationFeeAmount
+            ? parseFloat(cancellationPolicy.lateCancellationFeeAmount)
+            : null,
+          cancellationPolicy.lateCancellationFeePercentage
+            ? parseFloat(cancellationPolicy.lateCancellationFeePercentage)
+            : null,
+          price,
+        )
+      : null;
+
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-4">
+    <div className="mx-auto w-full max-w-3xl space-y-4">
       {/* Back navigation */}
       <div>
         <Link href="/bookings">
@@ -187,6 +218,81 @@ export default async function BookingDetailPage({
         depositPayment={depositPayment}
         updateDepositAction={updateDepositAction}
       />
+
+      {/* Late cancellation card — only for cancelled/no-show bookings when policy is enabled */}
+      {isCancelled && lateCancelled !== null && (
+        <Card className="p-5 space-y-4">
+          <p className="text-muted text-xs font-semibold uppercase tracking-wider">
+            מעקב ביטול
+          </p>
+
+          <span
+            className="inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold"
+            style={
+              lateCancelled
+                ? { background: "rgba(200,60,60,0.10)", color: "#b83232", border: "1px solid rgba(200,60,60,0.22)" }
+                : { background: "rgba(61,139,110,0.09)", color: "#2a6e57", border: "1px solid rgba(61,139,110,0.22)" }
+            }
+          >
+            {lateCancelled
+              ? BOOKINGS.lateCancellation.badgeLate
+              : BOOKINGS.lateCancellation.badgeOnTime}
+          </span>
+
+          {lateCancelled && computedFee != null && (
+            <div className="space-y-2">
+              <p className="text-sm font-medium" style={{ color: "var(--foreground-soft)" }}>
+                {BOOKINGS.lateCancellation.feeLabel}: ₪{computedFee.toLocaleString("he-IL")}
+              </p>
+              {booking.lateCancellationFeeStatus === "paid" ? (
+                <span
+                  className="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium"
+                  style={{ background: "rgba(61,139,110,0.09)", color: "#2a6e57", border: "1px solid rgba(61,139,110,0.22)" }}
+                >
+                  ✓ {BOOKINGS.lateCancellation.feeStatusPaid}
+                </span>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {!booking.lateCancellationFeeStatus && (
+                    <form action={markFeePendingAction}>
+                      <button
+                        type="submit"
+                        className="rounded-xl border px-4 py-2 text-sm font-medium transition-colors hover:bg-amber-50"
+                        style={{ borderColor: "rgba(184,150,10,0.30)", color: "#7a6400" }}
+                      >
+                        {BOOKINGS.lateCancellation.markFeeRequired}
+                      </button>
+                    </form>
+                  )}
+                  {booking.lateCancellationFeeStatus === "pending" && (
+                    <>
+                      <span
+                        className="inline-flex items-center rounded-full px-3 py-1 text-sm font-medium"
+                        style={{ background: "rgba(184,150,10,0.10)", color: "#7a6400", border: "1px solid rgba(184,150,10,0.22)" }}
+                      >
+                        {BOOKINGS.lateCancellation.feeStatusPending}
+                      </span>
+                      <form action={markFeePaidAction}>
+                        <button
+                          type="submit"
+                          className="rounded-xl border px-4 py-2 text-sm font-medium transition-colors hover:bg-green-50"
+                          style={{ borderColor: "rgba(61,139,110,0.30)", color: "#2a6e57" }}
+                        >
+                          {BOOKINGS.lateCancellation.markFeePaid}
+                        </button>
+                      </form>
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          <p className="text-xs" style={{ color: "var(--muted)" }}>
+            {BOOKINGS.lateCancellation.manualNote}
+          </p>
+        </Card>
+      )}
 
       {/* Client contact card */}
       <Card className="space-y-1 p-5">

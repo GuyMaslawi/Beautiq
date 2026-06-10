@@ -44,12 +44,22 @@ export function validateBusinessDetails(
   };
 }
 
-export type CancellationPolicyField = "minNoticeHours" | "form";
+export type CancellationPolicyField =
+  | "minNoticeHours"
+  | "lateCancellationHours"
+  | "lateCancellationFeeAmount"
+  | "lateCancellationFeePercentage"
+  | "form";
 
 export interface CancellationPolicyInput {
+  enabled: boolean;
   policyText?: string;
   minNoticeHours?: number;
   requireDepositToBook: boolean;
+  lateCancellationHours?: number;
+  lateCancellationFeeType: string;
+  lateCancellationFeeAmount?: number;
+  lateCancellationFeePercentage?: number;
 }
 
 type CancellationPolicyErrors = Partial<Record<CancellationPolicyField, string>>;
@@ -74,14 +84,58 @@ export function validateCancellationPolicy(
     }
   }
 
+  const lateHoursRaw = (raw.lateCancellationHours ?? "").trim();
+  let lateCancellationHours: number | undefined;
+  if (lateHoursRaw) {
+    const parsed = parseInt(lateHoursRaw, 10);
+    if (isNaN(parsed) || parsed < 1) {
+      errors.lateCancellationHours = SETTINGS.errors.minNoticeInvalid;
+    } else {
+      lateCancellationHours = parsed;
+    }
+  }
+
+  const feeType = (raw.lateCancellationFeeType ?? "none").trim();
+
+  let lateCancellationFeeAmount: number | undefined;
+  if (feeType === "fixed") {
+    const amtRaw = (raw.lateCancellationFeeAmount ?? "").trim();
+    if (amtRaw) {
+      const parsed = parseFloat(amtRaw);
+      if (isNaN(parsed) || parsed < 0) {
+        errors.lateCancellationFeeAmount = SETTINGS.errors.minNoticeInvalid;
+      } else {
+        lateCancellationFeeAmount = parsed;
+      }
+    }
+  }
+
+  let lateCancellationFeePercentage: number | undefined;
+  if (feeType === "percentage") {
+    const pctRaw = (raw.lateCancellationFeePercentage ?? "").trim();
+    if (pctRaw) {
+      const parsed = parseFloat(pctRaw);
+      if (isNaN(parsed) || parsed < 0 || parsed > 100) {
+        errors.lateCancellationFeePercentage = SETTINGS.errors.minNoticeInvalid;
+      } else {
+        lateCancellationFeePercentage = parsed;
+      }
+    }
+  }
+
   if (Object.keys(errors).length > 0) return { ok: false, errors };
 
   return {
     ok: true,
     value: {
+      enabled: raw.enabled === "true",
       policyText: (raw.policyText ?? "").trim() || undefined,
       minNoticeHours,
       requireDepositToBook: raw.requireDepositToBook === "true",
+      lateCancellationHours,
+      lateCancellationFeeType: feeType,
+      lateCancellationFeeAmount,
+      lateCancellationFeePercentage,
     },
   };
 }

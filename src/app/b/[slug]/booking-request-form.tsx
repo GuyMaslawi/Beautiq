@@ -5,7 +5,7 @@ import {
   submitPublicBookingAction,
   type PublicBookingFormState,
 } from "@/server/public-booking/actions";
-import type { PublicService } from "@/server/public-booking/queries";
+import type { PublicService, PublicCancellationPolicy } from "@/server/public-booking/queries";
 import { PUBLIC_BOOKING } from "@/lib/constants/he";
 
 // ---------------------------------------------------------------------------
@@ -88,9 +88,13 @@ function SuccessView({ onReset }: { onReset: () => void }) {
 export function BookingRequestForm({
   slug,
   services,
+  cancellationPolicy,
+  showPrices = true,
 }: {
   slug: string;
   services: PublicService[];
+  cancellationPolicy: PublicCancellationPolicy | null;
+  showPrices?: boolean;
 }) {
   const boundAction = submitPublicBookingAction.bind(null, slug);
   const [state, formAction, pending] = useActionState<
@@ -101,6 +105,7 @@ export function BookingRequestForm({
   const [selectedServiceId, setSelectedServiceId] = useState(
     state.values?.serviceId ?? "",
   );
+  const [policyAcknowledged, setPolicyAcknowledged] = useState(false);
 
   const selectedService = services.find((s) => s.id === selectedServiceId);
 
@@ -139,9 +144,10 @@ export function BookingRequestForm({
             {services.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name} · {s.durationMinutes}{" "}
-                {PUBLIC_BOOKING.form.serviceDurationSuffix} ·{" "}
-                {PUBLIC_BOOKING.form.servicePricePrefix}
-                {Number(s.price).toLocaleString("he-IL")}
+                {PUBLIC_BOOKING.form.serviceDurationSuffix}
+                {showPrices
+                  ? ` · ${PUBLIC_BOOKING.form.servicePricePrefix}${Number(s.price).toLocaleString("he-IL")}`
+                  : ""}
               </option>
             ))}
           </select>
@@ -245,6 +251,30 @@ export function BookingRequestForm({
         </div>
       </div>
 
+      {/* Cancellation policy — only shown when enabled */}
+      {cancellationPolicy?.policyText && (
+        <div className="rounded-2xl border border-[var(--border)] bg-white p-5 space-y-3">
+          <h2 className="font-bold text-[var(--foreground)]">
+            {PUBLIC_BOOKING.form.policyTitle}
+          </h2>
+          <p className="text-sm leading-relaxed" style={{ color: "var(--foreground-soft)" }}>
+            {cancellationPolicy.policyText}
+          </p>
+          <label className="flex cursor-pointer items-start gap-2.5">
+            <input
+              type="checkbox"
+              checked={policyAcknowledged}
+              onChange={(e) => setPolicyAcknowledged(e.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded accent-[var(--primary)]"
+              required
+            />
+            <span className="text-sm" style={{ color: "var(--foreground-soft)" }}>
+              {PUBLIC_BOOKING.form.policyAcknowledge}
+            </span>
+          </label>
+        </div>
+      )}
+
       {/* Approval note */}
       <p className="text-center text-xs text-[var(--muted)] leading-5">
         {PUBLIC_BOOKING.form.approvalNote}
@@ -253,7 +283,7 @@ export function BookingRequestForm({
       {/* Submit */}
       <button
         type="submit"
-        disabled={pending}
+        disabled={pending || (!!cancellationPolicy?.policyText && !policyAcknowledged)}
         className="w-full rounded-2xl bg-[var(--primary)] py-3 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-60"
       >
         {pending

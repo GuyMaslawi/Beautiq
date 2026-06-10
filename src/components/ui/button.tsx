@@ -10,7 +10,7 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantClasses: Record<ButtonVariant, string> = {
-  primary: "text-white active:scale-[0.98] disabled:opacity-50",
+  primary: "text-white active:scale-[0.98] disabled:opacity-50 hover:brightness-[1.06]",
   secondary:
     "bg-surface text-foreground border border-border hover:bg-background-alt active:scale-[0.98] disabled:opacity-50",
   ghost:
@@ -39,7 +39,7 @@ export function Button({
     <button
       type={type}
       className={cn(
-        "inline-flex items-center justify-center gap-2 font-medium transition-all duration-150 disabled:cursor-not-allowed",
+        "inline-flex cursor-pointer items-center justify-center gap-2 font-medium transition-all duration-200 disabled:cursor-not-allowed disabled:opacity-50",
         variantClasses[variant],
         sizeClasses[size],
         className,
@@ -48,7 +48,7 @@ export function Button({
         isPrimary
           ? {
               background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
-              boxShadow: "0 1px 6px rgba(184,107,140,0.28), inset 0 1px 0 rgba(255,255,255,0.15)",
+              boxShadow: "0 2px 10px rgba(184,107,140,0.38), inset 0 1px 0 rgba(255,255,255,0.18)",
               ...style,
             }
           : isDestructive

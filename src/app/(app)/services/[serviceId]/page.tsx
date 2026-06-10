@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ChevronLeft } from "lucide-react";
 import { requireTenant } from "@/server/auth/session";
 import { getService } from "@/server/services/queries";
 import { updateServiceAction } from "@/server/services/actions";
 import { ServiceForm } from "@/components/services/service-form";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { SERVICES } from "@/lib/constants/he";
 
 export default async function EditServicePage({
@@ -19,7 +18,6 @@ export default async function EditServicePage({
   const service = await getService(tenant, serviceId);
   if (!service) notFound();
 
-  // Bind the serviceId so the client form receives a (prevState, formData) action.
   const boundAction = updateServiceAction.bind(null, service.id);
 
   const initialValues = {
@@ -36,29 +34,33 @@ export default async function EditServicePage({
   };
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-6">
-      {/* Page header */}
-      <div className="flex items-center gap-3">
-        <Link href="/services" className="shrink-0">
-          <Button variant="ghost" size="sm">
-            → חזרה
-          </Button>
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-foreground text-xl font-bold tracking-tight">
-            {SERVICES.form.editTitle}
-          </h1>
-          <p className="text-muted mt-0.5 text-sm">{service.name}</p>
+    <div className="mx-auto w-full max-w-4xl space-y-6">
+      {/* Breadcrumb header */}
+      <div>
+        <div className="mb-3 flex items-center gap-1.5 text-sm" style={{ color: "var(--muted)" }}>
+          <Link
+            href="/services"
+            className="transition-colors hover:underline"
+            style={{ color: "var(--muted)" }}
+          >
+            שירותים
+          </Link>
+          <ChevronLeft className="h-3.5 w-3.5 shrink-0" />
+          <span style={{ color: "var(--foreground-soft)" }}>עריכת שירות</span>
         </div>
+        <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--foreground)" }}>
+          {SERVICES.form.editTitle}
+        </h1>
+        <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
+          {service.name} — עדכוני פרטים, מחיר וזמינות השירות
+        </p>
       </div>
 
-      <Card>
-        <ServiceForm
-          action={boundAction}
-          initialValues={initialValues}
-          isEdit
-        />
-      </Card>
+      <ServiceForm
+        action={boundAction}
+        initialValues={initialValues}
+        isEdit
+      />
     </div>
   );
 }

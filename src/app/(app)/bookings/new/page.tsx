@@ -24,7 +24,7 @@ export default async function NewBookingPage({
   const activeServices = allServices.filter((s) => s.isActive);
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-6">
+    <div className="mx-auto w-full max-w-3xl space-y-6">
       {/* Page header */}
       <div className="flex items-center gap-3">
         <Link href="/bookings" className="shrink-0">

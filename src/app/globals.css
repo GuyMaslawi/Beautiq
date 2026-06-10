@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /*
- * Beautiq Design System
+ * Allura Design System
  * פלטה פרימיום, נקייה ואלגנטית לעסקי יופי וטיפוח.
  * עברית-תחילה, RTL כברירת מחדל.
  */
@@ -50,6 +50,18 @@
   --shadow-md: 0 4px 12px rgba(43, 37, 48, 0.08), 0 2px 4px rgba(43, 37, 48, 0.04);
   --shadow-lg: 0 8px 28px rgba(43, 37, 48, 0.10), 0 4px 8px rgba(43, 37, 48, 0.05);
   --shadow-xl: 0 16px 48px rgba(43, 37, 48, 0.13), 0 6px 12px rgba(43, 37, 48, 0.06);
+
+  /* ── Sidebar dark theme ───────────────────────────────── */
+  --sidebar-bg-from: #4c1535;
+  --sidebar-bg-to: #3a0e27;
+  --sidebar-fg: rgba(255, 255, 255, 0.90);
+  --sidebar-fg-muted: rgba(255, 255, 255, 0.48);
+  --sidebar-fg-faint: rgba(255, 255, 255, 0.24);
+  --sidebar-border: rgba(255, 255, 255, 0.08);
+  --sidebar-hover: rgba(255, 255, 255, 0.07);
+  --sidebar-active-bg: rgba(255, 255, 255, 0.13);
+  --sidebar-active-border: rgba(255, 255, 255, 0.18);
+  --sidebar-badge: #e05b8a;
 }
 
 @theme inline {
@@ -129,6 +141,27 @@ body {
 :focus-visible {
   outline: 2px solid var(--primary);
   outline-offset: 2px;
+}
+
+/* ── Sidebar nav dark-theme helpers ──────────────────── */
+.sidebar-nav-item {
+  color: var(--sidebar-fg-muted);
+}
+.sidebar-nav-item:hover {
+  color: var(--sidebar-fg);
+  background: var(--sidebar-hover);
+}
+.sidebar-nav-item.active {
+  color: var(--sidebar-fg);
+  background: var(--sidebar-active-bg);
+  box-shadow: inset 0 0 0 1px var(--sidebar-active-border);
+}
+.sidebar-signout {
+  color: var(--sidebar-fg-muted);
+}
+.sidebar-signout:hover {
+  background: rgba(190, 74, 74, 0.18);
+  color: #f09090;
 }
 
 /* ── Reduced motion ───────────────────────────────────── */

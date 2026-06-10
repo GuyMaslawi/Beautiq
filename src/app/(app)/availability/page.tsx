@@ -30,7 +30,7 @@ export default async function AvailabilityPage() {
   }));
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6">
+    <div className="mx-auto w-full max-w-5xl space-y-6">
       {/* Page header */}
       <PageHeader
         icon={Clock}

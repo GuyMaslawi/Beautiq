@@ -2,10 +2,10 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
+import { FileText, Clock, CreditCard, Settings2, ToggleLeft, Save } from "lucide-react";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { SERVICES } from "@/lib/constants/he";
 import type { ServiceFormState } from "@/server/services/actions";
@@ -88,6 +88,49 @@ function initValues(
   };
 }
 
+function SectionCard({
+  icon: Icon,
+  title,
+  subtitle,
+  children,
+}: {
+  icon: React.ElementType;
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      className="rounded-2xl p-5"
+      style={{
+        background: "var(--surface)",
+        border: "1px solid var(--border)",
+        boxShadow: "var(--shadow-sm)",
+      }}
+    >
+      <div className="mb-4 flex items-center gap-2.5">
+        <div
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
+          style={{ background: "rgba(184,107,140,0.10)" }}
+        >
+          <Icon className="h-4 w-4" style={{ color: "#b86b8c" }} />
+        </div>
+        <div>
+          <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
+            {title}
+          </p>
+          {subtitle && (
+            <p className="text-xs" style={{ color: "var(--muted)" }}>
+              {subtitle}
+            </p>
+          )}
+        </div>
+      </div>
+      <div className="space-y-4">{children}</div>
+    </div>
+  );
+}
+
 export function ServiceForm({
   action,
   initialValues,
@@ -106,8 +149,6 @@ export function ServiceForm({
     initValues(undefined, initialValues),
   );
 
-  // When the server returns new state (after error), sync form values.
-  // React derived-state pattern — no useEffect needed.
   const [prevServerValues, setPrevServerValues] = useState(state.values);
   if (prevServerValues !== state.values && state.values) {
     setPrevServerValues(state.values);
@@ -118,12 +159,7 @@ export function ServiceForm({
     setFields((prev) => ({ ...prev, [field]: value }));
 
   const showDeposit = fields.requiresDeposit === "true";
-
-  const hasAdvancedValues =
-    Number(fields.bufferBeforeMinutes) > 0 ||
-    Number(fields.bufferAfterMinutes) > 0 ||
-    !!fields.categoryKey;
-  const [showAdvanced, setShowAdvanced] = useState(hasAdvancedValues);
+  const isActive = fields.isActive === "true";
 
   const initialDuration = initialValues?.durationMinutes;
   const isCustomDuration =
@@ -131,55 +167,45 @@ export function ServiceForm({
     !DURATION_OPTIONS.some((o) => o.value === initialDuration);
 
   return (
-    <form action={formAction} className="space-y-0" noValidate>
+    <form action={formAction} noValidate>
       {state.formError && (
-        <div className="mb-6">
+        <div className="mb-5">
           <Alert>{state.formError}</Alert>
         </div>
       )}
 
-      {/* Section 1 — Basic info */}
-      <div className="space-y-5 pb-6">
-        <p className="text-muted text-xs font-semibold uppercase tracking-wider">
-          {SERVICES.form.sectionBasic}
-        </p>
-        <Field
-          label={SERVICES.form.nameLabel}
-          htmlFor="name"
-          error={state.errors?.name}
-        >
-          <Input
-            id="name"
-            name="name"
-            placeholder={SERVICES.form.namePlaceholder}
-            value={fields.name}
-            onChange={(e) => set("name")(e.target.value)}
-            autoFocus
-          />
-        </Field>
-        <Field
-          label={SERVICES.form.descriptionLabel}
-          htmlFor="description"
-        >
-          <Textarea
-            id="description"
-            name="description"
-            placeholder={SERVICES.form.descriptionPlaceholder}
-            rows={3}
-            value={fields.description}
-            onChange={(e) => set("description")(e.target.value)}
-          />
-        </Field>
-      </div>
+      {/* 2-column card grid */}
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
 
-      <div className="border-border border-t" />
+        {/* Card 1: Service details */}
+        <SectionCard icon={FileText} title={SERVICES.form.sectionBasic} subtitle="שם השירות ותיאור קצר">
+          <Field label={SERVICES.form.nameLabel} htmlFor="name" error={state.errors?.name}>
+            <Input
+              id="name"
+              name="name"
+              placeholder={SERVICES.form.namePlaceholder}
+              value={fields.name}
+              onChange={(e) => set("name")(e.target.value)}
+              autoFocus
+            />
+          </Field>
+          <Field label={SERVICES.form.descriptionLabel} htmlFor="description">
+            <Textarea
+              id="description"
+              name="description"
+              placeholder={SERVICES.form.descriptionPlaceholder}
+              rows={4}
+              value={fields.description}
+              onChange={(e) => set("description")(e.target.value)}
+            />
+            <p className="mt-1 text-right text-xs" style={{ color: "var(--muted)" }}>
+              {fields.description.length}/180
+            </p>
+          </Field>
+        </SectionCard>
 
-      {/* Section 2 — Price and time */}
-      <div className="space-y-5 py-6">
-        <p className="text-muted text-xs font-semibold uppercase tracking-wider">
-          {SERVICES.form.sectionPriceAndTime}
-        </p>
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {/* Card 2: Price and duration */}
+        <SectionCard icon={Clock} title={SERVICES.form.sectionPriceAndTime} subtitle="כמה זמן השירות נמשך בפועל">
           <Field
             label={SERVICES.form.durationLabel}
             htmlFor="durationMinutes"
@@ -200,20 +226,17 @@ export function ServiceForm({
                 </option>
               ))}
               {isCustomDuration && (
-                <option value={initialDuration}>
-                  {initialDuration} דקות
-                </option>
+                <option value={initialDuration}>{initialDuration} דקות</option>
               )}
             </select>
           </Field>
 
-          <Field
-            label={SERVICES.form.priceLabel}
-            htmlFor="price"
-            error={state.errors?.price}
-          >
+          <Field label={SERVICES.form.priceLabel} htmlFor="price" error={state.errors?.price}>
             <div className="relative">
-              <span className="text-muted pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 select-none text-base">
+              <span
+                className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 select-none text-base"
+                style={{ color: "var(--muted)" }}
+              >
                 ₪
               </span>
               <Input
@@ -229,182 +252,225 @@ export function ServiceForm({
               />
             </div>
           </Field>
-        </div>
-      </div>
+        </SectionCard>
 
-      <div className="border-border border-t" />
-
-      {/* Section 3 — Deposit */}
-      <div className="space-y-4 py-6">
-        <div>
-          <p className="text-muted text-xs font-semibold uppercase tracking-wider">
-            {SERVICES.form.sectionDeposit}
-          </p>
-          <p className="text-muted mt-1 text-xs leading-5">
+        {/* Card 3: Deposit */}
+        <SectionCard
+          icon={CreditCard}
+          title={SERVICES.form.sectionDeposit}
+          subtitle="ניתן לגבות מקדמה בין 10₪ ל-500₪"
+        >
+          <label className="flex cursor-pointer items-center gap-3">
+            <input
+              type="checkbox"
+              name="requiresDeposit"
+              value="true"
+              checked={showDeposit}
+              onChange={(e) => set("requiresDeposit")(e.target.checked ? "true" : "false")}
+              className="h-5 w-5 rounded accent-primary"
+            />
+            <span className="text-foreground font-medium text-sm">
+              {SERVICES.form.requiresDepositLabel}
+            </span>
+          </label>
+          <p className="text-xs" style={{ color: "var(--muted)" }}>
             {SERVICES.form.depositHint}
           </p>
-        </div>
 
-        <label className="flex cursor-pointer items-center gap-3">
-          <input
-            type="checkbox"
-            name="requiresDeposit"
-            value="true"
-            checked={showDeposit}
-            onChange={(e) =>
-              set("requiresDeposit")(e.target.checked ? "true" : "false")
-            }
-            className="h-5 w-5 rounded accent-primary"
-          />
-          <span className="text-foreground font-medium">
-            {SERVICES.form.requiresDepositLabel}
-          </span>
-        </label>
+          {showDeposit && (
+            <Field
+              label={SERVICES.form.depositAmountLabel}
+              htmlFor="depositAmount"
+              error={state.errors?.depositAmount}
+            >
+              <div className="relative">
+                <span
+                  className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 select-none text-base"
+                  style={{ color: "var(--muted)" }}
+                >
+                  ₪
+                </span>
+                <Input
+                  id="depositAmount"
+                  name="depositAmount"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder={SERVICES.form.depositAmountPlaceholder}
+                  value={fields.depositAmount}
+                  onChange={(e) => set("depositAmount")(e.target.value)}
+                  className="pr-10"
+                />
+              </div>
+            </Field>
+          )}
+        </SectionCard>
 
-        {showDeposit && (
-          <Field
-            label={SERVICES.form.depositAmountLabel}
-            htmlFor="depositAmount"
-            error={state.errors?.depositAmount}
-          >
-            <div className="relative">
-              <span className="text-muted pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 select-none text-base">
-                ₪
-              </span>
+        {/* Card 4: Advanced settings */}
+        <SectionCard
+          icon={Settings2}
+          title={SERVICES.form.sectionAdvanced}
+          subtitle={`${SERVICES.form.advancedOptional} — אפשר להשאיר ריק לשייר במשך`}
+        >
+          <div className="grid grid-cols-2 gap-3">
+            <Field
+              label={SERVICES.form.bufferBeforeLabel}
+              htmlFor="bufferBeforeMinutes"
+              hint={SERVICES.form.bufferBeforeHint}
+              error={state.errors?.bufferBeforeMinutes}
+            >
               <Input
-                id="depositAmount"
-                name="depositAmount"
+                id="bufferBeforeMinutes"
+                name="bufferBeforeMinutes"
                 type="number"
                 min="0"
-                step="0.01"
-                placeholder={SERVICES.form.depositAmountPlaceholder}
-                value={fields.depositAmount}
-                onChange={(e) => set("depositAmount")(e.target.value)}
-                className="pr-10"
+                max="120"
+                step="5"
+                placeholder="0"
+                value={fields.bufferBeforeMinutes}
+                onChange={(e) => set("bufferBeforeMinutes")(e.target.value)}
               />
-            </div>
-          </Field>
-        )}
-      </div>
-
-      <div className="border-border border-t" />
-
-      {/* Section 4 — Advanced (collapsible) */}
-      <div className="py-6">
-        <button
-          type="button"
-          onClick={() => setShowAdvanced((v) => !v)}
-          className="text-muted hover:text-foreground flex items-center gap-2 text-sm font-medium transition-colors"
-        >
-          <span className="text-xs">{showAdvanced ? "▴" : "▾"}</span>
-          <span>{SERVICES.form.sectionAdvanced}</span>
-          <span className="text-xs font-normal opacity-70">
-            ({SERVICES.form.advancedOptional})
-          </span>
-        </button>
-
-        {showAdvanced && (
-          <div className="mt-5 space-y-5">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <Field
-                label={SERVICES.form.bufferBeforeLabel}
-                htmlFor="bufferBeforeMinutes"
-                hint={SERVICES.form.bufferBeforeHint}
-                error={state.errors?.bufferBeforeMinutes}
-              >
-                <Input
-                  id="bufferBeforeMinutes"
-                  name="bufferBeforeMinutes"
-                  type="number"
-                  min="0"
-                  max="120"
-                  step="5"
-                  placeholder="0"
-                  value={fields.bufferBeforeMinutes}
-                  onChange={(e) => set("bufferBeforeMinutes")(e.target.value)}
-                />
-              </Field>
-
-              <Field
-                label={SERVICES.form.bufferAfterLabel}
-                htmlFor="bufferAfterMinutes"
-                hint={SERVICES.form.bufferAfterHint}
-                error={state.errors?.bufferAfterMinutes}
-              >
-                <Input
-                  id="bufferAfterMinutes"
-                  name="bufferAfterMinutes"
-                  type="number"
-                  min="0"
-                  max="120"
-                  step="5"
-                  placeholder="0"
-                  value={fields.bufferAfterMinutes}
-                  onChange={(e) => set("bufferAfterMinutes")(e.target.value)}
-                />
-              </Field>
-            </div>
-
-            <Field
-              label={SERVICES.form.categoryLabel}
-              htmlFor="categoryKey"
-              hint={SERVICES.form.categoryHint}
-            >
-              <select
-                id="categoryKey"
-                name="categoryKey"
-                value={fields.categoryKey}
-                onChange={(e) => set("categoryKey")(e.target.value)}
-                className={selectClass}
-              >
-                <option value="">{SERVICES.form.categoryPlaceholder}</option>
-                {CATEGORY_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
             </Field>
-
-            {isEdit && (
-              <label className="flex cursor-pointer items-center gap-3">
-                <input
-                  type="checkbox"
-                  name="isActive"
-                  value="true"
-                  checked={fields.isActive === "true"}
-                  onChange={(e) =>
-                    set("isActive")(e.target.checked ? "true" : "false")
-                  }
-                  className="h-5 w-5 rounded accent-primary"
-                />
-                <span className="text-foreground font-medium">
-                  {SERVICES.form.isActiveLabel}
-                </span>
-              </label>
-            )}
+            <Field
+              label={SERVICES.form.bufferAfterLabel}
+              htmlFor="bufferAfterMinutes"
+              hint={SERVICES.form.bufferAfterHint}
+              error={state.errors?.bufferAfterMinutes}
+            >
+              <Input
+                id="bufferAfterMinutes"
+                name="bufferAfterMinutes"
+                type="number"
+                min="0"
+                max="120"
+                step="5"
+                placeholder="0"
+                value={fields.bufferAfterMinutes}
+                onChange={(e) => set("bufferAfterMinutes")(e.target.value)}
+              />
+            </Field>
           </div>
-        )}
+
+          <Field
+            label={SERVICES.form.categoryLabel}
+            htmlFor="categoryKey"
+            hint={SERVICES.form.categoryHint}
+          >
+            <select
+              id="categoryKey"
+              name="categoryKey"
+              value={fields.categoryKey}
+              onChange={(e) => set("categoryKey")(e.target.value)}
+              className={selectClass}
+            >
+              <option value="">{SERVICES.form.categoryPlaceholder}</option>
+              {CATEGORY_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
+                </option>
+              ))}
+            </select>
+          </Field>
+        </SectionCard>
       </div>
 
-      {/* Form actions */}
-      <div className="border-border space-y-3 border-t pt-6">
-        <Button type="submit" className="w-full" disabled={isPending}>
+      {/* Full-width: Active status toggle */}
+      {isEdit && (
+        <div
+          className="mt-4 flex items-center justify-between rounded-2xl p-5"
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            boxShadow: "var(--shadow-sm)",
+          }}
+        >
+          <div className="flex items-center gap-2.5">
+            <div
+              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
+              style={{ background: "rgba(184,107,140,0.10)" }}
+            >
+              <ToggleLeft className="h-4 w-4" style={{ color: "#b86b8c" }} />
+            </div>
+            <div>
+              <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
+                סטטוס השירות
+              </p>
+              <p className="text-xs" style={{ color: "var(--muted)" }}>
+                הגדרי אם השירות פעיל וגלוי ללקוחות
+              </p>
+            </div>
+          </div>
+          <label className="flex cursor-pointer items-center gap-3">
+            <span className="text-sm font-medium" style={{ color: "var(--muted)" }}>
+              {isActive ? "פעיל" : "לא פעיל"}
+            </span>
+            <div className="relative">
+              <input
+                type="checkbox"
+                name="isActive"
+                value="true"
+                checked={isActive}
+                onChange={(e) => set("isActive")(e.target.checked ? "true" : "false")}
+                className="sr-only"
+              />
+              <div
+                className="h-6 w-11 rounded-full transition-colors"
+                style={{
+                  background: isActive
+                    ? "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)"
+                    : "rgba(43,37,48,0.15)",
+                }}
+                onClick={() => set("isActive")(isActive ? "false" : "true")}
+              >
+                <div
+                  className="mt-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all"
+                  style={{
+                    marginRight: isActive ? "0.125rem" : "1.375rem",
+                    boxShadow: "0 1px 3px rgba(0,0,0,0.18)",
+                  }}
+                />
+              </div>
+            </div>
+          </label>
+        </div>
+      )}
+
+      {/* Action buttons */}
+      <div className="mt-5 flex items-center justify-end gap-3">
+        <Link
+          href="/services"
+          className="flex h-11 cursor-pointer items-center rounded-xl border px-5 text-sm font-medium transition-all hover:shadow-sm"
+          style={{
+            borderColor: "var(--border)",
+            color: "var(--foreground-soft)",
+            background: "var(--surface)",
+          }}
+        >
+          ✕ ביטול
+        </Link>
+        <button
+          type="submit"
+          disabled={isPending}
+          className="flex h-11 cursor-pointer items-center gap-2 rounded-xl px-6 text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-60"
+          style={{
+            background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
+            color: "#fff",
+            boxShadow: "0 2px 8px rgba(184,107,140,0.30)",
+          }}
+        >
+          <Save className="h-4 w-4" />
           {isPending
             ? SERVICES.form.saving
             : isEdit
-              ? SERVICES.form.saveEditButton
-              : SERVICES.form.saveButton}
-        </Button>
-        <div className="text-center">
-          <Link
-            href="/services"
-            className="text-muted hover:text-foreground text-sm transition-colors"
-          >
-            {SERVICES.form.backLink}
-          </Link>
-        </div>
+            ? SERVICES.form.saveEditButton
+            : SERVICES.form.saveButton}
+        </button>
       </div>
+
+      {/* Security note */}
+      <p className="mt-3 text-center text-xs" style={{ color: "var(--muted)" }}>
+        ✓ השינויים יישמרו באופן מאובטח
+      </p>
     </form>
   );
 }

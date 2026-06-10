@@ -67,6 +67,8 @@ export interface ClientDetail {
   email: string | null;
   notes: string | null;
   createdAt: Date;
+  whatsappOptIn: boolean;
+  marketingOptIn: boolean;
   bookings: ClientBookingHistoryItem[];
   stats: ClientStats;
 }
@@ -267,6 +269,8 @@ export async function getClientDetail(
     email: client.email,
     notes: client.notes,
     createdAt: client.createdAt,
+    whatsappOptIn: client.whatsappOptIn,
+    marketingOptIn: client.marketingOptIn,
     bookings: bookings.map((b) => ({
       id: b.id,
       status: b.status,

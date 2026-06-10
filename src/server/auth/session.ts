@@ -24,6 +24,7 @@ export interface CurrentUser {
   id: string;
   email: string;
   name: string | null;
+  isAdmin: boolean;
 }
 
 /** The current user, or null if unauthenticated. */
@@ -34,7 +35,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   return prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true, name: true },
+    select: { id: true, email: true, name: true, isAdmin: true },
   });
 }
 

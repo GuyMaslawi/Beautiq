@@ -36,3 +36,44 @@ export async function updateClientNotesAction(
   revalidatePath(`/clients/${clientId}`);
   return { success: true };
 }
+
+// ---------------------------------------------------------------------------
+// Opt-in management
+// ---------------------------------------------------------------------------
+
+export interface UpdateClientOptInState {
+  success?: boolean;
+  error?: string;
+}
+
+export async function updateClientOptInAction(
+  clientId: string,
+  _prevState: UpdateClientOptInState,
+  formData: FormData,
+): Promise<UpdateClientOptInState> {
+  const tenant = await requireTenant();
+
+  const client = await prisma.client.findUnique({
+    where: { id: clientId },
+    select: { id: true, businessId: true },
+  });
+
+  if (!client || client.businessId !== tenant.businessId) {
+    return { error: CLIENTS.errors.notFound };
+  }
+
+  const whatsappOptIn = formData.get("whatsappOptIn") === "true";
+  const marketingOptIn = formData.get("marketingOptIn") === "true";
+
+  try {
+    await prisma.client.update({
+      where: { id: clientId },
+      data: { whatsappOptIn, marketingOptIn },
+    });
+  } catch {
+    return { error: CLIENTS.errors.generic };
+  }
+
+  revalidatePath(`/clients/${clientId}`);
+  return { success: true };
+}

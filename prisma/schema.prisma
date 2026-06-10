@@ -153,6 +153,81 @@ enum AvailabilityExceptionType {
   custom_hours
 }
 
+enum ExpenseCategory {
+  rent
+  materials
+  equipment
+  marketing
+  staff
+  utilities
+  processing_fees
+  software
+  other
+}
+
+enum SubscriptionPlan {
+  basic
+  pro
+}
+
+/// Lifecycle status of a business's Allura subscription.
+enum SubscriptionStatus {
+  trial
+  active
+  discounted
+  suspended
+  cancelled
+  pending_payment
+}
+
+enum DiscountType {
+  none
+  fixed
+  percentage
+}
+
+enum WhatsAppProvider {
+  dev_mock
+  meta_cloud
+  twilio
+  green_api
+}
+
+enum WhatsAppConnectionStatus {
+  not_connected
+  pending
+  active
+  error
+}
+
+enum AutomationType {
+  win_back
+}
+
+enum AutomationRunStatus {
+  running
+  completed
+  failed
+  partial
+}
+
+enum AutomationMessageStatus {
+  queued
+  sent
+  delivered
+  read
+  failed
+  skipped
+}
+
+enum AutomationOfferType {
+  none
+  discount_10
+  upgrade
+  special_slot
+  custom
+}
+
 // ---------------------------------------------------------------------------
 // Global (non-tenant) models
 // ---------------------------------------------------------------------------
@@ -164,6 +239,7 @@ model User {
   email        String   @unique
   passwordHash String
   name         String?
+  isAdmin      Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
@@ -201,6 +277,21 @@ model Business {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
+  // Public page customisation fields
+  logoUrl              String?
+  coverImageUrl        String?
+  instagramUrl         String?
+  introMessage         String?
+  /// Section visibility toggles for the public booking page
+  showServices         Boolean @default(true)
+  showPrices           Boolean @default(true)
+  showHours            Boolean @default(true)
+  showReviews          Boolean @default(false)
+  showGallery          Boolean @default(false)
+  showCancellationPolicy Boolean @default(true)
+  showPhone            Boolean @default(true)
+  showAddress          Boolean @default(true)
+
   members                BusinessUser[]
   categories             BusinessCategoryOnBusiness[]
   services               Service[]
@@ -214,6 +305,14 @@ model Business {
   reminders              Reminder[]
   waitlistEntries        WaitlistEntry[]
   recommendations        Recommendation[]
+  galleryImages          GalleryImage[]
+  clientReviews          ClientReview[]
+  expenses               Expense[]
+  subscription           BusinessSubscription?
+  whatsappConnection     WhatsAppConnection?
+  automationSettings     AutomationSetting[]
+  automationRuns         AutomationRun[]
+  automationMessages     AutomationMessage[]
 }
 
 /// Membership join between a global User and a Business, carrying the role.
@@ -297,14 +396,21 @@ model Client {
   noShowCount       Int       @default(0)
   cancellationCount Int       @default(0)
   totalSpent        Decimal   @default(0) @db.Decimal(10, 2)
+  /// Client has consented to receive WhatsApp messages
+  whatsappOptIn     Boolean   @default(false)
+  /// Client has consented to receive marketing messages
+  marketingOptIn    Boolean   @default(false)
+  /// Set when client unsubscribes from automated messages
+  unsubscribedAt    DateTime?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  business        Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  bookings        Booking[]
-  payments        Payment[]
-  waitlistEntries WaitlistEntry[]
-  recommendations Recommendation[]
+  business           Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  bookings           Booking[]
+  payments           Payment[]
+  waitlistEntries    WaitlistEntry[]
+  recommendations    Recommendation[]
+  automationMessages AutomationMessage[]
 
   @@unique([businessId, normalizedPhone])
   @@index([businessId])
@@ -332,20 +438,23 @@ model Booking {
   cancelledAt              DateTime?
   completedAt              DateTime?
   noShowAt                 DateTime?
+  /// "pending" | "paid" — set when a late cancellation fee applies; null when not applicable
+  lateCancellationFeeStatus String?
   rescheduledFromBookingId String?
   createdAt                DateTime      @default(now())
   updatedAt                DateTime      @updatedAt
 
-  business        Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  client          Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  service         Service          @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  business           Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  client             Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  service            Service            @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   // Self-relation: when a booking is rescheduled, the new booking points back
   // at the original one it replaced.
-  rescheduledFrom Booking?         @relation("BookingReschedule", fields: [rescheduledFromBookingId], references: [id], onDelete: SetNull)
-  rescheduledTo   Booking[]        @relation("BookingReschedule")
-  payments        Payment[]
-  reminders       Reminder[]
-  recommendations Recommendation[]
+  rescheduledFrom    Booking?           @relation("BookingReschedule", fields: [rescheduledFromBookingId], references: [id], onDelete: SetNull)
+  rescheduledTo      Booking[]          @relation("BookingReschedule")
+  payments           Payment[]
+  reminders          Reminder[]
+  recommendations    Recommendation[]
+  automationMessages AutomationMessage[]
 
   @@index([businessId, startTime])
   @@index([businessId, status])
@@ -424,13 +533,22 @@ model Payment {
 
 /// One cancellation policy per business.
 model CancellationPolicy {
-  id                   String   @id @default(cuid())
-  businessId           String   @unique
-  policyText           String?
-  minNoticeHours       Int?
-  requireDepositToBook Boolean  @default(false)
-  createdAt            DateTime @default(now())
-  updatedAt            DateTime @updatedAt
+  id                           String   @id @default(cuid())
+  businessId                   String   @unique
+  enabled                      Boolean  @default(false)
+  policyText                   String?
+  minNoticeHours               Int?
+  requireDepositToBook         Boolean  @default(false)
+  /// Hours before appointment that mark a cancellation as "late" (6, 12, 24, 48, or custom)
+  lateCancellationHours        Int?
+  /// "none" | "fixed" | "percentage"
+  lateCancellationFeeType      String   @default("none")
+  /// Fixed fee amount in ILS
+  lateCancellationFeeAmount    Decimal? @db.Decimal(10, 2)
+  /// Percentage of service price (0–100)
+  lateCancellationFeePercentage Decimal? @db.Decimal(5, 2)
+  createdAt                    DateTime @default(now())
+  updatedAt                    DateTime @updatedAt
 
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 }
@@ -513,6 +631,40 @@ model WaitlistEntry {
   @@index([businessId, status])
 }
 
+// ---------------------------------------------------------------------------
+// Public page assets
+// ---------------------------------------------------------------------------
+
+/// An image in the business's public gallery (URL-based for V1, upload later).
+model GalleryImage {
+  id         String   @id @default(cuid())
+  businessId String
+  imageUrl   String
+  caption    String?
+  sortOrder  Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+}
+
+/// A client review shown on the public page (owner-approved, owner-entered for V1).
+model ClientReview {
+  id         String   @id @default(cuid())
+  businessId String
+  clientName String
+  reviewText String
+  rating     Int      @default(5)
+  isApproved Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId, isApproved])
+}
+
 /// A rule-based recommendation surfaced to the business owner.
 model Recommendation {
   id               String               @id @default(cuid())
@@ -535,4 +687,168 @@ model Recommendation {
 
   @@index([businessId, status])
   @@index([businessId, type])
+}
+
+/// A manually tracked business expense. V1 is owner-entered only; no payment provider.
+model Expense {
+  id          String          @id @default(cuid())
+  businessId  String
+  amount      Decimal         @db.Decimal(10, 2)
+  description String
+  category    ExpenseCategory
+  date        DateTime        @db.Date
+  notes       String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([businessId, date])
+}
+
+/// Internal subscription / billing record for an Allura customer business.
+/// Managed exclusively by platform admins — never visible to business owners.
+model BusinessSubscription {
+  id             String             @id @default(cuid())
+  businessId     String             @unique
+  plan           SubscriptionPlan   @default(basic)
+  status         SubscriptionStatus @default(trial)
+  monthlyPrice   Decimal            @default(149) @db.Decimal(10, 2)
+  discountType   DiscountType       @default(none)
+  discountValue  Decimal?           @db.Decimal(10, 2)
+  discountNote   String?
+  trialStartedAt DateTime?
+  trialEndsAt    DateTime?
+  suspendedAt    DateTime?
+  cancelledAt    DateTime?
+  /// Internal admin notes — never shown to the business owner.
+  adminNotes     String?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@index([plan])
+}
+
+// ---------------------------------------------------------------------------
+// WhatsApp automation — Win-back
+// ---------------------------------------------------------------------------
+
+/// Stores the WhatsApp Business API connection for a tenant.
+/// V1: Only dev_mock is usable; real providers require Phase 2 credentials.
+model WhatsAppConnection {
+  id                   String                   @id @default(cuid())
+  businessId           String                   @unique
+  provider             WhatsAppProvider         @default(dev_mock)
+  status               WhatsAppConnectionStatus @default(not_connected)
+  /// Display phone number (e.g. +972501234567)
+  phoneNumber          String?
+  /// WhatsApp Business Account ID (Meta Cloud API)
+  wabaId               String?
+  /// Encrypted provider access token — never returned to the client
+  accessTokenEncrypted String?
+  /// Timestamp of the last webhook event received from Meta (any type)
+  lastWebhookReceivedAt DateTime?
+  /// Timestamp of the last delivery status event received via webhook
+  lastDeliveryEventAt  DateTime?
+  /// Timestamp of the last read status event received via webhook
+  lastReadEventAt      DateTime?
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+/// Per-business, per-type automation configuration.
+model AutomationSetting {
+  id              String              @id @default(cuid())
+  businessId      String
+  type            AutomationType
+  enabled         Boolean             @default(false)
+  /// Days of inactivity before a client is eligible (30/45/60/90/custom)
+  thresholdDays   Int                 @default(45)
+  /// Hour of day (0–23, local business timezone) to send messages
+  sendHour        Int                 @default(10)
+  /// Owner-editable message template body with {variables}
+  messageTemplate  String?
+  /// Meta-approved WhatsApp template name (required for real Meta Cloud API sends)
+  templateName     String?
+  /// BCP 47 language code matching the approved template (default: he)
+  templateLanguage String?             @default("he")
+  offerType        AutomationOfferType @default(none)
+  /// Free-text offer value for custom offer type
+  offerValue      String?
+  /// Minimum days between two messages to the same client
+  cooldownDays    Int                 @default(30)
+  /// Only send to clients who have given WhatsApp/marketing opt-in
+  requireOptIn    Boolean             @default(true)
+  /// Timestamp of the first successful test send — used to track sandbox validation progress
+  testSendPassedAt DateTime?
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, type])
+  @@index([businessId])
+}
+
+/// A single execution of an automation job (one per business per run).
+model AutomationRun {
+  id             String              @id @default(cuid())
+  businessId     String
+  type           AutomationType
+  status         AutomationRunStatus @default(running)
+  startedAt      DateTime            @default(now())
+  finishedAt     DateTime?
+  eligibleCount  Int                 @default(0)
+  sentCount      Int                 @default(0)
+  failedCount    Int                 @default(0)
+  skippedCount   Int                 @default(0)
+  createdAt      DateTime            @default(now())
+
+  business Business            @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  messages AutomationMessage[]
+
+  @@index([businessId, type])
+  @@index([businessId, status])
+  @@index([businessId, startedAt])
+}
+
+/// One outbound message attempt per client per automation run.
+model AutomationMessage {
+  id                String                  @id @default(cuid())
+  businessId        String
+  runId             String
+  clientId          String
+  /// Optional — links back to the booking that triggered eligibility
+  bookingId         String?
+  type              AutomationType
+  phone             String
+  messageText       String
+  /// Provider template id if required for approved templates
+  templateId        String?
+  status            AutomationMessageStatus @default(queued)
+  providerMessageId String?
+  failureReason     String?
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  readAt            DateTime?
+  failedAt          DateTime?
+  repliedAt         DateTime?
+  createdAt         DateTime                @default(now())
+
+  business Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  run      AutomationRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
+  client   Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  booking  Booking?       @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+
+  @@index([businessId, type])
+  @@index([businessId, clientId])
+  @@index([runId])
+  @@index([status])
+  @@index([providerMessageId])
 }

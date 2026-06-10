@@ -16,7 +16,7 @@ export default async function AppLayout({
   const business = await getCurrentBusiness();
 
   return (
-    <AppShell userName={user.name ?? user.email} businessName={business?.name ?? null}>
+    <AppShell userName={user.name ?? user.email} businessName={business?.name ?? null} isAdmin={user.isAdmin}>
       {children}
     </AppShell>
   );

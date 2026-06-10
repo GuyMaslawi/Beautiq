@@ -13,7 +13,7 @@ export default async function ServicesPage() {
   const services = await getServices(tenant);
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6">
+    <div className="mx-auto w-full max-w-5xl space-y-6">
       {/* Page header */}
       <PageHeader
         icon={Sparkles}
@@ -39,7 +39,7 @@ export default async function ServicesPage() {
 
       {/* Service list */}
       {services.length > 0 && (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           {services.map((service) => (
             <ServiceCard key={service.id} service={service} />
           ))}

@@ -232,3 +232,39 @@ export async function noShowBookingAction(bookingId: string): Promise<void> {
   revalidatePath("/bookings");
   revalidatePath("/dashboard");
 }
+
+// ---------------------------------------------------------------------------
+// Late cancellation fee tracking
+// ---------------------------------------------------------------------------
+
+export async function markLateCancellationFeePendingAction(
+  bookingId: string,
+): Promise<void> {
+  const tenant = await requireTenant();
+  await prisma.booking.updateMany({
+    where: {
+      id: bookingId,
+      businessId: tenant.businessId,
+      status: { in: ["cancelled", "no_show"] },
+    },
+    data: { lateCancellationFeeStatus: "pending" },
+  });
+  revalidatePath(`/bookings/${bookingId}`);
+  revalidatePath("/bookings");
+}
+
+export async function markLateCancellationFeePaidAction(
+  bookingId: string,
+): Promise<void> {
+  const tenant = await requireTenant();
+  await prisma.booking.updateMany({
+    where: {
+      id: bookingId,
+      businessId: tenant.businessId,
+      status: { in: ["cancelled", "no_show"] },
+    },
+    data: { lateCancellationFeeStatus: "paid" },
+  });
+  revalidatePath(`/bookings/${bookingId}`);
+  revalidatePath("/bookings");
+}

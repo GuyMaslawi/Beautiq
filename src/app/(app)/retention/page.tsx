@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { HeartHandshake, Users } from "lucide-react";
+import { HeartHandshake, Users, Clock, CalendarCheck, MessageCircle } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireCurrentBusiness } from "@/server/auth/session";
 import { getRetentionClients, getRetentionSummary } from "@/server/retention/queries";
@@ -26,7 +26,7 @@ export default async function RetentionPage() {
   ]);
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-6" dir="rtl">
+    <div className="mx-auto w-full max-w-3xl space-y-6" dir="rtl">
       {/* Page header */}
       <PageHeader
         icon={HeartHandshake}
@@ -36,30 +36,74 @@ export default async function RetentionPage() {
 
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-3">
-        <Card className="p-4 text-center">
-          <p className="text-foreground text-2xl font-bold tabular-nums">
+        {/* לא חזרו */}
+        <div
+          className="rounded-2xl px-5 py-4 transition-shadow hover:shadow-md"
+          style={{
+            background: summary.notReturnedCount > 0 ? "rgba(254,246,228,0.80)" : "rgba(255,255,255,0.90)",
+            border: `1px solid ${summary.notReturnedCount > 0 ? "rgba(184,150,10,0.22)" : "var(--border)"}`,
+            boxShadow: "0 1px 6px rgba(43,37,48,0.06)",
+          }}
+        >
+          <div
+            className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl"
+            style={{ background: summary.notReturnedCount > 0 ? "rgba(184,150,10,0.12)" : "rgba(184,107,140,0.08)" }}
+          >
+            <Clock className="h-4 w-4" style={{ color: summary.notReturnedCount > 0 ? "#b87c1e" : "#b86b8c" }} />
+          </div>
+          <p className="text-2xl font-bold tabular-nums" style={{ color: summary.notReturnedCount > 0 ? "#7a6400" : "#2b2530" }}>
             {summary.notReturnedCount}
           </p>
-          <p className="text-muted mt-1 text-xs leading-tight">
+          <p className="mt-1 text-xs font-medium leading-tight" style={{ color: "#8a8190" }}>
             {RETENTION.summary.notReturned}
           </p>
-        </Card>
-        <Card className="p-4 text-center">
-          <p className="text-foreground text-2xl font-bold tabular-nums">
+        </div>
+
+        {/* עם תור קרוב */}
+        <div
+          className="rounded-2xl px-5 py-4 transition-shadow hover:shadow-md"
+          style={{
+            background: summary.withUpcomingCount > 0 ? "rgba(247,238,243,0.85)" : "rgba(255,255,255,0.90)",
+            border: `1px solid ${summary.withUpcomingCount > 0 ? "rgba(184,107,140,0.22)" : "var(--border)"}`,
+            boxShadow: "0 1px 6px rgba(43,37,48,0.06)",
+          }}
+        >
+          <div
+            className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl"
+            style={{ background: summary.withUpcomingCount > 0 ? "rgba(184,107,140,0.13)" : "rgba(184,107,140,0.08)" }}
+          >
+            <CalendarCheck className="h-4 w-4" style={{ color: "#b86b8c" }} />
+          </div>
+          <p className="text-2xl font-bold tabular-nums" style={{ color: summary.withUpcomingCount > 0 ? "#b86b8c" : "#2b2530" }}>
             {summary.withUpcomingCount}
           </p>
-          <p className="text-muted mt-1 text-xs leading-tight">
+          <p className="mt-1 text-xs font-medium leading-tight" style={{ color: "#8a8190" }}>
             {RETENTION.summary.withUpcoming}
           </p>
-        </Card>
-        <Card className="p-4 text-center">
-          <p className="text-foreground text-2xl font-bold tabular-nums">
+        </div>
+
+        {/* הודעות לשליחה */}
+        <div
+          className="rounded-2xl px-5 py-4 transition-shadow hover:shadow-md"
+          style={{
+            background: "rgba(255,255,255,0.90)",
+            border: "1px solid var(--border)",
+            boxShadow: "0 1px 6px rgba(43,37,48,0.06)",
+          }}
+        >
+          <div
+            className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl"
+            style={{ background: "rgba(184,107,140,0.08)" }}
+          >
+            <MessageCircle className="h-4 w-4" style={{ color: "#b86b8c" }} />
+          </div>
+          <p className="text-2xl font-bold tabular-nums" style={{ color: "#2b2530" }}>
             {clients.length}
           </p>
-          <p className="text-muted mt-1 text-xs leading-tight">
+          <p className="mt-1 text-xs font-medium leading-tight" style={{ color: "#8a8190" }}>
             {RETENTION.summary.messagesToSend}
           </p>
-        </Card>
+        </div>
       </div>
 
       {/* Client list or empty state */}

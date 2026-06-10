@@ -1,5 +1,5 @@
 /**
- * Prisma seed — Beautiq
+ * Prisma seed — Allura
  *
  * Seeds ONLY safe development/reference data:
  *   1. BusinessCategory        — fixed beauty/wellness categories (Hebrew names).

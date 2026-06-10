@@ -1,13 +1,12 @@
 import Link from "next/link";
-import { Users2, CalendarCheck, UserX, Clock } from "lucide-react";
+import { Users2, CalendarCheck, UserX, Clock, Upload } from "lucide-react";
 import type { ReactNode } from "react";
 import { requireTenant } from "@/server/auth/session";
 import { getClients, getClientSummary } from "@/server/clients/queries";
-import { ClientCard } from "@/components/clients/client-card";
+import { ClientRow } from "@/components/clients/client-row";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
-import { PageHeader } from "@/components/ui/page-header";
 import { CLIENTS } from "@/lib/constants/he";
 
 interface SummaryCardProps {
@@ -20,46 +19,41 @@ interface SummaryCardProps {
 }
 
 function SummaryCard({ label, helper, count, icon, highlight, warn }: SummaryCardProps) {
-  const bg = highlight
-    ? "rgba(247,238,243,0.85)"
-    : warn
-    ? "rgba(254,246,228,0.80)"
-    : "rgba(247,238,243,0.38)";
-  const borderColor = highlight
-    ? "rgba(184,107,140,0.22)"
-    : warn
-    ? "rgba(184,150,10,0.22)"
-    : "var(--border)";
-  const numColor = highlight ? "#b86b8c" : warn ? "#7a6400" : "#2b2530";
-  const iconBg = highlight
-    ? "rgba(184,107,140,0.13)"
-    : warn
-    ? "rgba(184,150,10,0.12)"
-    : "rgba(184,107,140,0.08)";
-  const iconColor = highlight ? "#b86b8c" : warn ? "#b87c1e" : "#b86b8c";
-
   return (
     <div
-      className="rounded-xl px-4 py-3.5"
+      className="rounded-2xl px-5 py-4 transition-shadow hover:shadow-md"
       style={{
-        background: bg,
-        border: `1px solid ${borderColor}`,
-        boxShadow: "0 1px 3px rgba(43,37,48,0.05)",
+        background: highlight
+          ? "rgba(247,238,243,0.85)"
+          : warn
+          ? "rgba(254,246,228,0.80)"
+          : "rgba(255,255,255,0.90)",
+        border: `1px solid ${highlight ? "rgba(184,107,140,0.22)" : warn ? "rgba(184,150,10,0.22)" : "var(--border)"}`,
+        boxShadow: "0 1px 6px rgba(43,37,48,0.06)",
       }}
     >
       <div
-        className="mb-2.5 flex h-7 w-7 items-center justify-center rounded-lg"
-        style={{ background: iconBg }}
+        className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl"
+        style={{
+          background: highlight
+            ? "rgba(184,107,140,0.13)"
+            : warn
+            ? "rgba(184,150,10,0.12)"
+            : "rgba(184,107,140,0.08)",
+        }}
       >
-        <span style={{ color: iconColor }}>{icon}</span>
+        <span style={{ color: highlight ? "#b86b8c" : warn ? "#b87c1e" : "#b86b8c" }}>{icon}</span>
       </div>
-      <p className="text-xs font-medium leading-tight" style={{ color: "#8a8190" }}>
-        {label}
-      </p>
-      <p className="mt-1 text-2xl font-bold tabular-nums" style={{ color: numColor }}>
+      <p
+        className="text-2xl font-bold tabular-nums"
+        style={{ color: highlight ? "#b86b8c" : warn ? "#7a6400" : "#2b2530" }}
+      >
         {count}
       </p>
-      <p className="mt-1 text-xs leading-tight" style={{ color: "#bbb3c2" }}>
+      <p className="mt-1 text-xs font-medium leading-tight" style={{ color: "#8a8190" }}>
+        {label}
+      </p>
+      <p className="mt-0.5 text-[10px] leading-tight" style={{ color: "#bbb3c2" }}>
         {helper}
       </p>
     </div>
@@ -81,42 +75,57 @@ export default async function ClientsPage({
   ]);
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6">
+    <div className="mx-auto w-full max-w-6xl space-y-6">
       {/* Page header */}
-      <PageHeader
-        icon={Users2}
-        title={CLIENTS.pageTitle}
-        subtitle="כאן מנהלים את הלקוחות, ההיסטוריה והקשר איתם."
-      />
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--foreground)" }}>
+            לקוחות
+          </h1>
+          <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
+            כל הלקוחות שלך, במקום אחד. ניהול קשרים, מעקב פגישות — בקלות.
+          </p>
+        </div>
+        <Link href="/clients/import">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="flex items-center gap-1.5 shrink-0"
+          >
+            <Upload className="h-3.5 w-3.5" />
+            ייבוא לקוחות
+          </Button>
+        </Link>
+      </div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <SummaryCard
-          label={CLIENTS.summary.total}
-          helper={CLIENTS.summary.totalHelper}
-          count={summary.total}
-          icon={<Users2 className="h-3.5 w-3.5" />}
-        />
-        <SummaryCard
-          label={CLIENTS.summary.withUpcoming}
+          label="פגישות קרובות"
           helper={CLIENTS.summary.withUpcomingHelper}
           count={summary.withUpcoming}
-          icon={<CalendarCheck className="h-3.5 w-3.5" />}
+          icon={<CalendarCheck className="h-4 w-4" />}
           highlight={summary.withUpcoming > 0}
         />
         <SummaryCard
-          label={CLIENTS.summary.withNoShow}
+          label="לא הגיעו"
           helper={CLIENTS.summary.withNoShowHelper}
           count={summary.withNoShow}
-          icon={<UserX className="h-3.5 w-3.5" />}
+          icon={<UserX className="h-4 w-4" />}
           warn={summary.withNoShow > 0}
         />
         <SummaryCard
-          label={CLIENTS.summary.notReturned}
+          label="זקוקים למעקב"
           helper={CLIENTS.summary.notReturnedHelper}
           count={summary.notReturned}
-          icon={<Clock className="h-3.5 w-3.5" />}
+          icon={<Clock className="h-4 w-4" />}
           warn={summary.notReturned > 0}
+        />
+        <SummaryCard
+          label={CLIENTS.summary.total}
+          helper={CLIENTS.summary.totalHelper}
+          count={summary.total}
+          icon={<Users2 className="h-4 w-4" />}
         />
       </div>
 
@@ -134,9 +143,7 @@ export default async function ClientsPage({
         </Button>
         {search && (
           <Link href="/clients">
-            <Button variant="ghost" size="sm">
-              ✕
-            </Button>
+            <Button variant="ghost" size="sm">✕</Button>
           </Link>
         )}
       </form>
@@ -154,30 +161,69 @@ export default async function ClientsPage({
 
       {/* Empty state — search returned nothing */}
       {summary.total > 0 && clients.length === 0 && search && (
-        <div className="rounded-2xl border border-border bg-surface px-6 py-12 text-center"
-          style={{ boxShadow: "var(--shadow-sm)" }}>
-          <h3 className="text-foreground text-base font-semibold">
-            {CLIENTS.searchEmpty.title}
-          </h3>
-          <p className="text-muted mx-auto mt-2 max-w-xs text-sm leading-6">
-            {CLIENTS.searchEmpty.body}
-          </p>
+        <div
+          className="rounded-2xl border px-6 py-12 text-center"
+          style={{ borderColor: "var(--border)", background: "var(--surface)", boxShadow: "var(--shadow-sm)" }}
+        >
+          <h3 className="text-foreground text-base font-semibold">{CLIENTS.searchEmpty.title}</h3>
+          <p className="text-muted mx-auto mt-2 max-w-xs text-sm leading-6">{CLIENTS.searchEmpty.body}</p>
           <div className="mt-4">
             <Link href="/clients">
-              <Button variant="secondary" size="sm">
-                {CLIENTS.searchEmpty.showAll}
-              </Button>
+              <Button variant="secondary" size="sm">{CLIENTS.searchEmpty.showAll}</Button>
             </Link>
           </div>
         </div>
       )}
 
-      {/* Client list */}
+      {/* Clients table */}
       {clients.length > 0 && (
-        <div className="space-y-3">
-          {clients.map((client) => (
-            <ClientCard key={client.id} client={client} />
-          ))}
+        <div
+          className="overflow-hidden rounded-2xl"
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
+            boxShadow: "var(--shadow-md)",
+          }}
+        >
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr
+                  style={{
+                    borderBottom: "1px solid var(--border)",
+                    background: "linear-gradient(135deg, rgba(247,238,243,0.60) 0%, rgba(255,255,255,0) 100%)",
+                  }}
+                >
+                  {["לקוח", "פרטים", "פעילות", "היסטוריה", "ערך לקוח", "פעולות"].map((col) => (
+                    <th
+                      key={col}
+                      className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide"
+                      style={{ color: "var(--muted)" }}
+                    >
+                      {col}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {clients.map((client) => (
+                  <ClientRow key={client.id} client={client} />
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Footer */}
+          <div
+            className="flex items-center justify-between px-4 py-3 text-xs"
+            style={{
+              borderTop: "1px solid var(--border)",
+              background: "rgba(247,238,243,0.25)",
+              color: "var(--muted)",
+            }}
+          >
+            <span>מציג {clients.length} מתוך {summary.total} לקוחות</span>
+          </div>
         </div>
       )}
     </div>

@@ -1,8 +1,8 @@
 /**
- * Beautiq demo seed — LOCAL DEVELOPMENT ONLY
+ * Allura demo seed — LOCAL DEVELOPMENT ONLY
  *
  * Creates a complete demo environment for "הסטודיו של יעל":
- *   - Demo business owner account  (demo@beautiq.local / Demo123456!)
+ *   - Demo business owner account  (demo@allura.local / Demo123456!)
  *   - Business with categories, services, and weekly availability
  *   - 6 realistic Hebrew clients
  *   - 12 bookings covering every key status and guidance-rule trigger
@@ -34,7 +34,7 @@ const prisma = new PrismaClient();
 
 // ─── Demo constants ───────────────────────────────────────────────────────────
 
-const DEMO_EMAIL = "demo@beautiq.local";
+const DEMO_EMAIL = "demo@allura.local";
 const DEMO_PASSWORD = "Demo123456!";
 const DEMO_SLUG = "yael-studio";
 
@@ -63,7 +63,7 @@ function normalizePhone(phone: string): string {
 // ─── Main ──────────────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log("🌱  Beautiq demo seed — LOCAL DEV ONLY");
+  console.log("🌱  Allura demo seed — LOCAL DEV ONLY");
   console.log(`    Slug: ${DEMO_SLUG}\n`);
 
   // ── 1. Demo user ─────────────────────────────────────────────────────────
