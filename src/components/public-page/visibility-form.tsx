@@ -2,6 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Switch } from "@/components/ui/switch";
 import { Alert } from "@/components/ui/alert";
 import { PUBLIC_PAGE } from "@/lib/constants/he";
 import type {
@@ -57,26 +58,13 @@ export function VisibilityForm({
       <div className="space-y-3">
         {TOGGLES.map(({ key, label }) => (
           <div key={key} className="flex items-center justify-between gap-4">
-            {/* Hidden inputs send the actual value */}
             <input type="hidden" name={key} value={values[key] ? "true" : "false"} />
             <span className="text-sm text-[var(--foreground)]">{label}</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={values[key]}
-              onClick={() => toggle(key)}
-              className="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none"
-              style={{
-                background: values[key]
-                  ? "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)"
-                  : "var(--border)",
-              }}
-            >
-              <span
-                className="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow-sm ring-0 transition duration-200 ease-in-out"
-                style={{ transform: values[key] ? "translateX(-20px)" : "translateX(-1px)" }}
-              />
-            </button>
+            <Switch
+              checked={values[key]}
+              onCheckedChange={() => toggle(key)}
+              aria-label={label}
+            />
           </div>
         ))}
       </div>

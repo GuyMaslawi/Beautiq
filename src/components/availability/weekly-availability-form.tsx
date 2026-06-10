@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { TimeSelect } from "@/components/availability/time-select";
+import { Switch } from "@/components/ui/switch";
 import { AVAILABILITY } from "@/lib/constants/he";
 import { minutesToTime } from "@/lib/time";
 import {
@@ -137,23 +138,11 @@ function DayRow({
           name={`day_${weekday}_open`}
           value={config.isOpen ? "true" : "false"}
         />
-        {/* Physical left/right used intentionally — toggles are direction-neutral */}
-        <button
-          type="button"
-          role="switch"
-          aria-checked={config.isOpen}
+        <Switch
+          checked={config.isOpen}
+          onCheckedChange={() => onToggle()}
           aria-label={`${dayName} — ${config.isOpen ? AVAILABILITY.weekly.open : AVAILABILITY.weekly.closed}`}
-          onClick={onToggle}
-          className={`relative inline-block h-6 w-11 shrink-0 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
-            config.isOpen ? "bg-primary" : "bg-border"
-          }`}
-        >
-          <span
-            className={`absolute top-1 h-4 w-4 rounded-full bg-white shadow transition-all duration-200 ${
-              config.isOpen ? "left-6" : "left-1"
-            }`}
-          />
-        </button>
+        />
 
         <span
           className={`min-w-[3.5rem] text-sm font-semibold ${

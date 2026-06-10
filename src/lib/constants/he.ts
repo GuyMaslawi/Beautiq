@@ -1750,7 +1750,7 @@ export const CLIENT_IMPORT = {
 /** טקסטים לאוטומציות ותזכורות תורים */
 export const AUTOMATIONS = {
   pageTitle: "אוטומציות",
-  pageSubtitle: "תזכורות אוטומטיות לפני תור, הודעות חזרה ועוד",
+  pageSubtitle: "תזכורות והודעות שנשלחות אוטומטית כדי לחסוך זמן ולהחזיר לקוחות.",
 
   reminders: {
     sectionTitle: "תזכורות תורים",

@@ -180,6 +180,41 @@ export async function saveWinBackAutomationSetting(
 }
 
 // ---------------------------------------------------------------------------
+// Toggle automation enabled state (hero CTA)
+// ---------------------------------------------------------------------------
+
+export async function toggleWinBackAutomation(
+  enabled: boolean,
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const business = await requireCurrentBusiness();
+    await prisma.automationSetting.upsert({
+      where: { businessId_type: { businessId: business.id, type: "win_back" } },
+      create: {
+        businessId: business.id,
+        type: "win_back",
+        enabled,
+        thresholdDays: 45,
+        sendHour: 10,
+        messageTemplate: null,
+        offerType: "none" as AutomationOfferType,
+        offerValue: null,
+        cooldownDays: 30,
+        requireOptIn: true,
+        templateName: null,
+        templateLanguage: "he",
+      },
+      update: { enabled },
+    });
+    revalidatePath("/bring-back");
+    revalidatePath("/automations");
+    return { success: true };
+  } catch {
+    return { success: false, error: "שמירה נכשלה. יש לנסות שוב." };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Trigger manual automation run (dev-safe)
 // ---------------------------------------------------------------------------
 

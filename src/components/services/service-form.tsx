@@ -3,6 +3,7 @@
 import { useActionState, useState } from "react";
 import Link from "next/link";
 import { FileText, Clock, CreditCard, Settings2, ToggleLeft, Save } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -400,38 +401,17 @@ export function ServiceForm({
               </p>
             </div>
           </div>
-          <label className="flex cursor-pointer items-center gap-3">
+          <div className="flex items-center gap-3">
+            <input type="hidden" name="isActive" value={isActive ? "true" : "false"} />
             <span className="text-sm font-medium" style={{ color: "var(--muted)" }}>
               {isActive ? "פעיל" : "לא פעיל"}
             </span>
-            <div className="relative">
-              <input
-                type="checkbox"
-                name="isActive"
-                value="true"
-                checked={isActive}
-                onChange={(e) => set("isActive")(e.target.checked ? "true" : "false")}
-                className="sr-only"
-              />
-              <div
-                className="h-6 w-11 rounded-full transition-colors"
-                style={{
-                  background: isActive
-                    ? "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)"
-                    : "rgba(43,37,48,0.15)",
-                }}
-                onClick={() => set("isActive")(isActive ? "false" : "true")}
-              >
-                <div
-                  className="mt-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all"
-                  style={{
-                    marginRight: isActive ? "0.125rem" : "1.375rem",
-                    boxShadow: "0 1px 3px rgba(0,0,0,0.18)",
-                  }}
-                />
-              </div>
-            </div>
-          </label>
+            <Switch
+              checked={isActive}
+              onCheckedChange={(v) => set("isActive")(v ? "true" : "false")}
+              aria-label="סטטוס השירות"
+            />
+          </div>
         </div>
       )}
 
