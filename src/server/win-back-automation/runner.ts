@@ -134,17 +134,24 @@ export async function runWinBackForBusiness(business: {
       },
     });
 
+    // hello_world is Meta's zero-variable sandbox template; sending body
+    // components against it triggers error 131008. Real templates carry 4 vars.
+    const templateVariables =
+      setting.templateName === "hello_world"
+        ? undefined
+        : {
+            "1": client.fullName,
+            "2": business.name,
+            "3": client.lastServiceName ?? "",
+            "4": offerText,
+          };
+
     const result = await provider.send({
       businessId: business.id,
       toPhone: client.normalizedPhone,
       templateId: setting.templateName ?? undefined,
       templateLanguage: setting.templateLanguage ?? "he",
-      templateVariables: {
-        "1": client.fullName,
-        "2": business.name,
-        "3": client.lastServiceName ?? "",
-        "4": offerText,
-      },
+      templateVariables,
       fallbackText: messageText,
       automationRunId: run.id,
       clientId: client.id,
