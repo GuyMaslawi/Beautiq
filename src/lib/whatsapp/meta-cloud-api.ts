@@ -43,6 +43,26 @@ function buildBodyComponents(
     .map((key) => ({ type: "text" as const, text: variables[key] }));
 }
 
+/**
+ * Fetches a template's definition from Meta so we can compare it against
+ * what we're building in the payload. Call this when debugging 131008 errors.
+ */
+async function fetchTemplateDefinition(
+  config: MetaProviderConfig,
+  templateName: string,
+  wabaId: string,
+): Promise<unknown> {
+  const url = `${META_GRAPH_BASE}/${config.apiVersion}/${wabaId}/message_templates?name=${encodeURIComponent(templateName)}&fields=name,language,components,status`;
+  try {
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${config.accessToken}` },
+    });
+    return await res.json();
+  } catch (e) {
+    return { fetchError: String(e) };
+  }
+}
+
 export function createMetaCloudApiProvider(
   config: MetaProviderConfig,
 ): WhatsAppProvider {
@@ -89,6 +109,10 @@ export function createMetaCloudApiProvider(
       console.log(
         `[WhatsApp meta_cloud_api] sending — businessId=${businessId} clientId=${clientId} runId=${automationRunId} to=${recipientPhone} template=${templateId}`,
       );
+      // Full payload (access token is only in the Authorization header, not here)
+      console.log(
+        `[WhatsApp meta_cloud_api] REQUEST PAYLOAD:\n${JSON.stringify(payload, null, 2)}`,
+      );
 
       let response: Response;
       try {
@@ -118,6 +142,11 @@ export function createMetaCloudApiProvider(
         };
       }
 
+      // Always log the full response for diagnostics
+      console.log(
+        `[WhatsApp meta_cloud_api] RESPONSE (HTTP ${response.status}):\n${JSON.stringify(body, null, 2)}`,
+      );
+
       if (!response.ok || body.error) {
         const reason =
           body.error?.message ??
@@ -125,6 +154,23 @@ export function createMetaCloudApiProvider(
         console.error(
           `[WhatsApp meta_cloud_api] API error — businessId=${businessId} code=${body.error?.code} type=${body.error?.type} message=${body.error?.message}`,
         );
+
+        // On "Required parameter is missing" (131008) fetch the template definition
+        // from Meta so we can compare its expected components against what we sent.
+        if (body.error?.code === 131008) {
+          const wabaId = process.env.META_WHATSAPP_WABA_ID ?? "";
+          if (wabaId) {
+            const templateDef = await fetchTemplateDefinition(config, templateId, wabaId);
+            console.error(
+              `[WhatsApp meta_cloud_api] TEMPLATE DEFINITION from Meta (for mismatch debug):\n${JSON.stringify(templateDef, null, 2)}`,
+            );
+          } else {
+            console.error(
+              `[WhatsApp meta_cloud_api] META_WHATSAPP_WABA_ID not set — cannot fetch template definition for debug`,
+            );
+          }
+        }
+
         return { success: false, providerMessageId: null, failureReason: reason };
       }
 
