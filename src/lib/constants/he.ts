@@ -659,9 +659,9 @@ export const CLIENTS = {
 
     optInSection: "הסכמה לקבלת הודעות",
     optInHelper:
-      "נדרש אישור לקוחה כדי לשלוח הודעות אוטומטיות.",
+      "הודעות WhatsApp נשלחות רק ללקוחות שאישרו זאת. הודעות שיווקיות (כמו הודעות החזרת לקוחה) דורשות הסכמה נפרדת.",
     whatsappOptInLabel: "אישרה קבלת הודעות WhatsApp",
-    marketingOptInLabel: "אישרה קבלת הודעות שיווקיות",
+    marketingOptInLabel: "אישרה קבלת הודעות שיווקיות (החזרת לקוחה, מבצעים)",
     optInSave: "שמירה",
     optInSaving: "שומר…",
     optInSaved: "העדפות ההודעות עודכנו",
@@ -685,7 +685,7 @@ export const CLIENTS = {
       notes: "הערות פנימיות",
       notesPlaceholder: "הערות על הלקוחה — אלרגיות, העדפות, מידע חשוב",
       whatsappOptIn: "מאשרת קבלת הודעות WhatsApp",
-      marketingOptIn: "מאשרת הודעות שיווקיות",
+      marketingOptIn: "מאשרת הודעות שיווקיות (החזרת לקוחה, מבצעים)",
       unsubscribedNotice: "הלקוחה הסירה את עצמה מהודעות אוטומטיות",
     },
 

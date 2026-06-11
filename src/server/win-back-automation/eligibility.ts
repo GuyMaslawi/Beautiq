@@ -8,7 +8,8 @@
  *   4. Has a valid E.164 phone (normalizedPhone matches +972XXXXXXXXX)
  *   5. Has not been unsubscribed
  *   6. Has whatsappOptIn=true when requireOptIn is enabled
- *   7. Was not already contacted by this automation within cooldownDays
+ *   7. Has marketingOptIn=true (win-back is a marketing message)
+ *   8. Was not already contacted by this automation within cooldownDays
  */
 
 import { prisma } from "@/server/db/prisma";
@@ -55,6 +56,8 @@ export interface EligibilityBreakdown {
   hasFutureBooking: number;
   /** Excluded: whatsappOptIn=false when requireOptIn=true */
   noOptIn: number;
+  /** Excluded: marketingOptIn=false (win-back is a marketing message, always required) */
+  noMarketingOptIn: number;
   /** Excluded: normalizedPhone is not a valid E.164 Israeli number */
   invalidPhone: number;
   /** Excluded: was messaged by this automation within cooldownDays */
@@ -75,6 +78,9 @@ export async function getEligibleClients(
   const whereOptIn: Prisma.ClientWhereInput = requireOptIn
     ? { whatsappOptIn: true }
     : {};
+
+  // Win-back is always a marketing message — marketingOptIn is always required.
+  const whereMarketingOptIn: Prisma.ClientWhereInput = { marketingOptIn: true };
 
   const cooldownFilter: Prisma.ClientWhereInput = ignoreCooldown
     ? {}
@@ -97,6 +103,7 @@ export async function getEligibleClients(
       // doing the expensive booking joins
       normalizedPhone: { startsWith: "+972" },
       ...whereOptIn,
+      ...whereMarketingOptIn,
       bookings: {
         some: {
           businessId: tenant.businessId,
@@ -175,7 +182,7 @@ export async function getEligibilityBreakdown(
   const thresholdDate = new Date(now.getTime() - thresholdDays * 24 * 60 * 60 * 1000);
   const cooldownDate = new Date(now.getTime() - cooldownDays * 24 * 60 * 60 * 1000);
 
-  const [total, eligible, noOptIn, invalidPhone] = await Promise.all([
+  const [total, eligible, noOptIn, noMarketingOptIn, invalidPhone] = await Promise.all([
     // All active (not unsubscribed) clients
     prisma.client.count({
       where: { businessId: tenant.businessId, unsubscribedAt: null },
@@ -184,7 +191,7 @@ export async function getEligibilityBreakdown(
     // Fully eligible — reuse the main query count
     getEligibleClients(tenant, options).then((c) => c.length),
 
-    // Missing opt-in (only relevant when requireOptIn=true)
+    // Missing WhatsApp opt-in (only relevant when requireOptIn=true)
     requireOptIn
       ? prisma.client.count({
           where: {
@@ -194,6 +201,15 @@ export async function getEligibilityBreakdown(
           },
         })
       : Promise.resolve(0),
+
+    // Missing marketing opt-in (always required for win-back)
+    prisma.client.count({
+      where: {
+        businessId: tenant.businessId,
+        unsubscribedAt: null,
+        marketingOptIn: false,
+      },
+    }),
 
     // Invalid phone (does not match E.164 +972 prefix)
     prisma.client.count({
@@ -271,6 +287,7 @@ export async function getEligibilityBreakdown(
     noCompletedBooking,
     hasFutureBooking,
     noOptIn,
+    noMarketingOptIn,
     invalidPhone,
     inCooldown: ignoreCooldown ? 0 : rawInCooldown,
     cooldownOverrideCount: ignoreCooldown ? rawInCooldown : 0,

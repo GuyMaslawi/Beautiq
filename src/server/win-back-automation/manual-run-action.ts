@@ -4,13 +4,14 @@ import { prisma } from "@/server/db/prisma";
 import { requireCurrentBusiness, getCurrentUser } from "@/server/auth/session";
 import { getEligibleClients, getEligibilityBreakdown } from "./eligibility";
 import { getBlockedClientsByReason } from "./blocked-clients";
-import type { BlockedClientsByReason } from "./blocked-clients";
 import { runWinBackForBusiness } from "./runner";
 import { isRealSendConfigured, isTestModeActive } from "@/lib/whatsapp/provider";
 import { revalidatePath } from "next/cache";
-
-export type { BlockedClientsByReason };
-export type { BlockedClientPreview } from "./blocked-clients";
+import type {
+  EligibilityCheckResult,
+  ManualRunMessageResult,
+  ManualRunResult,
+} from "./shared-types";
 
 function maskPhone(phone: string): string {
   if (!phone || phone.length < 4) return "****";
@@ -26,40 +27,6 @@ function maskTestPhone(): string | undefined {
 // ---------------------------------------------------------------------------
 // Eligibility check (dry-run) — no messages sent
 // ---------------------------------------------------------------------------
-
-export interface EligibleClientPreview {
-  name: string;
-  maskedPhone: string;
-  lastService: string;
-  daysSinceLastVisit: number;
-}
-
-export interface EligibilityBreakdownResult {
-  total: number;
-  eligible: number;
-  noCompletedBooking: number;
-  hasFutureBooking: number;
-  noOptIn: number;
-  invalidPhone: number;
-  inCooldown: number;
-  /** Admin override: how many cooldown clients were included instead of skipped */
-  cooldownOverrideCount: number;
-}
-
-export interface EligibilityCheckResult {
-  success: boolean;
-  error?: string;
-  automationEnabled: boolean;
-  whatsappConnected: boolean;
-  realSendConfigured: boolean;
-  testModeActive: boolean;
-  /** Masked last-4 of WHATSAPP_TEST_PHONE, present only when testModeActive */
-  maskedTestPhone?: string;
-  breakdown: EligibilityBreakdownResult | null;
-  eligibleClients: EligibleClientPreview[];
-  /** Per-client priority-based blocking reason breakdown */
-  blockedClients: BlockedClientsByReason | null;
-}
 
 export async function checkWinBackEligibilityAction(
   params?: { ignoreCooldown?: boolean },
@@ -157,29 +124,6 @@ export async function checkWinBackEligibilityAction(
 // ---------------------------------------------------------------------------
 // Manual run — real (or mock) send + per-client result report
 // ---------------------------------------------------------------------------
-
-export interface ManualRunMessageResult {
-  clientId: string;
-  clientName: string;
-  maskedPhone: string;
-  status: string;
-  failureReason: string | null;
-}
-
-export interface ManualRunResult {
-  success: boolean;
-  error?: string;
-  runId?: string;
-  sentCount: number;
-  failedCount: number;
-  skippedCount: number;
-  mockSkipCount: number;
-  isMockMode: boolean;
-  isTestMode: boolean;
-  /** Masked last-4 of WHATSAPP_TEST_PHONE, present only when isTestMode */
-  maskedTestPhone?: string;
-  messages: ManualRunMessageResult[];
-}
 
 export async function runWinBackManualAction(
   params?: { ignoreCooldown?: boolean },

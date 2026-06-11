@@ -61,6 +61,7 @@ export async function sendManualClientWhatsAppAction(
       normalizedPhone: true,
       unsubscribedAt: true,
       whatsappOptIn: true,
+      marketingOptIn: true,
       bookings: {
         where: { businessId, status: "completed" },
         orderBy: { startTime: "desc" },
@@ -92,15 +93,7 @@ export async function sendManualClientWhatsAppAction(
     return { error: "WhatsApp לא מחובר לעסק הזה" };
   }
 
-  // --- Recent message warning (non-blocking — owner can confirm) ---
-  if (!forceIfRecent) {
-    const recent = await hasRecentMessage(businessId, clientId);
-    if (recent) {
-      return { recentMessageWarning: true };
-    }
-  }
-
-  // --- Load automation setting for template details ---
+  // --- Load automation setting for template details + requireOptIn flag ---
   const setting = await prisma.automationSetting.findUnique({
     where: { businessId_type: { businessId, type: "win_back" } },
     select: {
@@ -109,14 +102,33 @@ export async function sendManualClientWhatsAppAction(
       messageTemplate: true,
       offerType: true,
       offerValue: true,
+      requireOptIn: true,
     },
   });
+
+  // --- Opt-in guards for win_back (marketing message) ---
+  if (messageType === "win_back") {
+    if ((setting?.requireOptIn ?? false) && !client.whatsappOptIn) {
+      return { error: "הלקוחה לא אישרה קבלת הודעות WhatsApp" };
+    }
+    if (!client.marketingOptIn) {
+      return { error: "הלקוחה לא אישרה הודעות שיווקיות" };
+    }
+  }
 
   const realSendEnabled = process.env.ENABLE_REAL_WHATSAPP_SEND === "true";
 
   // In real-send mode a Meta-approved template is required
   if (realSendEnabled && !setting?.templateName) {
     return { error: "לא הוגדרה תבנית הודעה מתאימה — יש להגדיר תבנית WhatsApp מאושרת בהגדרות האוטומציה" };
+  }
+
+  // --- Recent message warning (non-blocking — owner can confirm) ---
+  if (!forceIfRecent) {
+    const recent = await hasRecentMessage(businessId, clientId);
+    if (recent) {
+      return { recentMessageWarning: true };
+    }
   }
 
   const lastServiceName = client.bookings[0]?.service.name;

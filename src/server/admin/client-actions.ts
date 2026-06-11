@@ -112,6 +112,8 @@ export async function adminSendManualClientWhatsAppAction(
       phone: true,
       normalizedPhone: true,
       unsubscribedAt: true,
+      whatsappOptIn: true,
+      marketingOptIn: true,
       business: { select: { id: true, name: true, slug: true } },
       bookings: {
         where: { status: "completed" },
@@ -151,8 +153,19 @@ export async function adminSendManualClientWhatsAppAction(
       messageTemplate: true,
       offerType: true,
       offerValue: true,
+      requireOptIn: true,
     },
   });
+
+  // --- Opt-in guards for win_back (marketing message) ---
+  if (messageType === "win_back") {
+    if ((setting?.requireOptIn ?? false) && !client.whatsappOptIn) {
+      return { error: "הלקוחה לא אישרה קבלת הודעות WhatsApp" };
+    }
+    if (!client.marketingOptIn) {
+      return { error: "הלקוחה לא אישרה הודעות שיווקיות" };
+    }
+  }
 
   const realSendEnabled = process.env.ENABLE_REAL_WHATSAPP_SEND === "true";
 

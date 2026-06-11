@@ -18,7 +18,7 @@ import {
 import type {
   EligibilityCheckResult,
   ManualRunResult,
-} from "@/server/win-back-automation/manual-run-action";
+} from "@/server/win-back-automation/shared-types";
 import { EligibilityReasonCards } from "./eligibility-reason-cards";
 
 // ---------------------------------------------------------------------------

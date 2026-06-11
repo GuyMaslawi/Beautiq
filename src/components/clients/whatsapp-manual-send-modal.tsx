@@ -21,11 +21,12 @@ function maskPhone(phone: string): string {
 // ---------------------------------------------------------------------------
 
 const MESSAGE_TYPES: { value: ManualSendMessageType; label: string }[] = [
-  { value: "win_back", label: "הודעת החזרה ללקוחה" },
   { value: "manual_test", label: "הודעת בדיקה" },
+  { value: "win_back", label: "הודעת החזרה ללקוחה" },
 ];
 
 const OWNER_MESSAGE_TYPES: { value: ManualSendMessageType; label: string }[] = [
+  { value: "manual_test", label: "הודעת בדיקה" },
   { value: "win_back", label: "הודעת החזרה ללקוחה" },
 ];
 
@@ -60,7 +61,7 @@ export function WhatsAppManualSendModal({
   trigger,
 }: Props) {
   const [open, setOpen] = useState(false);
-  const [messageType, setMessageType] = useState<ManualSendMessageType>("win_back");
+  const [messageType, setMessageType] = useState<ManualSendMessageType>("manual_test");
   const [isPending, startTransition] = useTransition();
 
   type Step = "confirm" | "recent_warning" | "success" | "error";
@@ -157,6 +158,8 @@ export function WhatsAppManualSendModal({
                       <Row label="לקוחה" value={clientName} />
                       <Row label="טלפון" value={maskPhone(clientPhone)} dir="ltr" />
                       <Row label="עסק" value={businessName} />
+                      <Row label="מצב שליחה" value={isTestMode ? "בדיקה" : "אמיתי"} />
+                      <Row label="נמען בפועל" value={isTestMode ? "מספר הבדיקה" : "הלקוחה"} />
                     </div>
 
                     {/* Message type selector */}

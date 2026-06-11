@@ -12,7 +12,7 @@ import {
   ChevronDown,
   ExternalLink,
 } from "lucide-react";
-import type { BlockedClientsByReason, BlockedClientPreview } from "@/server/win-back-automation/manual-run-action";
+import type { BlockedClientsByReason, BlockedClientPreview } from "@/server/win-back-automation/shared-types";
 
 // ---------------------------------------------------------------------------
 // Reason config
@@ -67,6 +67,17 @@ const REASON_CONFIGS: ReasonConfig[] = [
     title: "לא אישרה קבלת הודעות WhatsApp",
     description: "הלקוחה לא אישרה קבלת הודעות WhatsApp.",
     fixHint: "אפשר לעדכן את העדפות הלקוחה אם התקבלה ממנה הסכמה.",
+    isFixable: true,
+  },
+  {
+    key: "noMarketingOptIn",
+    icon: ShieldAlert,
+    colorHex: "#7c3aed",
+    bgAlpha: "rgba(139,92,246,0.07)",
+    borderAlpha: "rgba(139,92,246,0.22)",
+    title: "לא אישרה הודעות שיווקיות",
+    description: "הודעת החזרה נחשבת הודעה שיווקית, ולכן נדרשת הסכמה.",
+    fixHint: "אפשר לעדכן את ההעדפות רק אם התקבלה הסכמה מהלקוחה.",
     isFixable: true,
   },
   {

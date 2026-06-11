@@ -3,17 +3,21 @@
  * using a fixed priority so each client is counted in exactly one bucket.
  *
  * Priority (highest → lowest):
- *   1. invalidPhone      — no valid E.164 Israeli number
- *   2. unsubscribed      — unsubscribedAt is set
- *   3. noOptIn           — requireOptIn=true and whatsappOptIn=false
- *   4. hasFutureBooking  — has a pending/approved booking in the future
- *   5. inCooldown        — messaged by win_back within cooldownDays
- *   6. noCompletedBooking — no completed booking older than thresholdDays
- *   7. eligible          — passes all checks
+ *   1. invalidPhone       — no valid E.164 Israeli number
+ *   2. unsubscribed       — unsubscribedAt is set
+ *   3. noOptIn            — requireOptIn=true and whatsappOptIn=false
+ *   4. noMarketingOptIn   — marketingOptIn=false (win-back is a marketing message)
+ *   5. hasFutureBooking   — has a pending/approved booking in the future
+ *   6. inCooldown         — messaged by win_back within cooldownDays
+ *   7. noCompletedBooking — no completed booking older than thresholdDays
+ *   8. eligible           — passes all checks
  */
 
 import { prisma } from "@/server/db/prisma";
 import type { TenantContext } from "@/server/db/tenant";
+import type { BlockedClientPreview, BlockedClientsByReason } from "./shared-types";
+
+export type { BlockedClientPreview, BlockedClientsByReason };
 
 const E164_REGEX = /^\+972\d{8,9}$/;
 
@@ -30,35 +34,11 @@ export type BlockingReason =
   | "invalidPhone"
   | "unsubscribed"
   | "noOptIn"
+  | "noMarketingOptIn"
   | "hasFutureBooking"
   | "inCooldown"
   | "noCompletedBooking"
   | "eligible";
-
-export interface BlockedClientPreview {
-  id: string;
-  fullName: string;
-  maskedPhone: string;
-}
-
-export interface BlockedClientsByReason {
-  invalidPhone: BlockedClientPreview[];
-  unsubscribed: BlockedClientPreview[];
-  noOptIn: BlockedClientPreview[];
-  hasFutureBooking: BlockedClientPreview[];
-  inCooldown: BlockedClientPreview[];
-  noCompletedBooking: BlockedClientPreview[];
-  counts: {
-    total: number;
-    eligible: number;
-    invalidPhone: number;
-    unsubscribed: number;
-    noOptIn: number;
-    hasFutureBooking: number;
-    inCooldown: number;
-    noCompletedBooking: number;
-  };
-}
 
 export interface BlockedClientsOptions {
   thresholdDays: number;
@@ -90,6 +70,7 @@ export async function getBlockedClientsByReason(
       phone: true,
       normalizedPhone: true,
       whatsappOptIn: true,
+      marketingOptIn: true,
       unsubscribedAt: true,
       bookings: {
         where: { businessId: tenant.businessId },
@@ -113,6 +94,7 @@ export async function getBlockedClientsByReason(
     invalidPhone: [],
     unsubscribed: [],
     noOptIn: [],
+    noMarketingOptIn: [],
     hasFutureBooking: [],
     inCooldown: [],
     noCompletedBooking: [],
@@ -122,6 +104,7 @@ export async function getBlockedClientsByReason(
       invalidPhone: 0,
       unsubscribed: 0,
       noOptIn: 0,
+      noMarketingOptIn: 0,
       hasFutureBooking: 0,
       inCooldown: 0,
       noCompletedBooking: 0,
@@ -143,6 +126,8 @@ export async function getBlockedClientsByReason(
       reason = "unsubscribed";
     } else if (requireOptIn && !client.whatsappOptIn) {
       reason = "noOptIn";
+    } else if (!client.marketingOptIn) {
+      reason = "noMarketingOptIn";
     } else {
       const hasFutureBook = client.bookings.some(
         (b) =>
@@ -186,6 +171,8 @@ function getReasonList(
       return result.unsubscribed;
     case "noOptIn":
       return result.noOptIn;
+    case "noMarketingOptIn":
+      return result.noMarketingOptIn;
     case "hasFutureBooking":
       return result.hasFutureBooking;
     case "inCooldown":
