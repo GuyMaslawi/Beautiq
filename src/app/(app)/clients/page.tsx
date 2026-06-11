@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Users2, CalendarCheck, UserX, Clock, Upload } from "lucide-react";
 import type { ReactNode } from "react";
-import { requireTenant } from "@/server/auth/session";
+import { requireCurrentBusiness } from "@/server/auth/session";
 import { getClients, getClientSummary } from "@/server/clients/queries";
 import { ClientRow } from "@/components/clients/client-row";
 import { Button } from "@/components/ui/button";
@@ -65,9 +65,11 @@ export default async function ClientsPage({
 }: {
   searchParams: Promise<{ q?: string }>;
 }) {
-  const tenant = await requireTenant();
+  const business = await requireCurrentBusiness();
+  const tenant = { businessId: business.id };
   const { q } = await searchParams;
   const search = q?.trim() || undefined;
+  const isTestMode = process.env.WHATSAPP_TEST_MODE === "true";
 
   const [clients, summary] = await Promise.all([
     getClients(tenant, { search }),
@@ -207,7 +209,7 @@ export default async function ClientsPage({
               </thead>
               <tbody>
                 {clients.map((client) => (
-                  <ClientRow key={client.id} client={client} />
+                  <ClientRow key={client.id} client={client} businessName={business.name} isTestMode={isTestMode} />
                 ))}
               </tbody>
             </table>

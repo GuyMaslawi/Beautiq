@@ -39,6 +39,8 @@ export interface EligibilityOptions {
   thresholdDays: number;
   cooldownDays: number;
   requireOptIn: boolean;
+  /** Admin-only: bypass cooldown check for manual test runs. Never applies to cron. */
+  ignoreCooldown?: boolean;
 }
 
 /** Breakdown of why clients were excluded from the eligible set. */
@@ -57,13 +59,15 @@ export interface EligibilityBreakdown {
   invalidPhone: number;
   /** Excluded: was messaged by this automation within cooldownDays */
   inCooldown: number;
+  /** Admin override: clients included despite cooldown (inCooldown=0 when this>0) */
+  cooldownOverrideCount: number;
 }
 
 export async function getEligibleClients(
   tenant: TenantContext,
   options: EligibilityOptions,
 ): Promise<EligibleClient[]> {
-  const { thresholdDays, cooldownDays, requireOptIn } = options;
+  const { thresholdDays, cooldownDays, requireOptIn, ignoreCooldown } = options;
   const now = new Date();
   const thresholdDate = new Date(now.getTime() - thresholdDays * 24 * 60 * 60 * 1000);
   const cooldownDate = new Date(now.getTime() - cooldownDays * 24 * 60 * 60 * 1000);
@@ -71,6 +75,19 @@ export async function getEligibleClients(
   const whereOptIn: Prisma.ClientWhereInput = requireOptIn
     ? { whatsappOptIn: true }
     : {};
+
+  const cooldownFilter: Prisma.ClientWhereInput = ignoreCooldown
+    ? {}
+    : {
+        automationMessages: {
+          none: {
+            businessId: tenant.businessId,
+            type: "win_back",
+            status: { in: ["queued", "sent", "delivered", "read"] },
+            createdAt: { gt: cooldownDate },
+          },
+        },
+      };
 
   const clients = await prisma.client.findMany({
     where: {
@@ -92,14 +109,7 @@ export async function getEligibleClients(
           startTime: { gt: now },
         },
       },
-      automationMessages: {
-        none: {
-          businessId: tenant.businessId,
-          type: "win_back",
-          status: { in: ["queued", "sent", "delivered", "read"] },
-          createdAt: { gt: cooldownDate },
-        },
-      },
+      ...cooldownFilter,
     },
     include: {
       bookings: {
@@ -160,7 +170,7 @@ export async function getEligibilityBreakdown(
   tenant: TenantContext,
   options: EligibilityOptions,
 ): Promise<EligibilityBreakdown> {
-  const { thresholdDays, cooldownDays, requireOptIn } = options;
+  const { thresholdDays, cooldownDays, requireOptIn, ignoreCooldown } = options;
   const now = new Date();
   const thresholdDate = new Date(now.getTime() - thresholdDays * 24 * 60 * 60 * 1000);
   const cooldownDate = new Date(now.getTime() - cooldownDays * 24 * 60 * 60 * 1000);
@@ -236,8 +246,8 @@ export async function getEligibilityBreakdown(
     },
   });
 
-  // Clients in cooldown
-  const inCooldown = await prisma.client.count({
+  // Clients in cooldown — always counted against real cooldownDate
+  const rawInCooldown = await prisma.client.count({
     where: {
       businessId: tenant.businessId,
       unsubscribedAt: null,
@@ -253,6 +263,8 @@ export async function getEligibilityBreakdown(
     },
   });
 
+  // When admin ignores cooldown, cooldown clients become eligible; expose the
+  // override count separately so the UI can explain the difference.
   return {
     total,
     eligible,
@@ -260,6 +272,7 @@ export async function getEligibilityBreakdown(
     hasFutureBooking,
     noOptIn,
     invalidPhone,
-    inCooldown,
+    inCooldown: ignoreCooldown ? 0 : rawInCooldown,
+    cooldownOverrideCount: ignoreCooldown ? rawInCooldown : 0,
   };
 }

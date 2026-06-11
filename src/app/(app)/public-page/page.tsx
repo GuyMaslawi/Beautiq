@@ -12,7 +12,6 @@ import {
   updateVisibilityAction,
   addGalleryImageAction,
   deleteGalleryImageAction,
-  addClientReviewAction,
   deleteClientReviewAction,
 } from "@/server/public-page/actions";
 import { PublicProfileForm } from "@/components/public-page/public-profile-form";
@@ -21,6 +20,7 @@ import { VisibilityForm } from "@/components/public-page/visibility-form";
 import { GalleryManager } from "@/components/public-page/gallery-manager";
 import { ReviewsManager } from "@/components/public-page/reviews-manager";
 import { PublicLinkPreview } from "@/components/public-page/public-link-preview";
+import { PublicPagePreviewPanel } from "@/components/public-page/public-page-preview-panel";
 import { PUBLIC_PAGE } from "@/lib/constants/he";
 
 function SectionCard({
@@ -86,6 +86,14 @@ export default async function PublicPageSettingsPage() {
         <PublicLinkPreview slug={settings.slug} />
       </SectionCard>
 
+      {/* 1b. Embedded preview */}
+      <SectionCard
+        title="תצוגה מקדימה"
+        icon={<Eye className="h-4 w-4" style={{ color: "#b86b8c" }} />}
+      >
+        <PublicPagePreviewPanel slug={settings.slug} />
+      </SectionCard>
+
       {/* 2. Business profile */}
       <SectionCard
         title={PUBLIC_PAGE.profile.sectionTitle}
@@ -99,6 +107,7 @@ export default async function PublicPageSettingsPage() {
             phone: settings.phone,
             addressNote: settings.addressNote,
             instagramUrl: settings.instagramUrl,
+            facebookUrl: settings.facebookUrl,
             introMessage: settings.introMessage,
           }}
         />
@@ -114,6 +123,7 @@ export default async function PublicPageSettingsPage() {
           initialValues={{
             logoUrl: settings.logoUrl,
             coverImageUrl: settings.coverImageUrl,
+            brandColor: settings.brandColor,
           }}
         />
       </SectionCard>
@@ -158,12 +168,8 @@ export default async function PublicPageSettingsPage() {
         title={PUBLIC_PAGE.reviews.sectionTitle}
         icon={<Star className="h-4 w-4" style={{ color: "#b86b8c" }} />}
       >
-        <p className="text-sm text-[var(--muted)] mb-4">
-          {PUBLIC_PAGE.reviews.sectionSubtitle}
-        </p>
         <ReviewsManager
           reviews={reviews}
-          addAction={addClientReviewAction}
           deleteAction={deleteClientReviewAction}
         />
       </SectionCard>

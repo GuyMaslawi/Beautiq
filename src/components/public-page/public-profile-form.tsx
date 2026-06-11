@@ -25,6 +25,7 @@ export function PublicProfileForm({
     phone: string | null;
     addressNote: string | null;
     instagramUrl: string | null;
+    facebookUrl: string | null;
     introMessage: string | null;
   };
 }) {
@@ -36,6 +37,7 @@ export function PublicProfileForm({
     phone: initialValues.phone ?? "",
     addressNote: initialValues.addressNote ?? "",
     instagramUrl: initialValues.instagramUrl ?? "",
+    facebookUrl: initialValues.facebookUrl ?? "",
     introMessage: initialValues.introMessage ?? "",
   });
 
@@ -124,6 +126,18 @@ export function PublicProfileForm({
           placeholder={PUBLIC_PAGE.profile.instagramPlaceholder}
           value={fields.instagramUrl}
           onChange={(e) => set("instagramUrl")(e.target.value)}
+        />
+      </Field>
+
+      <Field label="פייסבוק (קישור)" htmlFor="facebookUrl">
+        <Input
+          id="facebookUrl"
+          name="facebookUrl"
+          type="url"
+          dir="ltr"
+          placeholder="https://facebook.com/my-business"
+          value={fields.facebookUrl}
+          onChange={(e) => set("facebookUrl")(e.target.value)}
         />
       </Field>
 

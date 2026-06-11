@@ -21,13 +21,13 @@ export interface WinBackRunResult {
 
 /**
  * Core win-back run logic — no session/auth dependency.
- * Called by both the manual server action (triggerWinBackRun) and the daily cron handler.
+ * Called by both the manual server action and the daily cron handler.
+ * adminOptions is only ever set from manual admin runs — cron always omits it.
  */
-export async function runWinBackForBusiness(business: {
-  id: string;
-  name: string;
-  slug: string;
-}): Promise<WinBackRunResult> {
+export async function runWinBackForBusiness(
+  business: { id: string; name: string; slug: string },
+  adminOptions?: { ignoreCooldown?: boolean },
+): Promise<WinBackRunResult> {
   const setting = await prisma.automationSetting.findUnique({
     where: { businessId_type: { businessId: business.id, type: "win_back" } },
   });
@@ -73,6 +73,7 @@ export async function runWinBackForBusiness(business: {
     thresholdDays: setting.thresholdDays,
     cooldownDays: setting.cooldownDays,
     requireOptIn: setting.requireOptIn,
+    ignoreCooldown: adminOptions?.ignoreCooldown,
   });
 
   const run = await prisma.automationRun.create({

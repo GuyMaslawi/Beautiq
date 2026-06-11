@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 const NAV_ITEMS = [
   { href: "/admin", label: "סקירה" },
   { href: "/admin/businesses", label: "ניהול עסקים" },
+  { href: "/admin/clients", label: "ניהול לקוחות" },
 ] as const;
 
 export function AdminNav() {

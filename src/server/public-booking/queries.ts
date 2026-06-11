@@ -46,6 +46,8 @@ export interface PublicBusiness {
   addressNote: string | null;
   phone: string | null;
   instagramUrl: string | null;
+  facebookUrl: string | null;
+  brandColor: string | null;
   introMessage: string | null;
   slug: string;
   logoUrl: string | null;
@@ -79,6 +81,8 @@ export async function getPublicBusiness(
       addressNote: true,
       phone: true,
       instagramUrl: true,
+      facebookUrl: true,
+      brandColor: true,
       introMessage: true,
       slug: true,
       logoUrl: true,
@@ -155,6 +159,8 @@ export async function getPublicBusiness(
     addressNote: business.addressNote,
     phone: business.phone,
     instagramUrl: business.instagramUrl,
+    facebookUrl: business.facebookUrl,
+    brandColor: business.brandColor,
     introMessage: business.introMessage,
     slug: business.slug,
     logoUrl: business.logoUrl,

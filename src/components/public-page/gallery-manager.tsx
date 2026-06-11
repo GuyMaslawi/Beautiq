@@ -1,20 +1,26 @@
 "use client";
 
-import { useActionState, useState, useTransition } from "react";
-import { Trash2, ImagePlus } from "lucide-react";
-import { Field } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { useRef, useState, useTransition } from "react";
+import { Trash2, Upload, ImagePlus } from "lucide-react";
 import { Alert } from "@/components/ui/alert";
 import { PUBLIC_PAGE } from "@/lib/constants/he";
 import type {
   addGalleryImageAction,
   deleteGalleryImageAction,
-  GalleryFormState,
 } from "@/server/public-page/actions";
 import type { GalleryImageData } from "@/server/public-page/queries";
 
-const INITIAL: GalleryFormState = {};
+async function uploadImage(file: File): Promise<string> {
+  const fd = new FormData();
+  fd.append("file", file);
+  const res = await fetch("/api/upload", { method: "POST", body: fd });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    throw new Error((body as { error?: string }).error ?? "שגיאה בהעלאת התמונה");
+  }
+  const data = (await res.json()) as { url: string };
+  return data.url;
+}
 
 export function GalleryManager({
   images,
@@ -25,9 +31,40 @@ export function GalleryManager({
   addAction: typeof addGalleryImageAction;
   deleteAction: typeof deleteGalleryImageAction;
 }) {
-  const [state, formAction, isAdding] = useActionState(addAction, INITIAL);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const handleFiles = async (files: FileList) => {
+    if (!files.length) return;
+    setError(null);
+    setUploading(true);
+    setUploadProgress({ done: 0, total: files.length });
+
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      try {
+        const url = await uploadImage(file);
+        const fd = new FormData();
+        fd.append("imageUrl", url);
+        await addAction({}, fd);
+        setUploadProgress({ done: i + 1, total: files.length });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "שגיאה בהעלאת התמונה");
+        break;
+      }
+    }
+
+    setUploading(false);
+    setUploadProgress(null);
+    if (inputRef.current) inputRef.current.value = "";
+  };
 
   const handleDelete = (id: string) => {
     setDeletingId(id);
@@ -37,56 +74,74 @@ export function GalleryManager({
     });
   };
 
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    if (e.dataTransfer.files.length) handleFiles(e.dataTransfer.files);
+  };
+
   return (
     <div className="space-y-5">
-      {/* Add form */}
-      <form action={formAction} className="space-y-3" noValidate>
-        {state.formError && <Alert>{state.formError}</Alert>}
-        {state.success && (
-          <div className="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">
-            {state.success}
+      {error && <Alert>{error}</Alert>}
+
+      {/* Upload zone */}
+      <div
+        className="relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-[var(--border)] bg-[var(--surface)] p-8 cursor-pointer hover:border-[#b86b8c]/50 hover:bg-[#b86b8c]/5 transition-colors"
+        onClick={() => !uploading && inputRef.current?.click()}
+        onDragOver={(e) => e.preventDefault()}
+        onDrop={handleDrop}
+      >
+        {uploading ? (
+          <div className="flex flex-col items-center gap-2">
+            <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#b86b8c] border-t-transparent" />
+            {uploadProgress && (
+              <span className="text-sm text-[var(--muted)]">
+                מעלה {uploadProgress.done} מתוך {uploadProgress.total}…
+              </span>
+            )}
           </div>
+        ) : (
+          <>
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#b86b8c]/10">
+              <Upload className="h-6 w-6 text-[#b86b8c]" />
+            </div>
+            <div className="text-center">
+              <p className="text-sm font-medium text-[var(--foreground)]">
+                לחצי להעלאת תמונות
+              </p>
+              <p className="mt-0.5 text-xs text-[var(--muted)]">
+                ניתן לבחור מספר תמונות בבת אחת · JPG, PNG, WEBP עד 10MB לתמונה
+              </p>
+            </div>
+          </>
         )}
+      </div>
 
-        <Field
-          label={PUBLIC_PAGE.gallery.imageUrlLabel}
-          htmlFor="imageUrl"
-          error={state.errors?.imageUrl}
-        >
-          <Input
-            id="imageUrl"
-            name="imageUrl"
-            type="url"
-            dir="ltr"
-            placeholder={PUBLIC_PAGE.gallery.imageUrlPlaceholder}
-          />
-        </Field>
-
-        <Field label={PUBLIC_PAGE.gallery.captionLabel} htmlFor="caption">
-          <Input
-            id="caption"
-            name="caption"
-            placeholder={PUBLIC_PAGE.gallery.captionPlaceholder}
-          />
-        </Field>
-
-        <Button type="submit" variant="secondary" size="sm" disabled={isAdding}>
-          <ImagePlus className="h-4 w-4" />
-          {isAdding
-            ? PUBLIC_PAGE.gallery.adding
-            : PUBLIC_PAGE.gallery.addButton}
-        </Button>
-      </form>
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp"
+        multiple
+        className="hidden"
+        onChange={(e) => {
+          if (e.target.files) handleFiles(e.target.files);
+        }}
+      />
 
       {/* Image grid */}
       {images.length === 0 ? (
-        <p className="text-sm text-[var(--muted)]">
-          {PUBLIC_PAGE.gallery.emptyState}
-        </p>
+        <div className="flex flex-col items-center gap-3 rounded-xl bg-[var(--surface)] py-10 text-center">
+          <ImagePlus className="h-8 w-8 text-[var(--muted)]" />
+          <p className="text-sm text-[var(--muted)]">
+            {PUBLIC_PAGE.gallery.emptyState}
+          </p>
+        </div>
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           {images.map((img) => (
-            <div key={img.id} className="group relative rounded-xl overflow-hidden border border-[var(--border)]">
+            <div
+              key={img.id}
+              className="group relative rounded-xl overflow-hidden border border-[var(--border)]"
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={img.imageUrl}

@@ -1,4 +1,4 @@
-import { Zap, ChevronDown } from "lucide-react";
+import { Zap, ChevronDown, MessageSquare, AlertCircle, Info } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getCurrentBusiness, getCurrentUser } from "@/server/auth/session";
 import {
@@ -7,9 +7,16 @@ import {
   getWinBackStatsThisMonth,
   getLastWinBackRun,
 } from "@/server/win-back-automation/queries";
+import { getMorningReminderSetting, getMorningReminderStatsThisMonth } from "@/server/morning-reminder/queries";
+import { getReviewRequestSetting, getReviewRequestStatsThisMonth } from "@/server/review-request/queries";
+import { getAutomationMessageLog } from "@/server/automations/message-queries";
+import { isRealSendConfigured, isTestModeActive } from "@/lib/whatsapp/provider";
 import { PageHeader } from "@/components/ui/page-header";
 import { WinBackAutomationCard } from "@/components/automations/win-back-automation-card";
-import { ComingSoonCard } from "@/components/automations/coming-soon-card";
+import { MorningReminderCard } from "@/components/automations/morning-reminder-card";
+import { ReviewRequestCard } from "@/components/automations/review-request-card";
+import { AutomationMessageLog } from "@/components/automations/automation-message-log";
+import { ManualRunCard } from "@/components/automations/manual-run-card";
 
 export default async function AutomationsPage() {
   const [business, user] = await Promise.all([getCurrentBusiness(), getCurrentUser()]);
@@ -17,12 +24,32 @@ export default async function AutomationsPage() {
 
   const tenant = { businessId: business.id };
 
-  const [setting, connection, stats, lastRun] = await Promise.all([
+  const [
+    setting,
+    connection,
+    stats,
+    lastRun,
+    morningReminderSetting,
+    morningReminderStats,
+    reviewRequestSetting,
+    reviewRequestStats,
+    messageLog,
+  ] = await Promise.all([
     getWinBackAutomationSetting(tenant),
     getWhatsAppConnection(tenant),
     getWinBackStatsThisMonth(tenant),
     getLastWinBackRun(tenant),
+    getMorningReminderSetting(tenant),
+    getMorningReminderStatsThisMonth(tenant),
+    getReviewRequestSetting(tenant),
+    getReviewRequestStatsThisMonth(tenant),
+    getAutomationMessageLog(tenant, { limit: 50 }),
   ]);
+
+  // WhatsApp readiness banners — shown above the cards
+  const realSendConfigured = isRealSendConfigured();
+  const testMode = isTestModeActive();
+  const whatsappConnected = connection?.status === "active";
 
   return (
     <div className="w-full space-y-6">
@@ -32,23 +59,93 @@ export default async function AutomationsPage() {
         subtitle="הודעות שנשלחות אוטומטית כדי לחסוך זמן ולשמור על קשר עם הלקוחות."
       />
 
+      {/* WhatsApp status banners — never show technical credentials */}
+      {!realSendConfigured && (
+        <div
+          className="flex items-start gap-3 rounded-2xl px-4 py-3.5"
+          dir="rtl"
+          style={{
+            background: "rgba(234,179,8,0.08)",
+            border: "1px solid rgba(234,179,8,0.28)",
+          }}
+        >
+          <Info className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#b45309" }} />
+          <p className="text-sm leading-relaxed" style={{ color: "#92400e" }}>
+            <strong>מצב בדיקה</strong> — הודעות לא נשלחות ללקוחות אמיתיים.
+            ניתן להגדיר את האוטומציות, אך שליחה בפועל תופעל רק כאשר WhatsApp Business יהיה מחובר.
+          </p>
+        </div>
+      )}
+
+      {realSendConfigured && testMode && (
+        <div
+          className="flex items-start gap-3 rounded-2xl px-4 py-3.5"
+          dir="rtl"
+          style={{
+            background: "rgba(234,179,8,0.08)",
+            border: "1px solid rgba(234,179,8,0.28)",
+          }}
+        >
+          <Info className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#b45309" }} />
+          <p className="text-sm leading-relaxed" style={{ color: "#92400e" }}>
+            <strong>מצב בדיקה פעיל</strong> — הודעות נשלחות רק למספר הבדיקה המוגדר.
+            לקוחות אמיתיים לא יקבלו הודעות עד שמצב הבדיקה יכובה.
+          </p>
+        </div>
+      )}
+
+      {realSendConfigured && !testMode && !whatsappConnected && (
+        <div
+          className="flex items-start gap-3 rounded-2xl px-4 py-3.5"
+          dir="rtl"
+          style={{
+            background: "rgba(239,68,68,0.06)",
+            border: "1px solid rgba(239,68,68,0.20)",
+          }}
+        >
+          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#dc2626" }} />
+          <p className="text-sm leading-relaxed" style={{ color: "#991b1b" }}>
+            <strong>WhatsApp Business לא מחובר</strong> — כדי לשלוח הודעות אוטומטיות מהמספר של העסק, צריך לחבר WhatsApp Business.
+            ניתן להגדיר את האוטומציות, אך הן לא ישלחו הודעות ללקוחות.
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3">
         <WinBackAutomationCard setting={setting} />
 
-        <ComingSoonCard
-          title="תזכורות לתורים"
-          description="תזכורת תישלח לפני התור כדי להפחית איחורים וביטולים."
+        <MorningReminderCard
+          setting={morningReminderSetting}
+          sentThisMonth={morningReminderStats.sentThisMonth}
         />
 
-        <ComingSoonCard
-          title="תודה אחרי ביקור"
-          description="הודעת תודה תישלח לאחר הטיפול."
+        <ReviewRequestCard
+          setting={reviewRequestSetting}
+          sentThisMonth={reviewRequestStats.sentThisMonth}
         />
 
-        <ComingSoonCard
-          title="בקשת ביקורת"
-          description="בקשה לדירוג תישלח לאחר הביקור."
-        />
+        <ManualRunCard isAdmin={user?.isAdmin ?? false} />
+      </div>
+
+      {/* Message log */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2.5" dir="rtl">
+          <div
+            className="flex h-8 w-8 items-center justify-center rounded-xl shrink-0"
+            style={{ background: "rgba(184,107,140,0.10)" }}
+          >
+            <MessageSquare className="h-4 w-4" style={{ color: "#b86b8c" }} />
+          </div>
+          <div>
+            <h2 className="text-base font-semibold" style={{ color: "var(--foreground)" }}>
+              יומן הודעות
+            </h2>
+            <p className="text-xs" style={{ color: "var(--muted)" }}>
+              הודעות אוטומטיות שנשלחו — ניתן לנסות שוב הודעות שנכשלו.
+            </p>
+          </div>
+        </div>
+        <AutomationMessageLog messages={messageLog} />
       </div>
 
       {/* Admin section — hidden from regular users */}
@@ -82,15 +179,15 @@ export default async function AutomationsPage() {
               <span><strong>Provider:</strong> {connection?.provider ?? "—"}</span>
               <span><strong>WA Status:</strong> {connection?.status ?? "not_connected"}</span>
               <span><strong>Phone:</strong> {connection?.phoneNumber ?? "—"}</span>
-              <span><strong>Automation:</strong> {setting?.enabled ? "enabled" : "disabled"}</span>
+              <span><strong>Win-back:</strong> {setting?.enabled ? "enabled" : "disabled"}</span>
               <span><strong>Template:</strong> {setting?.templateName ?? "—"}</span>
             </div>
             <div className="flex gap-4 flex-wrap">
-              <span><strong>Last run:</strong> {lastRun?.startedAt?.toISOString() ?? "never"}</span>
+              <span><strong>Last win-back run:</strong> {lastRun?.startedAt?.toISOString() ?? "never"}</span>
               <span><strong>Last webhook:</strong> {connection?.lastWebhookReceivedAt?.toISOString() ?? "never"}</span>
-              <span><strong>Sent/month:</strong> {stats.realSentThisMonth}</span>
-              <span><strong>Failed/month:</strong> {stats.failedThisMonth}</span>
-              <span><strong>Mock/month:</strong> {stats.mockRunsThisMonth}</span>
+              <span><strong>Win-back sent/month:</strong> {stats.realSentThisMonth}</span>
+              <span><strong>Morning reminder sent/month:</strong> {morningReminderStats.sentThisMonth}</span>
+              <span><strong>Review requests sent/month:</strong> {reviewRequestStats.sentThisMonth}</span>
             </div>
           </div>
         </details>

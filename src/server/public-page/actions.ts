@@ -28,6 +28,7 @@ export async function updatePublicProfileAction(
     phone: String(formData.get("phone") ?? "").trim(),
     addressNote: String(formData.get("addressNote") ?? "").trim(),
     instagramUrl: String(formData.get("instagramUrl") ?? "").trim(),
+    facebookUrl: String(formData.get("facebookUrl") ?? "").trim(),
     introMessage: String(formData.get("introMessage") ?? "").trim(),
   };
 
@@ -44,6 +45,7 @@ export async function updatePublicProfileAction(
         phone: raw.phone || null,
         addressNote: raw.addressNote || null,
         instagramUrl: raw.instagramUrl || null,
+        facebookUrl: raw.facebookUrl || null,
         introMessage: raw.introMessage || null,
       },
     });
@@ -76,7 +78,13 @@ export async function updateBrandingAction(
   const raw = {
     logoUrl: String(formData.get("logoUrl") ?? "").trim(),
     coverImageUrl: String(formData.get("coverImageUrl") ?? "").trim(),
+    brandColor: String(formData.get("brandColor") ?? "").trim(),
   };
+
+  // Validate hex color if provided
+  if (raw.brandColor && !/^#[0-9a-fA-F]{6}$/.test(raw.brandColor)) {
+    return { errors: { brandColor: "צבע לא תקין" }, values: raw };
+  }
 
   try {
     await prisma.business.update({
@@ -84,6 +92,7 @@ export async function updateBrandingAction(
       data: {
         logoUrl: raw.logoUrl || null,
         coverImageUrl: raw.coverImageUrl || null,
+        brandColor: raw.brandColor || null,
       },
     });
   } catch {
@@ -199,46 +208,6 @@ export async function deleteGalleryImageAction(
 // ---------------------------------------------------------------------------
 // Reviews
 // ---------------------------------------------------------------------------
-
-export interface ReviewFormState {
-  errors?: Partial<Record<string, string>>;
-  formError?: string;
-  success?: string;
-}
-
-export async function addClientReviewAction(
-  _prev: ReviewFormState,
-  formData: FormData,
-): Promise<ReviewFormState> {
-  const tenant = await requireTenant();
-
-  const clientName = String(formData.get("clientName") ?? "").trim();
-  const reviewText = String(formData.get("reviewText") ?? "").trim();
-  const ratingRaw = parseInt(String(formData.get("rating") ?? "5"), 10);
-  const rating = isNaN(ratingRaw) ? 5 : Math.min(5, Math.max(1, ratingRaw));
-
-  const errors: Partial<Record<string, string>> = {};
-  if (!clientName) errors.clientName = PUBLIC_PAGE.reviews.errors.clientNameRequired;
-  if (!reviewText) errors.reviewText = PUBLIC_PAGE.reviews.errors.reviewTextRequired;
-  if (Object.keys(errors).length) return { errors };
-
-  try {
-    await prisma.clientReview.create({
-      data: {
-        businessId: tenant.businessId,
-        clientName,
-        reviewText,
-        rating,
-        isApproved: true,
-      },
-    });
-  } catch {
-    return { formError: PUBLIC_PAGE.reviews.errors.generic };
-  }
-
-  revalidatePath("/public-page");
-  return { success: PUBLIC_PAGE.reviews.addSuccess };
-}
 
 export async function deleteClientReviewAction(
   reviewId: string,

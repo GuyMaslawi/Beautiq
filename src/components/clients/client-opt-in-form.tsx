@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useState, useEffect, useActionState } from "react";
 import { MessageCircle } from "lucide-react";
 import { updateClientOptInAction } from "@/server/clients/actions";
 import type { UpdateClientOptInState } from "@/server/clients/actions";
@@ -20,6 +20,15 @@ export function ClientOptInForm({ clientId, whatsappOptIn, marketingOptIn }: Pro
   const boundAction = updateClientOptInAction.bind(null, clientId);
   const [state, formAction, isPending] = useActionState(boundAction, initialState);
 
+  const [localWhatsapp, setLocalWhatsapp] = useState(whatsappOptIn);
+  const [localMarketing, setLocalMarketing] = useState(marketingOptIn);
+
+  // Sync controlled state when the server component re-renders with updated DB values
+  useEffect(() => {
+    setLocalWhatsapp(whatsappOptIn);
+    setLocalMarketing(marketingOptIn);
+  }, [whatsappOptIn, marketingOptIn]);
+
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
@@ -35,13 +44,15 @@ export function ClientOptInForm({ clientId, whatsappOptIn, marketingOptIn }: Pro
         <OptInRow
           name="whatsappOptIn"
           label={c.whatsappOptInLabel}
-          checked={whatsappOptIn}
+          checked={localWhatsapp}
+          onCheckedChange={setLocalWhatsapp}
           color="#16a34a"
         />
         <OptInRow
           name="marketingOptIn"
           label={c.marketingOptInLabel}
-          checked={marketingOptIn}
+          checked={localMarketing}
+          onCheckedChange={setLocalMarketing}
           color="#3b7ab5"
         />
 
@@ -77,25 +88,24 @@ function OptInRow({
   name,
   label,
   checked,
+  onCheckedChange,
   color,
 }: {
   name: string;
   label: string;
   checked: boolean;
+  onCheckedChange: (v: boolean) => void;
   color: string;
 }) {
   return (
     <label className="flex cursor-pointer items-start gap-3">
-      <input
-        type="hidden"
-        name={name}
-        value="false"
-      />
+      <input type="hidden" name={name} value="false" />
       <input
         type="checkbox"
         name={name}
         value="true"
-        defaultChecked={checked}
+        checked={checked}
+        onChange={(e) => onCheckedChange(e.target.checked)}
         className="mt-0.5 h-4 w-4 cursor-pointer rounded"
         style={{ accentColor: color }}
       />

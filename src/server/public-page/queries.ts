@@ -10,11 +10,13 @@ export interface PublicPageSettings {
   area: string | null;
   addressNote: string | null;
   instagramUrl: string | null;
+  facebookUrl: string | null;
   introMessage: string | null;
   slug: string;
   // Branding
   logoUrl: string | null;
   coverImageUrl: string | null;
+  brandColor: string | null;
   // Visibility
   showServices: boolean;
   showPrices: boolean;
@@ -54,10 +56,12 @@ export async function getPublicPageSettings(
       area: true,
       addressNote: true,
       instagramUrl: true,
+      facebookUrl: true,
       introMessage: true,
       slug: true,
       logoUrl: true,
       coverImageUrl: true,
+      brandColor: true,
       showServices: true,
       showPrices: true,
       showHours: true,

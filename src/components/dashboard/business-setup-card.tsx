@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import {
   createBusinessAction,
   type BusinessStepState,
@@ -17,15 +16,18 @@ import { FadeIn } from "@/components/ui/animate";
 const INITIAL: BusinessStepState = {};
 
 export function BusinessSetupCard() {
-  const router = useRouter();
   const [state, formAction, isPending] = useActionState(
     createBusinessAction,
     INITIAL,
   );
 
   useEffect(() => {
-    if (state.created) router.refresh();
-  }, [state.created, router]);
+    if (state.created) {
+      // Full page reload ensures the session and server components both see
+      // the new business, avoiding any router-cache edge cases.
+      window.location.replace("/dashboard");
+    }
+  }, [state.created]);
 
   return (
     <FadeIn className="mx-auto w-full max-w-lg">

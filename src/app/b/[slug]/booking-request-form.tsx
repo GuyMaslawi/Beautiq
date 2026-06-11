@@ -1,81 +1,482 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { Fragment, useActionState, useState, useEffect } from "react";
+import { Clock, Check, ChevronRight, Calendar, Zap } from "lucide-react";
 import {
   submitPublicBookingAction,
   type PublicBookingFormState,
 } from "@/server/public-booking/actions";
-import type { PublicService, PublicCancellationPolicy } from "@/server/public-booking/queries";
-import { PUBLIC_BOOKING } from "@/lib/constants/he";
+import type {
+  PublicService,
+  PublicCancellationPolicy,
+} from "@/server/public-booking/queries";
+import type { UpcomingSlotGroup } from "@/app/api/public/[slug]/upcoming-slots/route";
 
 // ---------------------------------------------------------------------------
-// Today's date in YYYY-MM-DD (client-side, for date input min)
+// Types & constants
 // ---------------------------------------------------------------------------
+
+type Step = "service" | "quickpick" | "calendar" | "details";
+
+const DEFAULT_BRAND = "#b86b8c";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
 function todayISO() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-// ---------------------------------------------------------------------------
-// Small helpers
-// ---------------------------------------------------------------------------
-
-function FieldError({ message }: { message?: string }) {
-  if (!message) return null;
-  return <p className="mt-1 text-xs text-red-600">{message}</p>;
+function formatDateHebrew(dateStr: string): string {
+  if (!dateStr) return "";
+  try {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    return new Intl.DateTimeFormat("he-IL", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    }).format(new Date(y, m - 1, d));
+  } catch {
+    return dateStr;
+  }
 }
 
-function Label({
-  htmlFor,
-  children,
-  optional,
+function toWhatsAppPhone(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("972")) return digits;
+  if (digits.startsWith("0")) return "972" + digits.slice(1);
+  return digits;
+}
+
+// ---------------------------------------------------------------------------
+// Step indicator
+// ---------------------------------------------------------------------------
+
+function StepIndicator({
+  step,
+  brandColor,
 }: {
-  htmlFor: string;
-  children: React.ReactNode;
-  optional?: boolean;
+  step: Step;
+  brandColor: string;
 }) {
+  const steps: { id: Step; label: string }[] = [
+    { id: "service", label: "שירות" },
+    { id: "quickpick", label: "תאריך" },
+    { id: "details", label: "פרטים" },
+  ];
+  // quickpick and calendar both map to step index 1
+  const currentIdx = step === "calendar" ? 1 : steps.findIndex((s) => s.id === step);
+  const brandGrd = `linear-gradient(135deg, ${brandColor}cc 0%, ${brandColor} 100%)`;
+
   return (
-    <label
-      htmlFor={htmlFor}
-      className="mb-1 block text-sm font-medium text-[var(--foreground)]"
-    >
-      {children}
-      {optional && (
-        <span className="mr-1 text-xs font-normal text-[var(--muted)]">
-          ({PUBLIC_BOOKING.form.noteOptional})
-        </span>
-      )}
-    </label>
+    <div className="flex items-center justify-center mb-8" dir="ltr">
+      {steps.map((s, i) => {
+        const done = i < currentIdx;
+        const active = i === currentIdx;
+        return (
+          <Fragment key={s.id}>
+            <div className="flex flex-col items-center gap-1.5 w-16">
+              <div
+                className="h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold transition-all"
+                style={
+                  active
+                    ? { background: brandGrd, color: "white", boxShadow: `0 2px 8px ${brandColor}66` }
+                    : done
+                    ? { background: brandColor, color: "white" }
+                    : { background: "#f3f4f6", color: "#9ca3af" }
+                }
+              >
+                {done ? <Check className="h-4 w-4" /> : i + 1}
+              </div>
+              <span
+                className="text-xs text-center"
+                style={
+                  active
+                    ? { fontWeight: 700, color: "var(--foreground)" }
+                    : { color: "var(--muted)" }
+                }
+              >
+                {s.label}
+              </span>
+            </div>
+            {i < steps.length - 1 && (
+              <div
+                className="h-0.5 w-10 mb-5 flex-shrink-0 transition-colors rounded-full"
+                style={{ background: i < currentIdx ? brandColor : "#e5e7eb" }}
+              />
+            )}
+          </Fragment>
+        );
+      })}
+    </div>
   );
 }
 
-const inputClass =
-  "w-full rounded-xl border border-[var(--border)] bg-white px-4 py-2.5 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/40";
+// ---------------------------------------------------------------------------
+// Service card
+// ---------------------------------------------------------------------------
+
+function ServiceCard({
+  service,
+  selected,
+  onSelect,
+  showPrices,
+  brandColor,
+}: {
+  service: PublicService;
+  selected: boolean;
+  onSelect: () => void;
+  showPrices: boolean;
+  brandColor: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className="w-full rounded-2xl border-2 p-4 text-right transition-all hover:shadow-md"
+      style={{
+        borderColor: selected ? brandColor : "var(--border)",
+        background: selected ? `${brandColor}08` : "white",
+        boxShadow: selected ? `0 0 0 4px ${brandColor}18` : undefined,
+      }}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="font-bold text-[var(--foreground)] text-base">{service.name}</p>
+          {service.description && (
+            <p className="mt-0.5 text-xs text-[var(--muted)] line-clamp-2">
+              {service.description}
+            </p>
+          )}
+          <div className="mt-2.5 flex flex-wrap gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full bg-gray-50 px-2.5 py-0.5 text-xs text-[var(--muted)] border border-gray-100">
+              <Clock className="h-3 w-3" />
+              {service.durationMinutes} דקות
+            </span>
+            {showPrices && (
+              <span
+                className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold transition-colors"
+                style={{
+                  background: selected ? brandColor : `${brandColor}18`,
+                  color: selected ? "white" : brandColor,
+                }}
+              >
+                ₪{Number(service.price).toLocaleString("he-IL")}
+              </span>
+            )}
+          </div>
+        </div>
+        <div
+          className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all"
+          style={{
+            borderColor: selected ? brandColor : "#d1d5db",
+            background: selected ? brandColor : "transparent",
+          }}
+        >
+          {selected && <Check className="h-3.5 w-3.5 text-white" />}
+        </div>
+      </div>
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Upcoming slot quick-pick
+// ---------------------------------------------------------------------------
+
+function QuickPickSlots({
+  slug,
+  serviceId,
+  onSelect,
+  onShowCalendar,
+  brandColor,
+}: {
+  slug: string;
+  serviceId: string;
+  onSelect: (date: string, time: string) => void;
+  onShowCalendar: () => void;
+  brandColor: string;
+}) {
+  const [groups, setGroups] = useState<UpcomingSlotGroup[] | null>(null);
+  const brandGrd = `linear-gradient(135deg, ${brandColor}cc 0%, ${brandColor} 100%)`;
+
+  useEffect(() => {
+    if (!serviceId) return;
+    let cancelled = false;
+    fetch(`/api/public/${slug}/upcoming-slots?serviceId=${serviceId}`)
+      .then((r) => r.json())
+      .then((data: { groups?: UpcomingSlotGroup[] }) => {
+        if (!cancelled) setGroups(data.groups ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setGroups([]);
+      });
+    return () => { cancelled = true; };
+  }, [serviceId, slug]);
+
+  if (groups === null) {
+    return (
+      <div className="flex items-center justify-center gap-2.5 py-10 text-sm text-[var(--muted)]">
+        <div
+          className="h-5 w-5 rounded-full border-2 animate-spin"
+          style={{ borderColor: brandColor, borderTopColor: "transparent" }}
+        />
+        מאתרת שעות פנויות…
+      </div>
+    );
+  }
+
+  if (groups.length === 0) {
+    return (
+      <div className="text-center py-6 space-y-4">
+        <p className="text-sm text-[var(--muted)]">אין שעות פנויות בימים הקרובים</p>
+        <button
+          type="button"
+          onClick={onShowCalendar}
+          className="flex items-center justify-center gap-2 mx-auto rounded-xl px-5 py-2.5 text-sm font-semibold border-2 transition-all"
+          style={{ borderColor: brandColor, color: brandColor }}
+        >
+          <Calendar className="h-4 w-4" />
+          בחרי תאריך מהלוח
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Quick slot groups */}
+      {groups.map((group) => (
+        <div key={group.date}>
+          <p className="text-xs font-semibold text-[var(--muted)] mb-2 uppercase tracking-wide">
+            {group.label}
+          </p>
+          <div className="flex flex-wrap gap-2" dir="ltr">
+            {group.slots.map((slot) => (
+              <button
+                key={slot}
+                type="button"
+                onClick={() => onSelect(group.date, slot)}
+                className="rounded-xl px-4 py-2 text-sm font-bold transition-all hover:opacity-90 active:scale-[.97]"
+                style={{ background: brandGrd, color: "white" }}
+              >
+                {slot}
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {/* Fallback to full calendar */}
+      <button
+        type="button"
+        onClick={onShowCalendar}
+        className="flex items-center gap-1.5 text-xs font-semibold mt-2 transition-opacity hover:opacity-70"
+        style={{ color: "var(--muted)" }}
+      >
+        <Calendar className="h-3.5 w-3.5" />
+        הצגי כל התאריכים
+      </button>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Time slot pill
+// ---------------------------------------------------------------------------
+
+function SlotPill({
+  time,
+  selected,
+  onSelect,
+  brandColor,
+}: {
+  time: string;
+  selected: boolean;
+  onSelect: () => void;
+  brandColor: string;
+}) {
+  const brandGrd = `linear-gradient(135deg, ${brandColor}cc 0%, ${brandColor} 100%)`;
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className="rounded-xl px-5 py-2.5 text-sm font-semibold transition-all"
+      style={{
+        background: selected ? brandGrd : "white",
+        color: selected ? "white" : "var(--foreground)",
+        border: `2px solid ${selected ? brandColor : "var(--border)"}`,
+        boxShadow: selected ? `0 2px 10px ${brandColor}55` : undefined,
+      }}
+    >
+      {time}
+    </button>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Shared input primitive
+// ---------------------------------------------------------------------------
+
+const inputCls =
+  "w-full rounded-xl border border-[var(--border)] bg-white px-4 py-3 text-sm text-[var(--foreground)] placeholder:text-[var(--muted)] focus:outline-none focus:ring-2 focus:ring-[var(--primary)]/40 transition-shadow";
+
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return <p className="mt-1.5 text-xs text-red-500">{message}</p>;
+}
+
+function BackBtn({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-0.5 text-sm transition-colors"
+      style={{ color: "var(--muted)" }}
+    >
+      <ChevronRight className="h-4 w-4" />
+      חזרה
+    </button>
+  );
+}
+
+function PrimaryBtn({
+  onClick,
+  disabled,
+  children,
+  brandColor,
+}: {
+  onClick?: () => void;
+  disabled?: boolean;
+  children: React.ReactNode;
+  brandColor: string;
+}) {
+  const brandGrd = `linear-gradient(135deg, ${brandColor}cc 0%, ${brandColor} 100%)`;
+  return (
+    <button
+      type={onClick ? "button" : "submit"}
+      onClick={onClick}
+      disabled={disabled}
+      className="w-full rounded-2xl py-4 text-sm font-bold text-white transition-all hover:opacity-90 active:scale-[.98] disabled:opacity-40 disabled:cursor-not-allowed shadow-sm"
+      style={{ background: disabled ? "#d1d5db" : brandGrd }}
+    >
+      {children}
+    </button>
+  );
+}
 
 // ---------------------------------------------------------------------------
 // Success view
 // ---------------------------------------------------------------------------
 
-function SuccessView({ onReset }: { onReset: () => void }) {
+function SuccessView({
+  serviceName,
+  date,
+  time,
+  businessName,
+  businessPhone,
+  serviceDuration,
+  onReset,
+  brandColor,
+}: {
+  serviceName?: string;
+  date: string;
+  time: string;
+  businessName: string;
+  businessPhone?: string | null;
+  serviceDuration?: number;
+  onReset: () => void;
+  brandColor: string;
+}) {
+  const formattedDate = formatDateHebrew(date);
+  const brandGrd = `linear-gradient(135deg, ${brandColor}cc 0%, ${brandColor} 100%)`;
+
+  const msgText = `היי! קבעתי תור ל${serviceName ?? "טיפול"} אצל ${businessName}. ${formattedDate} בשעה ${time} 🎉`;
+  const waTarget = businessPhone
+    ? `https://wa.me/${toWhatsAppPhone(businessPhone)}?text=${encodeURIComponent(msgText)}`
+    : `https://wa.me/?text=${encodeURIComponent(msgText)}`;
+
+  const [y, m, d] = date.split("-");
+  const [hh, mm] = time.split(":");
+  const calStart = `${y}${m}${d}T${hh}${mm}00`;
+  const endMinTotal = parseInt(hh) * 60 + parseInt(mm) + (serviceDuration ?? 60);
+  const endH = Math.floor(endMinTotal / 60).toString().padStart(2, "0");
+  const endM = (endMinTotal % 60).toString().padStart(2, "0");
+  const calEnd = `${y}${m}${d}T${endH}${endM}00`;
+  const calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`${serviceName ?? "תור"} — ${businessName}`)}&dates=${calStart}/${calEnd}`;
+
   return (
-    <div className="rounded-2xl border border-[var(--border)] bg-white p-6 text-center space-y-4">
-      <div className="flex items-center justify-center">
-        <span className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--primary)]/10 text-2xl">
-          ✓
-        </span>
+    <div className="text-center space-y-6 py-4">
+      <div
+        className="mx-auto flex h-24 w-24 items-center justify-center rounded-full text-5xl"
+        style={{ background: `linear-gradient(135deg, ${brandColor}22, ${brandColor}44)` }}
+      >
+        🎉
       </div>
-      <div className="space-y-1">
-        <h2 className="text-lg font-bold text-[var(--foreground)]">
-          {PUBLIC_BOOKING.success.title}
+
+      <div className="space-y-1.5">
+        <h2 className="text-2xl font-bold text-[var(--foreground)]">
+          הבקשה נשלחה!
         </h2>
-        <p className="text-sm text-[var(--muted)]">{PUBLIC_BOOKING.success.body}</p>
+        <p className="text-sm text-[var(--muted)]">
+          העסק יחזור אליך לאישור התור
+        </p>
       </div>
+
+      <div
+        className="mx-auto max-w-xs rounded-2xl px-6 py-5 space-y-3"
+        style={{ background: `linear-gradient(135deg, ${brandColor}0d, ${brandColor}1e)` }}
+      >
+        {serviceName && (
+          <div className="flex items-center justify-center gap-2 text-sm font-bold text-[var(--foreground)]">
+            <span>✨</span>
+            <span>{serviceName}</span>
+          </div>
+        )}
+        {formattedDate && (
+          <div className="flex items-center justify-center gap-2 text-sm text-[var(--foreground)]">
+            <span>📅</span>
+            <span>{formattedDate}</span>
+          </div>
+        )}
+        {time && (
+          <div className="flex items-center justify-center gap-2 text-sm font-semibold text-[var(--foreground)]">
+            <span>🕐</span>
+            <span>בשעה {time}</span>
+          </div>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-3">
+        <a
+          href={calUrl}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold transition-all hover:opacity-90"
+          style={{ background: brandGrd, color: "white" }}
+        >
+          📅 הוספה ליומן
+        </a>
+        <a
+          href={waTarget}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="flex items-center justify-center gap-2 rounded-2xl border-2 py-3.5 text-sm font-bold transition-all"
+          style={{ borderColor: brandColor, color: brandColor }}
+        >
+          💬 שלחי בוואטסאפ
+        </a>
+      </div>
+
       <button
         type="button"
         onClick={onReset}
-        className="text-sm font-medium text-[var(--primary)] underline underline-offset-2"
+        className="text-sm underline underline-offset-2 hover:opacity-75 transition-opacity"
+        style={{ color: "var(--muted)" }}
       >
-        {PUBLIC_BOOKING.success.sendAnother}
+        שליחת בקשה נוספת
       </button>
     </div>
   );
@@ -90,11 +491,19 @@ export function BookingRequestForm({
   services,
   cancellationPolicy,
   showPrices = true,
+  initialServiceId = "",
+  businessName,
+  businessPhone,
+  brandColor = DEFAULT_BRAND,
 }: {
   slug: string;
   services: PublicService[];
   cancellationPolicy: PublicCancellationPolicy | null;
   showPrices?: boolean;
+  initialServiceId?: string;
+  businessName: string;
+  businessPhone?: string | null;
+  brandColor?: string;
 }) {
   const boundAction = submitPublicBookingAction.bind(null, slug);
   const [state, formAction, pending] = useActionState<
@@ -102,194 +511,389 @@ export function BookingRequestForm({
     FormData
   >(boundAction, {});
 
-  const [selectedServiceId, setSelectedServiceId] = useState(
-    state.values?.serviceId ?? "",
+  const [step, setStep] = useState<Step>(
+    initialServiceId ? "quickpick" : "service",
   );
+  const [selectedServiceId, setSelectedServiceId] = useState(initialServiceId);
+  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedTime, setSelectedTime] = useState("");
+  const [slots, setSlots] = useState<string[] | null>(null);
   const [policyAcknowledged, setPolicyAcknowledged] = useState(false);
+
+  const slotsLoading =
+    step === "calendar" && !!selectedDate && !!selectedServiceId && slots === null;
 
   const selectedService = services.find((s) => s.id === selectedServiceId);
 
-  if (state.success) {
-    return <SuccessView onReset={() => window.location.reload()} />;
+  // Fetch slots when on full calendar step and date changes
+  useEffect(() => {
+    if (step !== "calendar" || !selectedDate || !selectedServiceId) return;
+    let cancelled = false;
+    fetch(`/api/public/${slug}/slots?date=${selectedDate}&serviceId=${selectedServiceId}`)
+      .then((r) => r.json())
+      .then((data: { slots?: string[] }) => {
+        if (!cancelled) setSlots(data.slots ?? []);
+      })
+      .catch(() => {
+        if (!cancelled) setSlots([]);
+      });
+    return () => { cancelled = true; };
+  }, [selectedDate, selectedServiceId, step, slug]);
+
+  function handleServiceSelect(id: string) {
+    if (id !== selectedServiceId) {
+      setSelectedDate("");
+      setSelectedTime("");
+      setSlots(null);
+    }
+    setSelectedServiceId(id);
   }
 
-  const v = state.values ?? {};
+  function handleQuickPickSelect(date: string, time: string) {
+    setSelectedDate(date);
+    setSelectedTime(time);
+    setStep("details");
+  }
+
+  if (state.success) {
+    return (
+      <SuccessView
+        serviceName={selectedService?.name}
+        date={selectedDate}
+        time={selectedTime}
+        businessName={businessName}
+        businessPhone={businessPhone}
+        serviceDuration={selectedService?.durationMinutes}
+        onReset={() => window.location.reload()}
+        brandColor={brandColor}
+      />
+    );
+  }
+
+  const needsPolicy = !!cancellationPolicy?.policyText;
 
   return (
-    <form action={formAction} className="space-y-6" noValidate>
-      {/* Global error */}
-      {state.formError && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {state.formError}
+    <form action={formAction} noValidate>
+      {/* Hidden inputs */}
+      <input type="hidden" name="serviceId" value={selectedServiceId} />
+      <input type="hidden" name="date" value={selectedDate} />
+      <input type="hidden" name="requestedTime" value={selectedTime} />
+
+      <StepIndicator step={step} brandColor={brandColor} />
+
+      {/* ── STEP 1: Service ─────────────────────────────────────────────── */}
+      {step === "service" && (
+        <div className="space-y-4">
+          <p className="text-sm font-semibold text-[var(--foreground)] mb-1">
+            באיזה שירות את מעוניינת?
+          </p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            {services.map((service) => (
+              <ServiceCard
+                key={service.id}
+                service={service}
+                selected={selectedServiceId === service.id}
+                onSelect={() => handleServiceSelect(service.id)}
+                showPrices={showPrices}
+                brandColor={brandColor}
+              />
+            ))}
+          </div>
+
+          {selectedService?.requiresDeposit && (
+            <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              נדרשת מקדמה לשירות זה — התשלום יתואם מול העסק
+            </p>
+          )}
+
+          <PrimaryBtn
+            disabled={!selectedServiceId}
+            onClick={() => setStep("quickpick")}
+            brandColor={brandColor}
+          >
+            המשך לבחירת זמן →
+          </PrimaryBtn>
         </div>
       )}
 
-      {/* Section: Service */}
-      <div className="rounded-2xl border border-[var(--border)] bg-white p-5 space-y-4">
-        <h2 className="font-bold text-[var(--foreground)]">
-          {PUBLIC_BOOKING.form.sectionService}
-        </h2>
+      {/* ── STEP 2A: Smart quick-pick ─────────────────────────────────── */}
+      {step === "quickpick" && (
+        <div className="space-y-5">
+          {/* Selected service summary */}
+          {selectedService && (
+            <div
+              className="rounded-2xl px-4 py-3 flex items-center justify-between text-sm"
+              style={{ background: `${brandColor}0d` }}
+            >
+              <span className="font-bold text-[var(--foreground)]">
+                {selectedService.name}
+              </span>
+              <button
+                type="button"
+                onClick={() => setStep("service")}
+                className="text-xs font-semibold hover:underline"
+                style={{ color: brandColor }}
+              >
+                שינוי
+              </button>
+            </div>
+          )}
 
-        <div>
-          <Label htmlFor="serviceId">{PUBLIC_BOOKING.form.serviceLabel}</Label>
-          <select
-            id="serviceId"
-            name="serviceId"
-            value={selectedServiceId}
-            onChange={(e) => setSelectedServiceId(e.target.value)}
-            className={inputClass}
-            aria-invalid={!!state.errors?.serviceId}
-          >
-            <option value="">{PUBLIC_BOOKING.form.servicePlaceholder}</option>
-            {services.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name} · {s.durationMinutes}{" "}
-                {PUBLIC_BOOKING.form.serviceDurationSuffix}
-                {showPrices
-                  ? ` · ${PUBLIC_BOOKING.form.servicePricePrefix}${Number(s.price).toLocaleString("he-IL")}`
-                  : ""}
-              </option>
-            ))}
-          </select>
-          <FieldError message={state.errors?.serviceId} />
-        </div>
-
-        {selectedService?.requiresDeposit && (
-          <p className="rounded-xl bg-amber-50 border border-amber-200 px-4 py-2.5 text-sm text-amber-800">
-            {PUBLIC_BOOKING.form.depositNote}
-          </p>
-        )}
-      </div>
-
-      {/* Section: Client details */}
-      <div className="rounded-2xl border border-[var(--border)] bg-white p-5 space-y-4">
-        <h2 className="font-bold text-[var(--foreground)]">
-          {PUBLIC_BOOKING.form.sectionClient}
-        </h2>
-
-        <div>
-          <Label htmlFor="clientName">
-            {PUBLIC_BOOKING.form.clientNameLabel}
-          </Label>
-          <input
-            id="clientName"
-            name="clientName"
-            type="text"
-            autoComplete="name"
-            placeholder={PUBLIC_BOOKING.form.clientNamePlaceholder}
-            defaultValue={v.clientName}
-            className={inputClass}
-            aria-invalid={!!state.errors?.clientName}
-          />
-          <FieldError message={state.errors?.clientName} />
-        </div>
-
-        <div>
-          <Label htmlFor="phone">{PUBLIC_BOOKING.form.phoneLabel}</Label>
-          <input
-            id="phone"
-            name="phone"
-            type="tel"
-            autoComplete="tel"
-            placeholder={PUBLIC_BOOKING.form.phonePlaceholder}
-            defaultValue={v.phone}
-            className={inputClass}
-            dir="ltr"
-            aria-invalid={!!state.errors?.phone}
-          />
-          <FieldError message={state.errors?.phone} />
-        </div>
-
-        <div>
-          <Label htmlFor="note" optional>
-            {PUBLIC_BOOKING.form.noteLabel}
-          </Label>
-          <textarea
-            id="note"
-            name="note"
-            rows={3}
-            placeholder={PUBLIC_BOOKING.form.notePlaceholder}
-            defaultValue={v.note}
-            className={`${inputClass} resize-none`}
-          />
-        </div>
-      </div>
-
-      {/* Section: Date & time */}
-      <div className="rounded-2xl border border-[var(--border)] bg-white p-5 space-y-4">
-        <h2 className="font-bold text-[var(--foreground)]">
-          {PUBLIC_BOOKING.form.sectionDateTime}
-        </h2>
-
-        <div className="grid grid-cols-2 gap-4">
           <div>
-            <Label htmlFor="date">{PUBLIC_BOOKING.form.dateLabel}</Label>
+            <div className="flex items-center gap-2 mb-4">
+              <Zap className="h-4 w-4 shrink-0" style={{ color: brandColor }} />
+              <span className="font-semibold text-sm text-[var(--foreground)]">
+                התורים הקרובים
+              </span>
+            </div>
+            <QuickPickSlots
+              slug={slug}
+              serviceId={selectedServiceId}
+              onSelect={handleQuickPickSelect}
+              onShowCalendar={() => {
+                setSelectedDate("");
+                setSelectedTime("");
+                setSlots(null);
+                setStep("calendar");
+              }}
+              brandColor={brandColor}
+            />
+          </div>
+
+          <div className="flex justify-end">
+            <BackBtn onClick={() => setStep("service")} />
+          </div>
+        </div>
+      )}
+
+      {/* ── STEP 2B: Full calendar ────────────────────────────────────── */}
+      {step === "calendar" && (
+        <div className="space-y-5">
+          {/* Selected service summary */}
+          {selectedService && (
+            <div
+              className="rounded-2xl px-4 py-3 flex items-center justify-between text-sm"
+              style={{ background: `${brandColor}0d` }}
+            >
+              <span className="font-bold text-[var(--foreground)]">
+                {selectedService.name}
+              </span>
+              <button
+                type="button"
+                onClick={() => setStep("service")}
+                className="text-xs font-semibold hover:underline"
+                style={{ color: brandColor }}
+              >
+                שינוי
+              </button>
+            </div>
+          )}
+
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-[var(--foreground)]">
+              בחרי תאריך
+            </label>
             <input
-              id="date"
-              name="date"
               type="date"
               min={todayISO()}
-              defaultValue={v.date}
-              className={inputClass}
-              aria-invalid={!!state.errors?.date}
+              value={selectedDate}
+              onChange={(e) => {
+                setSelectedDate(e.target.value);
+                setSelectedTime("");
+                setSlots(null);
+              }}
+              className={inputCls}
             />
-            <FieldError message={state.errors?.date} />
           </div>
 
-          <div>
-            <Label htmlFor="requestedTime">{PUBLIC_BOOKING.form.timeLabel}</Label>
-            <input
-              id="requestedTime"
-              name="requestedTime"
-              type="time"
-              defaultValue={v.requestedTime}
-              className={inputClass}
-              aria-invalid={!!state.errors?.requestedTime}
-            />
-            <FieldError message={state.errors?.requestedTime} />
-          </div>
-        </div>
-      </div>
+          {selectedDate && (
+            <div>
+              <label className="mb-3 block text-sm font-semibold text-[var(--foreground)]">
+                בחרי שעה
+              </label>
+              {slotsLoading ? (
+                <div className="flex items-center justify-center gap-2.5 py-8 text-sm text-[var(--muted)]">
+                  <div
+                    className="h-5 w-5 rounded-full border-2 animate-spin"
+                    style={{ borderColor: brandColor, borderTopColor: "transparent" }}
+                  />
+                  טוענת שעות פנויות…
+                </div>
+              ) : slots !== null && slots.length === 0 ? (
+                <div className="rounded-2xl bg-gray-50 p-6 text-center">
+                  <p className="text-sm font-medium text-[var(--foreground)]">
+                    אין שעות פנויות בתאריך זה
+                  </p>
+                  <p className="mt-1 text-xs text-[var(--muted)]">
+                    נסי לבחור תאריך אחר
+                  </p>
+                </div>
+              ) : slots !== null ? (
+                <div className="flex flex-wrap gap-2" dir="ltr">
+                  {slots.map((time) => (
+                    <SlotPill
+                      key={time}
+                      time={time}
+                      selected={selectedTime === time}
+                      onSelect={() => setSelectedTime(time)}
+                      brandColor={brandColor}
+                    />
+                  ))}
+                </div>
+              ) : null}
+            </div>
+          )}
 
-      {/* Cancellation policy — only shown when enabled */}
-      {cancellationPolicy?.policyText && (
-        <div className="rounded-2xl border border-[var(--border)] bg-white p-5 space-y-3">
-          <h2 className="font-bold text-[var(--foreground)]">
-            {PUBLIC_BOOKING.form.policyTitle}
-          </h2>
-          <p className="text-sm leading-relaxed" style={{ color: "var(--foreground-soft)" }}>
-            {cancellationPolicy.policyText}
-          </p>
-          <label className="flex cursor-pointer items-start gap-2.5">
-            <input
-              type="checkbox"
-              checked={policyAcknowledged}
-              onChange={(e) => setPolicyAcknowledged(e.target.checked)}
-              className="mt-0.5 h-4 w-4 rounded accent-[var(--primary)]"
-              required
-            />
-            <span className="text-sm" style={{ color: "var(--foreground-soft)" }}>
-              {PUBLIC_BOOKING.form.policyAcknowledge}
-            </span>
-          </label>
+          {(state.errors?.date || state.errors?.requestedTime) && (
+            <FieldError message={state.errors.date ?? state.errors.requestedTime} />
+          )}
+
+          <PrimaryBtn
+            disabled={!selectedDate || !selectedTime}
+            onClick={() => setStep("details")}
+            brandColor={brandColor}
+          >
+            המשך למילוי פרטים →
+          </PrimaryBtn>
+
+          <div className="flex justify-end">
+            <BackBtn onClick={() => setStep("quickpick")} />
+          </div>
         </div>
       )}
 
-      {/* Approval note */}
-      <p className="text-center text-xs text-[var(--muted)] leading-5">
-        {PUBLIC_BOOKING.form.approvalNote}
-      </p>
+      {/* ── STEP 3: Personal details + submit ───────────────────────────── */}
+      {step === "details" && (
+        <div className="space-y-4">
+          {state.formError && (
+            <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+              {state.formError}
+              {state.formError.includes("תפוס") && (
+                <button
+                  type="button"
+                  onClick={() => setStep("quickpick")}
+                  className="block mt-1.5 text-xs font-semibold underline"
+                >
+                  חזרה לבחירת שעה
+                </button>
+              )}
+            </div>
+          )}
 
-      {/* Submit */}
-      <button
-        type="submit"
-        disabled={pending || (!!cancellationPolicy?.policyText && !policyAcknowledged)}
-        className="w-full rounded-2xl bg-[var(--primary)] py-3 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-60"
-      >
-        {pending
-          ? PUBLIC_BOOKING.form.submitting
-          : PUBLIC_BOOKING.form.submitButton}
-      </button>
+          {/* Booking summary bar */}
+          {selectedService && (
+            <div
+              className="rounded-2xl px-4 py-3 flex items-center justify-between text-sm"
+              style={{ background: `${brandColor}0d` }}
+            >
+              <div>
+                <span className="font-bold text-[var(--foreground)]">
+                  {selectedService.name}
+                </span>
+                {selectedDate && selectedTime && (
+                  <span className="text-[var(--muted)] mr-2 text-xs">
+                    · {formatDateHebrew(selectedDate)}, {selectedTime}
+                  </span>
+                )}
+              </div>
+              <button
+                type="button"
+                onClick={() => setStep("quickpick")}
+                className="text-xs font-semibold hover:underline"
+                style={{ color: brandColor }}
+              >
+                שינוי
+              </button>
+            </div>
+          )}
+
+          <div>
+            <label htmlFor="clientName" className="mb-1.5 block text-sm font-semibold text-[var(--foreground)]">
+              שם מלא
+            </label>
+            <input
+              id="clientName"
+              name="clientName"
+              type="text"
+              autoComplete="name"
+              placeholder="לדוגמה: נועה כהן"
+              className={inputCls}
+              aria-invalid={!!state.errors?.clientName}
+            />
+            <FieldError message={state.errors?.clientName} />
+          </div>
+
+          <div>
+            <label htmlFor="phone" className="mb-1.5 block text-sm font-semibold text-[var(--foreground)]">
+              טלפון
+            </label>
+            <input
+              id="phone"
+              name="phone"
+              type="tel"
+              autoComplete="tel"
+              placeholder="050-0000000"
+              className={inputCls}
+              dir="ltr"
+              aria-invalid={!!state.errors?.phone}
+            />
+            <FieldError message={state.errors?.phone} />
+          </div>
+
+          <div>
+            <label htmlFor="note" className="mb-1.5 block text-sm font-semibold text-[var(--foreground)]">
+              הערה קצרה{" "}
+              <span className="text-xs font-normal text-[var(--muted)]">(אופציונלי)</span>
+            </label>
+            <textarea
+              id="note"
+              name="note"
+              rows={3}
+              placeholder="אם יש משהו שחשוב לדעת…"
+              className={`${inputCls} resize-none`}
+            />
+          </div>
+
+          {needsPolicy && (
+            <div className="rounded-2xl border border-[var(--border)] bg-white p-4 space-y-3">
+              <h3 className="font-bold text-sm text-[var(--foreground)]">
+                מדיניות ביטולים
+              </h3>
+              <p className="text-sm leading-relaxed text-[var(--muted)]">
+                {cancellationPolicy!.policyText}
+              </p>
+              <label className="flex cursor-pointer items-start gap-3">
+                <input
+                  type="checkbox"
+                  checked={policyAcknowledged}
+                  onChange={(e) => setPolicyAcknowledged(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded accent-[var(--primary)]"
+                />
+                <span className="text-sm text-[var(--muted)]">
+                  קראתי את מדיניות הביטולים ואני מסכימה לתנאיה
+                </span>
+              </label>
+            </div>
+          )}
+
+          <p className="text-center text-xs text-[var(--muted)] leading-5">
+            הבקשה תישלח לעסק לאישור. התור יאושר רק אחרי שהעסק יאשר אותו.
+          </p>
+
+          <button
+            type="submit"
+            disabled={pending || (needsPolicy && !policyAcknowledged)}
+            className="w-full rounded-2xl py-4 text-sm font-bold text-white transition-all hover:opacity-90 active:scale-[.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
+            style={{ background: `linear-gradient(135deg, ${brandColor}cc 0%, ${brandColor} 100%)` }}
+          >
+            {pending ? "שולח…" : "שליחת בקשה לתור ✓"}
+          </button>
+
+          <div className="flex justify-end">
+            <BackBtn onClick={() => setStep("quickpick")} />
+          </div>
+        </div>
+      )}
     </form>
   );
 }

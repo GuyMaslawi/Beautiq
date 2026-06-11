@@ -1,13 +1,14 @@
 import Link from "next/link";
-import { CalendarDays, CalendarRange, Clock, XCircle, Plus, ChevronUp, ChevronDown, ChevronsUpDown } from "lucide-react";
+import { CalendarDays, CalendarRange, Clock, XCircle, Plus, ChevronUp, ChevronDown, ChevronsUpDown, List } from "lucide-react";
 import type { ReactNode } from "react";
 import { requireTenant } from "@/server/auth/session";
-import { getBookings, getBookingSummary, getActiveCancellationPolicy } from "@/server/bookings/queries";
+import { getBookings, getBookingSummary, getActiveCancellationPolicy, getCalendarBookings } from "@/server/bookings/queries";
 import { prisma } from "@/server/db/prisma";
 import { EmptyState } from "@/components/ui/empty-state";
 import { BookingRow } from "@/components/bookings/booking-row";
 import { BookingSearchInput } from "@/components/bookings/booking-search-input";
 import { BookingAdvancedFilter } from "@/components/bookings/booking-advanced-filter";
+import { BookingsCalendar } from "@/components/bookings/bookings-calendar";
 import { BOOKINGS } from "@/lib/constants/he";
 import type {
   BookingFilter,
@@ -15,6 +16,43 @@ import type {
   BookingSortField,
   BookingSortDir,
 } from "@/server/bookings/queries";
+
+// ---------------------------------------------------------------------------
+// Israel timezone helpers for the calendar
+// ---------------------------------------------------------------------------
+
+const IL_TZ = "Asia/Jerusalem";
+
+function getIsraelToday(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: IL_TZ }).format(new Date());
+}
+
+function israelDateToRange(dateStr: string): { start: Date; end: Date } {
+  // Use noon UTC as reference — guaranteed to land on the correct Israel calendar day
+  const ref = new Date(`${dateStr}T12:00:00Z`);
+  // Find midnight Israel time for this date
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: IL_TZ,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).formatToParts(ref);
+  const h = parseInt(parts.find((p) => p.type === "hour")!.value, 10);
+  const m = parseInt(parts.find((p) => p.type === "minute")!.value, 10);
+  const s = parseInt(parts.find((p) => p.type === "second")!.value, 10);
+  const start = new Date(ref.getTime() - (h * 3600 + m * 60 + s) * 1000 - ref.getMilliseconds());
+  const end = new Date(start.getTime() + 86400000 - 1);
+  return { start, end };
+}
+
+function israelWeekStart(dateStr: string): string {
+  const [y, mo, d] = dateStr.split("-").map(Number);
+  const date = new Date(y, mo - 1, d);
+  const dow = date.getDay(); // 0=Sunday
+  date.setDate(date.getDate() - dow);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
 
 // ---------------------------------------------------------------------------
 // Filter label maps
@@ -56,9 +94,34 @@ interface SummaryCardProps {
   icon: ReactNode;
   highlight?: boolean;
   warn?: boolean;
+  compact?: boolean;
 }
 
-function SummaryCard({ label, count, icon, highlight, warn }: SummaryCardProps) {
+function SummaryCard({ label, count, icon, highlight, warn, compact }: SummaryCardProps) {
+  const accentColor = highlight ? "#b86b8c" : warn ? "#b87c1e" : "#2b2530";
+
+  if (compact) {
+    return (
+      <div
+        className="flex items-center gap-2 rounded-xl px-3 py-2"
+        style={{
+          background: highlight
+            ? "rgba(247,238,243,0.85)"
+            : warn
+            ? "rgba(254,246,228,0.80)"
+            : "rgba(255,255,255,0.80)",
+          border: `1px solid ${highlight ? "rgba(184,107,140,0.20)" : warn ? "rgba(184,150,10,0.20)" : "var(--border)"}`,
+        }}
+      >
+        <span style={{ color: accentColor }}>{icon}</span>
+        <span className="text-base font-bold tabular-nums" style={{ color: accentColor }}>
+          {count}
+        </span>
+        <span className="text-xs font-medium" style={{ color: "#8a8190" }}>{label}</span>
+      </div>
+    );
+  }
+
   return (
     <div
       className="rounded-2xl px-5 py-4 transition-shadow hover:shadow-md"
@@ -120,6 +183,9 @@ export default async function BookingsPage({
   searchParams,
 }: {
   searchParams: Promise<{
+    view?: string;
+    calDate?: string;
+    calView?: string;
     filter?: string;
     status?: string;
     created?: string;
@@ -132,6 +198,9 @@ export default async function BookingsPage({
 }) {
   const tenant = await requireTenant();
   const {
+    view: rawView,
+    calDate: rawCalDate,
+    calView: rawCalView,
     filter: rawFilter,
     status: rawStatus,
     created,
@@ -141,6 +210,11 @@ export default async function BookingsPage({
     sort: rawSort,
     dir: rawDir,
   } = await searchParams;
+
+  const isCalendarView = rawView === "calendar";
+  const calView: "day" | "week" = rawCalView === "week" ? "week" : "day";
+  const todayStr = getIsraelToday();
+  const calDate = rawCalDate && /^\d{4}-\d{2}-\d{2}$/.test(rawCalDate) ? rawCalDate : todayStr;
 
   // Validate and coerce params
   const filter: BookingFilter =
@@ -169,15 +243,32 @@ export default async function BookingsPage({
   const hasExplicitSort = !!rawSort;
 
   // Fetch data
-  const [bookings, summary, services, cancellationPolicy] = await Promise.all([
-    getBookings(tenant, { filter, statusFilter, search, serviceId, depositStatusFilter, sortField, sortDir, smartSort: !hasExplicitSort }),
+  const [bookings, summary, services, cancellationPolicy, calBookings] = await Promise.all([
+    isCalendarView
+      ? Promise.resolve([])
+      : getBookings(tenant, { filter, statusFilter, search, serviceId, depositStatusFilter, sortField, sortDir, smartSort: !hasExplicitSort }),
     getBookingSummary(tenant),
-    prisma.service.findMany({
-      where: { businessId: tenant.businessId },
-      select: { id: true, name: true },
-      orderBy: { name: "asc" },
-    }),
-    getActiveCancellationPolicy(tenant),
+    isCalendarView
+      ? Promise.resolve([])
+      : prisma.service.findMany({
+          where: { businessId: tenant.businessId },
+          select: { id: true, name: true },
+          orderBy: { name: "asc" },
+        }),
+    isCalendarView ? Promise.resolve(null) : getActiveCancellationPolicy(tenant),
+    isCalendarView
+      ? (() => {
+          if (calView === "day") {
+            const { start, end } = israelDateToRange(calDate);
+            return getCalendarBookings(tenant, start, end);
+          } else {
+            const ws = israelWeekStart(calDate);
+            const { start } = israelDateToRange(ws);
+            const end = new Date(start.getTime() + 7 * 86400000 - 1);
+            return getCalendarBookings(tenant, start, end);
+          }
+        })()
+      : Promise.resolve([]),
   ]);
 
   // ---------------------------------------------------------------------------
@@ -217,29 +308,61 @@ export default async function BookingsPage({
   const advancedFilterBaseParams = buildParams({ status: undefined, serviceId: undefined, deposit: undefined });
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6">
+    <div className={isCalendarView ? "w-full space-y-3" : "mx-auto w-full max-w-6xl space-y-6"}>
       {/* Page header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--foreground)" }}>
-            ניהול לקוחות ותורים
+            תורים
           </h1>
-          <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
-            כאן תוכלו לנהל את כל התורים והפגישות שלכם בקלות.
-          </p>
+          {!isCalendarView && (
+            <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
+              נהלי תורים, צפי לפגישות ויומן עסקי.
+            </p>
+          )}
         </div>
-        <Link
-          href="/bookings/new"
-          className="flex shrink-0 cursor-pointer items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90"
-          style={{
-            background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
-            color: "#fff",
-            boxShadow: "0 2px 8px rgba(184,107,140,0.30)",
-          }}
-        >
-          <Plus className="h-4 w-4" />
-          קביעת פגישה חדשה
-        </Link>
+        <div className="flex items-center gap-2">
+          {/* View mode toggle */}
+          <div className="hidden sm:flex rounded-xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
+            <Link
+              href="/bookings"
+              className="flex h-9 items-center gap-1.5 px-3 text-xs font-medium transition-colors"
+              style={{
+                background: !isCalendarView ? "rgba(184,107,140,0.10)" : "transparent",
+                color: !isCalendarView ? "#b86b8c" : "var(--foreground-soft)",
+              }}
+            >
+              <List className="h-3.5 w-3.5" />
+              רשימה
+            </Link>
+            <Link
+              href={`/bookings?view=calendar&calDate=${todayStr}&calView=day`}
+              className="flex h-9 items-center gap-1.5 border-r px-3 text-xs font-medium transition-colors"
+              style={{
+                borderColor: "var(--border)",
+                background: isCalendarView ? "rgba(184,107,140,0.10)" : "transparent",
+                color: isCalendarView ? "#b86b8c" : "var(--foreground-soft)",
+              }}
+            >
+              <CalendarRange className="h-3.5 w-3.5" />
+              יומן
+            </Link>
+          </div>
+          {!isCalendarView && (
+            <Link
+              href="/bookings/new"
+              className="flex shrink-0 cursor-pointer items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90"
+              style={{
+                background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
+                color: "#fff",
+                boxShadow: "0 2px 8px rgba(184,107,140,0.30)",
+              }}
+            >
+              <Plus className="h-4 w-4" />
+              תור חדש
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Success banner */}
@@ -255,191 +378,255 @@ export default async function BookingsPage({
         </div>
       )}
 
-      {/* Summary cards */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <SummaryCard
-          label="היום"
-          count={summary.todayCount}
-          icon={<CalendarDays className="h-4 w-4" />}
-          highlight={summary.todayCount > 0}
-        />
-        <SummaryCard
-          label={BOOKINGS.summary.pending}
-          count={summary.pendingCount}
-          icon={<Clock className="h-4 w-4" />}
-          warn={summary.pendingCount > 0}
-        />
-        <SummaryCard
-          label={BOOKINGS.summary.cancelled}
-          count={summary.cancelledCount}
-          icon={<XCircle className="h-4 w-4" />}
-          warn={summary.cancelledCount > 0}
-        />
-        <SummaryCard
-          label={BOOKINGS.summary.week}
-          count={summary.weekCount}
-          icon={<CalendarRange className="h-4 w-4" />}
-        />
-      </div>
-
-      {/* Pending deposit alert */}
-      {summary.pendingDepositCount > 0 && (
-        <div
-          className="flex items-center gap-3 rounded-xl border px-4 py-3"
-          style={{ borderColor: "rgba(184,150,10,0.25)", background: "rgba(184,150,10,0.06)" }}
-        >
-          <span className="text-sm" style={{ color: "#b87c1e" }}>💳</span>
-          <p className="text-sm font-medium" style={{ color: "#7a6400" }}>
-            {summary.pendingDepositCount === 1
-              ? "תור אחד ללא מקדמה — שלחי בקשה ללקוחה"
-              : `${summary.pendingDepositCount} תורים ללא מקדמה — כדאי לשלוח בקשה`}
-          </p>
+      {/* Summary cards — compact chips in calendar mode, full cards in list mode */}
+      {isCalendarView ? (
+        <div className="flex items-center gap-2 flex-wrap" dir="rtl">
+          <SummaryCard
+            label="תורים היום"
+            count={summary.todayCount}
+            icon={<CalendarDays className="h-3.5 w-3.5" />}
+            highlight={summary.todayCount > 0}
+            compact
+          />
+          <SummaryCard
+            label={BOOKINGS.summary.pending}
+            count={summary.pendingCount}
+            icon={<Clock className="h-3.5 w-3.5" />}
+            warn={summary.pendingCount > 0}
+            compact
+          />
+          <SummaryCard
+            label="ביטולים"
+            count={summary.cancelledCount}
+            icon={<XCircle className="h-3.5 w-3.5" />}
+            warn={summary.cancelledCount > 0}
+            compact
+          />
+          <SummaryCard
+            label={BOOKINGS.summary.week}
+            count={summary.weekCount}
+            icon={<CalendarRange className="h-3.5 w-3.5" />}
+            compact
+          />
+          {summary.pendingDepositCount > 0 && (
+            <div
+              className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium"
+              style={{
+                background: "rgba(254,246,228,0.80)",
+                border: "1px solid rgba(184,150,10,0.20)",
+                color: "#7a6400",
+              }}
+            >
+              <span>💳</span>
+              <span>
+                {summary.pendingDepositCount === 1
+                  ? "תור אחד ללא מקדמה"
+                  : `${summary.pendingDepositCount} ללא מקדמה`}
+              </span>
+            </div>
+          )}
         </div>
+      ) : (
+        <>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <SummaryCard
+              label="היום"
+              count={summary.todayCount}
+              icon={<CalendarDays className="h-4 w-4" />}
+              highlight={summary.todayCount > 0}
+            />
+            <SummaryCard
+              label={BOOKINGS.summary.pending}
+              count={summary.pendingCount}
+              icon={<Clock className="h-4 w-4" />}
+              warn={summary.pendingCount > 0}
+            />
+            <SummaryCard
+              label={BOOKINGS.summary.cancelled}
+              count={summary.cancelledCount}
+              icon={<XCircle className="h-4 w-4" />}
+              warn={summary.cancelledCount > 0}
+            />
+            <SummaryCard
+              label={BOOKINGS.summary.week}
+              count={summary.weekCount}
+              icon={<CalendarRange className="h-4 w-4" />}
+            />
+          </div>
+
+          {/* Pending deposit alert — list mode only */}
+          {summary.pendingDepositCount > 0 && (
+            <div
+              className="flex items-center gap-3 rounded-xl border px-4 py-3"
+              style={{ borderColor: "rgba(184,150,10,0.25)", background: "rgba(184,150,10,0.06)" }}
+            >
+              <span className="text-sm" style={{ color: "#b87c1e" }}>💳</span>
+              <p className="text-sm font-medium" style={{ color: "#7a6400" }}>
+                {summary.pendingDepositCount === 1
+                  ? "תור אחד ללא מקדמה — שלחי בקשה ללקוחה"
+                  : `${summary.pendingDepositCount} תורים ללא מקדמה — כדאי לשלוח בקשה`}
+              </p>
+            </div>
+          )}
+        </>
       )}
 
-      {/* ── Filter toolbar ───────────────────────────────────────────────── */}
-      <div className="flex flex-wrap items-start gap-3">
-        {/* Debounced search — client component */}
-        <BookingSearchInput initialValue={search ?? ""} otherParams={searchOtherParams} />
-
-        {/* Date range tabs */}
-        <div className="flex gap-1 rounded-xl p-1" style={{ background: "rgba(43,37,48,0.05)" }}>
-          {(["all", "today", "week"] as BookingFilter[]).map((f) => (
-            <Link
-              key={f}
-              href={filterHref(f)}
-              className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-all ${
-                filter === f ? "bg-surface text-foreground" : "text-muted hover:text-foreground"
-              }`}
-              style={filter === f ? { boxShadow: "var(--shadow-xs)" } : undefined}
-            >
-              {FILTER_LABELS[f]}
-            </Link>
-          ))}
-        </div>
-
-        {/* Advanced filter — button + popover + active chips */}
-        <BookingAdvancedFilter
-          services={services}
-          currentStatus={statusFilter}
-          currentServiceId={serviceId}
-          currentDeposit={depositStatusFilter}
-          baseParams={advancedFilterBaseParams}
+      {/* ── Calendar view ───────────────────────────────────────────────── */}
+      {isCalendarView && (
+        <BookingsCalendar
+          bookings={calBookings}
+          calDate={calDate}
+          calView={calView}
         />
-      </div>
+      )}
 
-      {/* Empty state — contextual based on active filter */}
-      {bookings.length === 0 && (() => {
-        let title: string = BOOKINGS.emptyState.title;
-        let body: string = BOOKINGS.emptyState.body;
-        if (statusFilter === "pending") {
-          title = "אין כרגע פגישות שממתינות לאישור";
-          body = "כל הפגישות אושרו. כשתגיע בקשה חדשה, היא תופיע כאן.";
-        } else if (statusFilter === "active") {
-          title = "אין פגישות פעילות כרגע";
-          body = "לא נמצאו פגישות פעילות התואמות לחיפוש.";
-        } else if (statusFilter === "completed") {
-          title = "אין פגישות שהושלמו";
-          body = "פגישות שסומנו כהושלמו יופיעו כאן.";
-        } else if (statusFilter === "cancelled") {
-          title = "אין פגישות שבוטלו";
-          body = "פגישות שבוטלו יופיעו כאן.";
-        } else if (depositStatusFilter === "pending") {
-          title = "אין כרגע מקדמות שדורשות טיפול";
-          body = "כל המקדמות מסודרות. כשתור ידרוש מקדמה, הוא יופיע כאן.";
-        } else if (depositStatusFilter === "paid") {
-          title = "לא נמצאו תורים עם מקדמה ששולמה";
-          body = "תורים שבהם המקדמה אושרה יופיעו כאן.";
-        }
-        return (
-          <EmptyState
-            title={title}
-            body={body}
-            cta={BOOKINGS.emptyState.cta}
-            ctaHref="/bookings/new"
-            icon={<CalendarDays className="h-7 w-7" style={{ color: "#b86b8c" }} />}
-          />
-        );
-      })()}
+      {/* ── Table view (filters + empty state + table) ──────────────────── */}
+      {!isCalendarView && (
+        <>
+          <div className="flex flex-wrap items-start gap-3">
+            {/* Debounced search — client component */}
+            <BookingSearchInput initialValue={search ?? ""} otherParams={searchOtherParams} />
 
-      {/* Bookings table */}
-      {bookings.length > 0 && (
-        <div
-          className="overflow-hidden rounded-2xl"
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            boxShadow: "var(--shadow-md)",
-          }}
-        >
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr
-                  style={{
-                    borderBottom: "1px solid var(--border)",
-                    background:
-                      "linear-gradient(135deg, rgba(247,238,243,0.60) 0%, rgba(255,255,255,0) 100%)",
-                  }}
+            {/* Date range tabs */}
+            <div className="flex gap-1 rounded-xl p-1" style={{ background: "rgba(43,37,48,0.05)" }}>
+              {(["all", "today", "week"] as BookingFilter[]).map((f) => (
+                <Link
+                  key={f}
+                  href={filterHref(f)}
+                  className={`rounded-lg px-4 py-1.5 text-sm font-medium transition-all ${
+                    filter === f ? "bg-surface text-foreground" : "text-muted hover:text-foreground"
+                  }`}
+                  style={filter === f ? { boxShadow: "var(--shadow-xs)" } : undefined}
                 >
-                  {TABLE_COLS.map((col) =>
-                    col.sortable ? (
-                      <th
-                        key={col.field}
-                        className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide"
-                        style={{ color: (hasExplicitSort && sortField === col.field) ? "#b86b8c" : "var(--muted)" }}
-                      >
-                        <Link
-                          href={sortHref(col.field)}
-                          className="inline-flex items-center gap-1 hover:opacity-80"
-                        >
-                          {col.label}
-                          <SortIcon field={col.field} sortField={sortField} sortDir={sortDir} hasExplicitSort={hasExplicitSort} />
-                        </Link>
-                      </th>
-                    ) : (
-                      <th
-                        key={col.label}
-                        className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide"
-                        style={{ color: "var(--muted)" }}
-                      >
-                        {col.label}
-                      </th>
-                    )
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {bookings.map((booking) => (
-                  <BookingRow
-                    key={booking.id}
-                    booking={booking}
-                    lateCancellationHours={cancellationPolicy?.lateCancellationHours ?? null}
-                  />
-                ))}
-              </tbody>
-            </table>
+                  {FILTER_LABELS[f]}
+                </Link>
+              ))}
+            </div>
+
+            {/* Advanced filter — button + popover + active chips */}
+            <BookingAdvancedFilter
+              services={services}
+              currentStatus={statusFilter}
+              currentServiceId={serviceId}
+              currentDeposit={depositStatusFilter}
+              baseParams={advancedFilterBaseParams}
+            />
           </div>
 
-          {/* Footer */}
-          <div
-            className="flex items-center justify-between px-4 py-3 text-xs"
-            style={{
-              borderTop: "1px solid var(--border)",
-              background: "rgba(247,238,243,0.25)",
-              color: "var(--muted)",
-            }}
-          >
-            <span>מציג {bookings.length} פגישות</span>
-            <Link
-              href="/bookings"
-              className="font-medium hover:underline"
-              style={{ color: "#b86b8c" }}
+          {/* Empty state — contextual based on active filter */}
+          {bookings.length === 0 && (() => {
+            let title: string = BOOKINGS.emptyState.title;
+            let body: string = BOOKINGS.emptyState.body;
+            if (statusFilter === "pending") {
+              title = "אין כרגע פגישות שממתינות לאישור";
+              body = "כל הפגישות אושרו. כשתגיע בקשה חדשה, היא תופיע כאן.";
+            } else if (statusFilter === "active") {
+              title = "אין פגישות פעילות כרגע";
+              body = "לא נמצאו פגישות פעילות התואמות לחיפוש.";
+            } else if (statusFilter === "completed") {
+              title = "אין פגישות שהושלמו";
+              body = "פגישות שסומנו כהושלמו יופיעו כאן.";
+            } else if (statusFilter === "cancelled") {
+              title = "אין פגישות שבוטלו";
+              body = "פגישות שבוטלו יופיעו כאן.";
+            } else if (depositStatusFilter === "pending") {
+              title = "אין כרגע מקדמות שדורשות טיפול";
+              body = "כל המקדמות מסודרות. כשתור ידרוש מקדמה, הוא יופיע כאן.";
+            } else if (depositStatusFilter === "paid") {
+              title = "לא נמצאו תורים עם מקדמה ששולמה";
+              body = "תורים שבהם המקדמה אושרה יופיעו כאן.";
+            }
+            return (
+              <EmptyState
+                title={title}
+                body={body}
+                cta={BOOKINGS.emptyState.cta}
+                ctaHref="/bookings/new"
+                icon={<CalendarDays className="h-7 w-7" style={{ color: "#b86b8c" }} />}
+              />
+            );
+          })()}
+
+          {/* Bookings table */}
+          {bookings.length > 0 && (
+            <div
+              className="overflow-hidden rounded-2xl"
+              style={{
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+                boxShadow: "var(--shadow-md)",
+              }}
             >
-              צפייה בכל הפגישות ←
-            </Link>
-          </div>
-        </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr
+                      style={{
+                        borderBottom: "1px solid var(--border)",
+                        background:
+                          "linear-gradient(135deg, rgba(247,238,243,0.60) 0%, rgba(255,255,255,0) 100%)",
+                      }}
+                    >
+                      {TABLE_COLS.map((col) =>
+                        col.sortable ? (
+                          <th
+                            key={col.field}
+                            className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide"
+                            style={{ color: (hasExplicitSort && sortField === col.field) ? "#b86b8c" : "var(--muted)" }}
+                          >
+                            <Link
+                              href={sortHref(col.field)}
+                              className="inline-flex items-center gap-1 hover:opacity-80"
+                            >
+                              {col.label}
+                              <SortIcon field={col.field} sortField={sortField} sortDir={sortDir} hasExplicitSort={hasExplicitSort} />
+                            </Link>
+                          </th>
+                        ) : (
+                          <th
+                            key={col.label}
+                            className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide"
+                            style={{ color: "var(--muted)" }}
+                          >
+                            {col.label}
+                          </th>
+                        )
+                      )}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {bookings.map((booking) => (
+                      <BookingRow
+                        key={booking.id}
+                        booking={booking}
+                        lateCancellationHours={cancellationPolicy?.lateCancellationHours ?? null}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Footer */}
+              <div
+                className="flex items-center justify-between px-4 py-3 text-xs"
+                style={{
+                  borderTop: "1px solid var(--border)",
+                  background: "rgba(247,238,243,0.25)",
+                  color: "var(--muted)",
+                }}
+              >
+                <span>מציג {bookings.length} תורים</span>
+                <Link
+                  href="/bookings"
+                  className="font-medium hover:underline"
+                  style={{ color: "#b86b8c" }}
+                >
+                  צפייה בכל התורים ←
+                </Link>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

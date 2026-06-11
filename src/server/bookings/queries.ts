@@ -286,6 +286,53 @@ export interface BookingSummary {
   pendingDepositCount: number;
 }
 
+// ---------------------------------------------------------------------------
+// Calendar view
+// ---------------------------------------------------------------------------
+
+export type CalendarBookingItem = {
+  id: string;
+  clientName: string;
+  clientId: string;
+  clientPhone: string;
+  serviceName: string;
+  startTime: string; // ISO string
+  endTime: string;
+  status: string;
+  priceSnapshot: number;
+  durationMinutesSnapshot: number;
+  notes: string | null;
+};
+
+export async function getCalendarBookings(
+  tenant: TenantContext,
+  dateFrom: Date,
+  dateTo: Date,
+): Promise<CalendarBookingItem[]> {
+  const bookings = await prisma.booking.findMany({
+    where: {
+      businessId: tenant.businessId,
+      startTime: { gte: dateFrom, lte: dateTo },
+    },
+    include: bookingInclude,
+    orderBy: { startTime: "asc" },
+  });
+
+  return bookings.map((b) => ({
+    id: b.id,
+    clientName: b.client.fullName,
+    clientId: b.client.id,
+    clientPhone: b.client.phone,
+    serviceName: b.service.name,
+    startTime: b.startTime.toISOString(),
+    endTime: b.endTime.toISOString(),
+    status: b.status,
+    priceSnapshot: Number(b.priceSnapshot),
+    durationMinutesSnapshot: b.durationMinutesSnapshot,
+    notes: b.notes ?? null,
+  }));
+}
+
 export async function getLateCancellationsThisWeek(
   tenant: TenantContext,
 ): Promise<number> {

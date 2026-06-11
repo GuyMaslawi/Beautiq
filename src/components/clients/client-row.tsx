@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 import type { ClientListItem } from "@/server/clients/queries";
-import { CLIENTS } from "@/lib/constants/he";
+import { CLIENTS, ACTIONS } from "@/lib/constants/he";
+import { WhatsAppManualSendModal } from "@/components/clients/whatsapp-manual-send-modal";
 
 function formatLastVisit(date: Date): string {
   const d = new Date(date);
@@ -45,7 +46,15 @@ function formatUpcomingDate(date: Date): string {
   );
 }
 
-export function ClientRow({ client }: { client: ClientListItem }) {
+export function ClientRow({
+  client,
+  businessName,
+  isTestMode,
+}: {
+  client: ClientListItem;
+  businessName: string;
+  isTestMode: boolean;
+}) {
   const initials = client.fullName
     .split(" ")
     .map((w) => w[0])
@@ -188,6 +197,37 @@ export function ClientRow({ client }: { client: ClientListItem }) {
           >
             {CLIENTS.card.detailsButton}
           </Link>
+          <Link
+            href={`/clients/${client.id}`}
+            className="flex h-7 items-center rounded-lg border px-2.5 text-xs font-medium transition-all hover:shadow-sm"
+            style={{
+              borderColor: "var(--border)",
+              color: "var(--foreground-soft)",
+              background: "var(--surface)",
+            }}
+          >
+            {ACTIONS.edit}
+          </Link>
+          <WhatsAppManualSendModal
+            clientId={client.id}
+            clientName={client.fullName}
+            clientPhone={client.phone}
+            businessName={businessName}
+            isTestMode={isTestMode}
+            trigger={
+              <button
+                type="button"
+                className="flex h-7 items-center rounded-lg border px-2.5 text-xs font-medium transition-all hover:shadow-sm"
+                style={{
+                  borderColor: "rgba(22,163,74,0.30)",
+                  color: "#16a34a",
+                  background: "rgba(22,163,74,0.06)",
+                }}
+              >
+                WhatsApp
+              </button>
+            }
+          />
           <Link
             href={`/bookings/new?clientId=${client.id}`}
             className="flex h-7 items-center rounded-lg px-2.5 text-xs font-semibold transition-opacity hover:opacity-90"

@@ -5,7 +5,27 @@ import { Settings, X } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toggleWinBackAutomation } from "@/server/win-back-automation/actions";
 import { WinBackSettingsForm } from "@/components/win-back-automation/win-back-settings-form";
+import { DEFAULT_WIN_BACK_TEMPLATE } from "@/server/win-back-automation/message-builder";
 import type { AutomationSetting } from "@prisma/client";
+
+const OFFER_PREVIEW_TEXTS: Record<string, string> = {
+  none: "",
+  discount_10: "מגיעה לך הנחה של 10% בתור הבא 🎁",
+  upgrade: "שדרוג טיפול מתנה בתור הקרוב 🌟",
+  special_slot: "יש לנו תור פנוי מיוחד בשבוע הקרוב — רק בשבילך 🗓️",
+};
+
+function buildPreview(template: string, offerType: string, offerValue: string): string {
+  const offerText = offerType === "custom" ? offerValue : (OFFER_PREVIEW_TEXTS[offerType] ?? "");
+  return template
+    .replace(/\{שם\}/g, "רחל כהן")
+    .replace(/\{שם_העסק\}/g, "מספרה לדוגמה")
+    .replace(/\{שירות_אחרון\}/g, "צביעת שיער")
+    .replace(/\{הטבה\}/g, offerText)
+    .replace(/\{קישור_להזמנה\}/g, "allura.app/b/example")
+    .replace(/\n{2,}/g, "\n")
+    .trim();
+}
 
 interface Props {
   setting: AutomationSetting | null;
@@ -16,6 +36,14 @@ export function WinBackAutomationCard({ setting }: Props) {
   const [isToggling, startToggle] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
 
+  const [previewTemplate, setPreviewTemplate] = useState(
+    setting?.messageTemplate ?? DEFAULT_WIN_BACK_TEMPLATE,
+  );
+  const [previewOfferType, setPreviewOfferType] = useState(
+    (setting?.offerType as string) ?? "none",
+  );
+  const [previewOfferValue, setPreviewOfferValue] = useState(setting?.offerValue ?? "");
+
   const handleToggle = () => {
     const next = !isEnabled;
     setIsEnabled(next);
@@ -24,6 +52,29 @@ export function WinBackAutomationCard({ setting }: Props) {
       if (!result.success) setIsEnabled(!next);
     });
   };
+
+  const handlePreviewChange = (template: string, offerType: string, offerValue: string) => {
+    setPreviewTemplate(template);
+    setPreviewOfferType(offerType);
+    setPreviewOfferValue(offerValue);
+  };
+
+  const previewText = buildPreview(previewTemplate, previewOfferType, previewOfferValue);
+
+  const previewBubble = (
+    <div
+      className="rounded-2xl rounded-tr-sm px-4 py-3 text-sm leading-loose w-full"
+      style={{
+        background: "#fff",
+        color: "#111",
+        whiteSpace: "pre-wrap",
+        boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
+        direction: "rtl",
+      }}
+    >
+      {previewText}
+    </div>
+  );
 
   return (
     <>
@@ -35,7 +86,7 @@ export function WinBackAutomationCard({ setting }: Props) {
           boxShadow: "var(--shadow-sm)",
         }}
       >
-        {/* Title + switch in one row */}
+        {/* Title + switch */}
         <div className="flex items-center gap-3">
           <h3 className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
             החזרת לקוחות
@@ -48,20 +99,14 @@ export function WinBackAutomationCard({ setting }: Props) {
           />
         </div>
 
-        {/* Status */}
-        <p
-          className="text-xs font-semibold"
-          style={{ color: isEnabled ? "#16a34a" : "var(--muted)" }}
-        >
+        <p className="text-xs font-semibold" style={{ color: isEnabled ? "#16a34a" : "var(--muted)" }}>
           {isEnabled ? "פעיל" : "כבוי"}
         </p>
 
-        {/* Description */}
         <p className="text-xs leading-relaxed" style={{ color: "var(--muted)" }}>
-          לקוחות שלא חזרו יקבלו הודעת WhatsApp אוטומטית.
+          לקוחות שלא חזרו יקבלו הודעת WhatsApp אוטומטית כדי לעודד חזרה.
         </p>
 
-        {/* Settings button */}
         <button
           type="button"
           onClick={() => setDialogOpen(true)}
@@ -80,16 +125,15 @@ export function WinBackAutomationCard({ setting }: Props) {
       {/* Settings dialog */}
       {dialogOpen && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setDialogOpen(false)} />
+
           <div
-            className="absolute inset-0 bg-black/40"
-            onClick={() => setDialogOpen(false)}
-          />
-          <div
-            className="relative w-full max-w-md rounded-t-2xl sm:rounded-2xl overflow-hidden"
-            style={{ background: "var(--surface)", maxHeight: "90dvh" }}
+            className="relative w-full sm:max-w-3xl flex flex-col rounded-t-2xl sm:rounded-2xl overflow-hidden max-h-[90dvh]"
+            style={{ background: "var(--surface)" }}
           >
+            {/* Header */}
             <div
-              className="flex items-center justify-between px-5 py-4"
+              className="flex-shrink-0 flex items-center justify-between px-5 py-4"
               style={{ borderBottom: "1px solid var(--border)" }}
             >
               <h2 className="text-base font-bold" style={{ color: "var(--foreground)" }}>
@@ -104,12 +148,73 @@ export function WinBackAutomationCard({ setting }: Props) {
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="overflow-y-auto p-5" style={{ maxHeight: "calc(90dvh - 4rem)" }}>
-              <WinBackSettingsForm
-                setting={setting}
-                currentEnabled={isEnabled}
-                onSaved={() => setDialogOpen(false)}
-              />
+
+            {/* Body — scrollable, 2-col on desktop */}
+            <div className="flex-1 overflow-y-auto min-h-0">
+              <div className="sm:grid sm:grid-cols-[1fr_300px] sm:min-h-full">
+
+                {/* Config col — right in RTL */}
+                <div className="p-5 space-y-4">
+                  {/* Explanation */}
+                  <div
+                    className="rounded-xl px-4 py-3"
+                    style={{
+                      background: "rgba(201,120,152,0.06)",
+                      border: "1px solid rgba(201,120,152,0.12)",
+                    }}
+                  >
+                    <p className="text-sm font-medium leading-relaxed" style={{ color: "var(--foreground)" }}>
+                      הודעה אוטומטית ללקוחות שלא חזרו
+                    </p>
+                    <p className="text-xs mt-1 leading-relaxed" style={{ color: "var(--muted)" }}>
+                      לקוחות שלא קבעו תור תקבלנה הצעה שתחזיר אותן.
+                    </p>
+                  </div>
+
+                  {/* Preview — mobile only */}
+                  <div className="sm:hidden space-y-2">
+                    <p className="text-xs font-semibold" style={{ color: "#16a34a" }}>
+                      ✓ כך ההודעה תישלח ללקוחה
+                    </p>
+                    <div
+                      className="rounded-2xl p-4"
+                      style={{
+                        background: "rgba(37,211,102,0.05)",
+                        border: "1px solid rgba(37,211,102,0.2)",
+                      }}
+                    >
+                      {previewBubble}
+                    </div>
+                  </div>
+
+                  <WinBackSettingsForm
+                    setting={setting}
+                    currentEnabled={isEnabled}
+                    onSaved={() => setDialogOpen(false)}
+                    onPreviewChange={handlePreviewChange}
+                  />
+                </div>
+
+                {/* Preview col — desktop only, left in RTL */}
+                <div
+                  className="hidden sm:flex flex-col p-5 gap-4"
+                  style={{ borderRight: "1px solid var(--border)" }}
+                >
+                  <p className="text-xs font-semibold" style={{ color: "#16a34a" }}>
+                    ✓ כך ההודעה תישלח ללקוחה
+                  </p>
+                  <div
+                    className="rounded-2xl p-4 flex-1"
+                    style={{
+                      background: "rgba(37,211,102,0.05)",
+                      border: "1px solid rgba(37,211,102,0.2)",
+                    }}
+                  >
+                    {previewBubble}
+                  </div>
+                </div>
+
+              </div>
             </div>
           </div>
         </div>

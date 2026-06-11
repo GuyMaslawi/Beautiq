@@ -13,6 +13,8 @@ import { ClientReputationCard } from "@/components/reputation/client-reputation-
 import { getClientLatestCompletedBooking } from "@/server/reputation/queries";
 import { CLIENTS } from "@/lib/constants/he";
 import { ClientOptInForm } from "@/components/clients/client-opt-in-form";
+import { ClientEditModal } from "@/components/clients/client-edit-modal";
+import { WhatsAppManualSendModal } from "@/components/clients/whatsapp-manual-send-modal";
 
 function formatDate(date: Date): string {
   return new Date(date).toLocaleDateString("he-IL", {
@@ -106,6 +108,7 @@ export default async function ClientDetailPage({
 
   const notesAction = updateClientNotesAction.bind(null, clientId);
   const { stats } = client;
+  const isTestMode = process.env.WHATSAPP_TEST_MODE === "true";
 
   // Most recent completed booking for message context
   const recentCompletedBooking =
@@ -163,9 +166,31 @@ export default async function ClientDetailPage({
             >
               {status.label}
             </span>
-            <Link href={`/bookings/new?clientId=${client.id}`}>
-              <Button size="sm">{CLIENTS.detail.newBookingButton}</Button>
-            </Link>
+            <div className="flex items-center gap-2">
+              <WhatsAppManualSendModal
+                clientId={client.id}
+                clientName={client.fullName}
+                clientPhone={client.phone}
+                businessName={business.name}
+                isTestMode={isTestMode}
+                trigger={
+                  <button
+                    type="button"
+                    className="flex h-8 items-center rounded-lg border px-3 text-xs font-medium transition-all hover:shadow-sm"
+                    style={{
+                      borderColor: "rgba(22,163,74,0.30)",
+                      color: "#16a34a",
+                      background: "rgba(22,163,74,0.06)",
+                    }}
+                  >
+                    שליחת WhatsApp
+                  </button>
+                }
+              />
+              <Link href={`/bookings/new?clientId=${client.id}`}>
+                <Button size="sm">{CLIENTS.detail.newBookingButton}</Button>
+              </Link>
+            </div>
           </div>
         </div>
 
@@ -259,9 +284,23 @@ export default async function ClientDetailPage({
 
       {/* Contact details */}
       <Card className="space-y-0 p-5">
-        <p className="text-muted mb-3 text-xs font-semibold uppercase tracking-wider">
-          {CLIENTS.detail.contactSection}
-        </p>
+        <div className="mb-3 flex items-center justify-between gap-3">
+          <p className="text-muted text-xs font-semibold uppercase tracking-wider">
+            {CLIENTS.detail.contactSection}
+          </p>
+          <ClientEditModal
+            clientId={client.id}
+            initialData={{
+              fullName: client.fullName,
+              phone: client.phone,
+              email: client.email,
+              notes: client.notes,
+              whatsappOptIn: client.whatsappOptIn,
+              marketingOptIn: client.marketingOptIn,
+              isUnsubscribed: client.unsubscribedAt !== null,
+            }}
+          />
+        </div>
         <div className="space-y-0">
           <div className="flex items-center justify-between gap-4 py-2">
             <span className="text-muted text-sm">{CLIENTS.detail.name}</span>

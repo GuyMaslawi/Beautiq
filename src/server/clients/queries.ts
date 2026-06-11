@@ -69,6 +69,7 @@ export interface ClientDetail {
   createdAt: Date;
   whatsappOptIn: boolean;
   marketingOptIn: boolean;
+  unsubscribedAt: Date | null;
   bookings: ClientBookingHistoryItem[];
   stats: ClientStats;
 }
@@ -271,6 +272,7 @@ export async function getClientDetail(
     createdAt: client.createdAt,
     whatsappOptIn: client.whatsappOptIn,
     marketingOptIn: client.marketingOptIn,
+    unsubscribedAt: client.unsubscribedAt,
     bookings: bookings.map((b) => ({
       id: b.id,
       status: b.status,

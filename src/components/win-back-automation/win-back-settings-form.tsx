@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { ChevronDown } from "lucide-react";
 import { WIN_BACK_AUTOMATION } from "@/lib/constants/he";
 import { saveWinBackAutomationSetting } from "@/server/win-back-automation/actions";
 import { DEFAULT_WIN_BACK_TEMPLATE } from "@/server/win-back-automation/message-builder";
@@ -8,27 +9,8 @@ import type { AutomationSetting } from "@prisma/client";
 
 const c = WIN_BACK_AUTOMATION.settings;
 
-const OFFER_PREVIEW_TEXTS: Record<string, string> = {
-  none: "",
-  discount_10: "מגיעה לך הנחה של 10% בתור הבא 🎁",
-  upgrade: "שדרוג טיפול מתנה בתור הקרוב 🌟",
-  special_slot: "יש לנו תור פנוי מיוחד בשבוע הקרוב — רק בשבילך 🗓️",
-};
-
-function buildMessagePreview(template: string, offerType: string, offerValue: string): string {
-  const offerText =
-    offerType === "custom" ? offerValue : (OFFER_PREVIEW_TEXTS[offerType] ?? "");
-  return template
-    .replace(/\{שם\}/g, "רחל כהן")
-    .replace(/\{שם_העסק\}/g, "מספרה לדוגמה")
-    .replace(/\{שירות_אחרון\}/g, "צביעת שיער")
-    .replace(/\{הטבה\}/g, offerText)
-    .replace(/\{קישור_להזמנה\}/g, "allura.app/b/example")
-    .replace(/\n{2,}/g, "\n")
-    .trim();
-}
-
-const THRESHOLD_OPTIONS = [30, 45, 60, 90];
+const PRESET_DAYS = [30, 60, 90] as const;
+type PresetDays = typeof PRESET_DAYS[number];
 
 const SEND_TIME_OPTIONS = [
   { hour: 9, label: "09:00 — בוקר" },
@@ -42,18 +24,30 @@ const OFFER_OPTIONS = [
   { value: "custom" as const, label: "הטבה אישית" },
 ];
 
+function getInitialThresholdSelection(savedDays: number): { selected: PresetDays | "custom"; customInput: string } {
+  if ((PRESET_DAYS as readonly number[]).includes(savedDays)) {
+    return { selected: savedDays as PresetDays, customInput: "" };
+  }
+  return { selected: "custom", customInput: String(savedDays) };
+}
+
 interface Props {
   setting: AutomationSetting | null;
   currentEnabled: boolean;
   onSaved?: () => void;
+  onPreviewChange?: (template: string, offerType: string, offerValue: string) => void;
 }
 
-export function WinBackSettingsForm({ setting, currentEnabled, onSaved }: Props) {
+export function WinBackSettingsForm({ setting, currentEnabled, onSaved, onPreviewChange }: Props) {
   const [isPending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [thresholdDays, setThresholdDays] = useState(setting?.thresholdDays ?? 45);
+  const initialThreshold = getInitialThresholdSelection(setting?.thresholdDays ?? 30);
+  const [thresholdSelected, setThresholdSelected] = useState<PresetDays | "custom">(initialThreshold.selected);
+  const [customDaysInput, setCustomDaysInput] = useState(initialThreshold.customInput);
+  const [customDaysError, setCustomDaysError] = useState("");
+
   const [sendHour, setSendHour] = useState(setting?.sendHour ?? 12);
   const [messageTemplate, setMessageTemplate] = useState(
     setting?.messageTemplate ?? DEFAULT_WIN_BACK_TEMPLATE,
@@ -63,9 +57,43 @@ export function WinBackSettingsForm({ setting, currentEnabled, onSaved }: Props)
   );
   const [offerValue, setOfferValue] = useState(setting?.offerValue ?? "");
 
+  const handleTemplateChange = (val: string) => {
+    setMessageTemplate(val);
+    onPreviewChange?.(val, offerType, offerValue);
+  };
+
+  const handleOfferTypeChange = (val: typeof offerType) => {
+    setOfferType(val);
+    onPreviewChange?.(messageTemplate, val, offerValue);
+  };
+
+  const handleOfferValueChange = (val: string) => {
+    setOfferValue(val);
+    onPreviewChange?.(messageTemplate, offerType, val);
+  };
+
+  const getEffectiveThresholdDays = (): number | null => {
+    if (thresholdSelected !== "custom") return thresholdSelected;
+    const n = parseInt(customDaysInput, 10);
+    if (!customDaysInput || isNaN(n) || n < 1) return null;
+    return n;
+  };
+
   const handleSave = () => {
     setError(null);
     setSaved(false);
+    setCustomDaysError("");
+
+    if (thresholdSelected === "custom") {
+      const days = getEffectiveThresholdDays();
+      if (days === null) {
+        setCustomDaysError("יש להזין מספר ימים תקין");
+        return;
+      }
+    }
+
+    const thresholdDays = getEffectiveThresholdDays()!;
+
     startTransition(async () => {
       const result = await saveWinBackAutomationSetting({
         enabled: currentEnabled,
@@ -74,7 +102,6 @@ export function WinBackSettingsForm({ setting, currentEnabled, onSaved }: Props)
         messageTemplate: messageTemplate || null,
         offerType,
         offerValue: offerType === "custom" ? offerValue : null,
-        // Preserve existing values for fields not exposed in this form
         cooldownDays: setting?.cooldownDays ?? 30,
         requireOptIn: setting?.requireOptIn ?? true,
         templateName: setting?.templateName ?? null,
@@ -113,42 +140,71 @@ export function WinBackSettingsForm({ setting, currentEnabled, onSaved }: Props)
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
 
-      {/* 1. מתי לפנות ללקוחה */}
-      <div className="space-y-2.5">
+      {/* מתי כדאי לנסות להחזיר לקוחה */}
+      <div className="space-y-2">
         <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
-          מתי לפנות ללקוחה?
+          מתי כדאי לנסות להחזיר לקוחה?
         </label>
         <div className="flex flex-wrap gap-2">
-          {THRESHOLD_OPTIONS.map((days) => (
+          {PRESET_DAYS.map((days) => (
             <button
               key={days}
               type="button"
-              onClick={() => setThresholdDays(days)}
+              onClick={() => { setThresholdSelected(days); setCustomDaysError(""); }}
               className="rounded-full px-4 py-1.5 text-sm font-medium transition-all"
-              style={thresholdDays === days ? chipActive : chipInactive}
+              style={thresholdSelected === days ? chipActive : chipInactive}
             >
               {days} ימים
             </button>
           ))}
+          <button
+            type="button"
+            onClick={() => setThresholdSelected("custom")}
+            className="rounded-full px-4 py-1.5 text-sm font-medium transition-all"
+            style={thresholdSelected === "custom" ? chipActive : chipInactive}
+          >
+            מותאם אישית
+          </button>
         </div>
-        <p className="text-xs" style={{ color: "var(--muted)" }}>
-          ללקוחות שלא קבעו תור מאז התקופה הזו
-        </p>
+        {thresholdSelected === "custom" && (
+          <div className="space-y-1">
+            <label className="block text-xs font-medium" style={{ color: "var(--muted)" }}>
+              מספר ימים ללא תור
+            </label>
+            <input
+              type="number"
+              min={7}
+              max={365}
+              value={customDaysInput}
+              onChange={(e) => {
+                setCustomDaysInput(e.target.value);
+                setCustomDaysError("");
+              }}
+              placeholder="לדוגמה: 45"
+              style={{ ...inputStyle, maxWidth: "160px" }}
+            />
+            {customDaysError && (
+              <p className="text-xs" style={{ color: "#dc2626" }}>
+                {customDaysError}
+              </p>
+            )}
+          </div>
+        )}
       </div>
 
-      {/* 2. איזו הטבה להציע */}
-      <div className="space-y-2.5">
+      {/* מה יעזור ללקוחה לחזור */}
+      <div className="space-y-2">
         <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
-          איזו הטבה להציע?
+          מה יעזור ללקוחה לחזור?
         </label>
         <div className="flex flex-wrap gap-2">
           {OFFER_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               type="button"
-              onClick={() => setOfferType(opt.value)}
+              onClick={() => handleOfferTypeChange(opt.value)}
               className="rounded-full px-4 py-1.5 text-sm font-medium transition-all"
               style={offerType === opt.value ? chipActive : chipInactive}
             >
@@ -160,77 +216,75 @@ export function WinBackSettingsForm({ setting, currentEnabled, onSaved }: Props)
           <input
             type="text"
             value={offerValue}
-            onChange={(e) => setOfferValue(e.target.value)}
+            onChange={(e) => handleOfferValueChange(e.target.value)}
             placeholder="לדוגמה: מגיעה לך הנחה של 15% 🎁"
             style={inputStyle}
           />
         )}
       </div>
 
-      {/* 3. מתי לשלוח */}
-      <div className="space-y-2.5">
-        <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
-          מתי לשלוח?
-        </label>
-        <div className="flex flex-wrap gap-2">
-          {SEND_TIME_OPTIONS.map((p) => (
-            <button
-              key={p.hour}
-              type="button"
-              onClick={() => setSendHour(p.hour)}
-              className="rounded-full px-4 py-1.5 text-sm font-medium transition-all"
-              style={sendHour === p.hour ? chipActive : chipInactive}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* 4. נוסח ההודעה */}
-      <div className="space-y-2.5">
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
-            נוסח ההודעה
-          </label>
-          <button
-            type="button"
-            onClick={() => setMessageTemplate(DEFAULT_WIN_BACK_TEMPLATE)}
-            className="text-xs transition-opacity hover:opacity-70"
-            style={{ color: "var(--muted)" }}
-          >
-            איפוס לברירת מחדל
-          </button>
-        </div>
-        <textarea
-          rows={4}
-          value={messageTemplate}
-          onChange={(e) => setMessageTemplate(e.target.value)}
-          placeholder={c.templatePlaceholder}
-          className="resize-none leading-relaxed"
-          style={{ ...inputStyle, direction: "rtl" }}
-        />
-        <p className="text-xs" style={{ color: "var(--muted)" }}>
-          {c.templateHelper}
-        </p>
-
-        {/* Message preview */}
-        <div
-          className="rounded-xl p-3.5 text-sm leading-relaxed"
-          style={{
-            background: "rgba(37,211,102,0.05)",
-            border: "1px solid rgba(37,211,102,0.15)",
-            color: "var(--foreground)",
-            whiteSpace: "pre-wrap",
-            direction: "rtl",
-          }}
+      {/* Advanced settings */}
+      <details className="group">
+        <summary
+          className="flex cursor-pointer list-none items-center gap-1.5 select-none text-xs font-medium py-1"
+          style={{ color: "var(--muted)" }}
         >
-          {buildMessagePreview(messageTemplate, offerType, offerValue)}
+          <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+          עריכה מתקדמת
+        </summary>
+
+        <div className="mt-3 space-y-4 pt-1" style={{ borderTop: "1px solid var(--border)" }}>
+
+          {/* Send time */}
+          <div className="space-y-2">
+            <label className="block text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+              מתי לשלוח?
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {SEND_TIME_OPTIONS.map((p) => (
+                <button
+                  key={p.hour}
+                  type="button"
+                  onClick={() => setSendHour(p.hour)}
+                  className="rounded-full px-4 py-1.5 text-sm font-medium transition-all"
+                  style={sendHour === p.hour ? chipActive : chipInactive}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Message template */}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <label className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+                נוסח ההודעה
+              </label>
+              <button
+                type="button"
+                onClick={() => handleTemplateChange(DEFAULT_WIN_BACK_TEMPLATE)}
+                className="text-xs transition-opacity hover:opacity-70"
+                style={{ color: "var(--muted)" }}
+              >
+                איפוס
+              </button>
+            </div>
+            <textarea
+              rows={4}
+              value={messageTemplate}
+              onChange={(e) => handleTemplateChange(e.target.value)}
+              placeholder={c.templatePlaceholder}
+              className="resize-none leading-relaxed"
+              style={{ ...inputStyle, direction: "rtl" }}
+            />
+            <p className="text-xs" style={{ color: "var(--muted)" }}>
+              {c.templateHelper}
+            </p>
+          </div>
+
         </div>
-        <p className="text-xs" style={{ color: "var(--muted)" }}>
-          {c.messagePreviewNote}
-        </p>
-      </div>
+      </details>
 
       {error && (
         <p className="text-sm" style={{ color: "#dc2626" }}>
@@ -242,7 +296,7 @@ export function WinBackSettingsForm({ setting, currentEnabled, onSaved }: Props)
         type="button"
         disabled={isPending}
         onClick={handleSave}
-        className="w-full rounded-xl py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+        className="w-full rounded-xl py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
         style={{
           background: saved
             ? "linear-gradient(135deg, #3d8b6e 0%, #2d7060 100%)"

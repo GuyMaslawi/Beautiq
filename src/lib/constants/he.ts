@@ -664,8 +664,37 @@ export const CLIENTS = {
     marketingOptInLabel: "אישרה קבלת הודעות שיווקיות",
     optInSave: "שמירה",
     optInSaving: "שומר…",
-    optInSaved: "עודכן",
+    optInSaved: "העדפות ההודעות עודכנו",
     optInError: "שמירה נכשלה",
+  },
+
+  edit: {
+    openButton: "עריכת פרטי לקוחה",
+    title: "עריכת פרטי לקוחה",
+    saveButton: "שמירת שינויים",
+    savingButton: "שומר…",
+    cancelButton: "ביטול",
+    savedSuccess: "פרטי הלקוחה עודכנו",
+
+    fields: {
+      fullName: "שם לקוחה",
+      phone: "טלפון",
+      phonePlaceholder: "0501234567",
+      email: "אימייל",
+      emailPlaceholder: "example@email.com",
+      notes: "הערות פנימיות",
+      notesPlaceholder: "הערות על הלקוחה — אלרגיות, העדפות, מידע חשוב",
+      whatsappOptIn: "מאשרת קבלת הודעות WhatsApp",
+      marketingOptIn: "מאשרת הודעות שיווקיות",
+      unsubscribedNotice: "הלקוחה הסירה את עצמה מהודעות אוטומטיות",
+    },
+
+    errors: {
+      nameRequired: "יש למלא את שם הלקוחה",
+      phoneRequired: "יש למלא מספר טלפון",
+      phoneInvalid: "מספר הטלפון לא תקין",
+      phoneDuplicate: "כבר קיימת לקוחה עם מספר הטלפון הזה",
+    },
   },
 
   errors: {
@@ -1867,11 +1896,9 @@ export const PUBLIC_PAGE = {
 
   branding: {
     sectionTitle: "לוגו ותמונת קאבר",
-    logoLabel: "לוגו העסק (קישור לתמונה)",
-    logoPlaceholder: "https://...",
-    logoHint: "הדביקי קישור לתמונת לוגו. גודל מומלץ: 200×200.",
-    coverLabel: "תמונת קאבר (קישור לתמונה)",
-    coverPlaceholder: "https://...",
+    logoLabel: "לוגו העסק",
+    logoHint: "תמונה ריבועית. גודל מומלץ: 200×200.",
+    coverLabel: "תמונת קאבר",
     coverHint: "תמונה רחבה שתוצג בראש העמוד. גודל מומלץ: 1200×400.",
     saveButton: "שמירת תמונות",
     saving: "שומר…",
@@ -1895,16 +1922,12 @@ export const PUBLIC_PAGE = {
 
   gallery: {
     sectionTitle: "גלריית עבודות",
-    sectionSubtitle: "הוסיפי תמונות שיוצגו בעמוד הלקוחות. הדביקי קישור לכל תמונה.",
+    sectionSubtitle: "העלי תמונות שיוצגו בעמוד הלקוחות. ניתן להעלות מספר תמונות בבת אחת.",
     addButton: "הוספת תמונה",
     adding: "מוסיף…",
     deleteButton: "מחיקה",
     deleting: "מוחק…",
-    imageUrlLabel: "קישור לתמונה",
-    imageUrlPlaceholder: "https://...",
-    captionLabel: "כיתוב (אופציונלי)",
-    captionPlaceholder: "לדוגמה: עיצוב גבות",
-    emptyState: "עדיין לא נוספו תמונות לגלריה",
+    emptyState: "עדיין לא הועלו תמונות לגלריה",
     addSuccess: "התמונה נוספה בהצלחה",
     deleteSuccess: "התמונה נמחקה",
     errors: {
@@ -1915,7 +1938,6 @@ export const PUBLIC_PAGE = {
 
   reviews: {
     sectionTitle: "ביקורות",
-    sectionSubtitle: "הוסיפי ביקורות של לקוחות שיוצגו בעמוד הציבורי.",
     addButton: "הוספת ביקורת",
     adding: "מוסיף…",
     deleteButton: "מחיקה",
@@ -2160,11 +2182,14 @@ export const WIN_BACK_AUTOMATION = {
     enableLockedHelper:
       "שליחה אוטומטית תיפתח רק לאחר חיבור מספר עסקי, אישור תבנית עברית והפעלת cron.",
 
-    thresholdLabel: "אחרי כמה ימים ללא ביקור הלקוחה תיחשב לא פעילה?",
+    thresholdLabel: "מתי כדאי לנסות להחזיר לקוחה?",
     thresholdUnit: "ימים",
     thresholdCustom: "מותאם אישית",
+    thresholdCustomInputLabel: "מספר ימים ללא תור",
+    thresholdCustomPlaceholder: "לדוגמה: 45",
+    thresholdCustomError: "יש להזין מספר ימים תקין",
     thresholdApply: "החל",
-    presetDays: [30, 45, 60, 90] as const,
+    presetDays: [30, 60, 90] as const,
 
     sendTimeLabel: "מתי לשלוח את ההודעה?",
     sendTimeMorning: "בבוקר (9:00)",

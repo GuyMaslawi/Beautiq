@@ -8,18 +8,9 @@ import { PUBLIC_PAGE } from "@/lib/constants/he";
 export function PublicLinkPreview({ slug }: { slug: string }) {
   const [copied, setCopied] = useState(false);
 
-  const url =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/b/${slug}`
-      : `/b/${slug}`;
-
   const handleCopy = async () => {
-    const fullUrl =
-      typeof window !== "undefined"
-        ? `${window.location.origin}/b/${slug}`
-        : `/b/${slug}`;
     try {
-      await navigator.clipboard.writeText(fullUrl);
+      await navigator.clipboard.writeText(`${window.location.origin}/b/${slug}`);
       setCopied(true);
       setTimeout(() => setCopied(false), 2500);
     } catch {
@@ -37,8 +28,8 @@ export function PublicLinkPreview({ slug }: { slug: string }) {
         className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-white px-3 py-2"
         dir="ltr"
       >
-        <span className="flex-1 truncate text-sm text-[var(--muted)] font-mono">
-          {url}
+        <span suppressHydrationWarning className="flex-1 truncate text-sm text-[var(--muted)] font-mono">
+          {typeof window !== "undefined" ? `${window.location.origin}/b/${slug}` : `/b/${slug}`}
         </span>
       </div>
 

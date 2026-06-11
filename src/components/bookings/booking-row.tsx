@@ -165,6 +165,18 @@ export function BookingRow({
       <td className="px-4 py-3 whitespace-nowrap">
         <div className="flex flex-col gap-1">
           <BookingStatusBadge status={booking.status} />
+          {/* Reminder badge — only show when a reminder was actually sent */}
+          {booking.reminderSentAt &&
+            booking.status !== "cancelled" &&
+            booking.status !== "no_show" &&
+            booking.status !== "completed" && (
+              <span
+                className="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium"
+                style={{ background: "rgba(61,139,110,0.09)", color: "#2a6e57", border: "1px solid rgba(61,139,110,0.22)" }}
+              >
+                תזכורת נשלחה
+              </span>
+            )}
           {lateCancelled !== null && (
             <span
               className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"

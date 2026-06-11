@@ -173,30 +173,31 @@ export async function getRemindersData(
 export async function getRemindersDueCount(
   tenant: TenantContext,
 ): Promise<number> {
-  const business = await prisma.business.findUnique({
-    where: { id: tenant.businessId },
-    select: { settings: true },
+  // Only show the dashboard reminder card when the morning-reminder automation is actually enabled.
+  // The old reminders table is a legacy model — the current system writes reminderSentAt directly
+  // on the Booking row, so we query that instead.
+  const automationSetting = await prisma.automationSetting.findUnique({
+    where: {
+      businessId_type: {
+        businessId: tenant.businessId,
+        type: "morning_reminder",
+      },
+    },
+    select: { enabled: true },
   });
-  const settings = parseSettings(business?.settings);
+
+  if (!automationSetting?.enabled) return 0;
 
   const now = new Date();
-  const windowEnd = new Date(
-    now.getTime() + settings.reminderHoursBefore * 3600 * 1000,
-  );
+  // Show bookings in the next 24 hours that haven't had a reminder sent yet
+  const windowEnd = new Date(now.getTime() + 24 * 3600 * 1000);
 
-  const bookings = await prisma.booking.findMany({
+  return prisma.booking.count({
     where: {
       businessId: tenant.businessId,
       startTime: { gte: now, lte: windowEnd },
       status: { in: ["pending", "approved"] },
-    },
-    include: {
-      reminders: {
-        where: { type: "booking_reminder", status: "sent" },
-        take: 1,
-      },
+      reminderSentAt: null,
     },
   });
-
-  return bookings.filter((b) => b.reminders.length === 0).length;
 }

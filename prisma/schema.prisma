@@ -202,6 +202,9 @@ enum WhatsAppConnectionStatus {
 
 enum AutomationType {
   win_back
+  morning_reminder
+  review_request
+  manual
 }
 
 enum AutomationRunStatus {
@@ -281,6 +284,8 @@ model Business {
   logoUrl              String?
   coverImageUrl        String?
   instagramUrl         String?
+  facebookUrl          String?
+  brandColor           String?
   introMessage         String?
   /// Section visibility toggles for the public booking page
   showServices         Boolean @default(true)
@@ -441,6 +446,10 @@ model Booking {
   /// "pending" | "paid" — set when a late cancellation fee applies; null when not applicable
   lateCancellationFeeStatus String?
   rescheduledFromBookingId String?
+  /// WhatsApp automation tracking — prevent duplicate sends
+  confirmationSentAt       DateTime?
+  reminderSentAt           DateTime?
+  reviewRequestSentAt      DateTime?
   createdAt                DateTime      @default(now())
   updatedAt                DateTime      @updatedAt
 
@@ -839,6 +848,10 @@ model AutomationMessage {
   readAt            DateTime?
   failedAt          DateTime?
   repliedAt         DateTime?
+  retryCount        Int                     @default(0)
+  lastRetryAt       DateTime?
+  /// Origin of the message: cron, manual_owner, manual_admin, retry, or null for legacy records
+  source            String?
   createdAt         DateTime                @default(now())
 
   business Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
