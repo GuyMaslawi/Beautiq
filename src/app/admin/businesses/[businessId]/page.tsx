@@ -8,6 +8,7 @@ import {
 import { getAdminAutomationInfo } from "@/server/win-back-automation/queries";
 import { SubscriptionForm } from "./_components/subscription-form";
 import { RunWinBackButton } from "./_components/run-win-back-button";
+import { WhatsAppAdminPanel } from "./_components/whatsapp-admin-panel";
 import type { SubscriptionStatus, SubscriptionPlan } from "@prisma/client";
 
 const STATUS_LABELS: Record<SubscriptionStatus, string> = {
@@ -380,6 +381,21 @@ export default async function AdminBusinessDetailPage({
             )}
           </div>
         )}
+      </div>
+
+      {/* WhatsApp admin panel — connect + diagnostic */}
+      <div
+        className="rounded-2xl border p-6"
+        style={{
+          background: "#fff",
+          borderColor: "rgba(0,0,0,0.07)",
+          boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
+        }}
+      >
+        <h2 className="mb-1 text-sm font-bold" style={{ color: "#1a1a2e" }}>
+          ניהול חיבור WhatsApp
+        </h2>
+        <WhatsAppAdminPanel businessId={biz.id} />
       </div>
 
       {/* Win-back manual trigger */}

@@ -50,6 +50,10 @@ export default async function AutomationsPage() {
   const realSendConfigured = isRealSendConfigured();
   const testMode = isTestModeActive();
   const whatsappConnected = connection?.status === "active";
+  // Env fallback: per-business connection uses env credentials (Mode A / testing)
+  const isEnvFallback =
+    connection?.useEnvFallback === true ||
+    (!whatsappConnected && process.env.WHATSAPP_USE_ENV_FALLBACK === "true" && realSendConfigured);
 
   return (
     <div className="w-full space-y-6">
@@ -60,14 +64,13 @@ export default async function AutomationsPage() {
       />
 
       {/* WhatsApp status banners — never show technical credentials */}
+
+      {/* Dev mode: real send not enabled */}
       {!realSendConfigured && (
         <div
           className="flex items-start gap-3 rounded-2xl px-4 py-3.5"
           dir="rtl"
-          style={{
-            background: "rgba(234,179,8,0.08)",
-            border: "1px solid rgba(234,179,8,0.28)",
-          }}
+          style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.28)" }}
         >
           <Info className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#b45309" }} />
           <p className="text-sm leading-relaxed" style={{ color: "#92400e" }}>
@@ -77,14 +80,27 @@ export default async function AutomationsPage() {
         </div>
       )}
 
+      {/* Env fallback: connection defined at system level, not per business */}
+      {realSendConfigured && isEnvFallback && (
+        <div
+          className="flex items-start gap-3 rounded-2xl px-4 py-3.5"
+          dir="rtl"
+          style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.28)" }}
+        >
+          <Info className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#b45309" }} />
+          <p className="text-sm leading-relaxed" style={{ color: "#92400e" }}>
+            <strong>מצב בדיקה — החיבור מוגדר ברמת המערכת ולא ברמת העסק.</strong>{" "}
+            הודעות לא מייצגות חיבור אמיתי של העסק.
+          </p>
+        </div>
+      )}
+
+      {/* Test mode active */}
       {realSendConfigured && testMode && (
         <div
           className="flex items-start gap-3 rounded-2xl px-4 py-3.5"
           dir="rtl"
-          style={{
-            background: "rgba(234,179,8,0.08)",
-            border: "1px solid rgba(234,179,8,0.28)",
-          }}
+          style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.28)" }}
         >
           <Info className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#b45309" }} />
           <p className="text-sm leading-relaxed" style={{ color: "#92400e" }}>
@@ -94,19 +110,31 @@ export default async function AutomationsPage() {
         </div>
       )}
 
-      {realSendConfigured && !testMode && !whatsappConnected && (
+      {/* No connection and no fallback */}
+      {realSendConfigured && !testMode && !whatsappConnected && !isEnvFallback && (
         <div
           className="flex items-start gap-3 rounded-2xl px-4 py-3.5"
           dir="rtl"
-          style={{
-            background: "rgba(239,68,68,0.06)",
-            border: "1px solid rgba(239,68,68,0.20)",
-          }}
+          style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.20)" }}
         >
           <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#dc2626" }} />
           <p className="text-sm leading-relaxed" style={{ color: "#991b1b" }}>
-            <strong>WhatsApp Business לא מחובר</strong> — כדי לשלוח הודעות אוטומטיות מהמספר של העסק, צריך לחבר WhatsApp Business.
+            <strong>WhatsApp לא מחובר</strong> — כדי לשלוח הודעות מהמספר של העסק צריך לחבר WhatsApp Business.
             ניתן להגדיר את האוטומציות, אך הן לא ישלחו הודעות ללקוחות.
+          </p>
+        </div>
+      )}
+
+      {/* Properly connected */}
+      {realSendConfigured && !testMode && whatsappConnected && !isEnvFallback && (
+        <div
+          className="flex items-start gap-3 rounded-2xl px-4 py-3.5"
+          dir="rtl"
+          style={{ background: "rgba(22,163,74,0.06)", border: "1px solid rgba(22,163,74,0.20)" }}
+        >
+          <Info className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#15803d" }} />
+          <p className="text-sm leading-relaxed" style={{ color: "#14532d" }}>
+            <strong>WhatsApp מחובר</strong> — האוטומציות פעילות ושולחות הודעות ללקוחות.
           </p>
         </div>
       )}

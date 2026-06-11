@@ -2,11 +2,11 @@ import { prisma } from "@/server/db/prisma";
 import { getEligibleClients } from "./eligibility";
 import { buildWinBackMessage, buildOfferText } from "./message-builder";
 import {
-  getWhatsAppProvider,
   DEV_MOCK_SKIP_REASON,
   TEST_MODE_BLOCKED_REASON,
   isTestModeActive,
 } from "@/lib/whatsapp/provider";
+import { getWhatsAppProviderForBusiness } from "@/server/whatsapp/resolver";
 import { isValidIsraeliPhone } from "@/lib/phone";
 
 export interface WinBackRunResult {
@@ -85,7 +85,7 @@ export async function runWinBackForBusiness(
     },
   });
 
-  const provider = getWhatsAppProvider();
+  const provider = await getWhatsAppProviderForBusiness(business.id);
   let sentCount = 0;
   let failedCount = 0;
   let skippedCount = 0;

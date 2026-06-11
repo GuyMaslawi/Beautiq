@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/server/db/prisma";
-import { getWhatsAppProvider } from "@/lib/whatsapp/provider";
+import { getWhatsAppProviderForBusiness } from "@/server/whatsapp/resolver";
 import { isValidIsraeliPhone } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
@@ -125,7 +125,7 @@ export async function GET(request: Request) {
     });
     if (customTpl?.isActive && customTpl.body) body = customTpl.body;
 
-    const provider = getWhatsAppProvider();
+    const provider = await getWhatsAppProviderForBusiness(businessId);
 
     for (const booking of bookings) {
       const phone = booking.client.normalizedPhone;

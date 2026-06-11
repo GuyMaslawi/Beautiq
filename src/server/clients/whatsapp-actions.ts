@@ -4,10 +4,10 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/server/db/prisma";
 import { requireCurrentBusiness } from "@/server/auth/session";
 import {
-  getWhatsAppProvider,
   DEV_MOCK_SKIP_REASON,
   TEST_MODE_BLOCKED_REASON,
 } from "@/lib/whatsapp/provider";
+import { getWhatsAppProviderForBusiness } from "@/server/whatsapp/resolver";
 import { isValidIsraeliPhone } from "@/lib/phone";
 import { buildWinBackMessage, buildOfferText } from "@/server/win-back-automation/message-builder";
 
@@ -118,8 +118,8 @@ export async function sendManualClientWhatsAppAction(
 
   const realSendEnabled = process.env.ENABLE_REAL_WHATSAPP_SEND === "true";
 
-  // In real-send mode a Meta-approved template is required
-  if (realSendEnabled && !setting?.templateName) {
+  // win_back requires a configured Meta-approved template; manual_test falls back to hello_world
+  if (realSendEnabled && messageType === "win_back" && !setting?.templateName) {
     return { error: "לא הוגדרה תבנית הודעה מתאימה — יש להגדיר תבנית WhatsApp מאושרת בהגדרות האוטומציה" };
   }
 
@@ -149,6 +149,16 @@ export async function sendManualClientWhatsAppAction(
           template: setting?.messageTemplate ?? null,
         });
 
+  // manual_test without a configured template uses hello_world (Meta's universal test template)
+  const effectiveTemplateName =
+    messageType === "manual_test" && !setting?.templateName
+      ? "hello_world"
+      : setting?.templateName ?? undefined;
+  const effectiveTemplateLanguage =
+    messageType === "manual_test" && !setting?.templateName
+      ? "en_US"
+      : setting?.templateLanguage ?? "he";
+
   // --- Create run & message log ---
   const run = await prisma.automationRun.create({
     data: {
@@ -167,16 +177,16 @@ export async function sendManualClientWhatsAppAction(
       type: "manual",
       phone: client.normalizedPhone,
       messageText,
-      templateId: setting?.templateName ?? undefined,
+      templateId: effectiveTemplateName,
       status: "queued",
       source: "manual_owner",
     },
   });
 
   // --- Send ---
-  const provider = getWhatsAppProvider();
+  const provider = await getWhatsAppProviderForBusiness(businessId);
   const templateVariables =
-    setting?.templateName && setting.templateName !== "hello_world"
+    effectiveTemplateName && effectiveTemplateName !== "hello_world"
       ? {
           "1": client.fullName,
           "2": business.name,
@@ -188,8 +198,8 @@ export async function sendManualClientWhatsAppAction(
   const result = await provider.send({
     businessId,
     toPhone: client.normalizedPhone,
-    templateId: setting?.templateName ?? undefined,
-    templateLanguage: setting?.templateLanguage ?? "he",
+    templateId: effectiveTemplateName,
+    templateLanguage: effectiveTemplateLanguage,
     templateVariables,
     fallbackText: messageText,
     automationRunId: run.id,

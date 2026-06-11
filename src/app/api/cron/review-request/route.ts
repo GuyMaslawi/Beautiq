@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/server/db/prisma";
-import { getWhatsAppProvider } from "@/lib/whatsapp/provider";
+import { getWhatsAppProviderForBusiness } from "@/server/whatsapp/resolver";
 import { isValidIsraeliPhone } from "@/lib/phone";
 
 export const dynamic = "force-dynamic";
@@ -82,7 +82,7 @@ export async function GET(request: Request) {
       if (customTpl?.isActive && customTpl.body) body = customTpl.body;
     }
 
-    const provider = getWhatsAppProvider();
+    const provider = await getWhatsAppProviderForBusiness(businessId);
 
     // Default review link: the business's public page reputation section
     const defaultReviewLink = reviewLink ?? `beautiq.co/b/${business.slug}#reviews`;

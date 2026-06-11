@@ -747,18 +747,37 @@ model BusinessSubscription {
 // ---------------------------------------------------------------------------
 
 /// Stores the WhatsApp Business API connection for a tenant.
-/// V1: Only dev_mock is usable; real providers require Phase 2 credentials.
+/// Mode A (env fallback): useEnvFallback=true, token comes from META_WHATSAPP_ACCESS_TOKEN env var.
+/// Mode B (Embedded Signup, future): useEnvFallback=false, token stored in accessTokenEncrypted.
+/// Future: Meta Embedded Signup will create/update WhatsAppConnection per business via onboarding flow.
 model WhatsAppConnection {
   id                   String                   @id @default(cuid())
   businessId           String                   @unique
   provider             WhatsAppProvider         @default(dev_mock)
   status               WhatsAppConnectionStatus @default(not_connected)
-  /// Display phone number (e.g. +972501234567)
+  /// Display phone number for owner UI (e.g. +972501234567)
   phoneNumber          String?
+  /// Meta phone number ID used for API calls (e.g. "123456789012345") — different from display number
+  phoneNumberId        String?
+  /// Masked display phone shown in UI (e.g. "+972 50-123-****")
+  displayPhoneNumber   String?
   /// WhatsApp Business Account ID (Meta Cloud API)
   wabaId               String?
   /// Encrypted provider access token — never returned to the client
   accessTokenEncrypted String?
+  /// When true, the access token comes from META_WHATSAPP_ACCESS_TOKEN env var (Mode A / testing).
+  /// When false, token must come from accessTokenEncrypted (Mode B / Embedded Signup).
+  useEnvFallback       Boolean                  @default(false)
+  /// When the connection was last verified successfully against the provider API
+  lastVerifiedAt       DateTime?
+  /// Last error message — safe to display in admin UI (never contains credentials)
+  lastError            String?
+  /// When the connection was established (status changed to active)
+  connectedAt          DateTime?
+  /// When the connection was last lost (status changed from active)
+  disconnectedAt       DateTime?
+  /// Access token expiry — for future long-lived tokens from Embedded Signup
+  tokenExpiresAt       DateTime?
   /// Timestamp of the last webhook event received from Meta (any type)
   lastWebhookReceivedAt DateTime?
   /// Timestamp of the last delivery status event received via webhook

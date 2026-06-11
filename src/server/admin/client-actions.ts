@@ -5,10 +5,10 @@ import { prisma } from "@/server/db/prisma";
 import { requirePlatformAdmin } from "./auth";
 import { normalizePhone, isValidIsraeliPhone } from "@/lib/phone";
 import {
-  getWhatsAppProvider,
   DEV_MOCK_SKIP_REASON,
   TEST_MODE_BLOCKED_REASON,
 } from "@/lib/whatsapp/provider";
+import { getWhatsAppProviderForBusiness } from "@/server/whatsapp/resolver";
 import { buildWinBackMessage, buildOfferText } from "@/server/win-back-automation/message-builder";
 import type { ManualSendMessageType, ManualSendResult } from "@/server/clients/whatsapp-actions";
 
@@ -169,7 +169,8 @@ export async function adminSendManualClientWhatsAppAction(
 
   const realSendEnabled = process.env.ENABLE_REAL_WHATSAPP_SEND === "true";
 
-  if (realSendEnabled && !setting?.templateName) {
+  // win_back requires a configured Meta-approved template; manual_test falls back to hello_world
+  if (realSendEnabled && messageType === "win_back" && !setting?.templateName) {
     return { error: "לא הוגדרה תבנית הודעה מתאימה לעסק הזה" };
   }
 
@@ -191,6 +192,16 @@ export async function adminSendManualClientWhatsAppAction(
           template: setting?.messageTemplate ?? null,
         });
 
+  // manual_test without a configured template uses hello_world (Meta's universal test template)
+  const effectiveTemplateName =
+    messageType === "manual_test" && !setting?.templateName
+      ? "hello_world"
+      : setting?.templateName ?? undefined;
+  const effectiveTemplateLanguage =
+    messageType === "manual_test" && !setting?.templateName
+      ? "en_US"
+      : setting?.templateLanguage ?? "he";
+
   const run = await prisma.automationRun.create({
     data: {
       businessId,
@@ -208,15 +219,15 @@ export async function adminSendManualClientWhatsAppAction(
       type: "manual",
       phone: client.normalizedPhone,
       messageText,
-      templateId: setting?.templateName ?? undefined,
+      templateId: effectiveTemplateName,
       status: "queued",
       source: "manual_admin",
     },
   });
 
-  const provider = getWhatsAppProvider();
+  const provider = await getWhatsAppProviderForBusiness(businessId);
   const templateVariables =
-    setting?.templateName && setting.templateName !== "hello_world"
+    effectiveTemplateName && effectiveTemplateName !== "hello_world"
       ? {
           "1": client.fullName,
           "2": client.business.name,
@@ -228,8 +239,8 @@ export async function adminSendManualClientWhatsAppAction(
   const result = await provider.send({
     businessId,
     toPhone: client.normalizedPhone,
-    templateId: setting?.templateName ?? undefined,
-    templateLanguage: setting?.templateLanguage ?? "he",
+    templateId: effectiveTemplateName,
+    templateLanguage: effectiveTemplateLanguage,
     templateVariables,
     fallbackText: messageText,
     automationRunId: run.id,

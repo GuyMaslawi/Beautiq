@@ -4,7 +4,7 @@ import { prisma } from "@/server/db/prisma";
 import { requireCurrentBusiness } from "@/server/auth/session";
 import { revalidatePath } from "next/cache";
 import type { AutomationOfferType } from "@prisma/client";
-import { getWhatsAppProvider } from "@/lib/whatsapp/provider";
+import { getWhatsAppProviderForBusiness } from "@/server/whatsapp/resolver";
 import { runWinBackForBusiness } from "./runner";
 
 // ---------------------------------------------------------------------------
@@ -73,7 +73,7 @@ export async function sendWhatsAppTestMessage(): Promise<TestSendResult> {
       },
     });
 
-    const provider = getWhatsAppProvider();
+    const provider = await getWhatsAppProviderForBusiness(business.id);
     const result = await provider.send({
       businessId: business.id,
       toPhone: testPhone,

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/server/db/prisma";
 import { requireTenant } from "@/server/auth/session";
-import { getWhatsAppProvider } from "@/lib/whatsapp/provider";
+import { getWhatsAppProviderForBusiness } from "@/server/whatsapp/resolver";
 import { isValidIsraeliPhone } from "@/lib/phone";
 
 const MAX_RETRY_COUNT = 3;
@@ -60,7 +60,7 @@ export async function retryAutomationMessageAction(
     return { success: false, error: "מספר טלפון לא תקין" };
   }
 
-  const provider = getWhatsAppProvider();
+  const provider = await getWhatsAppProviderForBusiness(tenant.businessId);
 
   try {
     const result = await provider.send({

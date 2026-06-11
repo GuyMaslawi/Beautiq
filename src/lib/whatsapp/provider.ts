@@ -67,7 +67,7 @@ export interface WhatsAppProvider {
 export const DEV_MOCK_SKIP_REASON =
   "מצב פיתוח — הודעה לא נשלחה בפועל";
 
-const devMockProvider: WhatsAppProvider = {
+export const devMockProvider: WhatsAppProvider = {
   name: "dev_mock",
   async send(params) {
     console.log(
@@ -87,10 +87,10 @@ const devMockProvider: WhatsAppProvider = {
 // Disabled provider — used when real sending is requested but misconfigured
 // ---------------------------------------------------------------------------
 
-const DISABLED_REASON = "חיבור WhatsApp לא מוגדר";
+export const DISABLED_REASON = "חיבור WhatsApp לא מוגדר";
 
 /** Returns a safe failure without attempting to send. */
-function createDisabledProvider(reason = DISABLED_REASON): WhatsAppProvider {
+export function createDisabledProvider(reason = DISABLED_REASON): WhatsAppProvider {
   return {
     name: "disabled",
     async send() {
@@ -114,7 +114,7 @@ export const TEST_MODE_BLOCKED_REASON =
  * Secrets (access token etc.) are never logged — only businessId,
  * clientId, provider name, and status.
  */
-function createTestModeProvider(inner: WhatsAppProvider): WhatsAppProvider {
+export function createTestModeProvider(inner: WhatsAppProvider): WhatsAppProvider {
   return {
     name: `test_mode:${inner.name}`,
     async send(params) {

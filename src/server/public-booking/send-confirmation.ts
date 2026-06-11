@@ -11,7 +11,7 @@
  */
 
 import { prisma } from "@/server/db/prisma";
-import { getWhatsAppProvider } from "@/lib/whatsapp/provider";
+import { getWhatsAppProviderForBusiness } from "@/server/whatsapp/resolver";
 import { isValidIsraeliPhone } from "@/lib/phone";
 
 const DEFAULT_BODY =
@@ -107,7 +107,7 @@ export async function sendBookingConfirmation(params: {
   const messageText = applyVariables(body, vars);
 
   try {
-    const provider = getWhatsAppProvider();
+    const provider = await getWhatsAppProviderForBusiness(businessId);
     const result = await provider.send({
       businessId,
       toPhone: toWaNumber(clientPhone),
