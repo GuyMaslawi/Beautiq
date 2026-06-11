@@ -8,6 +8,7 @@ import { findOrCreateClient } from "@/server/clients/find-or-create";
 import { syncClientStats } from "@/server/clients/stats";
 import { hasOverlap } from "@/server/bookings/queries";
 import { validatePublicBooking } from "@/lib/validation/public-booking";
+import { parseIsraelDateTime } from "@/lib/time";
 import { PUBLIC_BOOKING } from "@/lib/constants/he";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import { sendBookingConfirmation } from "./send-confirmation";
@@ -23,10 +24,6 @@ export interface PublicBookingFormState {
   errors?: Partial<Record<string, string>>;
   formError?: string;
   values?: Record<string, string>;
-}
-
-function combineDateTime(date: string, time: string): Date {
-  return new Date(`${date}T${time}:00`);
 }
 
 /**
@@ -85,7 +82,7 @@ export async function submitPublicBookingAction(
     };
   }
 
-  const startTime = combineDateTime(value.date, value.requestedTime);
+  const startTime = parseIsraelDateTime(value.date, value.requestedTime);
 
   // Reject times in the past (5 min tolerance)
   if (startTime.getTime() < Date.now() - 5 * 60 * 1000) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -22,38 +22,11 @@ const INITIAL: BookingFormState = {};
 const selectClass =
   "bg-surface border-border text-foreground h-11 w-full appearance-none rounded-xl border px-4 text-base outline-none transition-colors focus:border-primary";
 
-function generateTimeOptions() {
-  const options: { value: string; label: string }[] = [];
-  for (let h = 7; h <= 22; h++) {
-    for (const m of [0, 15, 30, 45]) {
-      if (h === 22 && m > 0) break;
-      const hStr = String(h).padStart(2, "0");
-      const mStr = String(m).padStart(2, "0");
-      options.push({ value: `${hStr}:${mStr}`, label: `${hStr}:${mStr}` });
-    }
-  }
-  return options;
-}
-
-const TIME_OPTIONS = generateTimeOptions();
-
 function getLocalTodayStr(): string {
-  const d = new Date();
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
-
-function getNextQuarterHour(): string {
-  const now = new Date();
-  const totalMinutes = now.getHours() * 60 + now.getMinutes() + 1;
-  const nextSlot = Math.ceil(totalMinutes / 15) * 15;
-  const h = Math.floor(nextSlot / 60);
-  const min = nextSlot % 60;
-  if (h >= 22) return "22:00";
-  if (h < 7) return "07:00";
-  return `${String(h).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
+  // Client-side: use Intl so it matches Israel timezone even for international users
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem" }).format(
+    new Date(),
+  );
 }
 
 export function BookingForm({
@@ -73,16 +46,21 @@ export function BookingForm({
   const [state, formAction, isPending] = useActionState(action, INITIAL);
 
   const todayStr = getLocalTodayStr();
-  const nextQuarterHour = getNextQuarterHour();
 
   const [fields, setFields] = useState({
     clientName: initialClientName ?? "",
     phone: initialClientPhone ?? "",
     serviceId: "",
     date: todayStr,
-    startTime: nextQuarterHour,
+    startTime: "",
     notes: "",
   });
+
+  // Available slots fetched from /api/owner/slots
+  const [availableSlots, setAvailableSlots] = useState<string[] | null>(null);
+  const [isFetchingSlots, setIsFetchingSlots] = useState(false);
+  // Track the last fetch key to discard stale responses
+  const fetchKeyRef = useRef("");
 
   // Sync fields from server state after validation error
   const [prevServerValues, setPrevServerValues] = useState(state.values);
@@ -98,13 +76,46 @@ export function BookingForm({
     }));
   }
 
+  // Fetch available slots whenever serviceId or date changes
+  useEffect(() => {
+    if (!fields.serviceId || !fields.date) {
+      setAvailableSlots(null);
+      return;
+    }
+
+    const key = `${fields.date}|${fields.serviceId}`;
+    fetchKeyRef.current = key;
+    setIsFetchingSlots(true);
+
+    fetch(
+      `/api/owner/slots?date=${encodeURIComponent(fields.date)}&serviceId=${encodeURIComponent(fields.serviceId)}`,
+    )
+      .then((r) => r.json())
+      .then((data: { slots?: string[] }) => {
+        if (fetchKeyRef.current !== key) return; // stale response, discard
+        const slots = data.slots ?? [];
+        setAvailableSlots(slots);
+        setIsFetchingSlots(false);
+        // Reset startTime to first available slot, or clear if none
+        setFields((prev) => ({
+          ...prev,
+          startTime:
+            slots.length > 0
+              ? slots.includes(prev.startTime)
+                ? prev.startTime
+                : slots[0]
+              : "",
+        }));
+      })
+      .catch(() => {
+        if (fetchKeyRef.current !== key) return;
+        setIsFetchingSlots(false);
+        setAvailableSlots([]);
+      });
+  }, [fields.serviceId, fields.date]);
+
   const set = (field: keyof typeof fields) => (value: string) =>
     setFields((prev) => ({ ...prev, [field]: value }));
-
-  const isToday = fields.date === todayStr;
-  const availableTimeOptions = isToday
-    ? TIME_OPTIONS.filter((t) => t.value >= nextQuarterHour)
-    : TIME_OPTIONS;
 
   const selectedService = services.find((s) => s.id === fields.serviceId);
 
@@ -252,18 +263,7 @@ export function BookingForm({
               type="date"
               min={todayStr}
               value={fields.date}
-              onChange={(e) => {
-                const newDate = e.target.value;
-                setFields((prev) => {
-                  const needsTimeReset =
-                    newDate === todayStr && prev.startTime < nextQuarterHour;
-                  return {
-                    ...prev,
-                    date: newDate,
-                    startTime: needsTimeReset ? nextQuarterHour : prev.startTime,
-                  };
-                });
-              }}
+              onChange={(e) => set("date")(e.target.value)}
             />
           </Field>
           <Field
@@ -271,20 +271,50 @@ export function BookingForm({
             htmlFor="startTime"
             error={state.errors?.startTime}
           >
-            <select
-              id="startTime"
-              name="startTime"
-              value={fields.startTime}
-              onChange={(e) => set("startTime")(e.target.value)}
-              className={selectClass}
-            >
-              <option value="">{BOOKINGS.form.startTimePlaceholder}</option>
-              {availableTimeOptions.map((t) => (
-                <option key={t.value} value={t.value}>
-                  {t.label}
-                </option>
-              ))}
-            </select>
+            {isFetchingSlots ? (
+              <div
+                className={`${selectClass} flex items-center`}
+                style={{ color: "var(--muted)" }}
+              >
+                {BOOKINGS.form.loadingSlots}
+              </div>
+            ) : !fields.serviceId ? (
+              <select
+                id="startTime"
+                name="startTime"
+                value={fields.startTime}
+                disabled
+                className={selectClass}
+                style={{ opacity: 0.5 }}
+              >
+                <option value="">{BOOKINGS.form.startTimePlaceholder}</option>
+              </select>
+            ) : availableSlots !== null && availableSlots.length === 0 ? (
+              <>
+                <input type="hidden" name="startTime" value="" />
+                <div
+                  className={`${selectClass} flex items-center`}
+                  style={{ color: "var(--muted)" }}
+                >
+                  {BOOKINGS.form.noSlots}
+                </div>
+              </>
+            ) : (
+              <select
+                id="startTime"
+                name="startTime"
+                value={fields.startTime}
+                onChange={(e) => set("startTime")(e.target.value)}
+                className={selectClass}
+              >
+                <option value="">{BOOKINGS.form.startTimePlaceholder}</option>
+                {(availableSlots ?? []).map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            )}
           </Field>
         </div>
         <p className="text-muted text-xs">{BOOKINGS.form.overlapHelper}</p>

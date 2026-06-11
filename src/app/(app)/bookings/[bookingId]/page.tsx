@@ -24,33 +24,31 @@ import { BookingSmartMessagesCard } from "@/components/messages/booking-smart-me
 import { BookingReputationCard } from "@/components/reputation/booking-reputation-card";
 import { BOOKINGS } from "@/lib/constants/he";
 
+const TZ = "Asia/Jerusalem";
+
 function formatDetailDate(date: Date): string {
   const d = new Date(date);
   const now = new Date();
 
-  const todayStart = new Date(
-    now.getFullYear(),
-    now.getMonth(),
-    now.getDate(),
+  const todayStr = now.toLocaleDateString("en-CA", { timeZone: TZ });
+  const tomorrowStr = new Date(now.getTime() + 86_400_000).toLocaleDateString(
+    "en-CA",
+    { timeZone: TZ },
   );
-  const tomorrowStart = new Date(todayStart);
-  tomorrowStart.setDate(tomorrowStart.getDate() + 1);
-  const bookingDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  const bookingStr = d.toLocaleDateString("en-CA", { timeZone: TZ });
 
   const timeStr = d.toLocaleTimeString("he-IL", {
+    timeZone: TZ,
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
   });
 
-  if (bookingDay.getTime() === todayStart.getTime()) {
-    return `היום · ${timeStr}`;
-  }
-  if (bookingDay.getTime() === tomorrowStart.getTime()) {
-    return `מחר · ${timeStr}`;
-  }
+  if (bookingStr === todayStr) return `היום · ${timeStr}`;
+  if (bookingStr === tomorrowStr) return `מחר · ${timeStr}`;
 
   const dateStr = d.toLocaleDateString("he-IL", {
+    timeZone: TZ,
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -61,6 +59,7 @@ function formatDetailDate(date: Date): string {
 
 function formatCreatedAt(date: Date): string {
   return new Date(date).toLocaleDateString("he-IL", {
+    timeZone: TZ,
     day: "numeric",
     month: "long",
     year: "numeric",
@@ -69,6 +68,7 @@ function formatCreatedAt(date: Date): string {
 
 function formatMsgDate(date: Date): string {
   return new Date(date).toLocaleDateString("he-IL", {
+    timeZone: TZ,
     weekday: "long",
     day: "numeric",
     month: "long",
@@ -78,6 +78,7 @@ function formatMsgDate(date: Date): string {
 
 function formatMsgTime(date: Date): string {
   return new Date(date).toLocaleTimeString("he-IL", {
+    timeZone: TZ,
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
@@ -85,13 +86,9 @@ function formatMsgTime(date: Date): string {
 }
 
 function isBookingToday(date: Date): boolean {
-  const now = new Date();
-  const d = new Date(date);
-  return (
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate()
-  );
+  const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: TZ });
+  const bookingStr = new Date(date).toLocaleDateString("en-CA", { timeZone: TZ });
+  return todayStr === bookingStr;
 }
 
 export default async function BookingDetailPage({

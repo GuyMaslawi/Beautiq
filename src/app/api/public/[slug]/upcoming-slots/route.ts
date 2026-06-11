@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/db/prisma";
+import { getAvailableSlots } from "@/server/availability/get-available-slots";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
-const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
-const RATE_LIMIT_MAX = 40; // generous — slot lookups are read-only
+const RATE_LIMIT_WINDOW_MS = 60_000;
+const RATE_LIMIT_MAX = 40;
 
 export interface UpcomingSlotGroup {
   label: string; // "היום", "מחר", "יום ראשון", …
@@ -21,17 +22,24 @@ const HEBREW_WEEKDAYS: Record<number, string> = {
   6: "שבת",
 };
 
-function dateLabel(date: Date, idx: number): string {
+function dateLabel(dateStr: string, idx: number): string {
   if (idx === 0) return "היום";
   if (idx === 1) return "מחר";
-  return `יום ${HEBREW_WEEKDAYS[date.getDay()] ?? ""}`;
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const dow = new Date(y, m - 1, d).getDay();
+  return `יום ${HEBREW_WEEKDAYS[dow] ?? ""}`;
 }
 
-function toDateString(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+/** Return YYYY-MM-DD for a Date in Asia/Jerusalem time (avoids UTC date shift). */
+function israelDateStr(d: Date): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem" }).format(d);
+}
+
+/** Add `n` calendar days to a YYYY-MM-DD string without timezone drift. */
+function addDays(dateStr: string, n: number): string {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const date = new Date(y, m - 1, d + n);
+  return israelDateStr(date);
 }
 
 export async function GET(
@@ -49,7 +57,6 @@ export async function GET(
   }
 
   const serviceId = req.nextUrl.searchParams.get("serviceId");
-
   if (!serviceId) return NextResponse.json({ groups: [] });
 
   const business = await prisma.business.findUnique({
@@ -58,71 +65,24 @@ export async function GET(
   });
   if (!business) return NextResponse.json({ groups: [] });
 
-  const service = await prisma.service.findFirst({
-    where: { id: serviceId, businessId: business.id, isActive: true },
-    select: { durationMinutes: true, bufferBeforeMinutes: true, bufferAfterMinutes: true },
-  });
-  if (!service) return NextResponse.json({ groups: [] });
-
-  const totalDuration =
-    service.durationMinutes + service.bufferBeforeMinutes + service.bufferAfterMinutes;
-  const SLOT_STEP = 30;
   const DAYS_AHEAD = 5;
   const MAX_SLOTS_PER_DAY = 6;
-  const nowMs = Date.now();
 
+  const todayStr = israelDateStr(new Date());
   const groups: UpcomingSlotGroup[] = [];
 
   for (let i = 0; i < DAYS_AHEAD; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() + i);
-    const dateStr = toDateString(d);
-    const [y, mo, day] = dateStr.split("-").map(Number);
-    const weekday = new Date(y, mo - 1, day).getDay();
+    const dateStr = addDays(todayStr, i);
 
-    const rules = await prisma.availabilityRule.findMany({
-      where: { businessId: business.id, weekday, isActive: true },
-      select: { startMinutes: true, endMinutes: true },
-      orderBy: { startMinutes: "asc" },
+    const allSlots = await getAvailableSlots({
+      businessId: business.id,
+      date: dateStr,
+      serviceId,
     });
 
-    if (rules.length === 0) continue;
-
-    const dayStart = new Date(`${dateStr}T00:00:00`);
-    const dayEnd = new Date(`${dateStr}T23:59:59`);
-
-    const existingBookings = await prisma.booking.findMany({
-      where: {
-        businessId: business.id,
-        status: { in: ["pending", "approved"] },
-        AND: [{ startTime: { lt: dayEnd } }, { endTime: { gt: dayStart } }],
-      },
-      select: { startTime: true, endTime: true },
-    });
-
-    const daySlots: string[] = [];
-    for (const rule of rules) {
-      let slotMinutes = rule.startMinutes;
-      while (slotMinutes + totalDuration <= rule.endMinutes && daySlots.length < MAX_SLOTS_PER_DAY) {
-        const h = Math.floor(slotMinutes / 60).toString().padStart(2, "0");
-        const mn = (slotMinutes % 60).toString().padStart(2, "0");
-        const slotTime = `${h}:${mn}`;
-        const slotStartMs = new Date(`${dateStr}T${slotTime}:00`).getTime();
-        const slotEndMs = slotStartMs + totalDuration * 60 * 1000;
-
-        if (slotStartMs >= nowMs - 5 * 60 * 1000) {
-          const hasConflict = existingBookings.some(
-            (b) => b.startTime.getTime() < slotEndMs && b.endTime.getTime() > slotStartMs,
-          );
-          if (!hasConflict) daySlots.push(slotTime);
-        }
-        slotMinutes += SLOT_STEP;
-      }
-      if (daySlots.length >= MAX_SLOTS_PER_DAY) break;
-    }
-
+    const daySlots = allSlots.slice(0, MAX_SLOTS_PER_DAY);
     if (daySlots.length > 0) {
-      groups.push({ label: dateLabel(d, i), date: dateStr, slots: daySlots });
+      groups.push({ label: dateLabel(dateStr, i), date: dateStr, slots: daySlots });
     }
   }
 

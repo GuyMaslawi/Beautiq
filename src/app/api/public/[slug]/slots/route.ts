@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/db/prisma";
+import { getAvailableSlots } from "@/server/availability/get-available-slots";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
@@ -32,74 +33,11 @@ export async function GET(
   });
   if (!business) return NextResponse.json({ slots: [] });
 
-  const service = await prisma.service.findFirst({
-    where: { id: serviceId, businessId: business.id, isActive: true },
-    select: {
-      durationMinutes: true,
-      bufferBeforeMinutes: true,
-      bufferAfterMinutes: true,
-    },
+  const slots = await getAvailableSlots({
+    businessId: business.id,
+    date,
+    serviceId,
   });
-  if (!service) return NextResponse.json({ slots: [] });
-
-  // Parse date locally to get the correct weekday (avoids UTC shift)
-  const [y, m, d] = date.split("-").map(Number);
-  const weekday = new Date(y, m - 1, d).getDay();
-
-  const rules = await prisma.availabilityRule.findMany({
-    where: { businessId: business.id, weekday, isActive: true },
-    select: { startMinutes: true, endMinutes: true },
-    orderBy: { startMinutes: "asc" },
-  });
-
-  if (rules.length === 0) return NextResponse.json({ slots: [] });
-
-  // Fetch all bookings that touch this calendar day
-  const dayStart = new Date(`${date}T00:00:00`);
-  const dayEnd = new Date(`${date}T23:59:59`);
-
-  const existingBookings = await prisma.booking.findMany({
-    where: {
-      businessId: business.id,
-      status: { in: ["pending", "approved"] },
-      AND: [{ startTime: { lt: dayEnd } }, { endTime: { gt: dayStart } }],
-    },
-    select: { startTime: true, endTime: true },
-  });
-
-  const totalDuration =
-    service.durationMinutes +
-    service.bufferBeforeMinutes +
-    service.bufferAfterMinutes;
-  const SLOT_STEP = 30;
-  const nowMs = Date.now();
-  const slots: string[] = [];
-
-  for (const rule of rules) {
-    let slotMinutes = rule.startMinutes;
-    while (slotMinutes + totalDuration <= rule.endMinutes) {
-      const h = Math.floor(slotMinutes / 60).toString().padStart(2, "0");
-      const mn = (slotMinutes % 60).toString().padStart(2, "0");
-      const slotTime = `${h}:${mn}`;
-      const slotStartMs = new Date(`${date}T${slotTime}:00`).getTime();
-      const slotEndMs = slotStartMs + totalDuration * 60 * 1000;
-
-      // Skip slots more than 5 minutes in the past
-      if (slotStartMs < nowMs - 5 * 60 * 1000) {
-        slotMinutes += SLOT_STEP;
-        continue;
-      }
-
-      const hasConflict = existingBookings.some(
-        (b) =>
-          b.startTime.getTime() < slotEndMs &&
-          b.endTime.getTime() > slotStartMs,
-      );
-
-      if (!hasConflict) slots.push(slotTime);
-      slotMinutes += SLOT_STEP;
-    }
-  }
 
   return NextResponse.json({ slots });
 }

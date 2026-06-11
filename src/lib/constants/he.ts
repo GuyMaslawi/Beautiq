@@ -477,7 +477,9 @@ export const BOOKINGS = {
     dateLabel: "תאריך",
     startTimeLabel: "שעה",
     startTimePlaceholder: "בחירת שעה…",
-    overlapHelper: "המערכת תבדוק שאין תור אחר באותה שעה",
+    overlapHelper: "מוצגות רק השעות הפנויות לשירות שנבחר",
+    loadingSlots: "טוען שעות פנויות…",
+    noSlots: "אין שעות פנויות ביום הזה",
   },
 
   card: {

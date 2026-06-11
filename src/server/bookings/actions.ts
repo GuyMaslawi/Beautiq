@@ -9,6 +9,7 @@ import { getBooking, hasOverlap } from "@/server/bookings/queries";
 import { findOrCreateClient } from "@/server/clients/find-or-create";
 import { syncClientStats } from "@/server/clients/stats";
 import { validateBooking } from "@/lib/validation/booking";
+import { parseIsraelDateTime } from "@/lib/time";
 import { BOOKINGS } from "@/lib/constants/he";
 
 export interface BookingFormState {
@@ -29,13 +30,6 @@ function extractRaw(formData: FormData): Record<string, string> {
   };
 }
 
-/**
- * Combine a date string ("YYYY-MM-DD") and a time string ("HH:MM") into a
- * Date object. Treated as local (Israel) wall-clock time.
- */
-function combineDateTime(date: string, time: string): Date {
-  return new Date(`${date}T${time}:00`);
-}
 
 export async function createBookingAction(
   _prevState: BookingFormState,
@@ -65,7 +59,7 @@ export async function createBookingAction(
     };
   }
 
-  const startTime = combineDateTime(value.date, value.startTime);
+  const startTime = parseIsraelDateTime(value.date, value.startTime);
 
   // Validate not in the past (allow up to 5 min tolerance)
   if (startTime.getTime() < Date.now() - 5 * 60 * 1000) {
