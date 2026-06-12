@@ -36,6 +36,12 @@ async function hasRecentMessage(businessId: string, clientId: string): Promise<b
   return count > 0;
 }
 
+function maskPhoneForLog(phone: string): string {
+  const d = phone.replace(/\D/g, "");
+  if (d.length < 7) return "***";
+  return d.slice(0, 3) + "***" + d.slice(-3);
+}
+
 /**
  * Business owner sends a WhatsApp message to one of their own clients manually.
  *
@@ -169,6 +175,10 @@ export async function sendManualClientWhatsAppAction(
   }
   const recipientPhone = isTestMode && testPhone ? testPhone : client.normalizedPhone;
 
+  console.log(
+    `[WhatsApp manual send] START — businessId=${businessId} clientId=${clientId} messageType=${messageType} isTestMode=${isTestMode} recipientType=${isTestMode ? "test_phone" : "client"} maskedRecipient=${maskPhoneForLog(recipientPhone)} template=${effectiveTemplateName} lang=${effectiveTemplateLanguage}`,
+  );
+
   // --- Create run & message log ---
   const run = await prisma.automationRun.create({
     data: {
@@ -234,6 +244,10 @@ export async function sendManualClientWhatsAppAction(
     finalStatus = "failed";
     failureReason = result.failureReason;
   }
+
+  console.log(
+    `[WhatsApp manual send] RESULT — businessId=${businessId} clientId=${clientId} messageId=${automationMessage.id} finalStatus=${finalStatus} providerMessageId=${providerMessageId ?? "none"} failureReason=${failureReason ?? "none"}`,
+  );
 
   await prisma.automationMessage.update({
     where: { id: automationMessage.id },

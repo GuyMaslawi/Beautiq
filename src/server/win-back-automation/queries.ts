@@ -211,6 +211,91 @@ export async function getWinBackAutomationData(
 // Admin queries
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Manual send history
+// ---------------------------------------------------------------------------
+
+export interface AdminManualSendEntry {
+  id: string;
+  createdAt: Date;
+  clientId: string;
+  clientName: string;
+  /** AutomationType as string */
+  type: string;
+  /** source: manual_owner | manual_admin */
+  source: string | null;
+  /** status: queued | sent | delivered | read | failed | skipped */
+  status: string;
+  providerMessageId: string | null;
+  failureReason: string | null;
+  /** Masked phone stored at send time */
+  maskedPhone: string;
+  templateId: string | null;
+  sentAt: Date | null;
+}
+
+function maskPhoneForLog(phone: string): string {
+  const d = phone.replace(/\D/g, "");
+  if (d.length < 7) return "***";
+  return d.slice(0, 3) + "***" + d.slice(-3);
+}
+
+export async function getAdminLastManualSends(
+  businessId: string,
+  limit = 5,
+): Promise<AdminManualSendEntry[]> {
+  const msgs = await prisma.automationMessage.findMany({
+    where: {
+      businessId,
+      source: { in: ["manual_owner", "manual_admin"] },
+    },
+    orderBy: { createdAt: "desc" },
+    take: limit,
+    select: {
+      id: true,
+      createdAt: true,
+      clientId: true,
+      type: true,
+      source: true,
+      status: true,
+      providerMessageId: true,
+      failureReason: true,
+      phone: true,
+      templateId: true,
+      sentAt: true,
+      client: { select: { fullName: true } },
+    },
+  });
+
+  return msgs.map((m) => ({
+    id: m.id,
+    createdAt: m.createdAt,
+    clientId: m.clientId,
+    clientName: m.client.fullName,
+    type: m.type,
+    source: m.source,
+    status: m.status,
+    providerMessageId: m.providerMessageId,
+    failureReason: m.failureReason,
+    maskedPhone: maskPhoneForLog(m.phone),
+    templateId: m.templateId,
+    sentAt: m.sentAt,
+  }));
+}
+
+async function getManualSentThisMonth(businessId: string): Promise<number> {
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  return prisma.automationMessage.count({
+    where: {
+      businessId,
+      source: { in: ["manual_owner", "manual_admin"] },
+      status: { in: ["sent", "delivered", "read"] },
+      createdAt: { gte: monthStart },
+    },
+  });
+}
+
 export interface AdminAutomationInfo {
   whatsappConnected: boolean;
   provider: string | null;
@@ -223,6 +308,10 @@ export interface AdminAutomationInfo {
   mockRunsThisMonth: number;
   failedThisMonth: number;
   skippedThisMonth: number;
+  /** Manual sends (manual_owner / manual_admin) that reached sent/delivered/read this month */
+  manualSentThisMonth: number;
+  /** Up to 5 most recent manual send attempts */
+  lastManualSends: AdminManualSendEntry[];
   lastRunAt: Date | null;
   lastFailureReason: string | null;
   /** Timestamp of the last webhook event received from Meta */
@@ -237,18 +326,20 @@ export async function getAdminAutomationInfo(
   businessId: string,
 ): Promise<AdminAutomationInfo> {
   const tenant = { businessId };
-  const [connection, setting, stats, lastRun, lastFailedMsg] = await Promise.all([
-    getWhatsAppConnection(tenant),
-    getWinBackAutomationSetting(tenant),
-    getWinBackStatsThisMonth(tenant),
-    getLastWinBackRun(tenant),
-    // Most recent failed message for this business
-    prisma.automationMessage.findFirst({
-      where: { businessId, status: "failed" },
-      orderBy: { createdAt: "desc" },
-      select: { failureReason: true },
-    }),
-  ]);
+  const [connection, setting, stats, lastRun, lastFailedMsg, manualSentThisMonth, lastManualSends] =
+    await Promise.all([
+      getWhatsAppConnection(tenant),
+      getWinBackAutomationSetting(tenant),
+      getWinBackStatsThisMonth(tenant),
+      getLastWinBackRun(tenant),
+      prisma.automationMessage.findFirst({
+        where: { businessId, status: "failed" },
+        orderBy: { createdAt: "desc" },
+        select: { failureReason: true },
+      }),
+      getManualSentThisMonth(businessId),
+      getAdminLastManualSends(businessId, 5),
+    ]);
 
   return {
     whatsappConnected: connection?.status === "active",
@@ -262,6 +353,8 @@ export async function getAdminAutomationInfo(
     mockRunsThisMonth: stats.mockRunsThisMonth,
     failedThisMonth: stats.failedThisMonth,
     skippedThisMonth: stats.skippedThisMonth,
+    manualSentThisMonth,
+    lastManualSends,
     lastRunAt: lastRun?.startedAt ?? null,
     lastFailureReason: lastFailedMsg?.failureReason ?? null,
     lastWebhookReceivedAt: connection?.lastWebhookReceivedAt ?? null,
