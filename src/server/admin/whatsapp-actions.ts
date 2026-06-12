@@ -16,6 +16,11 @@
 import { prisma } from "@/server/db/prisma";
 import { requirePlatformAdmin } from "./auth";
 import { getWhatsAppDiagnostic, type WhatsAppDiagnosticResult } from "@/server/whatsapp/resolver";
+import {
+  createDefaultTemplatesForBusiness,
+  syncTemplatesForBusiness,
+  type TemplateSetupResult,
+} from "@/server/whatsapp/templates-core";
 import { createMetaCloudApiProvider } from "@/lib/whatsapp/meta-cloud-api";
 import { revalidatePath } from "next/cache";
 
@@ -177,4 +182,43 @@ export async function adminCheckWhatsAppDiagnostic(
 ): Promise<WhatsAppDiagnosticResult> {
   await requirePlatformAdmin();
   return getWhatsAppDiagnostic(businessId);
+}
+
+/** Admin: create the 4 default templates in a business's WABA. */
+export async function adminCreateTemplatesForBusiness(
+  businessId: string,
+): Promise<TemplateSetupResult> {
+  await requirePlatformAdmin();
+  const result = await createDefaultTemplatesForBusiness(businessId);
+  revalidatePath(`/admin/businesses/${businessId}`);
+  return result;
+}
+
+/** Admin: sync template statuses from a business's WABA. */
+export async function adminSyncTemplatesForBusiness(
+  businessId: string,
+): Promise<TemplateSetupResult> {
+  await requirePlatformAdmin();
+  const result = await syncTemplatesForBusiness(businessId);
+  revalidatePath(`/admin/businesses/${businessId}`);
+  return result;
+}
+
+/** Admin: disconnect a business's WhatsApp and clear its stored token. */
+export async function adminDisconnectBusiness(
+  businessId: string,
+): Promise<{ success: boolean }> {
+  await requirePlatformAdmin();
+  await prisma.whatsAppConnection.updateMany({
+    where: { businessId },
+    data: {
+      status: "not_connected",
+      accessTokenEncrypted: null,
+      useEnvFallback: false,
+      disconnectedAt: new Date(),
+      lastError: null,
+    },
+  });
+  revalidatePath(`/admin/businesses/${businessId}`);
+  return { success: true };
 }

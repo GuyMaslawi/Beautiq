@@ -807,6 +807,10 @@ model AutomationSetting {
   templateName     String?
   /// BCP 47 language code matching the approved template (default: he)
   templateLanguage String?             @default("he")
+  /// Last known Meta approval status of templateName: approved | pending | rejected | unknown
+  templateStatus   String?
+  /// When templateStatus was last fetched/synced from Meta
+  templateSyncedAt DateTime?
   offerType        AutomationOfferType @default(none)
   /// Free-text offer value for custom offer type
   offerValue      String?

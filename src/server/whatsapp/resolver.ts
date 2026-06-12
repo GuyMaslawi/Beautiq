@@ -18,6 +18,7 @@
 
 import { prisma } from "@/server/db/prisma";
 import { createMetaCloudApiProvider } from "@/lib/whatsapp/meta-cloud-api";
+import { tryDecryptToken } from "@/lib/whatsapp/crypto";
 import {
   devMockProvider,
   createDisabledProvider,
@@ -76,15 +77,28 @@ export async function resolveWhatsAppConnectionForBusiness(
     const apiVersion = process.env.META_WHATSAPP_API_VERSION ?? "v19.0";
 
     let accessToken: string | undefined;
+    let decryptFailed = false;
     if (connection.useEnvFallback) {
+      // Mode A (testing): token from env.
       accessToken = process.env.META_WHATSAPP_ACCESS_TOKEN;
     } else {
-      // Future Mode B: decrypt connection.accessTokenEncrypted here.
-      // accessToken = await decryptToken(connection.accessTokenEncrypted);
+      // Mode B (Embedded Signup / production): decrypt the stored token.
+      const decrypted = tryDecryptToken(connection.accessTokenEncrypted);
+      if (!decrypted && connection.accessTokenEncrypted) {
+        decryptFailed = true;
+        console.error(
+          `[WhatsApp resolver] businessId=${businessId} token decryption failed — check WHATSAPP_CREDENTIALS_ENCRYPTION_KEY.`,
+        );
+      }
+      accessToken = decrypted ?? undefined;
     }
 
     if (!phoneNumberId || !accessToken) {
-      const missingWhat = !phoneNumberId ? "Phone Number ID" : "Access Token";
+      const missingWhat = decryptFailed
+        ? "פענוח Access Token"
+        : !phoneNumberId
+          ? "Phone Number ID"
+          : "Access Token";
       console.error(
         `[WhatsApp resolver] businessId=${businessId} has active connection but ${missingWhat} is missing.`,
       );
@@ -290,4 +304,130 @@ export async function getWhatsAppDiagnostic(
   }
 
   return { ok, statusLabel, details };
+}
+
+/**
+ * Server-side ONLY. Returns the decrypted access token + ids for a business so
+ * template create/sync calls can run. NEVER return this to the client.
+ * Resolves the token from Mode B (encrypted) or Mode A (env fallback).
+ */
+export async function getDecryptedCredentialsForBusiness(
+  businessId: string,
+): Promise<{
+  accessToken: string;
+  phoneNumberId?: string;
+  wabaId?: string;
+  apiVersion: string;
+} | null> {
+  const connection = await prisma.whatsAppConnection.findUnique({
+    where: { businessId },
+  });
+  if (!connection || connection.status !== "active") return null;
+
+  const apiVersion = process.env.META_WHATSAPP_API_VERSION ?? "v19.0";
+
+  let accessToken: string | undefined;
+  if (connection.useEnvFallback) {
+    accessToken = process.env.META_WHATSAPP_ACCESS_TOKEN;
+  } else {
+    accessToken = tryDecryptToken(connection.accessTokenEncrypted) ?? undefined;
+  }
+  if (!accessToken) return null;
+
+  return {
+    accessToken,
+    phoneNumberId: connection.phoneNumberId ?? process.env.META_WHATSAPP_PHONE_NUMBER_ID ?? undefined,
+    wabaId: connection.wabaId ?? process.env.META_WHATSAPP_WABA_ID ?? undefined,
+    apiVersion,
+  };
+}
+
+export interface WhatsAppReadiness {
+  /** True only when the business can send real production WhatsApp messages. */
+  ready: boolean;
+  /** Hebrew owner-facing status: "WhatsApp לא מחובר" | "חיבור WhatsApp בתהליך" | "WhatsApp מחובר" | "יש בעיה בחיבור WhatsApp". */
+  statusLabel: string;
+  /** Machine-readable connection state for the UI. */
+  state: "not_connected" | "pending" | "active" | "error";
+  /** Owner-safe display phone (the business's own number). */
+  displayPhoneNumber?: string;
+  /** Admin-only safe reason when not ready (never a credential). */
+  reason?: string;
+}
+
+/**
+ * Production readiness check for a business's WhatsApp connection.
+ * A business is ready only when:
+ *   - status=active
+ *   - useEnvFallback=false (real per-business credentials)
+ *   - accessTokenEncrypted exists and decrypts
+ *   - phoneNumberId exists
+ * (Per-template approval readiness is computed separately, per automation.)
+ */
+export async function getWhatsAppReadiness(
+  businessId: string,
+): Promise<WhatsAppReadiness> {
+  const connection = await prisma.whatsAppConnection.findUnique({
+    where: { businessId },
+    select: {
+      status: true,
+      useEnvFallback: true,
+      accessTokenEncrypted: true,
+      phoneNumberId: true,
+      displayPhoneNumber: true,
+      phoneNumber: true,
+      lastError: true,
+    },
+  });
+
+  const displayPhoneNumber =
+    connection?.displayPhoneNumber ?? connection?.phoneNumber ?? undefined;
+
+  if (!connection || connection.status === "not_connected") {
+    return { ready: false, state: "not_connected", statusLabel: "WhatsApp לא מחובר" };
+  }
+  if (connection.status === "pending") {
+    return { ready: false, state: "pending", statusLabel: "חיבור WhatsApp בתהליך" };
+  }
+  if (connection.status === "error") {
+    return {
+      ready: false,
+      state: "error",
+      statusLabel: "יש בעיה בחיבור WhatsApp",
+      reason: connection.lastError ?? undefined,
+      displayPhoneNumber,
+    };
+  }
+
+  // status === active
+  if (!connection.phoneNumberId) {
+    return {
+      ready: false,
+      state: "error",
+      statusLabel: "יש בעיה בחיבור WhatsApp",
+      reason: "Phone Number ID חסר",
+      displayPhoneNumber,
+    };
+  }
+
+  // In production Mode B the token must be present and decryptable.
+  if (!connection.useEnvFallback) {
+    const token = tryDecryptToken(connection.accessTokenEncrypted);
+    if (!token) {
+      return {
+        ready: false,
+        state: "error",
+        statusLabel: "יש בעיה בחיבור WhatsApp",
+        reason: "פענוח ה-Access Token נכשל",
+        displayPhoneNumber,
+      };
+    }
+  }
+
+  return {
+    ready: true,
+    state: "active",
+    statusLabel: "WhatsApp מחובר",
+    displayPhoneNumber,
+  };
 }

@@ -12,7 +12,9 @@ import { getReviewRequestSetting, getReviewRequestStatsThisMonth, getLastReviewR
 import { getBookingConfirmationSetting } from "@/server/booking-confirmation/queries";
 import { getAutomationMessageLog } from "@/server/automations/message-queries";
 import { getLastAutomationRun } from "@/server/automations/run-queries";
+import { getOwnerWhatsAppStatus } from "@/server/whatsapp/owner-status";
 import { isRealSendConfigured, isTestModeActive } from "@/lib/whatsapp/provider";
+import { WhatsAppConnectionCard } from "@/components/whatsapp/whatsapp-connection-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { WinBackAutomationCard } from "@/components/automations/win-back-automation-card";
 import { MorningReminderCard } from "@/components/automations/morning-reminder-card";
@@ -56,6 +58,9 @@ export default async function AutomationsPage() {
     getLastReviewRequestRun(tenant),
   ]);
 
+  // Owner-facing WhatsApp connection + per-automation template readiness.
+  const ownerWhatsAppStatus = await getOwnerWhatsAppStatus(business.id);
+
   // Fetch last run summaries (with skipped-reason breakdowns) for all 4 automation types
   const [winBackLastRunSummary, morningReminderLastRunSummary, reviewRequestLastRunSummary, bookingConfirmationLastRunSummary] =
     await Promise.all([
@@ -82,6 +87,15 @@ export default async function AutomationsPage() {
         icon={Zap}
         title="אוטומציות"
         subtitle="הודעות שנשלחות אוטומטית כדי לחסוך זמן ולשמור על קשר עם הלקוחות."
+      />
+
+      {/* Owner WhatsApp connection (Embedded Signup) + template setup */}
+      <WhatsAppConnectionCard
+        status={ownerWhatsAppStatus}
+        appId={process.env.NEXT_PUBLIC_META_APP_ID}
+        configId={process.env.NEXT_PUBLIC_META_CONFIG_ID}
+        graphVersion={process.env.NEXT_PUBLIC_META_GRAPH_VERSION ?? "v19.0"}
+        isAdmin={user?.isAdmin ?? false}
       />
 
       {/* WhatsApp status banners — never show technical credentials */}
