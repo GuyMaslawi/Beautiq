@@ -43,6 +43,8 @@ export async function runReviewRequestForBusiness(params: {
   requireOptIn?: boolean;
   bypassTiming?: boolean;
   now?: Date;
+  templateName?: string | null;
+  templateLanguage?: string | null;
 }): Promise<ReviewRunResult> {
   const {
     businessId,
@@ -52,6 +54,8 @@ export async function runReviewRequestForBusiness(params: {
     requireOptIn = false,
     bypassTiming = false,
     now = new Date(),
+    templateName,
+    templateLanguage,
   } = params;
 
   // hoursAfter: how many hours after completion to send (default 24 for legacy records)
@@ -130,6 +134,7 @@ export async function runReviewRequestForBusiness(params: {
     if (customTpl?.isActive && customTpl.body) body = customTpl.body;
   }
 
+  const realSendEnabled = process.env.ENABLE_REAL_WHATSAPP_SEND === "true";
   const provider = await getWhatsAppProviderForBusiness(businessId);
   const defaultReviewLink = reviewLink ?? `beautiq.co/b/${business.slug}#reviews`;
   const source = bypassTiming ? "manual_admin" : "cron";
@@ -138,6 +143,41 @@ export async function runReviewRequestForBusiness(params: {
   const run = await prisma.automationRun.create({
     data: { businessId, type: "review_request", status: "running", eligibleCount: bookings.length },
   });
+
+  // In real-send mode a Meta-approved templateName is required
+  if (realSendEnabled && !templateName) {
+    const MISSING_TPL_REASON = "תבנית ההודעה עדיין לא מוגדרת";
+    await Promise.all(
+      bookings.map((booking) =>
+        prisma.automationMessage.create({
+          data: {
+            businessId,
+            runId: run.id,
+            clientId: booking.clientId,
+            bookingId: booking.id,
+            type: "review_request",
+            phone: booking.client.normalizedPhone ?? "",
+            messageText: "",
+            status: "skipped",
+            failureReason: MISSING_TPL_REASON,
+            source,
+          },
+        }),
+      ),
+    );
+    await prisma.automationRun.update({
+      where: { id: run.id },
+      data: { status: "completed", finishedAt: new Date(), skippedCount: bookings.length },
+    });
+    return {
+      success: false,
+      sentCount: 0,
+      failedCount: 0,
+      skippedCount: bookings.length,
+      runId: run.id,
+      error: "תבנית WhatsApp מאושרת נדרשת לשליחה אמיתית.",
+    };
+  }
 
   let sentCount = 0;
   let failedCount = 0;
@@ -231,9 +271,21 @@ export async function runReviewRequestForBusiness(params: {
     });
 
     try {
+      const templateVariables = templateName
+        ? {
+            "1": booking.client.fullName,
+            "2": booking.service.name,
+            "3": business.name,
+            "4": defaultReviewLink,
+          }
+        : undefined;
+
       const result = await provider.send({
         businessId,
         toPhone: toWaNumber(phone),
+        templateId: templateName ?? undefined,
+        templateLanguage: templateLanguage ?? "he",
+        templateVariables,
         fallbackText: messageText,
         automationRunId: run.id,
         clientId: booking.clientId,

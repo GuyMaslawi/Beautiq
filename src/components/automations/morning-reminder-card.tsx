@@ -15,10 +15,12 @@ function TemplateReadinessBadge({
   realSendConfigured,
   testMode,
   hasTemplate,
+  onConfigure,
 }: {
   realSendConfigured: boolean;
   testMode: boolean;
   hasTemplate: boolean;
+  onConfigure?: () => void;
 }) {
   if (!realSendConfigured) return null;
   if (testMode) {
@@ -38,14 +40,24 @@ function TemplateReadinessBadge({
     );
   }
   return (
-    <div className="space-y-0.5">
+    <div className="space-y-1">
       <div className="flex items-center gap-1.5 text-xs" style={{ color: "#b45309" }}>
         <AlertTriangle className="h-3 w-3 shrink-0" />
         חסרה תבנית הודעה
       </div>
       <p className="text-xs leading-snug" style={{ color: "var(--muted)" }}>
-        כדי לשלוח הודעות אמיתיות, צריך להגדיר תבנית WhatsApp מאושרת.
+        האוטומציה פעילה, אבל לא תשלח הודעות אמיתיות עד שתוגדר תבנית WhatsApp מאושרת.
       </p>
+      {onConfigure && (
+        <button
+          type="button"
+          onClick={onConfigure}
+          className="text-xs font-medium transition-opacity hover:opacity-70"
+          style={{ color: "#c97898" }}
+        >
+          הגדרת תבנית
+        </button>
+      )}
     </div>
   );
 }
@@ -97,6 +109,8 @@ export function MorningReminderCard({ setting, sentThisMonth, lastRun, realSendC
     setting?.messageTemplate ?? DEFAULT_TEMPLATE,
   );
   const [requireOptIn, setRequireOptIn] = useState(setting?.requireOptIn ?? false);
+  const [templateName, setTemplateName] = useState(setting?.templateName ?? "");
+  const [templateLanguage, setTemplateLanguage] = useState(setting?.templateLanguage ?? "he");
   const [editingMessage, setEditingMessage] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -122,6 +136,8 @@ export function MorningReminderCard({ setting, sentThisMonth, lastRun, realSendC
         thresholdDays: timing.thresholdDays,
         messageTemplate: messageTemplate || null,
         requireOptIn,
+        templateName: templateName.trim() || null,
+        templateLanguage: templateLanguage.trim() || "he",
       });
       if (result.error) {
         setError(result.error);
@@ -211,6 +227,7 @@ export function MorningReminderCard({ setting, sentThisMonth, lastRun, realSendC
           realSendConfigured={realSendConfigured}
           testMode={testMode}
           hasTemplate={!!setting?.templateName}
+          onConfigure={() => setDialogOpen(true)}
         />
 
         <AutomationLastRunSummary lastRun={lastRun ?? null} />
@@ -348,6 +365,49 @@ export function MorningReminderCard({ setting, sentThisMonth, lastRun, realSendC
                                 ? "תזכורות יישלחו רק ללקוחות שנתנו הסכמה מפורשת."
                                 : "תזכורות יישלחו לכל הלקוחות (מומלץ לשירות עסקי)."}
                             </p>
+                          </div>
+                        </div>
+
+                        {/* WhatsApp template fields */}
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-sm font-semibold mb-1" style={{ color: "var(--foreground)" }}>
+                              שם תבנית WhatsApp
+                            </label>
+                            <input
+                              type="text"
+                              value={templateName}
+                              onChange={(e) => setTemplateName(e.target.value)}
+                              dir="ltr"
+                              className="w-full rounded-xl px-4 py-2.5 text-sm"
+                              style={{
+                                border: "1px solid var(--border)",
+                                background: "var(--background)",
+                                color: "var(--foreground)",
+                              }}
+                              placeholder="morning_reminder_he"
+                            />
+                            <p className="text-xs mt-1 leading-snug" style={{ color: "var(--muted)" }}>
+                              יש להזין את שם התבנית כפי שאושרה ב־WhatsApp Business.
+                            </p>
+                          </div>
+                          <div>
+                            <label className="block text-sm font-semibold mb-1" style={{ color: "var(--foreground)" }}>
+                              שפת התבנית
+                            </label>
+                            <input
+                              type="text"
+                              value={templateLanguage}
+                              onChange={(e) => setTemplateLanguage(e.target.value)}
+                              dir="ltr"
+                              className="w-full rounded-xl px-4 py-2.5 text-sm"
+                              style={{
+                                border: "1px solid var(--border)",
+                                background: "var(--background)",
+                                color: "var(--foreground)",
+                              }}
+                              placeholder="he"
+                            />
                           </div>
                         </div>
 

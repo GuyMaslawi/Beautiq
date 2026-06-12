@@ -120,20 +120,23 @@ async function _send(params: {
     return;
   }
 
-  // Load client opt-in fields + booking_confirmation requireOptIn setting in parallel.
+  // Load client opt-in fields + booking_confirmation requireOptIn + template settings in parallel.
   // Booking confirmation is transactional — requireOptIn defaults to false if no setting exists.
-  const [client, requireOptInSetting] = await Promise.all([
+  const [client, confirmationSetting] = await Promise.all([
     prisma.client.findUnique({
       where: { id: clientId },
       select: { unsubscribedAt: true, whatsappOptIn: true },
     }),
     prisma.automationSetting.findUnique({
       where: { businessId_type: { businessId, type: "booking_confirmation" } },
-      select: { requireOptIn: true },
+      select: { requireOptIn: true, templateName: true, templateLanguage: true },
     }),
   ]);
 
-  const requireOptIn = requireOptInSetting?.requireOptIn ?? false;
+  const requireOptIn = confirmationSetting?.requireOptIn ?? false;
+  const templateName = confirmationSetting?.templateName ?? null;
+  const templateLanguage = confirmationSetting?.templateLanguage ?? "he";
+  const realSendEnabled = process.env.ENABLE_REAL_WHATSAPP_SEND === "true";
 
   if (client?.unsubscribedAt) {
     await createSkippedRun(businessId, clientId, bookingId, clientPhone, "הלקוחה לא מעוניינת בקבלת הודעות").catch(() => {});
@@ -205,11 +208,37 @@ async function _send(params: {
     },
   });
 
+  // In real-send mode a Meta-approved templateName is required
+  if (realSendEnabled && !templateName) {
+    await prisma.automationMessage
+      .update({
+        where: { id: msg.id },
+        data: { status: "skipped", failureReason: "תבנית ההודעה עדיין לא מוגדרת" },
+      })
+      .catch(() => {});
+    await prisma.automationRun
+      .update({ where: { id: run.id }, data: { status: "completed", finishedAt: new Date(), skippedCount: 1 } })
+      .catch(() => {});
+    return;
+  }
+
   try {
     const provider = await getWhatsAppProviderForBusiness(businessId);
+    const templateVariables = templateName
+      ? {
+          "1": clientName,
+          "2": serviceName,
+          "3": formatDate(startTime),
+          "4": formatTime(startTime),
+        }
+      : undefined;
+
     const result = await provider.send({
       businessId,
       toPhone: toWaNumber(clientPhone),
+      templateId: templateName ?? undefined,
+      templateLanguage,
+      templateVariables,
       fallbackText: messageText,
       automationRunId: run.id,
       clientId,

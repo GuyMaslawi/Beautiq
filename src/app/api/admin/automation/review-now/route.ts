@@ -43,20 +43,22 @@ export async function POST(request: Request) {
     messageTemplate: string | null;
     sendHour: number;
     requireOptIn: boolean;
+    templateName: string | null;
+    templateLanguage: string | null;
   }>;
 
   if (bodyBusinessId) {
     const setting = await prisma.automationSetting.findUnique({
       where: { businessId_type: { businessId: bodyBusinessId, type: "review_request" } },
-      select: { businessId: true, offerValue: true, messageTemplate: true, sendHour: true, requireOptIn: true },
+      select: { businessId: true, offerValue: true, messageTemplate: true, sendHour: true, requireOptIn: true, templateName: true, templateLanguage: true },
     });
     targetSettings = setting
       ? [setting]
-      : [{ businessId: bodyBusinessId, offerValue: null, messageTemplate: null, sendHour: 10, requireOptIn: false }];
+      : [{ businessId: bodyBusinessId, offerValue: null, messageTemplate: null, sendHour: 10, requireOptIn: false, templateName: null, templateLanguage: null }];
   } else {
     targetSettings = await prisma.automationSetting.findMany({
       where: { type: "review_request", enabled: true },
-      select: { businessId: true, offerValue: true, messageTemplate: true, sendHour: true, requireOptIn: true },
+      select: { businessId: true, offerValue: true, messageTemplate: true, sendHour: true, requireOptIn: true, templateName: true, templateLanguage: true },
     });
   }
 
@@ -82,6 +84,8 @@ export async function POST(request: Request) {
         messageTemplate: setting.messageTemplate,
         sendHour: setting.sendHour,
         requireOptIn: setting.requireOptIn,
+        templateName: setting.templateName,
+        templateLanguage: setting.templateLanguage,
         bypassTiming: true,
       });
       results.push({ businessId: setting.businessId, ...result });

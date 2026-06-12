@@ -74,9 +74,11 @@ export async function saveReviewRequestTimingAction(params: {
   messageTemplate: string | null;
   reviewLink: string | null;
   requireOptIn?: boolean;
+  templateName?: string | null;
+  templateLanguage?: string | null;
 }): Promise<{ success?: string; error?: string }> {
   const tenant = await requireTenant();
-  const { hoursAfter, messageTemplate, reviewLink, requireOptIn = false } = params;
+  const { hoursAfter, messageTemplate, reviewLink, requireOptIn = false, templateName = null, templateLanguage = null } = params;
 
   try {
     await prisma.automationSetting.upsert({
@@ -91,8 +93,10 @@ export async function saveReviewRequestTimingAction(params: {
         thresholdDays: 0,
         cooldownDays: 0,
         requireOptIn,
+        templateName,
+        templateLanguage,
       },
-      update: { sendHour: hoursAfter, messageTemplate, offerValue: reviewLink, requireOptIn },
+      update: { sendHour: hoursAfter, messageTemplate, offerValue: reviewLink, requireOptIn, templateName, templateLanguage },
     });
   } catch {
     return { error: "שגיאה בשמירת ההגדרות" };

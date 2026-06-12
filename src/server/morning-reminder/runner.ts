@@ -61,6 +61,8 @@ export async function runMorningReminderForBusiness(params: {
   requireOptIn?: boolean;
   bypassHourCheck?: boolean;
   now?: Date;
+  templateName?: string | null;
+  templateLanguage?: string | null;
 }): Promise<ReminderRunResult> {
   const {
     businessId,
@@ -70,6 +72,8 @@ export async function runMorningReminderForBusiness(params: {
     requireOptIn = false,
     bypassHourCheck = false,
     now = new Date(),
+    templateName,
+    templateLanguage,
   } = params;
 
   const israelHour = parseInt(
@@ -168,6 +172,7 @@ export async function runMorningReminderForBusiness(params: {
     if (customTpl?.isActive && customTpl.body) body = customTpl.body;
   }
 
+  const realSendEnabled = process.env.ENABLE_REAL_WHATSAPP_SEND === "true";
   const provider = await getWhatsAppProviderForBusiness(businessId);
   const source = bypassHourCheck ? "manual_admin" : "cron";
 
@@ -175,6 +180,41 @@ export async function runMorningReminderForBusiness(params: {
   const run = await prisma.automationRun.create({
     data: { businessId, type: "morning_reminder", status: "running", eligibleCount: bookings.length },
   });
+
+  // In real-send mode a Meta-approved templateName is required
+  if (realSendEnabled && !templateName) {
+    const MISSING_TPL_REASON = "תבנית ההודעה עדיין לא מוגדרת";
+    await Promise.all(
+      bookings.map((booking) =>
+        prisma.automationMessage.create({
+          data: {
+            businessId,
+            runId: run.id,
+            clientId: booking.clientId,
+            bookingId: booking.id,
+            type: "morning_reminder",
+            phone: booking.client.normalizedPhone ?? "",
+            messageText: "",
+            status: "skipped",
+            failureReason: MISSING_TPL_REASON,
+            source,
+          },
+        }),
+      ),
+    );
+    await prisma.automationRun.update({
+      where: { id: run.id },
+      data: { status: "completed", finishedAt: new Date(), skippedCount: bookings.length },
+    });
+    return {
+      success: false,
+      sentCount: 0,
+      failedCount: 0,
+      skippedCount: bookings.length,
+      runId: run.id,
+      error: "תבנית WhatsApp מאושרת נדרשת לשליחה אמיתית.",
+    };
+  }
 
   let sentCount = 0;
   let failedCount = 0;
@@ -268,9 +308,21 @@ export async function runMorningReminderForBusiness(params: {
     });
 
     try {
+      const templateVariables = templateName
+        ? {
+            "1": booking.client.fullName,
+            "2": booking.service.name,
+            "3": formatTime(booking.startTime, tz),
+            "4": business.name,
+          }
+        : undefined;
+
       const result = await provider.send({
         businessId,
         toPhone: toWaNumber(phone),
+        templateId: templateName ?? undefined,
+        templateLanguage: templateLanguage ?? "he",
+        templateVariables,
         fallbackText: messageText,
         automationRunId: run.id,
         clientId: booking.clientId,

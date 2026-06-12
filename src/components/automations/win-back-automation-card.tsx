@@ -33,10 +33,12 @@ function TemplateReadinessBadge({
   realSendConfigured,
   testMode,
   hasTemplate,
+  onConfigure,
 }: {
   realSendConfigured: boolean;
   testMode: boolean;
   hasTemplate: boolean;
+  onConfigure?: () => void;
 }) {
   if (!realSendConfigured) return null;
   if (testMode) {
@@ -56,14 +58,24 @@ function TemplateReadinessBadge({
     );
   }
   return (
-    <div className="space-y-0.5">
+    <div className="space-y-1">
       <div className="flex items-center gap-1.5 text-xs" style={{ color: "#b45309" }}>
         <AlertTriangle className="h-3 w-3 shrink-0" />
         חסרה תבנית הודעה
       </div>
       <p className="text-xs leading-snug" style={{ color: "var(--muted)" }}>
-        כדי לשלוח הודעות אמיתיות, צריך להגדיר תבנית WhatsApp מאושרת.
+        האוטומציה פעילה, אבל לא תשלח הודעות אמיתיות עד שתוגדר תבנית WhatsApp מאושרת.
       </p>
+      {onConfigure && (
+        <button
+          type="button"
+          onClick={onConfigure}
+          className="text-xs font-medium transition-opacity hover:opacity-70"
+          style={{ color: "#c97898" }}
+        >
+          הגדרת תבנית
+        </button>
+      )}
     </div>
   );
 }
@@ -169,6 +181,7 @@ export function WinBackAutomationCard({ setting, lastRun, realSendConfigured = f
           realSendConfigured={realSendConfigured}
           testMode={testMode}
           hasTemplate={!!setting?.templateName}
+          onConfigure={() => setDialogOpen(true)}
         />
 
         <AutomationLastRunSummary lastRun={lastRun ?? null} />
