@@ -159,6 +159,16 @@ export async function sendManualClientWhatsAppAction(
       ? "en_US"
       : setting?.templateLanguage ?? "he";
 
+  // --- Test mode recipient redirect ---
+  // In test mode every manual send must go to WHATSAPP_TEST_PHONE, never to the real client phone.
+  // The provider wrapper is a secondary safety net; the redirect happens here first.
+  const isTestMode = process.env.WHATSAPP_TEST_MODE === "true";
+  const testPhone = process.env.WHATSAPP_TEST_PHONE;
+  if (isTestMode && !testPhone) {
+    return { error: "WHATSAPP_TEST_PHONE לא מוגדר — לא ניתן לשלוח במצב בדיקה" };
+  }
+  const recipientPhone = isTestMode && testPhone ? testPhone : client.normalizedPhone;
+
   // --- Create run & message log ---
   const run = await prisma.automationRun.create({
     data: {
@@ -175,7 +185,7 @@ export async function sendManualClientWhatsAppAction(
       runId: run.id,
       clientId: client.id,
       type: "manual",
-      phone: client.normalizedPhone,
+      phone: recipientPhone,
       messageText,
       templateId: effectiveTemplateName,
       status: "queued",
@@ -197,7 +207,7 @@ export async function sendManualClientWhatsAppAction(
 
   const result = await provider.send({
     businessId,
-    toPhone: client.normalizedPhone,
+    toPhone: recipientPhone,
     templateId: effectiveTemplateName,
     templateLanguage: effectiveTemplateLanguage,
     templateVariables,
@@ -210,7 +220,6 @@ export async function sendManualClientWhatsAppAction(
   let finalStatus: "sent" | "skipped" | "failed";
   let providerMessageId: string | null = null;
   let failureReason: string | undefined;
-  const isTestMode = process.env.WHATSAPP_TEST_MODE === "true";
 
   if (result.isMockSkip) {
     finalStatus = "skipped";
