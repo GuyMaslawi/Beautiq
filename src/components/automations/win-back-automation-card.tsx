@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Settings, X } from "lucide-react";
+import { Settings, X, CheckCircle, AlertTriangle, FlaskConical } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { toggleWinBackAutomation } from "@/server/win-back-automation/actions";
 import { WinBackSettingsForm } from "@/components/win-back-automation/win-back-settings-form";
@@ -29,12 +29,53 @@ function buildPreview(template: string, offerType: string, offerValue: string): 
     .trim();
 }
 
+function TemplateReadinessBadge({
+  realSendConfigured,
+  testMode,
+  hasTemplate,
+}: {
+  realSendConfigured: boolean;
+  testMode: boolean;
+  hasTemplate: boolean;
+}) {
+  if (!realSendConfigured) return null;
+  if (testMode) {
+    return (
+      <div className="flex items-center gap-1.5 text-xs" style={{ color: "#b45309" }}>
+        <FlaskConical className="h-3 w-3 shrink-0" />
+        מצב בדיקה פעיל
+      </div>
+    );
+  }
+  if (hasTemplate) {
+    return (
+      <div className="flex items-center gap-1.5 text-xs" style={{ color: "#15803d" }}>
+        <CheckCircle className="h-3 w-3 shrink-0" />
+        תבנית מוגדרת
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-0.5">
+      <div className="flex items-center gap-1.5 text-xs" style={{ color: "#b45309" }}>
+        <AlertTriangle className="h-3 w-3 shrink-0" />
+        חסרה תבנית הודעה
+      </div>
+      <p className="text-xs leading-snug" style={{ color: "var(--muted)" }}>
+        כדי לשלוח הודעות אמיתיות, צריך להגדיר תבנית WhatsApp מאושרת.
+      </p>
+    </div>
+  );
+}
+
 interface Props {
   setting: AutomationSetting | null;
   lastRun?: LastRunSummary | null;
+  realSendConfigured?: boolean;
+  testMode?: boolean;
 }
 
-export function WinBackAutomationCard({ setting, lastRun }: Props) {
+export function WinBackAutomationCard({ setting, lastRun, realSendConfigured = false, testMode = false }: Props) {
   const [isEnabled, setIsEnabled] = useState(setting?.enabled ?? false);
   const [isToggling, startToggle] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -123,6 +164,12 @@ export function WinBackAutomationCard({ setting, lastRun }: Props) {
           <Settings className="h-4 w-4" />
           הגדרות
         </button>
+
+        <TemplateReadinessBadge
+          realSendConfigured={realSendConfigured}
+          testMode={testMode}
+          hasTemplate={!!setting?.templateName}
+        />
 
         <AutomationLastRunSummary lastRun={lastRun ?? null} />
       </div>

@@ -205,6 +205,7 @@ enum AutomationType {
   morning_reminder
   review_request
   manual
+  booking_confirmation
 }
 
 enum AutomationRunStatus {

@@ -42,20 +42,21 @@ export async function POST(request: Request) {
     offerValue: string | null;
     messageTemplate: string | null;
     sendHour: number;
+    requireOptIn: boolean;
   }>;
 
   if (bodyBusinessId) {
     const setting = await prisma.automationSetting.findUnique({
       where: { businessId_type: { businessId: bodyBusinessId, type: "review_request" } },
-      select: { businessId: true, offerValue: true, messageTemplate: true, sendHour: true },
+      select: { businessId: true, offerValue: true, messageTemplate: true, sendHour: true, requireOptIn: true },
     });
     targetSettings = setting
       ? [setting]
-      : [{ businessId: bodyBusinessId, offerValue: null, messageTemplate: null, sendHour: 10 }];
+      : [{ businessId: bodyBusinessId, offerValue: null, messageTemplate: null, sendHour: 10, requireOptIn: false }];
   } else {
     targetSettings = await prisma.automationSetting.findMany({
       where: { type: "review_request", enabled: true },
-      select: { businessId: true, offerValue: true, messageTemplate: true, sendHour: true },
+      select: { businessId: true, offerValue: true, messageTemplate: true, sendHour: true, requireOptIn: true },
     });
   }
 
@@ -80,6 +81,7 @@ export async function POST(request: Request) {
         reviewLink: setting.offerValue,
         messageTemplate: setting.messageTemplate,
         sendHour: setting.sendHour,
+        requireOptIn: setting.requireOptIn,
         bypassTiming: true,
       });
       results.push({ businessId: setting.businessId, ...result });

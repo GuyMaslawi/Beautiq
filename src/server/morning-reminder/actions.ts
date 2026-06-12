@@ -76,9 +76,10 @@ export async function saveMorningReminderTimingAction(params: {
   sendHour: number;
   thresholdDays: number;
   messageTemplate: string | null;
+  requireOptIn?: boolean;
 }): Promise<{ success?: string; error?: string }> {
   const tenant = await requireTenant();
-  const { sendHour, thresholdDays, messageTemplate } = params;
+  const { sendHour, thresholdDays, messageTemplate, requireOptIn = false } = params;
 
   try {
     await prisma.automationSetting.upsert({
@@ -91,9 +92,9 @@ export async function saveMorningReminderTimingAction(params: {
         thresholdDays,
         messageTemplate,
         cooldownDays: 0,
-        requireOptIn: false,
+        requireOptIn,
       },
-      update: { sendHour, thresholdDays, messageTemplate },
+      update: { sendHour, thresholdDays, messageTemplate, requireOptIn },
     });
   } catch {
     return { error: "שגיאה בשמירת ההגדרות" };

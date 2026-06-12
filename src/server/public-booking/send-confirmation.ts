@@ -2,11 +2,10 @@
  * Best-effort WhatsApp booking confirmation sent immediately after a public
  * booking request is created.
  *
- * Resolves the message body from the business's booking_confirmation template
- * (or a system default), substitutes variables, then hands off to the
- * configured WhatsApp provider.
+ * Every attempt (sent, skipped, or failed) creates an AutomationRun +
+ * AutomationMessage so it appears in the message log.
  *
- * This is fire-and-forget — errors are logged but never propagate to the
+ * This is fire-and-forget — errors are caught and never propagate to the
  * booking creation flow.
  */
 
@@ -40,14 +39,61 @@ function formatTime(d: Date): string {
   }).format(d);
 }
 
-function applyVariables(
-  body: string,
-  vars: Record<string, string>,
-): string {
+function applyVariables(body: string, vars: Record<string, string>): string {
   return body.replace(/\{[^}]+\}/g, (match) => vars[match] ?? match);
 }
 
+async function createSkippedRun(
+  businessId: string,
+  clientId: string,
+  bookingId: string,
+  phone: string,
+  failureReason: string,
+): Promise<void> {
+  const run = await prisma.automationRun.create({
+    data: {
+      businessId,
+      type: "booking_confirmation",
+      status: "completed",
+      eligibleCount: 1,
+      skippedCount: 1,
+      finishedAt: new Date(),
+    },
+  });
+  await prisma.automationMessage.create({
+    data: {
+      businessId,
+      runId: run.id,
+      clientId,
+      bookingId,
+      type: "booking_confirmation",
+      phone,
+      messageText: "",
+      status: "skipped",
+      failureReason,
+      source: "public_booking",
+    },
+  });
+}
+
 export async function sendBookingConfirmation(params: {
+  bookingId: string;
+  businessId: string;
+  businessName: string;
+  clientId: string;
+  clientPhone: string;
+  clientName: string;
+  serviceName: string;
+  startTime: Date;
+}): Promise<void> {
+  try {
+    await _send(params);
+  } catch (err) {
+    console.error("[sendBookingConfirmation] unexpected error:", err);
+  }
+}
+
+async function _send(params: {
   bookingId: string;
   businessId: string;
   businessName: string;
@@ -68,7 +114,36 @@ export async function sendBookingConfirmation(params: {
     startTime,
   } = params;
 
-  if (!isValidIsraeliPhone(clientPhone)) return;
+  // Phone check
+  if (!isValidIsraeliPhone(clientPhone)) {
+    await createSkippedRun(businessId, clientId, bookingId, clientPhone, "אין מספר טלפון תקין").catch(() => {});
+    return;
+  }
+
+  // Load client opt-in fields + booking_confirmation requireOptIn setting in parallel.
+  // Booking confirmation is transactional — requireOptIn defaults to false if no setting exists.
+  const [client, requireOptInSetting] = await Promise.all([
+    prisma.client.findUnique({
+      where: { id: clientId },
+      select: { unsubscribedAt: true, whatsappOptIn: true },
+    }),
+    prisma.automationSetting.findUnique({
+      where: { businessId_type: { businessId, type: "booking_confirmation" } },
+      select: { requireOptIn: true },
+    }),
+  ]);
+
+  const requireOptIn = requireOptInSetting?.requireOptIn ?? false;
+
+  if (client?.unsubscribedAt) {
+    await createSkippedRun(businessId, clientId, bookingId, clientPhone, "הלקוחה לא מעוניינת בקבלת הודעות").catch(() => {});
+    return;
+  }
+
+  if (requireOptIn && !client?.whatsappOptIn) {
+    await createSkippedRun(businessId, clientId, bookingId, clientPhone, "הלקוחה לא אישרה קבלת הודעות WhatsApp").catch(() => {});
+    return;
+  }
 
   // Resolve template body
   let body = DEFAULT_BODY;
@@ -106,23 +181,79 @@ export async function sendBookingConfirmation(params: {
 
   const messageText = applyVariables(body, vars);
 
+  // Create run + queued message before attempting send
+  const run = await prisma.automationRun.create({
+    data: {
+      businessId,
+      type: "booking_confirmation",
+      status: "running",
+      eligibleCount: 1,
+    },
+  });
+
+  const msg = await prisma.automationMessage.create({
+    data: {
+      businessId,
+      runId: run.id,
+      clientId,
+      bookingId,
+      type: "booking_confirmation",
+      phone: clientPhone,
+      messageText,
+      status: "queued",
+      source: "public_booking",
+    },
+  });
+
   try {
     const provider = await getWhatsAppProviderForBusiness(businessId);
     const result = await provider.send({
       businessId,
       toPhone: toWaNumber(clientPhone),
       fallbackText: messageText,
-      automationRunId: bookingId,
+      automationRunId: run.id,
       clientId,
     });
 
     if (result.success || result.isMockSkip) {
-      await prisma.booking.update({
-        where: { id: bookingId },
-        data: { confirmationSentAt: new Date() },
+      await prisma.$transaction([
+        prisma.automationMessage.update({
+          where: { id: msg.id },
+          data: {
+            status: "sent",
+            sentAt: new Date(),
+            providerMessageId: result.providerMessageId ?? undefined,
+          },
+        }),
+        prisma.booking.update({
+          where: { id: bookingId },
+          data: { confirmationSentAt: new Date() },
+        }),
+      ]);
+      await prisma.automationRun.update({
+        where: { id: run.id },
+        data: { status: "completed", finishedAt: new Date(), sentCount: 1 },
       });
+    } else {
+      const reason = result.failureReason ?? "שגיאה לא ידועה";
+      await prisma.automationMessage.update({
+        where: { id: msg.id },
+        data: { status: "failed", failedAt: new Date(), failureReason: reason },
+      });
+      await prisma.automationRun.update({
+        where: { id: run.id },
+        data: { status: "failed", finishedAt: new Date(), failedCount: 1 },
+      });
+      console.warn(`[sendBookingConfirmation] failed bookingId=${bookingId}: ${reason}`);
     }
   } catch (err) {
-    console.error("[sendBookingConfirmation] error:", err);
+    const reason = String(err);
+    await prisma.automationMessage
+      .update({ where: { id: msg.id }, data: { status: "failed", failedAt: new Date(), failureReason: reason } })
+      .catch(() => {});
+    await prisma.automationRun
+      .update({ where: { id: run.id }, data: { status: "failed", finishedAt: new Date(), failedCount: 1 } })
+      .catch(() => {});
+    console.error("[sendBookingConfirmation] send error:", err);
   }
 }

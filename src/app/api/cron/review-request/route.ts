@@ -19,7 +19,7 @@ export async function GET(request: Request) {
 
   const eligibleSettings = await prisma.automationSetting.findMany({
     where: { type: "review_request", enabled: true },
-    select: { businessId: true, offerValue: true, messageTemplate: true, sendHour: true },
+    select: { businessId: true, offerValue: true, messageTemplate: true, sendHour: true, requireOptIn: true },
   });
 
   let totalSent = 0;
@@ -33,6 +33,7 @@ export async function GET(request: Request) {
         reviewLink: setting.offerValue,
         messageTemplate: setting.messageTemplate,
         sendHour: setting.sendHour,
+        requireOptIn: setting.requireOptIn,
         bypassTiming: false,
         now,
       });

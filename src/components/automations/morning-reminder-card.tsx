@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { X, Pencil, ChevronDown } from "lucide-react";
+import { X, Pencil, ChevronDown, CheckCircle, AlertTriangle, FlaskConical, ShieldCheck } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
   toggleMorningReminderAction,
@@ -10,6 +10,45 @@ import {
 import { AutomationLastRunSummary } from "@/components/automations/automation-last-run-summary";
 import type { AutomationSetting } from "@prisma/client";
 import type { LastRunSummary } from "@/server/automations/run-queries";
+
+function TemplateReadinessBadge({
+  realSendConfigured,
+  testMode,
+  hasTemplate,
+}: {
+  realSendConfigured: boolean;
+  testMode: boolean;
+  hasTemplate: boolean;
+}) {
+  if (!realSendConfigured) return null;
+  if (testMode) {
+    return (
+      <div className="flex items-center gap-1.5 text-xs" style={{ color: "#b45309" }}>
+        <FlaskConical className="h-3 w-3 shrink-0" />
+        מצב בדיקה פעיל
+      </div>
+    );
+  }
+  if (hasTemplate) {
+    return (
+      <div className="flex items-center gap-1.5 text-xs" style={{ color: "#15803d" }}>
+        <CheckCircle className="h-3 w-3 shrink-0" />
+        תבנית מוגדרת
+      </div>
+    );
+  }
+  return (
+    <div className="space-y-0.5">
+      <div className="flex items-center gap-1.5 text-xs" style={{ color: "#b45309" }}>
+        <AlertTriangle className="h-3 w-3 shrink-0" />
+        חסרה תבנית הודעה
+      </div>
+      <p className="text-xs leading-snug" style={{ color: "var(--muted)" }}>
+        כדי לשלוח הודעות אמיתיות, צריך להגדיר תבנית WhatsApp מאושרת.
+      </p>
+    </div>
+  );
+}
 
 const DEFAULT_TEMPLATE =
   "בוקר טוב {שם הלקוח} ☀️\n\nרק תזכורת קטנה שיש לך היום תור ב:\n\n🕒 {שעה}\n✨ {שירות}\n\nמחכות לראותך ❤️\n{שם העסק}";
@@ -44,9 +83,11 @@ interface Props {
   setting: AutomationSetting | null;
   sentThisMonth: number;
   lastRun?: LastRunSummary | null;
+  realSendConfigured?: boolean;
+  testMode?: boolean;
 }
 
-export function MorningReminderCard({ setting, sentThisMonth, lastRun }: Props) {
+export function MorningReminderCard({ setting, sentThisMonth, lastRun, realSendConfigured = false, testMode = false }: Props) {
   const [isEnabled, setIsEnabled] = useState(setting?.enabled ?? false);
   const [isToggling, startToggle] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -55,6 +96,7 @@ export function MorningReminderCard({ setting, sentThisMonth, lastRun }: Props) 
   const [messageTemplate, setMessageTemplate] = useState(
     setting?.messageTemplate ?? DEFAULT_TEMPLATE,
   );
+  const [requireOptIn, setRequireOptIn] = useState(setting?.requireOptIn ?? false);
   const [editingMessage, setEditingMessage] = useState(false);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -79,6 +121,7 @@ export function MorningReminderCard({ setting, sentThisMonth, lastRun }: Props) 
         sendHour: timing.sendHour,
         thresholdDays: timing.thresholdDays,
         messageTemplate: messageTemplate || null,
+        requireOptIn,
       });
       if (result.error) {
         setError(result.error);
@@ -163,6 +206,12 @@ export function MorningReminderCard({ setting, sentThisMonth, lastRun }: Props) 
         >
           הגדרה
         </button>
+
+        <TemplateReadinessBadge
+          realSendConfigured={realSendConfigured}
+          testMode={testMode}
+          hasTemplate={!!setting?.templateName}
+        />
 
         <AutomationLastRunSummary lastRun={lastRun ?? null} />
       </div>
@@ -280,6 +329,28 @@ export function MorningReminderCard({ setting, sentThisMonth, lastRun }: Props) 
 
                     {advancedOpen && (
                       <div className="mt-3 space-y-4 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
+                        {/* requireOptIn toggle */}
+                        <div className="flex items-start gap-3">
+                          <ShieldCheck className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#c97898" }} />
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between gap-3">
+                              <label className="text-sm font-medium leading-snug" style={{ color: "var(--foreground)" }}>
+                                שלח רק ללקוחות שאישרו הודעות WhatsApp
+                              </label>
+                              <Switch
+                                checked={requireOptIn}
+                                onCheckedChange={setRequireOptIn}
+                                aria-label="דרישת אישור WhatsApp"
+                              />
+                            </div>
+                            <p className="mt-1 text-xs leading-snug" style={{ color: "var(--muted)" }}>
+                              {requireOptIn
+                                ? "תזכורות יישלחו רק ללקוחות שנתנו הסכמה מפורשת."
+                                : "תזכורות יישלחו לכל הלקוחות (מומלץ לשירות עסקי)."}
+                            </p>
+                          </div>
+                        </div>
+
                         {!editingMessage ? (
                           <button
                             type="button"

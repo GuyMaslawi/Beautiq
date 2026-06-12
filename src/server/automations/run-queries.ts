@@ -19,7 +19,7 @@ export interface LastRunSummary {
 function toOwnerLabel(reason: string | null): string {
   if (!reason) return "לא נשלח";
   if (reason.includes("מספר טלפון")) return "אין מספר טלפון";
-  if (reason.includes("הסירה") || reason.includes("unsubscrib")) return "ביקשה להסיר מרשימה";
+  if (reason.includes("הסירה") || reason.includes("unsubscrib") || reason.includes("מעוניינת בקבלת הודעות")) return "ביקשה להסיר מרשימה";
   if (reason.includes("שיווקי")) return "לא אישרה שיווקיות";
   if (reason.includes("לא אישרה קבלת הודעות")) return "לא אישרה הודעות";
   if (reason.includes("תור עתידי")) return "יש תור עתידי";

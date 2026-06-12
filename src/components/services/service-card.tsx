@@ -38,7 +38,7 @@ export function ServiceCard({ service }: ServiceCardProps) {
 
   return (
     <div
-      className={`overflow-hidden rounded-2xl border transition-shadow hover:shadow-md ${!service.isActive ? "opacity-60" : ""}`}
+      className="overflow-hidden rounded-2xl border transition-shadow hover:shadow-md"
       style={{
         background: "#fff",
         borderColor: "var(--border)",
@@ -77,25 +77,11 @@ export function ServiceCard({ service }: ServiceCardProps) {
             </div>
           </div>
 
-          {/* Active / inactive badge */}
-          <span
-            className="shrink-0 rounded-full px-2.5 py-0.5 text-xs font-semibold"
-            style={
-              service.isActive
-                ? {
-                    background: "rgba(61,139,110,0.10)",
-                    color: "#2e6b52",
-                    border: "1px solid rgba(61,139,110,0.22)",
-                  }
-                : {
-                    background: "rgba(43,37,48,0.06)",
-                    color: "#8a8190",
-                    border: "1px solid rgba(43,37,48,0.12)",
-                  }
-            }
-          >
-            {service.isActive ? SERVICES.card.active : SERVICES.card.inactive}
-          </span>
+          {/* Active / inactive switch */}
+          <ToggleServiceButton
+            serviceId={service.id}
+            isActive={service.isActive}
+          />
         </div>
       </div>
 
@@ -146,10 +132,6 @@ export function ServiceCard({ service }: ServiceCardProps) {
           >
             {SERVICES.card.editButton}
           </Link>
-          <ToggleServiceButton
-            serviceId={service.id}
-            isActive={service.isActive}
-          />
         </div>
       </div>
     </div>

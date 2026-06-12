@@ -28,7 +28,7 @@ export async function GET(request: Request) {
   // Fetch all enabled settings. The runner applies the hour filter per-business.
   const allEnabled = await prisma.automationSetting.findMany({
     where: { type: "morning_reminder", enabled: true },
-    select: { businessId: true, sendHour: true, thresholdDays: true, messageTemplate: true },
+    select: { businessId: true, sendHour: true, thresholdDays: true, messageTemplate: true, requireOptIn: true },
   });
 
   // Pre-filter: for fixed-hour mode only include businesses scheduled this hour.
@@ -48,7 +48,7 @@ export async function GET(request: Request) {
         sendHour: setting.sendHour,
         thresholdDays: setting.thresholdDays,
         messageTemplate: setting.messageTemplate,
-        // bypassHourCheck=false so the runner applies its idempotency guard
+        requireOptIn: setting.requireOptIn,
         bypassHourCheck: false,
         now,
       });

@@ -9,6 +9,7 @@ import {
 } from "@/server/win-back-automation/queries";
 import { getMorningReminderSetting, getMorningReminderStatsThisMonth, getLastMorningReminderRun } from "@/server/morning-reminder/queries";
 import { getReviewRequestSetting, getReviewRequestStatsThisMonth, getLastReviewRequestRun } from "@/server/review-request/queries";
+import { getBookingConfirmationSetting } from "@/server/booking-confirmation/queries";
 import { getAutomationMessageLog } from "@/server/automations/message-queries";
 import { getLastAutomationRun } from "@/server/automations/run-queries";
 import { isRealSendConfigured, isTestModeActive } from "@/lib/whatsapp/provider";
@@ -19,6 +20,7 @@ import { ReviewRequestCard } from "@/components/automations/review-request-card"
 import { AutomationMessageLog } from "@/components/automations/automation-message-log";
 import { ManualRunCard } from "@/components/automations/manual-run-card";
 import { AdminCronTestCard } from "@/components/automations/admin-cron-test-card";
+import { BookingConfirmationCard } from "@/components/automations/booking-confirmation-card";
 
 export default async function AutomationsPage() {
   const [business, user] = await Promise.all([getCurrentBusiness(), getCurrentUser()]);
@@ -35,6 +37,7 @@ export default async function AutomationsPage() {
     morningReminderStats,
     reviewRequestSetting,
     reviewRequestStats,
+    bookingConfirmationSetting,
     messageLog,
     lastMorningReminderRun,
     lastReviewRequestRun,
@@ -47,17 +50,19 @@ export default async function AutomationsPage() {
     getMorningReminderStatsThisMonth(tenant),
     getReviewRequestSetting(tenant),
     getReviewRequestStatsThisMonth(tenant),
+    getBookingConfirmationSetting(tenant),
     getAutomationMessageLog(tenant, { limit: 50 }),
     getLastMorningReminderRun(tenant),
     getLastReviewRequestRun(tenant),
   ]);
 
-  // Fetch last run summaries (with skipped-reason breakdowns) for all 3 automation types
-  const [winBackLastRunSummary, morningReminderLastRunSummary, reviewRequestLastRunSummary] =
+  // Fetch last run summaries (with skipped-reason breakdowns) for all 4 automation types
+  const [winBackLastRunSummary, morningReminderLastRunSummary, reviewRequestLastRunSummary, bookingConfirmationLastRunSummary] =
     await Promise.all([
       getLastAutomationRun(tenant, "win_back"),
       getLastAutomationRun(tenant, "morning_reminder"),
       getLastAutomationRun(tenant, "review_request"),
+      getLastAutomationRun(tenant, "booking_confirmation"),
     ]);
 
   // WhatsApp readiness banners — shown above the cards
@@ -155,18 +160,35 @@ export default async function AutomationsPage() {
 
       {/* Automation cards — each shows status, settings, and last run summary */}
       <div className="grid grid-cols-2 gap-3">
-        <WinBackAutomationCard setting={setting} lastRun={winBackLastRunSummary} />
+        <WinBackAutomationCard
+          setting={setting}
+          lastRun={winBackLastRunSummary}
+          realSendConfigured={realSendConfigured}
+          testMode={testMode}
+        />
 
         <MorningReminderCard
           setting={morningReminderSetting}
           sentThisMonth={morningReminderStats.sentThisMonth}
           lastRun={morningReminderLastRunSummary}
+          realSendConfigured={realSendConfigured}
+          testMode={testMode}
         />
 
         <ReviewRequestCard
           setting={reviewRequestSetting}
           sentThisMonth={reviewRequestStats.sentThisMonth}
           lastRun={reviewRequestLastRunSummary}
+          realSendConfigured={realSendConfigured}
+          testMode={testMode}
+        />
+
+        <BookingConfirmationCard
+          setting={bookingConfirmationSetting}
+          lastRun={bookingConfirmationLastRunSummary}
+          realSendConfigured={realSendConfigured}
+          testMode={testMode}
+          isAdmin={user?.isAdmin ?? false}
         />
 
         {/* ManualRunCard (eligibility checker) — admin-only */}

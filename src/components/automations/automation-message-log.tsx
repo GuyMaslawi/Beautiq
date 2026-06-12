@@ -14,16 +14,17 @@ const TYPE_LABELS: Record<string, string> = {
   win_back: "החזרת לקוחה",
   morning_reminder: "תזכורת לתור",
   review_request: "בקשת ביקורת",
-  manual: "שליחה ידנית",
+  manual: "הודעה ידנית",
+  booking_confirmation: "אישור תור",
 };
 
 const STATUS_LABELS: Record<string, string> = {
-  queued: "ממתין לשליחה",
+  queued: "ממתין",
   sent: "נשלח",
   delivered: "נמסר",
   read: "נקרא",
   failed: "נכשל",
-  skipped: "דולג",
+  skipped: "לא נשלח",
 };
 
 const STATUS_STYLE: Record<string, { bg: string; color: string; border: string }> = {

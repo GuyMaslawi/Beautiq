@@ -297,10 +297,11 @@ export const SERVICES = {
     deposit: "מקדמה",
     noDeposit: "לא נדרשת",
     active: "פעיל",
-    inactive: "לא פעיל",
+    inactive: "כבוי",
     editButton: "עריכה",
-    deactivateButton: "השבתה",
-    activateButton: "הפעלה",
+    activateSuccess: "השירות הופעל",
+    deactivateSuccess: "השירות כובה",
+    toggleError: "לא הצלחנו לעדכן את השירות. נסו שוב.",
   },
 
   errors: {

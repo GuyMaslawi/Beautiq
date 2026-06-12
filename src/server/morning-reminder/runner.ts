@@ -58,6 +58,7 @@ export async function runMorningReminderForBusiness(params: {
   sendHour: number;
   thresholdDays: number;
   messageTemplate?: string | null;
+  requireOptIn?: boolean;
   bypassHourCheck?: boolean;
   now?: Date;
 }): Promise<ReminderRunResult> {
@@ -66,6 +67,7 @@ export async function runMorningReminderForBusiness(params: {
     sendHour,
     thresholdDays,
     messageTemplate,
+    requireOptIn = false,
     bypassHourCheck = false,
     now = new Date(),
   } = params;
@@ -145,7 +147,7 @@ export async function runMorningReminderForBusiness(params: {
       startTime: { gte: startWindow, lte: endWindow },
     },
     include: {
-      client: { select: { fullName: true, normalizedPhone: true } },
+      client: { select: { fullName: true, normalizedPhone: true, unsubscribedAt: true, whatsappOptIn: true } },
       service: { select: { name: true } },
     },
   });
@@ -192,7 +194,45 @@ export async function runMorningReminderForBusiness(params: {
           phone: phone ?? "",
           messageText: "",
           status: "skipped",
-          failureReason: "מספר טלפון לא תקין",
+          failureReason: "אין מספר טלפון תקין",
+          source,
+        },
+      });
+      skippedCount++;
+      continue;
+    }
+
+    if (booking.client.unsubscribedAt) {
+      await prisma.automationMessage.create({
+        data: {
+          businessId,
+          runId: run.id,
+          clientId: booking.clientId,
+          bookingId: booking.id,
+          type: "morning_reminder",
+          phone,
+          messageText: "",
+          status: "skipped",
+          failureReason: "הלקוחה לא מעוניינת בקבלת הודעות",
+          source,
+        },
+      });
+      skippedCount++;
+      continue;
+    }
+
+    if (requireOptIn && !booking.client.whatsappOptIn) {
+      await prisma.automationMessage.create({
+        data: {
+          businessId,
+          runId: run.id,
+          clientId: booking.clientId,
+          bookingId: booking.id,
+          type: "morning_reminder",
+          phone,
+          messageText: "",
+          status: "skipped",
+          failureReason: "הלקוחה לא אישרה קבלת הודעות WhatsApp",
           source,
         },
       });

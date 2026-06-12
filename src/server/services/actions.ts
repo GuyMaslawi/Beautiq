@@ -121,13 +121,23 @@ export async function updateServiceAction(
 export async function toggleServiceActiveAction(
   serviceId: string,
   isActive: boolean,
-): Promise<void> {
-  const tenant = await requireTenant();
-  // updateMany scopes by businessId — safe, no throw on zero matches
-  await prisma.service.updateMany({
-    where: { id: serviceId, businessId: tenant.businessId },
-    data: { isActive },
-  });
-  revalidatePath("/services");
-  revalidatePath("/dashboard");
+): Promise<{ success: boolean }> {
+  try {
+    const tenant = await requireTenant();
+    // updateMany scopes by businessId — safe, never touches another business's data
+    await prisma.service.updateMany({
+      where: { id: serviceId, businessId: tenant.businessId },
+      data: { isActive },
+    });
+    const business = await prisma.business.findUnique({
+      where: { id: tenant.businessId },
+      select: { slug: true },
+    });
+    revalidatePath("/services");
+    revalidatePath("/dashboard");
+    if (business?.slug) revalidatePath(`/b/${business.slug}`);
+    return { success: true };
+  } catch {
+    return { success: false };
+  }
 }

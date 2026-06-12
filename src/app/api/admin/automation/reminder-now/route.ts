@@ -42,23 +42,24 @@ export async function POST(request: Request) {
     sendHour: number;
     thresholdDays: number;
     messageTemplate: string | null;
+    requireOptIn: boolean;
   }>;
 
   if (bodyBusinessId) {
     const setting = await prisma.automationSetting.findUnique({
       where: { businessId_type: { businessId: bodyBusinessId, type: "morning_reminder" } },
-      select: { businessId: true, sendHour: true, thresholdDays: true, messageTemplate: true },
+      select: { businessId: true, sendHour: true, thresholdDays: true, messageTemplate: true, requireOptIn: true },
     });
     if (!setting) {
       // Business has no morning-reminder setting — create a default run with zero bookings
-      targetSettings = [{ businessId: bodyBusinessId, sendHour: 9, thresholdDays: 0, messageTemplate: null }];
+      targetSettings = [{ businessId: bodyBusinessId, sendHour: 9, thresholdDays: 0, messageTemplate: null, requireOptIn: false }];
     } else {
       targetSettings = [setting];
     }
   } else {
     targetSettings = await prisma.automationSetting.findMany({
       where: { type: "morning_reminder", enabled: true },
-      select: { businessId: true, sendHour: true, thresholdDays: true, messageTemplate: true },
+      select: { businessId: true, sendHour: true, thresholdDays: true, messageTemplate: true, requireOptIn: true },
     });
   }
 
@@ -83,6 +84,7 @@ export async function POST(request: Request) {
         sendHour: setting.sendHour,
         thresholdDays: setting.thresholdDays,
         messageTemplate: setting.messageTemplate,
+        requireOptIn: setting.requireOptIn,
         bypassHourCheck: true,
       });
       results.push({ businessId: setting.businessId, ...result });
