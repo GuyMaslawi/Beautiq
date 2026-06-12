@@ -69,10 +69,12 @@ export default async function AutomationsPage() {
   const realSendConfigured = isRealSendConfigured();
   const testMode = isTestModeActive();
   const whatsappConnected = connection?.status === "active";
-  // Env fallback: per-business connection uses env credentials (Mode A / testing)
+  // isEnvFallback: true only when a business has NO per-business connection but the system env fallback is active.
+  // A business with an active WhatsAppConnection is always treated as production-connected.
   const isEnvFallback =
-    connection?.useEnvFallback === true ||
-    (!whatsappConnected && process.env.WHATSAPP_USE_ENV_FALLBACK === "true" && realSendConfigured);
+    !whatsappConnected &&
+    process.env.WHATSAPP_USE_ENV_FALLBACK === "true" &&
+    realSendConfigured;
 
   return (
     <div className="w-full space-y-6">
@@ -144,7 +146,7 @@ export default async function AutomationsPage() {
         </div>
       )}
 
-      {/* Properly connected */}
+      {/* Properly connected — production mode */}
       {realSendConfigured && !testMode && whatsappConnected && !isEnvFallback && (
         <div
           className="flex items-start gap-3 rounded-2xl px-4 py-3.5"
@@ -152,9 +154,14 @@ export default async function AutomationsPage() {
           style={{ background: "rgba(22,163,74,0.06)", border: "1px solid rgba(22,163,74,0.20)" }}
         >
           <Info className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#15803d" }} />
-          <p className="text-sm leading-relaxed" style={{ color: "#14532d" }}>
-            <strong>WhatsApp מחובר</strong> — האוטומציות פעילות ושולחות הודעות ללקוחות.
-          </p>
+          <div className="flex flex-col gap-0.5">
+            <p className="text-sm font-semibold" style={{ color: "#14532d" }}>
+              WhatsApp מחובר
+            </p>
+            <p className="text-xs" style={{ color: "#15803d" }}>
+              מצב בדיקה כבוי · חיבור ברמת העסק · האוטומציות פעילות
+            </p>
+          </div>
         </div>
       )}
 

@@ -102,19 +102,21 @@ export async function resolveWhatsAppConnectionForBusiness(
     const baseProvider = createMetaCloudApiProvider({ accessToken, phoneNumberId, apiVersion });
     const provider = isTestMode ? createTestModeProvider(baseProvider) : baseProvider;
 
+    // isEnvFallback is only meaningful when the system-level env fallback is also enabled.
+    // When WHATSAPP_USE_ENV_FALLBACK=false, every active connection is treated as production.
+    const envFallbackAllowed = process.env.WHATSAPP_USE_ENV_FALLBACK === "true";
+
     return {
       mode: "per_business",
       provider,
-      isEnvFallback: connection.useEnvFallback,
+      isEnvFallback: envFallbackAllowed && connection.useEnvFallback,
       isTestMode,
       phoneNumberId,
       wabaId: connection.wabaId ?? undefined,
       displayPhoneNumber:
         connection.displayPhoneNumber ?? connection.phoneNumber ?? undefined,
       connectionId: connection.id,
-      uiStatus: connection.useEnvFallback
-        ? "מצב בדיקה — החיבור מוגדר ברמת המערכת ולא ברמת העסק"
-        : "WhatsApp מחובר",
+      uiStatus: "WhatsApp מחובר",
     };
   }
 
@@ -175,7 +177,6 @@ export async function getWhatsAppDiagnostic(
   const testModeActive = process.env.WHATSAPP_TEST_MODE === "true";
   const hasAccessToken = !!process.env.META_WHATSAPP_ACCESS_TOKEN;
   const hasPhoneNumberId = !!process.env.META_WHATSAPP_PHONE_NUMBER_ID;
-  const hasTestPhone = !!process.env.WHATSAPP_TEST_PHONE;
 
   const connection = await prisma.whatsAppConnection.findUnique({
     where: { businessId },
@@ -246,19 +247,18 @@ export async function getWhatsAppDiagnostic(
   }
 
   details.push({ label: "שליחה אמיתית מופעלת (ENABLE_REAL_WHATSAPP_SEND)", ok: realSendEnabled });
-  details.push({ label: "Env fallback מופעל (WHATSAPP_USE_ENV_FALLBACK)", ok: envFallbackEnabled });
+  details.push({
+    label: "Env fallback (WHATSAPP_USE_ENV_FALLBACK)",
+    ok: !envFallbackEnabled,
+    value: envFallbackEnabled ? "פעיל — לא מומלץ בייצור" : "כבוי",
+  });
   details.push({ label: "Access Token מוגדר", ok: hasAccessToken });
   details.push({ label: "Phone Number ID מוגדר", ok: hasPhoneNumberId });
-
-  if (testModeActive) {
-    details.push({
-      label: "מצב בדיקה פעיל",
-      ok: hasTestPhone,
-      value: hasTestPhone ? "מספר בדיקה מוגדר" : "מספר בדיקה חסר!",
-    });
-  } else {
-    details.push({ label: "מצב בדיקה", ok: true, value: "כבוי — שליחה לכלל הלקוחות" });
-  }
+  details.push({
+    label: "מצב בדיקה (WHATSAPP_TEST_MODE)",
+    ok: !testModeActive,
+    value: testModeActive ? "פעיל — שליחה רק למספר בדיקה" : "כבוי",
+  });
 
   // Derive main status label
   let statusLabel: string;
@@ -268,13 +268,13 @@ export async function getWhatsAppDiagnostic(
     statusLabel = "מצב פיתוח — הודעות לא נשלחות בפועל";
     ok = false;
   } else if (isActive && (connection.useEnvFallback ? hasAccessToken && hasPhoneNumberId : true)) {
-    statusLabel = connection.useEnvFallback
-      ? "מצב בדיקה פעיל — החיבור מוגדר ברמת המערכת"
-      : "WhatsApp מחובר";
+    // Active connection — production-ready regardless of useEnvFallback flag.
+    // When token encryption (Mode B) is implemented, the useEnvFallback=false path will be the only production path.
+    statusLabel = "WhatsApp מחובר";
     ok = true;
   } else if (envFallbackEnabled && hasAccessToken && hasPhoneNumberId) {
-    statusLabel = "מצב בדיקה — החיבור מוגדר ברמת המערכת ולא ברמת העסק";
-    ok = true;
+    statusLabel = "חיבור ברמת המערכת — העסק עדיין לא חובר ישירות";
+    ok = false;
   } else if (!hasAccessToken) {
     statusLabel = "חסר Access Token";
     ok = false;
