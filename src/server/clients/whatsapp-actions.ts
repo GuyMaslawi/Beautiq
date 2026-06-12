@@ -11,7 +11,11 @@ import { getWhatsAppProviderForBusiness } from "@/server/whatsapp/resolver";
 import { isValidIsraeliPhone } from "@/lib/phone";
 import { buildWinBackMessage, buildOfferText } from "@/server/win-back-automation/message-builder";
 
-export type ManualSendMessageType = "win_back" | "manual_test";
+export type ManualSendMessageType =
+  | "win_back"
+  | "appointment_reminder"
+  | "review_request"
+  | "manual_test";
 
 export interface ManualSendResult {
   success?: boolean;
@@ -41,6 +45,16 @@ function maskPhoneForLog(phone: string): string {
   if (d.length < 7) return "***";
   return d.slice(0, 3) + "***" + d.slice(-3);
 }
+
+function applyReminderVariables(template: string, vars: Record<string, string>): string {
+  return template.replace(/\{[^}]+\}/g, (m) => vars[m] ?? m);
+}
+
+const DEFAULT_REMINDER_TEXT =
+  "בוקר טוב {שם הלקוח} ☀️\n\nרק תזכורת קטנה שיש לך תור ב{שם העסק}.\n\nמחכות לראותך ❤️";
+
+const DEFAULT_REVIEW_TEXT =
+  "היי {שם הלקוח} ❤️\n\nנהנינו לארח אותך!\n\nנשמח אם תוכלי להשאיר ביקורת קצרה 🙏\n{קישור לביקורת}\n\n{שם העסק}";
 
 /**
  * Business owner sends a WhatsApp message to one of their own clients manually.
@@ -99,34 +113,140 @@ export async function sendManualClientWhatsAppAction(
     return { error: "WhatsApp לא מחובר לעסק הזה" };
   }
 
-  // --- Load automation setting for template details + requireOptIn flag ---
-  const setting = await prisma.automationSetting.findUnique({
-    where: { businessId_type: { businessId, type: "win_back" } },
-    select: {
-      templateName: true,
-      templateLanguage: true,
-      messageTemplate: true,
-      offerType: true,
-      offerValue: true,
-      requireOptIn: true,
-    },
-  });
+  const realSendEnabled = process.env.ENABLE_REAL_WHATSAPP_SEND === "true";
 
-  // --- Opt-in guards for win_back (marketing message) ---
+  // --- Build message per type ---
+  let messageText: string;
+  let effectiveTemplateName: string | undefined;
+  let effectiveTemplateLanguage: string | undefined;
+  let templateVariables: Record<string, string> | undefined;
+
+  const lastServiceName = client.bookings[0]?.service.name;
+
   if (messageType === "win_back") {
+    // Load win_back automation setting
+    const setting = await prisma.automationSetting.findUnique({
+      where: { businessId_type: { businessId, type: "win_back" } },
+      select: {
+        templateName: true,
+        templateLanguage: true,
+        messageTemplate: true,
+        offerType: true,
+        offerValue: true,
+        requireOptIn: true,
+      },
+    });
+
+    // Opt-in guards for win_back (marketing message)
     if ((setting?.requireOptIn ?? false) && !client.whatsappOptIn) {
       return { error: "הלקוחה לא אישרה קבלת הודעות WhatsApp" };
     }
     if (!client.marketingOptIn) {
       return { error: "הלקוחה לא אישרה הודעות שיווקיות" };
     }
-  }
 
-  const realSendEnabled = process.env.ENABLE_REAL_WHATSAPP_SEND === "true";
+    if (realSendEnabled && !setting?.templateName) {
+      return { error: "תבנית ההודעה עדיין לא מוגדרת — יש להגדיר תבנית WhatsApp מאושרת בהגדרות אוטומציית החזרת הלקוחות" };
+    }
 
-  // win_back requires a configured Meta-approved template; manual_test falls back to hello_world
-  if (realSendEnabled && messageType === "win_back" && !setting?.templateName) {
-    return { error: "לא הוגדרה תבנית הודעה מתאימה — יש להגדיר תבנית WhatsApp מאושרת בהגדרות האוטומציה" };
+    const offerText = buildOfferText(
+      setting?.offerType ?? "none",
+      setting?.offerValue ?? null,
+    );
+    messageText = buildWinBackMessage({
+      clientName: client.fullName,
+      businessName: business.name,
+      lastServiceName: lastServiceName ?? undefined,
+      offerType: setting?.offerType ?? "none",
+      offerValue: setting?.offerValue ?? null,
+      template: setting?.messageTemplate ?? null,
+    });
+    effectiveTemplateName = setting?.templateName ?? undefined;
+    effectiveTemplateLanguage = setting?.templateLanguage ?? "he";
+    if (effectiveTemplateName) {
+      templateVariables = {
+        "1": client.fullName,
+        "2": business.name,
+        "3": lastServiceName ?? "",
+        "4": offerText,
+      };
+    }
+
+  } else if (messageType === "appointment_reminder") {
+    // Appointment reminder — no marketingOptIn required
+    const setting = await prisma.automationSetting.findUnique({
+      where: { businessId_type: { businessId, type: "morning_reminder" } },
+      select: { templateName: true, templateLanguage: true, messageTemplate: true },
+    });
+
+    if (realSendEnabled && !setting?.templateName) {
+      return { error: "תבנית ההודעה עדיין לא מוגדרת — יש להגדיר תבנית WhatsApp מאושרת בהגדרות תזכורת התור" };
+    }
+
+    const templateBody = setting?.messageTemplate ?? DEFAULT_REMINDER_TEXT;
+    messageText = applyReminderVariables(templateBody, {
+      "{שם הלקוח}": client.fullName,
+      "{שם הלקוחה}": client.fullName,
+      "{שם העסק}": business.name,
+      "{שירות}": lastServiceName ?? "טיפול",
+      "{clientName}": client.fullName,
+      "{businessName}": business.name,
+    });
+    effectiveTemplateName = setting?.templateName ?? undefined;
+    effectiveTemplateLanguage = setting?.templateLanguage ?? "he";
+    if (effectiveTemplateName) {
+      templateVariables = {
+        "1": client.fullName,
+        "2": business.name,
+        "3": lastServiceName ?? "טיפול",
+      };
+    }
+
+  } else if (messageType === "review_request") {
+    // Review request — no marketingOptIn required
+    const setting = await prisma.automationSetting.findUnique({
+      where: { businessId_type: { businessId, type: "review_request" } },
+      select: { templateName: true, templateLanguage: true, messageTemplate: true, offerValue: true },
+    });
+
+    if (realSendEnabled && !setting?.templateName) {
+      return { error: "תבנית ההודעה עדיין לא מוגדרת — יש להגדיר תבנית WhatsApp מאושרת בהגדרות בקשת הביקורת" };
+    }
+
+    const reviewLink = setting?.offerValue ?? "";
+    const templateBody = setting?.messageTemplate ?? DEFAULT_REVIEW_TEXT;
+    messageText = applyReminderVariables(templateBody, {
+      "{שם הלקוח}": client.fullName,
+      "{שם הלקוחה}": client.fullName,
+      "{שם העסק}": business.name,
+      "{שירות}": lastServiceName ?? "טיפול",
+      "{קישור לביקורת}": reviewLink,
+      "{review_link}": reviewLink,
+      "{clientName}": client.fullName,
+      "{businessName}": business.name,
+    });
+    effectiveTemplateName = setting?.templateName ?? undefined;
+    effectiveTemplateLanguage = setting?.templateLanguage ?? "he";
+    if (effectiveTemplateName) {
+      templateVariables = {
+        "1": client.fullName,
+        "2": business.name,
+        "3": reviewLink,
+      };
+    }
+
+  } else {
+    // manual_test — admin only
+    messageText = `היי ${client.fullName}, זוהי הודעת בדיקה מ${business.name} 👋`;
+    // manual_test without a configured template uses hello_world
+    const winBackSetting = await prisma.automationSetting.findUnique({
+      where: { businessId_type: { businessId, type: "win_back" } },
+      select: { templateName: true, templateLanguage: true },
+    });
+    effectiveTemplateName =
+      winBackSetting?.templateName ?? "hello_world";
+    effectiveTemplateLanguage =
+      winBackSetting?.templateName ? (winBackSetting.templateLanguage ?? "he") : "en_US";
   }
 
   // --- Recent message warning (non-blocking — owner can confirm) ---
@@ -137,37 +257,7 @@ export async function sendManualClientWhatsAppAction(
     }
   }
 
-  const lastServiceName = client.bookings[0]?.service.name;
-  const offerText = buildOfferText(
-    setting?.offerType ?? "none",
-    setting?.offerValue ?? null,
-  );
-
-  const messageText =
-    messageType === "manual_test"
-      ? `היי ${client.fullName}, זוהי הודעת בדיקה מ${business.name} 👋`
-      : buildWinBackMessage({
-          clientName: client.fullName,
-          businessName: business.name,
-          lastServiceName: lastServiceName ?? undefined,
-          offerType: setting?.offerType ?? "none",
-          offerValue: setting?.offerValue ?? null,
-          template: setting?.messageTemplate ?? null,
-        });
-
-  // manual_test without a configured template uses hello_world (Meta's universal test template)
-  const effectiveTemplateName =
-    messageType === "manual_test" && !setting?.templateName
-      ? "hello_world"
-      : setting?.templateName ?? undefined;
-  const effectiveTemplateLanguage =
-    messageType === "manual_test" && !setting?.templateName
-      ? "en_US"
-      : setting?.templateLanguage ?? "he";
-
   // --- Test mode recipient redirect ---
-  // In test mode every manual send must go to WHATSAPP_TEST_PHONE, never to the real client phone.
-  // The provider wrapper is a secondary safety net; the redirect happens here first.
   const isTestMode = process.env.WHATSAPP_TEST_MODE === "true";
   const testPhone = process.env.WHATSAPP_TEST_PHONE;
   if (isTestMode && !testPhone) {
@@ -205,15 +295,6 @@ export async function sendManualClientWhatsAppAction(
 
   // --- Send ---
   const provider = await getWhatsAppProviderForBusiness(businessId);
-  const templateVariables =
-    effectiveTemplateName && effectiveTemplateName !== "hello_world"
-      ? {
-          "1": client.fullName,
-          "2": business.name,
-          "3": lastServiceName ?? "",
-          "4": offerText,
-        }
-      : undefined;
 
   const result = await provider.send({
     businessId,

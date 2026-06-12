@@ -1,6 +1,6 @@
 import { prisma } from "@/server/db/prisma";
 import type { TenantContext } from "@/server/db/tenant";
-import type { AutomationSetting } from "@prisma/client";
+import type { AutomationSetting, AutomationRun } from "@prisma/client";
 
 export async function getReviewRequestSetting(
   tenant: TenantContext,
@@ -28,4 +28,13 @@ export async function getReviewRequestStatsThisMonth(
   });
 
   return { sentThisMonth };
+}
+
+export async function getLastReviewRequestRun(
+  tenant: TenantContext,
+): Promise<AutomationRun | null> {
+  return prisma.automationRun.findFirst({
+    where: { businessId: tenant.businessId, type: "review_request" },
+    orderBy: { startedAt: "desc" },
+  });
 }

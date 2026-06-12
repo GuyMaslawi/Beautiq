@@ -20,14 +20,39 @@ function maskPhone(phone: string): string {
 // Message type options
 // ---------------------------------------------------------------------------
 
-const MESSAGE_TYPES: { value: ManualSendMessageType; label: string }[] = [
-  { value: "manual_test", label: "הודעת בדיקה" },
-  { value: "win_back", label: "הודעת החזרה ללקוחה" },
+interface MessageTypeOption {
+  value: ManualSendMessageType;
+  label: string;
+  description: string;
+}
+
+// Owner sees only production-friendly message types
+const OWNER_MESSAGE_TYPES: MessageTypeOption[] = [
+  {
+    value: "win_back",
+    label: "הודעת החזרה ללקוחה",
+    description: "מעודדת לקוחה שלא חזרה לקבוע תור חדש",
+  },
+  {
+    value: "appointment_reminder",
+    label: "תזכורת לתור",
+    description: "תזכורת ללקוחה על תור קרוב",
+  },
+  {
+    value: "review_request",
+    label: "בקשת ביקורת",
+    description: "מבקשת ביקורת לאחר ביקור",
+  },
 ];
 
-const OWNER_MESSAGE_TYPES: { value: ManualSendMessageType; label: string }[] = [
-  { value: "manual_test", label: "הודעת בדיקה" },
-  { value: "win_back", label: "הודעת החזרה ללקוחה" },
+// Admin also sees test/diagnostic options
+const ADMIN_MESSAGE_TYPES: MessageTypeOption[] = [
+  {
+    value: "manual_test",
+    label: "הודעת בדיקה",
+    description: "hello_world — בדיקת חיבור WhatsApp",
+  },
+  ...OWNER_MESSAGE_TYPES,
 ];
 
 // ---------------------------------------------------------------------------
@@ -60,8 +85,11 @@ export function WhatsAppManualSendModal({
   isAdmin = false,
   trigger,
 }: Props) {
+  const typeOptions = isAdmin ? ADMIN_MESSAGE_TYPES : OWNER_MESSAGE_TYPES;
+  const defaultType = isAdmin ? "manual_test" : "win_back";
+
   const [open, setOpen] = useState(false);
-  const [messageType, setMessageType] = useState<ManualSendMessageType>("manual_test");
+  const [messageType, setMessageType] = useState<ManualSendMessageType>(defaultType);
   const [isPending, startTransition] = useTransition();
 
   type Step = "confirm" | "recent_warning" | "success" | "error";
@@ -69,10 +97,9 @@ export function WhatsAppManualSendModal({
   const [errorMsg, setErrorMsg] = useState<string>("");
   const [successIsTestMode, setSuccessIsTestMode] = useState(false);
 
-  const typeOptions = isAdmin ? MESSAGE_TYPES : OWNER_MESSAGE_TYPES;
-
   function handleOpen() {
     setStep("confirm");
+    setMessageType(defaultType);
     setErrorMsg("");
     setOpen(true);
   }
@@ -102,6 +129,8 @@ export function WhatsAppManualSendModal({
       setStep("success");
     });
   }
+
+  const selectedOption = typeOptions.find((o) => o.value === messageType);
 
   return (
     <>
@@ -158,7 +187,6 @@ export function WhatsAppManualSendModal({
                       <Row label="לקוחה" value={clientName} />
                       <Row label="טלפון" value={maskPhone(clientPhone)} dir="ltr" />
                       <Row label="עסק" value={businessName} />
-                      <Row label="מצב שליחה" value={isTestMode ? "בדיקה" : "אמיתי"} />
                       <Row label="נמען בפועל" value={isTestMode ? "מספר הבדיקה" : "הלקוחה"} />
                     </div>
 
@@ -169,7 +197,9 @@ export function WhatsAppManualSendModal({
                       </label>
                       <div className="space-y-2">
                         {typeOptions.map((opt) => (
-                          <label key={opt.value} className="flex cursor-pointer items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors"
+                          <label
+                            key={opt.value}
+                            className="flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-2.5 transition-colors"
                             style={{
                               borderColor: messageType === opt.value ? "#16a34a" : "rgba(0,0,0,0.10)",
                               background: messageType === opt.value ? "rgba(22,163,74,0.04)" : "transparent",
@@ -181,16 +211,36 @@ export function WhatsAppManualSendModal({
                               value={opt.value}
                               checked={messageType === opt.value}
                               onChange={() => setMessageType(opt.value)}
-                              className="h-4 w-4 cursor-pointer"
+                              className="mt-0.5 h-4 w-4 cursor-pointer shrink-0"
                               style={{ accentColor: "#16a34a" }}
                             />
-                            <span className="text-sm font-medium" style={{ color: "var(--foreground, #1a1a2e)" }}>
-                              {opt.label}
-                            </span>
+                            <div>
+                              <p className="text-sm font-medium" style={{ color: "var(--foreground, #1a1a2e)" }}>
+                                {opt.label}
+                              </p>
+                              <p className="text-xs mt-0.5" style={{ color: "var(--muted, #888)" }}>
+                                {opt.description}
+                              </p>
+                            </div>
                           </label>
                         ))}
                       </div>
                     </div>
+
+                    {/* Preview of what will be sent */}
+                    {selectedOption && (
+                      <div
+                        className="rounded-xl px-4 py-3 text-xs leading-5"
+                        style={{ background: "rgba(22,163,74,0.04)", border: "1px solid rgba(22,163,74,0.18)" }}
+                      >
+                        <p className="font-semibold mb-0.5" style={{ color: "#15803d" }}>
+                          תצוגה מקדימה
+                        </p>
+                        <p style={{ color: "var(--foreground-soft, #555)" }}>
+                          {getMessagePreview(messageType, clientName, businessName)}
+                        </p>
+                      </div>
+                    )}
 
                     {/* Test mode notice */}
                     {isTestMode && (
@@ -269,7 +319,7 @@ export function WhatsAppManualSendModal({
                     <div className="flex flex-col items-center gap-3 py-4 text-center">
                       <CheckCircle className="h-10 w-10 text-green-500" />
                       <p className="text-base font-bold" style={{ color: "var(--foreground, #1a1a2e)" }}>
-                        {successIsTestMode ? "הודעת בדיקה נשלחה למספר הבדיקה" : "ההודעה נשלחה"}
+                        {successIsTestMode ? "ההודעה נשלחה למספר הבדיקה" : "ההודעה נשלחה"}
                       </p>
                       {successIsTestMode && (
                         <p className="text-xs" style={{ color: "var(--muted, #888)" }}>
@@ -317,6 +367,23 @@ export function WhatsAppManualSendModal({
       )}
     </>
   );
+}
+
+// ---------------------------------------------------------------------------
+// Message preview (client-side, not the actual sent text)
+// ---------------------------------------------------------------------------
+
+function getMessagePreview(type: ManualSendMessageType, clientName: string, businessName: string): string {
+  switch (type) {
+    case "win_back":
+      return `היי ${clientName}, מתגעגעים אליך ב${businessName}! 💛\nכבר הגיע הזמן לטיפול חדש — נשמח לראותך שוב.`;
+    case "appointment_reminder":
+      return `בוקר טוב ${clientName} ☀️\nרק תזכורת קטנה שיש לך תור ב${businessName}.\nמחכות לראותך! ❤️`;
+    case "review_request":
+      return `היי ${clientName} ❤️\nנהנינו לארח אותך ב${businessName}!\nנשמח אם תוכלי להשאיר ביקורת קצרה 🙏`;
+    case "manual_test":
+      return `היי ${clientName}, זוהי הודעת בדיקה מ${businessName} 👋`;
+  }
 }
 
 // ---------------------------------------------------------------------------

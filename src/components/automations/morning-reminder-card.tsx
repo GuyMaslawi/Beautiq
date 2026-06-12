@@ -7,7 +7,9 @@ import {
   toggleMorningReminderAction,
   saveMorningReminderTimingAction,
 } from "@/server/morning-reminder/actions";
+import { AutomationLastRunSummary } from "@/components/automations/automation-last-run-summary";
 import type { AutomationSetting } from "@prisma/client";
+import type { LastRunSummary } from "@/server/automations/run-queries";
 
 const DEFAULT_TEMPLATE =
   "בוקר טוב {שם הלקוח} ☀️\n\nרק תזכורת קטנה שיש לך היום תור ב:\n\n🕒 {שעה}\n✨ {שירות}\n\nמחכות לראותך ❤️\n{שם העסק}";
@@ -41,9 +43,10 @@ function buildPreview(template: string): string {
 interface Props {
   setting: AutomationSetting | null;
   sentThisMonth: number;
+  lastRun?: LastRunSummary | null;
 }
 
-export function MorningReminderCard({ setting, sentThisMonth }: Props) {
+export function MorningReminderCard({ setting, sentThisMonth, lastRun }: Props) {
   const [isEnabled, setIsEnabled] = useState(setting?.enabled ?? false);
   const [isToggling, startToggle] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -160,6 +163,8 @@ export function MorningReminderCard({ setting, sentThisMonth }: Props) {
         >
           הגדרה
         </button>
+
+        <AutomationLastRunSummary lastRun={lastRun ?? null} />
       </div>
 
       {/* Dialog */}

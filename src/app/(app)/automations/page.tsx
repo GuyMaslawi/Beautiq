@@ -7,9 +7,10 @@ import {
   getWinBackStatsThisMonth,
   getLastWinBackRun,
 } from "@/server/win-back-automation/queries";
-import { getMorningReminderSetting, getMorningReminderStatsThisMonth } from "@/server/morning-reminder/queries";
-import { getReviewRequestSetting, getReviewRequestStatsThisMonth } from "@/server/review-request/queries";
+import { getMorningReminderSetting, getMorningReminderStatsThisMonth, getLastMorningReminderRun } from "@/server/morning-reminder/queries";
+import { getReviewRequestSetting, getReviewRequestStatsThisMonth, getLastReviewRequestRun } from "@/server/review-request/queries";
 import { getAutomationMessageLog } from "@/server/automations/message-queries";
+import { getLastAutomationRun } from "@/server/automations/run-queries";
 import { isRealSendConfigured, isTestModeActive } from "@/lib/whatsapp/provider";
 import { PageHeader } from "@/components/ui/page-header";
 import { WinBackAutomationCard } from "@/components/automations/win-back-automation-card";
@@ -17,6 +18,7 @@ import { MorningReminderCard } from "@/components/automations/morning-reminder-c
 import { ReviewRequestCard } from "@/components/automations/review-request-card";
 import { AutomationMessageLog } from "@/components/automations/automation-message-log";
 import { ManualRunCard } from "@/components/automations/manual-run-card";
+import { AdminCronTestCard } from "@/components/automations/admin-cron-test-card";
 
 export default async function AutomationsPage() {
   const [business, user] = await Promise.all([getCurrentBusiness(), getCurrentUser()]);
@@ -28,12 +30,14 @@ export default async function AutomationsPage() {
     setting,
     connection,
     stats,
-    lastRun,
+    lastWinBackRun,
     morningReminderSetting,
     morningReminderStats,
     reviewRequestSetting,
     reviewRequestStats,
     messageLog,
+    lastMorningReminderRun,
+    lastReviewRequestRun,
   ] = await Promise.all([
     getWinBackAutomationSetting(tenant),
     getWhatsAppConnection(tenant),
@@ -44,7 +48,17 @@ export default async function AutomationsPage() {
     getReviewRequestSetting(tenant),
     getReviewRequestStatsThisMonth(tenant),
     getAutomationMessageLog(tenant, { limit: 50 }),
+    getLastMorningReminderRun(tenant),
+    getLastReviewRequestRun(tenant),
   ]);
+
+  // Fetch last run summaries (with skipped-reason breakdowns) for all 3 automation types
+  const [winBackLastRunSummary, morningReminderLastRunSummary, reviewRequestLastRunSummary] =
+    await Promise.all([
+      getLastAutomationRun(tenant, "win_back"),
+      getLastAutomationRun(tenant, "morning_reminder"),
+      getLastAutomationRun(tenant, "review_request"),
+    ]);
 
   // WhatsApp readiness banners — shown above the cards
   const realSendConfigured = isRealSendConfigured();
@@ -139,20 +153,26 @@ export default async function AutomationsPage() {
         </div>
       )}
 
+      {/* Automation cards — each shows status, settings, and last run summary */}
       <div className="grid grid-cols-2 gap-3">
-        <WinBackAutomationCard setting={setting} />
+        <WinBackAutomationCard setting={setting} lastRun={winBackLastRunSummary} />
 
         <MorningReminderCard
           setting={morningReminderSetting}
           sentThisMonth={morningReminderStats.sentThisMonth}
+          lastRun={morningReminderLastRunSummary}
         />
 
         <ReviewRequestCard
           setting={reviewRequestSetting}
           sentThisMonth={reviewRequestStats.sentThisMonth}
+          lastRun={reviewRequestLastRunSummary}
         />
 
-        <ManualRunCard isAdmin={user?.isAdmin ?? false} />
+        {/* ManualRunCard (eligibility checker) — admin-only */}
+        {user?.isAdmin && <ManualRunCard isAdmin />}
+
+        {user?.isAdmin && <AdminCronTestCard businessId={business.id} />}
       </div>
 
       {/* Message log */}
@@ -211,7 +231,9 @@ export default async function AutomationsPage() {
               <span><strong>Template:</strong> {setting?.templateName ?? "—"}</span>
             </div>
             <div className="flex gap-4 flex-wrap">
-              <span><strong>Last win-back run:</strong> {lastRun?.startedAt?.toISOString() ?? "never"}</span>
+              <span><strong>Last win-back run:</strong> {lastWinBackRun?.startedAt?.toISOString() ?? "never"}</span>
+              <span><strong>Last morning-reminder run:</strong> {lastMorningReminderRun?.startedAt?.toISOString() ?? "never"}</span>
+              <span><strong>Last review-request run:</strong> {lastReviewRequestRun?.startedAt?.toISOString() ?? "never"}</span>
               <span><strong>Last webhook:</strong> {connection?.lastWebhookReceivedAt?.toISOString() ?? "never"}</span>
               <span><strong>Win-back sent/month:</strong> {stats.realSentThisMonth}</span>
               <span><strong>Morning reminder sent/month:</strong> {morningReminderStats.sentThisMonth}</span>

@@ -6,7 +6,9 @@ import { Switch } from "@/components/ui/switch";
 import { toggleWinBackAutomation } from "@/server/win-back-automation/actions";
 import { WinBackSettingsForm } from "@/components/win-back-automation/win-back-settings-form";
 import { DEFAULT_WIN_BACK_TEMPLATE } from "@/server/win-back-automation/message-builder";
+import { AutomationLastRunSummary } from "@/components/automations/automation-last-run-summary";
 import type { AutomationSetting } from "@prisma/client";
+import type { LastRunSummary } from "@/server/automations/run-queries";
 
 const OFFER_PREVIEW_TEXTS: Record<string, string> = {
   none: "",
@@ -29,9 +31,10 @@ function buildPreview(template: string, offerType: string, offerValue: string): 
 
 interface Props {
   setting: AutomationSetting | null;
+  lastRun?: LastRunSummary | null;
 }
 
-export function WinBackAutomationCard({ setting }: Props) {
+export function WinBackAutomationCard({ setting, lastRun }: Props) {
   const [isEnabled, setIsEnabled] = useState(setting?.enabled ?? false);
   const [isToggling, startToggle] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -120,6 +123,8 @@ export function WinBackAutomationCard({ setting }: Props) {
           <Settings className="h-4 w-4" />
           הגדרות
         </button>
+
+        <AutomationLastRunSummary lastRun={lastRun ?? null} />
       </div>
 
       {/* Settings dialog */}

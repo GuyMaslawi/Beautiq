@@ -7,7 +7,9 @@ import {
   toggleReviewRequestAction,
   saveReviewRequestTimingAction,
 } from "@/server/review-request/actions";
+import { AutomationLastRunSummary } from "@/components/automations/automation-last-run-summary";
 import type { AutomationSetting } from "@prisma/client";
+import type { LastRunSummary } from "@/server/automations/run-queries";
 
 const DEFAULT_TEMPLATE =
   "היי {שם הלקוח} ❤️\n\nנהנינו לארח אותך!\n\nנשמח אם תוכלי להשאיר ביקורת קצרה 🙏\n{קישור לביקורת}\n\n{שם העסק}";
@@ -40,9 +42,10 @@ function buildPreview(template: string, reviewLink: string): string {
 interface Props {
   setting: AutomationSetting | null;
   sentThisMonth: number;
+  lastRun?: LastRunSummary | null;
 }
 
-export function ReviewRequestCard({ setting, sentThisMonth }: Props) {
+export function ReviewRequestCard({ setting, sentThisMonth, lastRun }: Props) {
   const [isEnabled, setIsEnabled] = useState(setting?.enabled ?? false);
   const [isToggling, startToggle] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -160,6 +163,8 @@ export function ReviewRequestCard({ setting, sentThisMonth }: Props) {
         >
           הגדרה
         </button>
+
+        <AutomationLastRunSummary lastRun={lastRun ?? null} />
       </div>
 
       {/* Dialog */}
