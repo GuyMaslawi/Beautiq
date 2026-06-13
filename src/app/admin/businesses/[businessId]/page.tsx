@@ -1,14 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { requirePlatformAdmin } from "@/server/admin/auth";
+import { getCurrentUser } from "@/server/auth/session";
 import {
   getAdminBusiness,
   getAdminBusinessBookingsThisMonth,
+  getAdminBusinessDeletionSummary,
 } from "@/server/admin/queries";
 import { getAdminAutomationInfo, type AdminManualSendEntry } from "@/server/win-back-automation/queries";
 import { SubscriptionForm } from "./_components/subscription-form";
 import { RunWinBackButton } from "./_components/run-win-back-button";
 import { WhatsAppAdminPanel } from "./_components/whatsapp-admin-panel";
+import { BusinessDangerZone } from "./_components/business-danger-zone";
 import type { SubscriptionStatus, SubscriptionPlan } from "@prisma/client";
 
 const STATUS_LABELS: Record<SubscriptionStatus, string> = {
@@ -100,13 +103,33 @@ export default async function AdminBusinessDetailPage({
   await requirePlatformAdmin();
   const { businessId } = await params;
 
-  const [biz, bookingsThisMonth, automationInfo] = await Promise.all([
+  const [biz, bookingsThisMonth, automationInfo, deletionSummary, admin] = await Promise.all([
     getAdminBusiness(businessId),
     getAdminBusinessBookingsThisMonth(businessId),
     getAdminAutomationInfo(businessId),
+    getAdminBusinessDeletionSummary(businessId),
+    getCurrentUser(),
   ]);
 
   if (!biz) notFound();
+
+  // Whether the owner User account is safe to delete alongside the business, and
+  // a Hebrew reason when it is not (mirrors the server-side guards exactly).
+  let ownerDeletable = false;
+  let ownerBlockReason: string | null = null;
+  if (deletionSummary) {
+    if (!deletionSummary.ownerId) {
+      ownerBlockReason = "לא נמצא בעלים לעסק זה — ניתן למחוק את העסק בלבד.";
+    } else if (deletionSummary.ownerIsAdmin) {
+      ownerBlockReason = "הבעלים הוא מנהל פלטפורמה — לא ניתן למחוק את חשבון המשתמש.";
+    } else if (admin && deletionSummary.ownerId === admin.id) {
+      ownerBlockReason = "לא ניתן למחוק את חשבון המשתמש שלך.";
+    } else if (!deletionSummary.ownerCanBeDeleted) {
+      ownerBlockReason = `הבעלים מקושר לעוד ${deletionSummary.ownerOtherBusinessCount} עסקים — ניתן למחוק את העסק בלבד.`;
+    } else {
+      ownerDeletable = true;
+    }
+  }
 
   const owner = biz.members[0]?.user;
   const sub = biz.subscription;
@@ -516,6 +539,25 @@ export default async function AdminBusinessDetailPage({
           }
         />
       </div>
+
+      {/* Danger zone — delete business / owner account */}
+      {deletionSummary && (
+        <BusinessDangerZone
+          summary={{
+            id: deletionSummary.id,
+            name: deletionSummary.name,
+            slug: deletionSummary.slug,
+            ownerName: deletionSummary.ownerName,
+            ownerEmail: deletionSummary.ownerEmail,
+            clientCount: deletionSummary.clientCount,
+            bookingCount: deletionSummary.bookingCount,
+            serviceCount: deletionSummary.serviceCount,
+            automationMessageCount: deletionSummary.automationMessageCount,
+          }}
+          ownerDeletable={ownerDeletable}
+          ownerBlockReason={ownerBlockReason}
+        />
+      )}
     </div>
   );
 }

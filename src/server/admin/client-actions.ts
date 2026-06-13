@@ -89,6 +89,62 @@ export async function adminUpdateClientAction(
 }
 
 // ---------------------------------------------------------------------------
+// Admin client deletion (single + bulk) — platform-admin only, cross-tenant.
+//
+// Hard delete: the schema cascades a Client to its Bookings, WaitlistEntries and
+// AutomationMessages, and SetNulls Payments + Recommendations — so no orphan
+// rows are left and no owner page breaks. This is intended for cleaning up test
+// data before production QA.
+// ---------------------------------------------------------------------------
+
+export interface AdminDeleteClientsResult {
+  success?: boolean;
+  error?: string;
+  deletedCount?: number;
+}
+
+export async function adminDeleteClientsAction(
+  clientIds: string[],
+): Promise<AdminDeleteClientsResult> {
+  // Server-side authorization — never trust the client-side role check.
+  await requirePlatformAdmin();
+
+  if (!Array.isArray(clientIds)) {
+    return { error: "לא נבחרו לקוחות למחיקה" };
+  }
+
+  // De-dupe and drop anything that isn't a non-empty string id.
+  const ids = [...new Set(clientIds.filter((id) => typeof id === "string" && id.length > 0))];
+  if (ids.length === 0) {
+    return { error: "לא נבחרו לקוחות למחיקה" };
+  }
+
+  // Validate the ids actually exist before deleting.
+  const existing = await prisma.client.findMany({
+    where: { id: { in: ids } },
+    select: { id: true },
+  });
+  if (existing.length === 0) {
+    return { error: "הלקוחות לא נמצאו" };
+  }
+
+  try {
+    // Single atomic statement; DB-level cascades run inside it.
+    const result = await prisma.client.deleteMany({
+      where: { id: { in: existing.map((c) => c.id) } },
+    });
+
+    revalidatePath("/admin/clients");
+    revalidatePath("/clients");
+    revalidatePath("/admin");
+
+    return { success: true, deletedCount: result.count };
+  } catch {
+    return { error: "המחיקה נכשלה. נסו שוב או פנו לתמיכה." };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Admin manual WhatsApp send — uses the client's own business connection
 // ---------------------------------------------------------------------------
 

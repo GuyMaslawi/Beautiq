@@ -120,6 +120,66 @@ export async function getAdminBusiness(businessId: string) {
   });
 }
 
+/**
+ * Summary used to render the admin "delete business" danger zone: record counts
+ * plus owner info and whether the owner User row is safe to delete alongside
+ * the business (only this business + not a platform admin).
+ */
+export async function getAdminBusinessDeletionSummary(businessId: string) {
+  const biz = await prisma.business.findUnique({
+    where: { id: businessId },
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      members: {
+        where: { role: "owner" },
+        orderBy: { createdAt: "asc" },
+        take: 1,
+        include: { user: { select: { id: true, name: true, email: true, isAdmin: true } } },
+      },
+      _count: {
+        select: {
+          clients: true,
+          bookings: true,
+          services: true,
+          automationMessages: true,
+        },
+      },
+    },
+  });
+
+  if (!biz) return null;
+
+  const owner = biz.members[0]?.user ?? null;
+  let ownerCanBeDeleted = false;
+  let ownerOtherBusinessCount = 0;
+
+  if (owner && !owner.isAdmin) {
+    const membershipCount = await prisma.businessUser.count({
+      where: { userId: owner.id },
+    });
+    ownerOtherBusinessCount = Math.max(0, membershipCount - 1);
+    ownerCanBeDeleted = membershipCount === 1;
+  }
+
+  return {
+    id: biz.id,
+    name: biz.name,
+    slug: biz.slug,
+    ownerId: owner?.id ?? null,
+    ownerName: owner?.name ?? null,
+    ownerEmail: owner?.email ?? null,
+    ownerIsAdmin: owner?.isAdmin ?? false,
+    clientCount: biz._count.clients,
+    bookingCount: biz._count.bookings,
+    serviceCount: biz._count.services,
+    automationMessageCount: biz._count.automationMessages,
+    ownerCanBeDeleted,
+    ownerOtherBusinessCount,
+  };
+}
+
 /** Booking count for a specific business in the current calendar month. */
 export async function getAdminBusinessBookingsThisMonth(businessId: string) {
   const now = new Date();
