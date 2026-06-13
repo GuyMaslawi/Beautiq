@@ -58,7 +58,8 @@ export function BookingForm({
 
   // Available slots fetched from /api/owner/slots
   const [availableSlots, setAvailableSlots] = useState<string[] | null>(null);
-  const [isFetchingSlots, setIsFetchingSlots] = useState(false);
+  // Key whose slots are currently loaded; loading is derived from it below.
+  const [loadedSlotsKey, setLoadedSlotsKey] = useState("");
   // Track the last fetch key to discard stale responses
   const fetchKeyRef = useRef("");
 
@@ -76,16 +77,27 @@ export function BookingForm({
     }));
   }
 
+  // Clear slots during render (not in an effect) when service/date is
+  // incomplete, to avoid a cascading-render setState-in-effect.
+  const slotsKey =
+    fields.serviceId && fields.date ? `${fields.date}|${fields.serviceId}` : "";
+  const [prevSlotsKey, setPrevSlotsKey] = useState(slotsKey);
+  if (prevSlotsKey !== slotsKey) {
+    setPrevSlotsKey(slotsKey);
+    if (!slotsKey) {
+      setAvailableSlots(null);
+    }
+  }
+  const isFetchingSlots = slotsKey !== "" && slotsKey !== loadedSlotsKey;
+
   // Fetch available slots whenever serviceId or date changes
   useEffect(() => {
     if (!fields.serviceId || !fields.date) {
-      setAvailableSlots(null);
       return;
     }
 
     const key = `${fields.date}|${fields.serviceId}`;
     fetchKeyRef.current = key;
-    setIsFetchingSlots(true);
 
     fetch(
       `/api/owner/slots?date=${encodeURIComponent(fields.date)}&serviceId=${encodeURIComponent(fields.serviceId)}`,
@@ -95,7 +107,7 @@ export function BookingForm({
         if (fetchKeyRef.current !== key) return; // stale response, discard
         const slots = data.slots ?? [];
         setAvailableSlots(slots);
-        setIsFetchingSlots(false);
+        setLoadedSlotsKey(key);
         // Reset startTime to first available slot, or clear if none
         setFields((prev) => ({
           ...prev,
@@ -109,7 +121,7 @@ export function BookingForm({
       })
       .catch(() => {
         if (fetchKeyRef.current !== key) return;
-        setIsFetchingSlots(false);
+        setLoadedSlotsKey(key);
         setAvailableSlots([]);
       });
   }, [fields.serviceId, fields.date]);

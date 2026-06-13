@@ -105,11 +105,16 @@ export async function POST(request: Request) {
   const totalSent = results.reduce((s, r) => s + r.sentCount, 0);
   const totalFailed = results.reduce((s, r) => s + r.failedCount, 0);
   const totalMock = results.reduce((s, r) => s + r.mockSkipCount, 0);
+  // The admin test card reads `totalSkipped` (renders the "דולגו" pill). Win-back
+  // splits not-sent into ineligible (skippedCount) and dev-mock (mockSkipCount);
+  // surface their sum so the client contract matches the other two routes.
+  const totalSkipped = results.reduce((s, r) => s + r.skippedCount + r.mockSkipCount, 0);
 
   return NextResponse.json({
     processed: businesses.length,
     totalSent,
     totalFailed,
+    totalSkipped,
     totalMock,
     results,
   });

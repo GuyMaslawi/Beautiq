@@ -19,7 +19,12 @@ import {
   type TemplateSetupResult,
 } from "@/server/whatsapp/templates-core";
 
-export type { TemplateSetupResult };
+// NOTE: A "use server" module may only export async functions. Re-exporting a
+// type with `export type { ... }` here makes the server-action transform emit a
+// runtime reference to a type-only binding, which throws
+// "ReferenceError: TemplateSetupResult is not defined" at module-eval and breaks
+// EVERY server action bundled for the page (including sign-out). Consumers import
+// this type directly from `templates-core` instead.
 
 export async function createDefaultTemplatesAction(): Promise<TemplateSetupResult> {
   const business = await requireCurrentBusiness();

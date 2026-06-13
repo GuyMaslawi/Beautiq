@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useActionState } from "react";
+import { useState, useActionState } from "react";
 import { MessageCircle } from "lucide-react";
 import { updateClientOptInAction } from "@/server/clients/actions";
 import type { UpdateClientOptInState } from "@/server/clients/actions";
@@ -23,11 +23,18 @@ export function ClientOptInForm({ clientId, whatsappOptIn, marketingOptIn }: Pro
   const [localWhatsapp, setLocalWhatsapp] = useState(whatsappOptIn);
   const [localMarketing, setLocalMarketing] = useState(marketingOptIn);
 
-  // Sync controlled state when the server component re-renders with updated DB values
-  useEffect(() => {
+  // Sync controlled state when the server component re-renders with updated DB
+  // values, adjusting during render instead of in an effect to avoid a
+  // cascading-render setState-in-effect.
+  const [prevProps, setPrevProps] = useState({ whatsappOptIn, marketingOptIn });
+  if (
+    prevProps.whatsappOptIn !== whatsappOptIn ||
+    prevProps.marketingOptIn !== marketingOptIn
+  ) {
+    setPrevProps({ whatsappOptIn, marketingOptIn });
     setLocalWhatsapp(whatsappOptIn);
     setLocalMarketing(marketingOptIn);
-  }, [whatsappOptIn, marketingOptIn]);
+  }
 
   return (
     <div className="space-y-3">
