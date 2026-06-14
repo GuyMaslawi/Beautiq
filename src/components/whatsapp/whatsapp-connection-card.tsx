@@ -43,6 +43,24 @@ interface Props {
   isAdmin?: boolean;
 }
 
+/**
+ * Client-side Embedded Signup step tracker. Surfaced to admins in a small debug
+ * panel and logged to the browser console so we can see exactly where the
+ * client→server handoff stops. NEVER carries tokens/secrets — only step names.
+ */
+type DebugStep =
+  | "idle"
+  | "sdk_loaded"
+  | "popup_opened"
+  | "callback_received"
+  | "missing_code"
+  | "missing_whatsapp_ids"
+  | "calling_server_action"
+  | "server_action_success"
+  | "server_action_failed";
+
+const LOG = "[WA Embedded Signup]";
+
 const PILL: Record<
   OwnerWhatsAppStatus["connection"]["state"],
   { bg: string; border: string; color: string }
@@ -76,6 +94,15 @@ export function WhatsAppConnectionCard({
   const [connecting, setConnecting] = useState(false);
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
   const [templateResult, setTemplateResult] = useState<TemplateSetupResult | null>(null);
+  const [debugStep, setDebugStep] = useState<DebugStep>("idle");
+  const [sdkLoaded, setSdkLoaded] = useState(false);
+
+  // Record + log a client-side step in one place (never logs tokens).
+  function track(step: DebugStep, extra?: Record<string, unknown>) {
+    setDebugStep(step);
+    if (extra) console.log(`${LOG} step=${step}`, extra);
+    else console.log(`${LOG} step=${step}`);
+  }
 
   const state = status.connection.state;
   const pill = PILL[state];
@@ -86,11 +113,19 @@ export function WhatsAppConnectionCard({
       if (typeof event.origin !== "string" || !event.origin.endsWith("facebook.com")) return;
       try {
         const data = JSON.parse(event.data);
-        if (data?.type === "WA_EMBEDDED_SIGNUP" && data?.event === "FINISH" && data?.data) {
-          sessionInfo.current = {
-            wabaId: data.data.waba_id,
-            phoneNumberId: data.data.phone_number_id,
-          };
+        if (data?.type === "WA_EMBEDDED_SIGNUP") {
+          // Log the event + which id keys arrived (never the values).
+          console.log(`${LOG} postMessage event=${data?.event}`, {
+            hasData: !!data?.data,
+            hasWabaId: !!data?.data?.waba_id,
+            hasPhoneNumberId: !!data?.data?.phone_number_id,
+          });
+          if (data?.event === "FINISH" && data?.data) {
+            sessionInfo.current = {
+              wabaId: data.data.waba_id,
+              phoneNumberId: data.data.phone_number_id,
+            };
+          }
         }
       } catch {
         /* non-JSON messages are ignored */
@@ -101,38 +136,93 @@ export function WhatsAppConnectionCard({
   }, []);
 
   function initFbSdk() {
-    if (!appId) return;
+    if (!appId) {
+      console.warn(`${LOG} SDK loaded but NEXT_PUBLIC_META_APP_ID is missing — cannot init.`);
+      return;
+    }
     if (window.FB) {
       window.FB.init({ appId, autoLogAppEvents: true, xfbml: true, version: graphVersion });
       sdkReady.current = true;
+      setSdkLoaded(true);
+      track("sdk_loaded", { graphVersion, hasConfigId: !!configId });
     }
   }
 
   function handleConnect() {
+    console.log(`${LOG} connect button clicked`);
+    // Clear any stale red error immediately so a new attempt starts clean
+    // (the old "לא הצלחנו לחבר" must not linger behind the popup).
     setMessage(null);
+
     if (!embeddedSignupEnabled || !window.FB) {
+      console.warn(`${LOG} cannot start`, {
+        embeddedSignupEnabled,
+        fbLoaded: !!window.FB,
+        sdkReady: sdkReady.current,
+      });
       setMessage({ ok: false, text: "חיבור WhatsApp עדיין לא זמין. נסי שוב מאוחר יותר." });
       return;
     }
+
     sessionInfo.current = {};
     setConnecting(true);
+    track("popup_opened");
+    console.log(`${LOG} FB.login called`, {
+      hasConfigId: !!configId,
+      responseType: "code",
+      overrideDefaultResponseType: true,
+    });
 
     window.FB.login(
       (response: any) => {
+        track("callback_received", {
+          // keys only — never the token/code values themselves
+          responseKeys: response ? Object.keys(response) : [],
+          status: response?.status,
+          hasAuthResponse: !!response?.authResponse,
+          authResponseKeys: response?.authResponse ? Object.keys(response.authResponse) : [],
+          hasCode: !!response?.authResponse?.code,
+        });
+
         const code = response?.authResponse?.code as string | undefined;
         if (!code) {
+          track("missing_code", { status: response?.status });
           setConnecting(false);
-          setMessage({ ok: false, text: "החיבור בוטל." });
+          // Covers both "popup closed/cancelled" and "Meta returned no code".
+          setMessage({ ok: false, text: "לא התקבל אישור חיבור מ־Meta. נסו שוב." });
           return;
         }
-        startTransition(async () => {
-          const result = await completeEmbeddedSignupAction({
-            code,
-            wabaId: sessionInfo.current.wabaId,
-            phoneNumberId: sessionInfo.current.phoneNumberId,
-          });
+
+        const { wabaId, phoneNumberId } = sessionInfo.current;
+        // The server can resolve the phone number from the WABA, so only the
+        // WABA id is strictly required client-side. If it's missing, the owner
+        // never actually selected a WhatsApp Business account in the popup.
+        if (!wabaId) {
+          track("missing_whatsapp_ids", { hasWabaId: false, hasPhoneNumberId: !!phoneNumberId });
           setConnecting(false);
-          setMessage({ ok: result.success, text: result.statusLabel });
+          setMessage({ ok: false, text: "לא נבחר מספר WhatsApp Business." });
+          return;
+        }
+
+        track("calling_server_action", { hasWabaId: true, hasPhoneNumberId: !!phoneNumberId });
+        startTransition(async () => {
+          try {
+            const result = await completeEmbeddedSignupAction({
+              code,
+              wabaId,
+              phoneNumberId,
+            });
+            track(result.success ? "server_action_success" : "server_action_failed", {
+              success: result.success,
+            });
+            setConnecting(false);
+            setMessage({ ok: result.success, text: result.statusLabel });
+          } catch (err) {
+            console.error(`${LOG} server action threw`, err);
+            track("server_action_failed");
+            setConnecting(false);
+            setMessage({ ok: false, text: "אירעה שגיאה בחיבור. נסו שוב." });
+          }
         });
       },
       {
@@ -395,6 +485,26 @@ export function WhatsAppConnectionCard({
               )}
             </div>
           )}
+        </div>
+      )}
+
+      {/* TEMP admin-only debug panel — last client-side Embedded Signup step.
+          Remove once the client→server handoff is confirmed in production. */}
+      {isAdmin && (
+        <div
+          className="rounded-xl px-3.5 py-2.5 text-xs space-y-1"
+          style={{ background: "rgba(107,114,128,0.06)", border: "1px dashed rgba(107,114,128,0.3)", color: "var(--muted)" }}
+        >
+          <p className="font-semibold" style={{ color: "var(--foreground)" }}>
+            דיבאג (אדמין בלבד)
+          </p>
+          <p>
+            שלב נוכחי: <span style={{ fontFamily: "monospace" }}>{debugStep}</span>
+          </p>
+          <p className="opacity-80">
+            SDK: {sdkLoaded ? "loaded" : "not loaded"} · appId: {appId ? "set" : "missing"} ·
+            {" "}configId: {configId ? "set" : "missing"}
+          </p>
         </div>
       )}
     </div>

@@ -81,6 +81,15 @@ async function saveError(
 export async function completeEmbeddedSignupAction(
   input: EmbeddedSignupInput,
 ): Promise<EmbeddedSignupResult> {
+  // If this line is absent from production logs after the owner clicks
+  // "Continue", the client never reached the server action — debug the
+  // FB.login callback in whatsapp-connection-card.tsx, not this file.
+  console.log("[WhatsApp Embedded Signup] server action started", {
+    hasCode: !!input.code,
+    hasWabaId: !!input.wabaId,
+    hasPhoneNumberId: !!input.phoneNumberId,
+  });
+
   const business = await requireCurrentBusiness();
   const businessId = business.id;
 
