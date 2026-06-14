@@ -55,9 +55,9 @@ const PILL: Record<
 
 function ownerLabelColor(label: string): string {
   if (label === "מוכן לשליחה") return "#15803d";
-  if (label === "התבנית נדחתה") return "#dc2626";
+  if (label === "נדחתה — פני לתמיכה") return "#dc2626";
   if (label === "WhatsApp לא מחובר") return "#6b7280";
-  return "#b45309"; // pending / missing
+  return "#b45309"; // pending / preparing
 }
 
 export function WhatsAppConnectionCard({
@@ -232,6 +232,31 @@ export function WhatsAppConnectionCard({
         </div>
       )}
 
+      {/* First-time onboarding — calm setup steps, shown before any connection exists */}
+      {state === "not_connected" && (
+        <div
+          className="space-y-3 rounded-xl px-4 py-3.5"
+          style={{ background: "rgba(184,107,140,0.05)", border: "1px solid rgba(184,107,140,0.14)" }}
+        >
+          <p className="text-xs leading-relaxed" style={{ color: "var(--foreground)" }}>
+            כדי לשלוח הודעות אוטומטיות ללקוחות, צריך לחבר את WhatsApp Business של העסק.
+          </p>
+          <ol className="space-y-2">
+            {["חיבור WhatsApp", "הכנת תבניות הודעה", "הפעלת אוטומציות"].map((step, i) => (
+              <li key={step} className="flex items-center gap-2.5 text-xs" style={{ color: "var(--foreground)" }}>
+                <span
+                  className="flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold shrink-0"
+                  style={{ background: "rgba(184,107,140,0.12)", color: "#b86b8c" }}
+                >
+                  {i + 1}
+                </span>
+                {step}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
       {/* Action buttons */}
       <div className="flex flex-wrap gap-2.5">
         {(state === "not_connected" || state === "error") && (
@@ -270,6 +295,12 @@ export function WhatsAppConnectionCard({
         )}
       </div>
 
+      {(state === "not_connected" || state === "error") && (
+        <p className="text-xs leading-relaxed" style={{ color: "var(--muted)" }}>
+          החיבור מתבצע דרך Meta בצורה מאובטחת. אנחנו לא מציגים ללקוחות פרטים טכניים.
+        </p>
+      )}
+
       {!embeddedSignupEnabled && (state === "not_connected" || state === "error") && (
         <p className="text-xs" style={{ color: "var(--muted)" }}>
           חיבור WhatsApp עדיין לא זמין בעסק הזה. צרי קשר עם התמיכה כדי להפעיל אותו.
@@ -298,7 +329,7 @@ export function WhatsAppConnectionCard({
               תבניות הודעות
             </h4>
             <p className="text-xs" style={{ color: "var(--muted)" }}>
-              כדי לשלוח הודעות, WhatsApp צריך לאשר את תבניות ההודעות. ניתן ליצור אותן אוטומטית.
+              התבניות מוכנות אוטומטית אחרי החיבור. WhatsApp צריך לאשר אותן — זה יכול לקחת זמן קצר.
             </p>
           </div>
 
@@ -319,6 +350,8 @@ export function WhatsAppConnectionCard({
             ))}
           </ul>
 
+          {/* Owner: a single retry button (templates already auto-prepare on connect). */}
+          {/* Admin: also gets an explicit sync button + per-template diagnostics below. */}
           <div className="flex flex-wrap gap-2.5">
             <button
               onClick={handleCreateTemplates}
@@ -326,16 +359,18 @@ export function WhatsAppConnectionCard({
               className="rounded-xl px-4 py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
               style={{ background: "#b86b8c", color: "#fff" }}
             >
-              {busy ? "פועל..." : "יצירת תבניות WhatsApp"}
+              {busy ? "פועל..." : "הכנת תבניות WhatsApp"}
             </button>
-            <button
-              onClick={handleSyncTemplates}
-              disabled={busy}
-              className="rounded-xl px-4 py-2.5 text-sm font-medium transition-opacity disabled:opacity-50"
-              style={{ background: "rgba(184,107,140,0.10)", color: "#b86b8c", border: "1px solid rgba(184,107,140,0.25)" }}
-            >
-              סנכרון תבניות
-            </button>
+            {isAdmin && (
+              <button
+                onClick={handleSyncTemplates}
+                disabled={busy}
+                className="rounded-xl px-4 py-2.5 text-sm font-medium transition-opacity disabled:opacity-50"
+                style={{ background: "rgba(184,107,140,0.10)", color: "#b86b8c", border: "1px solid rgba(184,107,140,0.25)" }}
+              >
+                סנכרון תבניות
+              </button>
+            )}
           </div>
 
           {templateResult && (

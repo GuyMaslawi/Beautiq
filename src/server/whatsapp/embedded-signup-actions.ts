@@ -35,6 +35,7 @@ import {
   derivePin,
   scrubToken,
 } from "@/lib/whatsapp/meta-onboarding";
+import { createDefaultTemplatesForBusiness } from "@/server/whatsapp/templates-core";
 
 export interface EmbeddedSignupInput {
   code: string;
@@ -94,7 +95,7 @@ export async function completeEmbeddedSignupAction(
     return saveError(businessId, "הגדרת אבטחה חסרה בשרת (encryption key)");
   }
 
-  // Mark as in-progress so the UI can show "חיבור WhatsApp בתהליך".
+  // Mark as in-progress so the UI can show "מחברים את WhatsApp".
   await prisma.whatsAppConnection.upsert({
     where: { businessId },
     create: { businessId, provider: "meta_cloud", status: "pending", useEnvFallback: false },
@@ -191,11 +192,28 @@ export async function completeEmbeddedSignupAction(
   });
 
   console.log(`[EmbeddedSignup] connected businessId=${businessId} (Mode B, encrypted token stored)`);
+
+  // 7. Auto-create the default templates immediately after connecting (non-fatal).
+  //    This is the "מכינים תבניות הודעה" step — the owner does not have to click a
+  //    per-card setup button. createTemplate is idempotent (handles alreadyExists),
+  //    so re-running is safe. A failure here must NOT fail the connection itself —
+  //    the owner can retry from the single "הכנת תבניות WhatsApp" button.
+  let templatesPrepared = false;
+  try {
+    const tplResult = await createDefaultTemplatesForBusiness(businessId);
+    templatesPrepared = tplResult.success;
+    console.log(
+      `[EmbeddedSignup] auto template setup businessId=${businessId}: ${tplResult.statusLabel}`,
+    );
+  } catch (err) {
+    console.error(`[EmbeddedSignup] auto template setup failed businessId=${businessId}:`, err);
+  }
+
   revalidatePath("/automations");
 
   return {
     success: true,
-    statusLabel: "WhatsApp מחובר",
+    statusLabel: templatesPrepared ? "WhatsApp מחובר — מכינים תבניות הודעה" : "WhatsApp מחובר",
     displayPhoneNumber,
   };
 }

@@ -345,7 +345,7 @@ export async function getDecryptedCredentialsForBusiness(
 export interface WhatsAppReadiness {
   /** True only when the business can send real production WhatsApp messages. */
   ready: boolean;
-  /** Hebrew owner-facing status: "WhatsApp לא מחובר" | "חיבור WhatsApp בתהליך" | "WhatsApp מחובר" | "יש בעיה בחיבור WhatsApp". */
+  /** Hebrew owner-facing status: "WhatsApp לא מחובר" | "מחברים את WhatsApp" | "WhatsApp מחובר" | "יש בעיה בחיבור WhatsApp". */
   statusLabel: string;
   /** Machine-readable connection state for the UI. */
   state: "not_connected" | "pending" | "active" | "error";
@@ -387,7 +387,7 @@ export async function getWhatsAppReadiness(
     return { ready: false, state: "not_connected", statusLabel: "WhatsApp לא מחובר" };
   }
   if (connection.status === "pending") {
-    return { ready: false, state: "pending", statusLabel: "חיבור WhatsApp בתהליך" };
+    return { ready: false, state: "pending", statusLabel: "מחברים את WhatsApp" };
   }
   if (connection.status === "error") {
     return {

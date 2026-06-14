@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { X, Pencil, ChevronDown, CheckCircle, AlertTriangle, FlaskConical, ShieldCheck } from "lucide-react";
+import { X, Pencil, ChevronDown, Lock, ShieldCheck } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
   toggleReviewRequestAction,
   saveReviewRequestTimingAction,
 } from "@/server/review-request/actions";
 import { AutomationLastRunSummary } from "@/components/automations/automation-last-run-summary";
+import { TemplateReadinessBadge } from "@/components/automations/template-readiness-badge";
 import type { AutomationSetting } from "@prisma/client";
 import type { LastRunSummary } from "@/server/automations/run-queries";
 
@@ -39,69 +40,21 @@ function buildPreview(template: string, reviewLink: string): string {
     .replace(/\{review_link\}/g, link);
 }
 
-function TemplateReadinessBadge({
-  realSendConfigured,
-  testMode,
-  hasTemplate,
-  onConfigure,
-}: {
-  realSendConfigured: boolean;
-  testMode: boolean;
-  hasTemplate: boolean;
-  onConfigure?: () => void;
-}) {
-  if (!realSendConfigured) return null;
-  if (testMode) {
-    return (
-      <div className="flex items-center gap-1.5 text-xs" style={{ color: "#b45309" }}>
-        <FlaskConical className="h-3 w-3 shrink-0" />
-        מצב בדיקה פעיל
-      </div>
-    );
-  }
-  if (hasTemplate) {
-    return (
-      <div className="flex items-center gap-1.5 text-xs" style={{ color: "#15803d" }}>
-        <CheckCircle className="h-3 w-3 shrink-0" />
-        תבנית מוגדרת
-      </div>
-    );
-  }
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center gap-1.5 text-xs" style={{ color: "#b45309" }}>
-        <AlertTriangle className="h-3 w-3 shrink-0" />
-        חסרה תבנית הודעה
-      </div>
-      <p className="text-xs leading-snug" style={{ color: "var(--muted)" }}>
-        האוטומציה פעילה, אבל לא תשלח הודעות אמיתיות עד שתוגדר תבנית WhatsApp מאושרת.
-      </p>
-      {onConfigure && (
-        <button
-          type="button"
-          onClick={onConfigure}
-          className="text-xs font-medium transition-opacity hover:opacity-70"
-          style={{ color: "#c97898" }}
-        >
-          הגדרת תבנית
-        </button>
-      )}
-    </div>
-  );
-}
-
 interface Props {
   setting: AutomationSetting | null;
   sentThisMonth: number;
   lastRun?: LastRunSummary | null;
   realSendConfigured?: boolean;
   testMode?: boolean;
+  /** True before WhatsApp is connected — the card is shown but locked. */
+  locked?: boolean;
 }
 
-export function ReviewRequestCard({ setting, sentThisMonth, lastRun, realSendConfigured = false, testMode = false }: Props) {
+export function ReviewRequestCard({ setting, sentThisMonth, lastRun, realSendConfigured = false, testMode = false, locked = false }: Props) {
   const [isEnabled, setIsEnabled] = useState(setting?.enabled ?? false);
   const [isToggling, startToggle] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [lockNotice, setLockNotice] = useState(false);
 
   const [selectedTiming, setSelectedTiming] = useState(() => detectTiming(setting));
   const [messageTemplate, setMessageTemplate] = useState(
@@ -188,32 +141,56 @@ export function ReviewRequestCard({ setting, sentThisMonth, lastRun, realSendCon
           <h3 className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
             בקשת ביקורת
           </h3>
-          <Switch
-            checked={isEnabled}
-            onCheckedChange={handleToggle}
-            disabled={isToggling}
-            aria-label="הפעלת בקשת ביקורת"
-          />
+          <div className="relative inline-flex">
+            <Switch
+              checked={locked ? false : isEnabled}
+              onCheckedChange={handleToggle}
+              disabled={isToggling || locked}
+              aria-label="הפעלת בקשת ביקורת"
+            />
+            {locked && (
+              <button
+                type="button"
+                onClick={() => setLockNotice(true)}
+                className="absolute inset-0 cursor-not-allowed"
+                aria-label="חברי WhatsApp כדי להפעיל"
+              />
+            )}
+          </div>
         </div>
 
-        <p className="text-xs font-semibold" style={{ color: isEnabled ? "#16a34a" : "var(--muted)" }}>
-          {isEnabled ? "פעיל" : "כבוי"}
-        </p>
+        {locked ? (
+          <p className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "var(--muted)" }}>
+            <Lock className="h-3 w-3 shrink-0" />
+            זמין אחרי חיבור WhatsApp
+          </p>
+        ) : (
+          <p className="text-xs font-semibold" style={{ color: isEnabled ? "#16a34a" : "var(--muted)" }}>
+            {isEnabled ? "פעיל" : "כבוי"}
+          </p>
+        )}
 
         <p className="text-xs leading-relaxed" style={{ color: "var(--muted)" }}>
           לאחר ביקור הלקוחה תקבל הודעה עם בקשה להשאיר ביקורת.
         </p>
 
-        {sentThisMonth > 0 && (
+        {!locked && sentThisMonth > 0 && (
           <p className="text-xs" style={{ color: "var(--muted)" }}>
             נשלחו {sentThisMonth} בקשות החודש
+          </p>
+        )}
+
+        {lockNotice && (
+          <p className="text-xs" style={{ color: "#b45309" }}>
+            קודם צריך לחבר WhatsApp Business.
           </p>
         )}
 
         <button
           type="button"
           onClick={() => setDialogOpen(true)}
-          className="mt-1 flex items-center gap-2 self-start rounded-lg px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80"
+          disabled={locked}
+          className="mt-1 flex items-center gap-2 self-start rounded-lg px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
             background: "var(--background-alt)",
             border: "1px solid var(--border)",
@@ -223,12 +200,14 @@ export function ReviewRequestCard({ setting, sentThisMonth, lastRun, realSendCon
           הגדרה
         </button>
 
-        <TemplateReadinessBadge
-          realSendConfigured={realSendConfigured}
-          testMode={testMode}
-          hasTemplate={!!setting?.templateName}
-          onConfigure={() => setDialogOpen(true)}
-        />
+        {!locked && (
+          <TemplateReadinessBadge
+            realSendConfigured={realSendConfigured}
+            testMode={testMode}
+            templateName={setting?.templateName}
+            templateStatus={setting?.templateStatus}
+          />
+        )}
 
         <AutomationLastRunSummary lastRun={lastRun ?? null} />
       </div>

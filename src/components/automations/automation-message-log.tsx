@@ -122,10 +122,10 @@ export function AutomationMessageLog({ messages }: AutomationMessageLogProps) {
           <MessageSquare className="h-5 w-5" style={{ color: "#b86b8c" }} />
         </div>
         <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
-          אין עדיין הודעות שנשלחו
+          עדיין לא נשלחו הודעות
         </p>
         <p className="mt-1 text-xs" style={{ color: "var(--muted)" }}>
-          הודעות אוטומטיות שנשלחות יופיעו כאן.
+          אחרי שתפעילי אוטומציות, ההודעות יופיעו כאן.
         </p>
       </div>
     );

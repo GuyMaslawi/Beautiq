@@ -14,9 +14,9 @@ import type { AutomationType } from "@prisma/client";
 /** Owner-facing per-automation readiness label (Part 4). */
 export type AutomationTemplateLabel =
   | "מוכן לשליחה"
-  | "ממתין לאישור תבנית"
-  | "חסרה תבנית"
-  | "התבנית נדחתה"
+  | "ממתין לאישור WhatsApp"
+  | "מכינים תבניות הודעה"
+  | "נדחתה — פני לתמיכה"
   | "WhatsApp לא מחובר";
 
 export interface AutomationTemplateStatus {
@@ -61,17 +61,18 @@ export async function getOwnerWhatsAppStatus(
     if (!connected) {
       ownerLabel = "WhatsApp לא מחובר";
     } else if (!setting?.templateName) {
-      ownerLabel = "חסרה תבנית";
+      // Connected but template not created yet — calm "preparing" state, never a warning.
+      ownerLabel = "מכינים תבניות הודעה";
     } else if (setting.templateStatus === "approved") {
       ownerLabel = "מוכן לשליחה";
       ready = true;
     } else if (setting.templateStatus === "rejected") {
-      ownerLabel = "התבנית נדחתה";
+      ownerLabel = "נדחתה — פני לתמיכה";
     } else if (setting.templateStatus === "pending") {
-      ownerLabel = "ממתין לאישור תבנית";
+      ownerLabel = "ממתין לאישור WhatsApp";
     } else {
       // unknown / not yet synced — template exists but status not confirmed.
-      ownerLabel = "ממתין לאישור תבנית";
+      ownerLabel = "ממתין לאישור WhatsApp";
     }
 
     return {

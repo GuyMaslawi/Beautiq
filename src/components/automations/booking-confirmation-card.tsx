@@ -1,63 +1,13 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { X, CheckCircle, AlertTriangle, FlaskConical, ShieldCheck, MessageCircle } from "lucide-react";
+import { X, Lock, ShieldCheck, MessageCircle } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { saveBookingConfirmationSettingsAction } from "@/server/booking-confirmation/actions";
 import { AutomationLastRunSummary } from "@/components/automations/automation-last-run-summary";
+import { TemplateReadinessBadge } from "@/components/automations/template-readiness-badge";
 import type { AutomationSetting } from "@prisma/client";
 import type { LastRunSummary } from "@/server/automations/run-queries";
-
-function TemplateReadinessBadge({
-  realSendConfigured,
-  testMode,
-  hasTemplate,
-  onConfigure,
-}: {
-  realSendConfigured: boolean;
-  testMode: boolean;
-  hasTemplate: boolean;
-  onConfigure?: () => void;
-}) {
-  if (!realSendConfigured) return null;
-  if (testMode) {
-    return (
-      <div className="flex items-center gap-1.5 text-xs" style={{ color: "#b45309" }}>
-        <FlaskConical className="h-3 w-3 shrink-0" />
-        מצב בדיקה פעיל
-      </div>
-    );
-  }
-  if (hasTemplate) {
-    return (
-      <div className="flex items-center gap-1.5 text-xs" style={{ color: "#15803d" }}>
-        <CheckCircle className="h-3 w-3 shrink-0" />
-        תבנית מוגדרת
-      </div>
-    );
-  }
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center gap-1.5 text-xs" style={{ color: "#b45309" }}>
-        <AlertTriangle className="h-3 w-3 shrink-0" />
-        חסרה תבנית הודעה
-      </div>
-      <p className="text-xs leading-snug" style={{ color: "var(--muted)" }}>
-        האוטומציה פעילה, אבל לא תשלח הודעות אמיתיות עד שתוגדר תבנית WhatsApp מאושרת.
-      </p>
-      {onConfigure && (
-        <button
-          type="button"
-          onClick={onConfigure}
-          className="text-xs font-medium transition-opacity hover:opacity-70"
-          style={{ color: "#c97898" }}
-        >
-          הגדרת תבנית
-        </button>
-      )}
-    </div>
-  );
-}
 
 interface Props {
   setting: AutomationSetting | null;
@@ -65,6 +15,8 @@ interface Props {
   realSendConfigured?: boolean;
   testMode?: boolean;
   isAdmin?: boolean;
+  /** True before WhatsApp is connected — the card is shown but locked. */
+  locked?: boolean;
 }
 
 export function BookingConfirmationCard({
@@ -73,6 +25,7 @@ export function BookingConfirmationCard({
   realSendConfigured = false,
   testMode = false,
   isAdmin = false,
+  locked = false,
 }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [requireOptIn, setRequireOptIn] = useState(setting?.requireOptIn ?? false);
@@ -127,9 +80,16 @@ export function BookingConfirmationCard({
           </h3>
         </div>
 
-        <p className="text-xs font-semibold" style={{ color: "#16a34a" }}>
-          פעיל תמיד
-        </p>
+        {locked ? (
+          <p className="flex items-center gap-1.5 text-xs font-semibold" style={{ color: "var(--muted)" }}>
+            <Lock className="h-3 w-3 shrink-0" />
+            זמין אחרי חיבור WhatsApp
+          </p>
+        ) : (
+          <p className="text-xs font-semibold" style={{ color: "#16a34a" }}>
+            פעיל תמיד
+          </p>
+        )}
 
         <p className="text-xs leading-relaxed" style={{ color: "var(--muted)" }}>
           הודעה אוטומטית ללקוחה מיד לאחר שהיא שולחת בקשת תור.
@@ -138,7 +98,8 @@ export function BookingConfirmationCard({
         <button
           type="button"
           onClick={() => setDialogOpen(true)}
-          className="mt-1 flex items-center gap-2 self-start rounded-lg px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80"
+          disabled={locked && !isAdmin}
+          className="mt-1 flex items-center gap-2 self-start rounded-lg px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80 disabled:opacity-50 disabled:cursor-not-allowed"
           style={{
             background: "var(--background-alt)",
             border: "1px solid var(--border)",
@@ -148,12 +109,14 @@ export function BookingConfirmationCard({
           הגדרה
         </button>
 
-        <TemplateReadinessBadge
-          realSendConfigured={realSendConfigured}
-          testMode={testMode}
-          hasTemplate={!!setting?.templateName}
-          onConfigure={() => setDialogOpen(true)}
-        />
+        {!locked && (
+          <TemplateReadinessBadge
+            realSendConfigured={realSendConfigured}
+            testMode={testMode}
+            templateName={setting?.templateName}
+            templateStatus={setting?.templateStatus}
+          />
+        )}
 
         <AutomationLastRunSummary lastRun={lastRun ?? null} />
       </div>

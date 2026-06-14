@@ -73,13 +73,21 @@ export default async function AutomationsPage() {
   // WhatsApp readiness banners — shown above the cards
   const realSendConfigured = isRealSendConfigured();
   const testMode = isTestModeActive();
-  const whatsappConnected = connection?.status === "active";
+  // Owner-facing connection state — drives the calm onboarding vs. connected UX.
+  const ownerConnectionState = ownerWhatsAppStatus.connection.state; // not_connected | pending | active | error
+  const whatsappConnected = ownerConnectionState === "active";
   // isEnvFallback: true only when a business has NO per-business connection but the system env fallback is active.
   // A business with an active WhatsAppConnection is always treated as production-connected.
   const isEnvFallback =
     !whatsappConnected &&
     process.env.WHATSAPP_USE_ENV_FALLBACK === "true" &&
     realSendConfigured;
+
+  // Automations are "locked" (shown but disabled) until the business connects WhatsApp.
+  // Dev mode, test mode, and the system-level env fallback are not real owner connections,
+  // but they all allow sending, so the cards stay usable in those cases.
+  const automationsLocked =
+    realSendConfigured && !testMode && !isEnvFallback && !whatsappConnected;
 
   return (
     <div className="w-full space-y-6">
@@ -145,8 +153,8 @@ export default async function AutomationsPage() {
         </div>
       )}
 
-      {/* No connection and no fallback */}
-      {realSendConfigured && !testMode && !whatsappConnected && !isEnvFallback && (
+      {/* Connection failed — red only after an actual attempt failed (never as a first impression) */}
+      {realSendConfigured && !testMode && !isEnvFallback && ownerConnectionState === "error" && (
         <div
           className="flex items-start gap-3 rounded-2xl px-4 py-3.5"
           dir="rtl"
@@ -154,8 +162,7 @@ export default async function AutomationsPage() {
         >
           <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#dc2626" }} />
           <p className="text-sm leading-relaxed" style={{ color: "#991b1b" }}>
-            <strong>WhatsApp לא מחובר</strong> — כדי לשלוח הודעות מהמספר של העסק צריך לחבר WhatsApp Business.
-            ניתן להגדיר את האוטומציות, אך הן לא ישלחו הודעות ללקוחות.
+            <strong>לא הצלחנו לחבר את WhatsApp</strong> — נסי שוב, ואם הבעיה נמשכת פני לתמיכה.
           </p>
         </div>
       )}
@@ -186,6 +193,7 @@ export default async function AutomationsPage() {
           lastRun={winBackLastRunSummary}
           realSendConfigured={realSendConfigured}
           testMode={testMode}
+          locked={automationsLocked}
         />
 
         <MorningReminderCard
@@ -194,6 +202,7 @@ export default async function AutomationsPage() {
           lastRun={morningReminderLastRunSummary}
           realSendConfigured={realSendConfigured}
           testMode={testMode}
+          locked={automationsLocked}
         />
 
         <ReviewRequestCard
@@ -202,6 +211,7 @@ export default async function AutomationsPage() {
           lastRun={reviewRequestLastRunSummary}
           realSendConfigured={realSendConfigured}
           testMode={testMode}
+          locked={automationsLocked}
         />
 
         <BookingConfirmationCard
@@ -210,6 +220,7 @@ export default async function AutomationsPage() {
           realSendConfigured={realSendConfigured}
           testMode={testMode}
           isAdmin={user?.isAdmin ?? false}
+          locked={automationsLocked}
         />
 
         {/* ManualRunCard (eligibility checker) — admin-only */}
