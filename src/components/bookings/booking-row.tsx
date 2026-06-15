@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Clock, Banknote } from "lucide-react";
 import { BookingStatusBadge } from "@/components/bookings/booking-status-badge";
-import { BookingRowActions } from "@/components/bookings/booking-row-actions";
+import { BookingActionsMenu } from "@/components/bookings/booking-actions-menu";
 import { isLateCancellation } from "@/lib/cancellation";
 import { BOOKINGS } from "@/lib/constants/he";
 import type { BookingListItem } from "@/server/bookings/queries";
@@ -204,9 +204,10 @@ export function BookingRow({
 
       {/* Actions */}
       <td className="px-4 py-3">
-        <BookingRowActions
+        <BookingActionsMenu
           bookingId={booking.id}
           status={booking.status}
+          layout="row"
         />
       </td>
     </tr>

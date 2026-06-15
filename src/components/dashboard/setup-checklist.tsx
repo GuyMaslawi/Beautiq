@@ -16,7 +16,6 @@ import {
   ArrowLeft,
   CheckCircle2,
   Circle,
-  ShieldAlert,
   RefreshCcw,
   BellRing,
   XCircle,
@@ -1129,7 +1128,6 @@ export function SetupChecklist({
     suggestedClients.length > 0 ||
     pendingApprovalCount > 0 ||
     emptySlots.length > 0 ||
-    atRiskCount > 0 ||
     remindersDueCount > 0 ||
     lateCancellationsCount > 0 ||
     extraUrgent.length > 0;
@@ -1225,13 +1223,13 @@ export function SetupChecklist({
                 {suggestedClients.length > 0 && (
                   <AttentionCard
                     count={suggestedClients.length}
-                    label="לקוחות"
-                    subLabel="ממתינות למעקב ושימור"
-                    action="החזרת לקוחות"
+                    label="לקוחות שמחכות למעקב"
+                    subLabel="לקוחות שלא חזרו זמן מה ומוכנות לפנייה"
+                    action="לניהול שימור"
                     href="/bring-back"
                     icon={RefreshCcw}
                     color="green"
-                    ariaLabel={`${suggestedClients.length} לקוחות ממתינות למעקב — עבור להחזרת לקוחות`}
+                    ariaLabel={`${suggestedClients.length} לקוחות שמחכות למעקב — מעבר לניהול שימור`}
                   />
                 )}
                 {pendingApprovalCount > 0 && (
@@ -1252,22 +1250,10 @@ export function SetupChecklist({
                     label="חלונות פנויים"
                     subLabel="זמן פנוי לשבוע הקרוב"
                     action="מילוי חלונות"
-                    href="/bring-back"
+                    href="/dashboard#empty-slots"
                     icon={CalendarRange}
                     color="info"
-                    ariaLabel={`${emptySlots.length} חלונות פנויים — שלחי הצעה ללקוחות`}
-                  />
-                )}
-                {atRiskCount > 0 && (
-                  <AttentionCard
-                    count={atRiskCount}
-                    label="לקוחות בסיכון"
-                    subLabel="לא חזרו מזמן — כדאי לפנות"
-                    action="לפנייה עכשיו"
-                    href="/bring-back"
-                    icon={ShieldAlert}
-                    color="rose"
-                    ariaLabel={`${atRiskCount} לקוחות בסיכון — עבור להחזרת לקוחות`}
+                    ariaLabel={`${emptySlots.length} חלונות פנויים — מעבר לחלונות הפנויים`}
                   />
                 )}
                 {remindersDueCount > 0 && (

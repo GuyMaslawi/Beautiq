@@ -509,6 +509,33 @@ export const BOOKINGS = {
     successApprove: "התור אושר",
   },
 
+  // Row/card action menu — one primary action + a "פעולות" menu, replacing the
+  // old strip of unlabeled icons.
+  rowActions: {
+    more: "פעולות",
+    moreCompact: "פעולות נוספות",
+    view: "צפייה בפרטים",
+    viewShort: "צפייה",
+    approve: "אישור תור",
+    complete: "סימון כהושלם",
+    noShow: "סימון כאי־הגעה",
+    cancel: "ביטול תור",
+    message: "שליחת הודעה",
+    review: "בקשת ביקורת",
+    confirmCancel: {
+      title: "לבטל את התור?",
+      description: "הפעולה תעדכן את סטטוס התור למבוטל.",
+      confirm: "כן, לבטל",
+      cancel: "חזרה",
+    },
+    confirmNoShow: {
+      title: "לסמן כאי־הגעה?",
+      description: "הלקוחה תסומן כמי שלא הגיעה לתור.",
+      confirm: "כן, לסמן",
+      cancel: "חזרה",
+    },
+  },
+
   lateCancellation: {
     badgeLate: "ביטול מאוחר",
     badgeOnTime: "בוטל בזמן",
