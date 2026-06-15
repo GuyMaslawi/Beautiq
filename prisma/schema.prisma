@@ -1,6 +1,6 @@
-// Prisma schema — Beautiq
+// Prisma schema — Allura
 //
-// Beautiq is a Hebrew-only, multi-tenant SaaS for beauty & wellness businesses.
+// Allura is a Hebrew-only, multi-tenant SaaS for beauty & wellness businesses.
 // Model and field names are kept in developer-friendly English; all user-facing
 // Hebrew lives in the application layer, not in the schema.
 //

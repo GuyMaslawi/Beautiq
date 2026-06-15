@@ -12,6 +12,7 @@
 import { prisma } from "@/server/db/prisma";
 import { getWhatsAppProviderForBusiness } from "@/server/whatsapp/resolver";
 import { isValidIsraeliPhone } from "@/lib/phone";
+import { publicBusinessUrl } from "@/lib/config";
 
 const DEFAULT_REVIEW_BODY =
   "היי {שם הלקוח} ❤️\n\nנהנינו לארח אותך!\n\nנשמח אם תוכלי להשאיר ביקורת קצרה 🙏\n{קישור לביקורת}\n\n{שם העסק}";
@@ -136,7 +137,7 @@ export async function runReviewRequestForBusiness(params: {
 
   const realSendEnabled = process.env.ENABLE_REAL_WHATSAPP_SEND === "true";
   const provider = await getWhatsAppProviderForBusiness(businessId);
-  const defaultReviewLink = reviewLink ?? `beautiq.co/b/${business.slug}#reviews`;
+  const defaultReviewLink = reviewLink ?? `${publicBusinessUrl(business.slug)}#reviews`;
   const source = bypassTiming ? "manual_admin" : "cron";
 
   // Create the run record

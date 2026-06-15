@@ -10,6 +10,7 @@ import { AutomationLastRunSummary } from "@/components/automations/automation-la
 import { TemplateReadinessBadge } from "@/components/automations/template-readiness-badge";
 import type { AutomationSetting } from "@prisma/client";
 import type { LastRunSummary } from "@/server/automations/run-queries";
+import { APP_DOMAIN } from "@/lib/config";
 
 const OFFER_PREVIEW_TEXTS: Record<string, string> = {
   none: "",
@@ -25,7 +26,7 @@ function buildPreview(template: string, offerType: string, offerValue: string): 
     .replace(/\{שם_העסק\}/g, "מספרה לדוגמה")
     .replace(/\{שירות_אחרון\}/g, "צביעת שיער")
     .replace(/\{הטבה\}/g, offerText)
-    .replace(/\{קישור_להזמנה\}/g, "allura.app/b/example")
+    .replace(/\{קישור_להזמנה\}/g, `${APP_DOMAIN}/b/example`)
     .replace(/\n{2,}/g, "\n")
     .trim();
 }

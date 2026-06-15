@@ -125,7 +125,7 @@ export function BookingRowActions({
 
       {/* שליחת הודעה */}
       <Link
-        href="/messages"
+        href={`/bookings/${bookingId}`}
         aria-label="שליחת הודעה"
         title="שליחת הודעה"
         className="flex h-8 w-8 items-center justify-center rounded-full transition-all hover:bg-rose-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1"

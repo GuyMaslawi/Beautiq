@@ -29,10 +29,10 @@ describe("renderMessage", () => {
         businessName: "ב",
         lastService: "מניקור",
         offer: "10% הנחה",
-        bookingLink: "allura.app/x",
+        bookingLink: "allura.info/x",
       },
     );
-    expect(out).toBe("דנה: מניקור | 10% הנחה | allura.app/x");
+    expect(out).toBe("דנה: מניקור | 10% הנחה | allura.info/x");
   });
 
   it("replaces missing optional variables with empty string (no crash)", () => {

@@ -63,9 +63,9 @@ describe("buildWinBackMessage", () => {
       ...base,
       offerType: "none",
       template: "שלום {שם}, מ{שם_העסק} מתגעגעים אלייך! קישור: {קישור_להזמנה}",
-      bookingUrl: "allura.app/b/studio",
+      bookingUrl: "allura.info/b/studio",
     });
-    expect(msg).toBe("שלום דנה, מסטודיו יופי מתגעגעים אלייך! קישור: allura.app/b/studio");
+    expect(msg).toBe("שלום דנה, מסטודיו יופי מתגעגעים אלייך! קישור: allura.info/b/studio");
   });
 
   it("honours a custom offer value via {הטבה}", () => {

@@ -1119,7 +1119,7 @@ export const RETENTION = {
   guidance: {
     title: "יש לקוחות שלא חזרו לאחרונה",
     body: "אפשר לשלוח הודעה קצרה ולהציע לקבוע תור נוסף.",
-    action: "מעבר לשימור לקוחות",
+    action: "מעבר להחזרת לקוחות",
   },
 } as const;
 
@@ -1184,7 +1184,7 @@ export const REPUTATION = {
   guidance: {
     title: "יש טיפולים שהושלמו לאחרונה",
     body: "אפשר לשלוח הודעת תודה או בקשת ביקורת כדי לחזק את הקשר עם הלקוחות.",
-    action: "מעבר למוניטין",
+    action: "מעבר לאוטומציות",
   },
 } as const;
 
@@ -1289,7 +1289,7 @@ export const PRICING = {
   guidance: {
     title: "יש שירותים שכדאי לבדוק את המחיר שלהם",
     body: "מצאנו שירותים שאולי מתומחרים נמוך ביחס לזמן או לטווח שהוגדר.",
-    action: "מעבר לתובנות מחיר",
+    action: "מעבר לשירותים",
   },
 } as const;
 
@@ -1552,7 +1552,7 @@ export const REVENUE_FORECAST = {
     atRisk: (count: number) =>
       `יש ${count} לקוחות בסיכון עם פוטנציאל הכנסה שטרם מומש`,
     atRiskAction: "צפייה בלקוחות בסיכון",
-    atRiskHref: "/at-risk",
+    atRiskHref: "/bring-back",
     pendingDeposits: (count: number) =>
       `יש ${count} מקדמות שעדיין לא שולמו`,
     pendingDepositsAction: "מעבר לתורים",

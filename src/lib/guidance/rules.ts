@@ -94,7 +94,7 @@ export function generateGuidanceItems(
       description: RETENTION.guidance.body,
       priority: "recommended",
       actionLabel: RETENTION.guidance.action,
-      href: "/retention",
+      href: "/bring-back",
     });
   }
 
@@ -150,7 +150,7 @@ export function generateGuidanceItems(
       description: REPUTATION.guidance.body,
       priority: "recommended",
       actionLabel: REPUTATION.guidance.action,
-      href: "/reputation",
+      href: "/automations",
     });
   }
 
@@ -162,7 +162,7 @@ export function generateGuidanceItems(
       description: PRICING.guidance.body,
       priority: "info",
       actionLabel: PRICING.guidance.action,
-      href: "/pricing",
+      href: "/services",
     });
   }
 

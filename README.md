@@ -1,4 +1,4 @@
-# Beautiq
+# Allura
 
 מערכת חכמה לניהול עסקי יופי וטיפוח — Hebrew-only, RTL-first, multi-tenant SaaS.
 
@@ -113,7 +113,7 @@ npm run db:demo
 
 | שדה | ערך |
 |---|---|
-| Email | `demo@beautiq.local` |
+| Email | `demo@allura.local` |
 | Password | `Demo123456!` |
 
 ### לינק הזמנה ציבורי
@@ -156,7 +156,7 @@ http://localhost:3000/b/yael-studio
 
 ```
 prisma/
-  schema.prisma         # Full Beautiq data model (Phase 3)
+  schema.prisma         # Full Allura data model (Phase 3)
   seed.ts               # Reference seed: categories + system message templates
 docker-compose.yml      # Local PostgreSQL for development
 src/

@@ -11,6 +11,7 @@ import { AutomationLastRunSummary } from "@/components/automations/automation-la
 import { TemplateReadinessBadge } from "@/components/automations/template-readiness-badge";
 import type { AutomationSetting } from "@prisma/client";
 import type { LastRunSummary } from "@/server/automations/run-queries";
+import { APP_DOMAIN } from "@/lib/config";
 
 const DEFAULT_TEMPLATE =
   "היי {שם הלקוח} ❤️\n\nנהנינו לארח אותך!\n\nנשמח אם תוכלי להשאיר ביקורת קצרה 🙏\n{קישור לביקורת}\n\n{שם העסק}";
@@ -30,7 +31,7 @@ function detectTiming(setting: AutomationSetting | null): string {
 }
 
 function buildPreview(template: string, reviewLink: string): string {
-  const link = reviewLink || "beautiq.co/b/example#reviews";
+  const link = reviewLink || `${APP_DOMAIN}/b/example#reviews`;
   return template
     .replace(/\{שם הלקוח\}/g, "נועה")
     .replace(/\{שם הלקוחה\}/g, "נועה")

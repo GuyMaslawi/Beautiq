@@ -1,5 +1,10 @@
-# Local development infrastructure for Beautiq.
+# Local development infrastructure for Allura.
 # Spins up a PostgreSQL instance for local dev only — not for production.
+#
+# NOTE: the `beautiq_*` container/DB/volume identifiers below are LEGACY local-only
+# names kept intentionally. Renaming them would orphan existing developers' Postgres
+# volumes (data lives in `beautiq_postgres_data`) and break their `.env` DATABASE_URL.
+# They are never user-facing and have no relation to the product brand (Allura).
 #
 # Usage:
 #   npm run docker:db:up      # start Postgres in the background

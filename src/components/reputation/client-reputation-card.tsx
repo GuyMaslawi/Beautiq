@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
 import { BadgeCheck, MessageSquareHeart, Star } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -119,11 +118,6 @@ export function ClientReputationCard({
           <Star className="h-3.5 w-3.5" />
           {REPUTATION.clientCard.reviewAction}
         </Button>
-        <Link href="/reputation">
-          <Button size="sm" variant="ghost" className="text-muted">
-            {REPUTATION.clientCard.goToReputation}
-          </Button>
-        </Link>
       </div>
     </Card>
   );

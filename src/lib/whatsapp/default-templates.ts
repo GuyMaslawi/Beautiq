@@ -14,6 +14,7 @@
  */
 
 import type { AutomationType } from "@prisma/client";
+import { APP_URL } from "@/lib/config";
 
 export type MetaTemplateCategory = "UTILITY" | "MARKETING";
 
@@ -61,7 +62,7 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     language: "he",
     category: "UTILITY",
     body: "תודה שבחרת ב{{3}}, {{1}}! נשמח אם תוכלי לדרג את ה{{2}} שקיבלת: {{4}}",
-    example: ["דנה", "מניקור ג'ל", "סטודיו ביוטי", "https://allura.co/b/studio#reviews"],
+    example: ["דנה", "מניקור ג'ל", "סטודיו ביוטי", `${APP_URL}/b/studio#reviews`],
     variables: ["clientName", "serviceName", "businessName", "reviewLink"],
     automationType: "review_request",
   },

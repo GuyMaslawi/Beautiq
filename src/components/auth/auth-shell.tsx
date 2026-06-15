@@ -4,6 +4,7 @@ import Link from "next/link";
 import { motion } from "motion/react";
 import { CheckCircle2, Sparkles } from "lucide-react";
 import { BRAND } from "@/lib/constants/he";
+import { APP_DOMAIN } from "@/lib/config";
 
 /* ── static preview data ────────────────────────────────────────────────── */
 
@@ -21,15 +22,15 @@ const NAV_GROUPS_PREVIEW = [
     items: [
       { label: "שירותים", active: false },
       { label: "שעות פעילות", active: false },
-      { label: "הודעות", active: false },
+      { label: "עמוד לקוחות", active: false },
     ],
   },
   {
-    label: "צמיחה",
+    label: "הגדלת הכנסות",
     items: [
-      { label: "שימור לקוחות", active: false },
-      { label: "מוניטין", active: false },
-      { label: "תובנות מחיר", active: false },
+      { label: "החזרת לקוחות", active: false },
+      { label: "אוטומציות", active: false },
+      { label: "כספים", active: false },
     ],
   },
 ];
@@ -236,7 +237,7 @@ function PreviewPanel() {
                 className="flex-1 rounded-md px-3 py-1 text-center text-xs"
                 style={{ background: "rgba(255,255,255,.06)", color: "rgba(255,255,255,.30)" }}
               >
-                allura.co.il/dashboard
+                {APP_DOMAIN}/dashboard
               </div>
             </div>
 

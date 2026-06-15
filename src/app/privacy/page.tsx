@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
+import { SUPPORT_EMAIL } from "@/lib/config";
 
 // עמוד ציבורי — מדיניות פרטיות. אינו דורש התחברות ואינו משתמש
 // במעטפת המאומתת (סרגל צד). נדרש לפרסום אפליקציית Meta/WhatsApp.
@@ -10,7 +11,6 @@ export const metadata: Metadata = {
     "מדיניות הפרטיות של Allura — איזה מידע אנו אוספים, כיצד אנו משתמשים בו וכיצד אנו שומרים עליו.",
 };
 
-const SUPPORT_EMAIL = "support@allura.info";
 const LAST_UPDATED = "14 ביוני 2026";
 
 function Section({
@@ -156,6 +156,9 @@ export default function PrivacyPage() {
 
         <footer className="mt-10 border-t border-[var(--border)] pt-6">
           <p className="text-muted text-sm">
+            Allura מופעלת על ידי [שם העסק המשפטי].
+          </p>
+          <p className="text-muted mt-2 text-sm">
             ראה גם:{" "}
             <Link
               href="/terms"

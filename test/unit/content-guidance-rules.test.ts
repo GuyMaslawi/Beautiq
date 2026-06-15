@@ -62,10 +62,10 @@ describe("generateGuidanceItems — individual rules", () => {
     );
   });
 
-  it("flags lost clients → retention (F)", () => {
+  it("flags lost clients → bring-back (F)", () => {
     const items = generateGuidanceItems(data({ lostClientsCount: 4 }), 0);
     expect(ids(items)).toContain("clients-not-returned");
-    expect(items.find((i) => i.id === "clients-not-returned")!.href).toBe("/retention");
+    expect(items.find((i) => i.id === "clients-not-returned")!.href).toBe("/bring-back");
   });
 
   it("flags no-show clients (G)", () => {
@@ -74,10 +74,10 @@ describe("generateGuidanceItems — individual rules", () => {
     );
   });
 
-  it("flags recent completed → reputation (J)", () => {
+  it("flags recent completed → automations (J)", () => {
     const items = generateGuidanceItems(data({ recentCompletedBookingsCount: 2 }), 0);
     expect(ids(items)).toContain("reputation");
-    expect(items.find((i) => i.id === "reputation")!.href).toBe("/reputation");
+    expect(items.find((i) => i.id === "reputation")!.href).toBe("/automations");
   });
 
   it("flags pricing concerns (K)", () => {

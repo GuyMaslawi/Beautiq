@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import type { AutomationOfferType } from "@prisma/client";
 import { getWhatsAppProviderForBusiness } from "@/server/whatsapp/resolver";
 import { runWinBackForBusiness } from "./runner";
+import { publicBusinessUrl } from "@/lib/config";
 
 // ---------------------------------------------------------------------------
 // Test send — send one real message to WHATSAPP_TEST_PHONE only
@@ -59,7 +60,7 @@ export async function sendWhatsAppTestMessage(): Promise<TestSendResult> {
     }
 
     // Safe sample fallback text — no real customer data
-    const bookingUrl = `allura.app/b/${business.slug}`;
+    const bookingUrl = publicBusinessUrl(business.slug);
     const sampleFallbackText =
       `היי בדיקה, עבר זמן מה מאז הביקור האחרון שלך בטיפול לדוגמה אצל ${business.name}.\n` +
       `10% הנחה\nנשמח לראות אותך שוב ❤️\nלקביעת תור: ${bookingUrl}`;

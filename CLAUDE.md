@@ -1,10 +1,10 @@
-# Beautiq — Claude Code Project Rules
+# Allura — Claude Code Project Rules
 
 ## Product Focus Clarification
 
-Beautiq is primarily a CRM and internal business management system for beauty and wellness business owners.
+Allura is primarily a CRM and internal business management system for beauty and wellness business owners.
 
-Beautiq is not primarily a customer-facing platform.
+Allura is not primarily a customer-facing platform.
 
 The main product experience is the authenticated business dashboard used by the business owner.
 
@@ -72,9 +72,9 @@ Do not interpret manual tests as a request to write or run Playwright.
 
 ## 1. Product Context
 
-We are building **Beautiq**, a Hebrew-only multi-tenant SaaS product for beauty and wellness businesses.
+We are building **Allura**, a Hebrew-only multi-tenant SaaS product for beauty and wellness businesses.
 
-Beautiq helps small beauty businesses manage:
+Allura helps small beauty businesses manage:
 - Bookings
 - Clients
 - Services
@@ -89,9 +89,9 @@ Beautiq helps small beauty businesses manage:
 - Business insights
 - Future AI recommendations
 
-Beautiq is not just a booking calendar.
+Allura is not just a booking calendar.
 
-Beautiq should become a smart business assistant that helps beauty business owners:
+Allura should become a smart business assistant that helps beauty business owners:
 - Reduce manual work
 - Prevent lost revenue
 - Fill empty slots
@@ -187,7 +187,7 @@ Keep the architecture simple, clean, and scalable.
 
 ## 5. Language Rules
 
-Beautiq is currently **Hebrew-only**.
+Allura is currently **Hebrew-only**.
 
 All user-facing UI text must be in Hebrew only.
 
@@ -289,7 +289,7 @@ Examples:
 
 ## 7. Tone of Voice
 
-Beautiq should sound like a helpful business assistant, not a technical admin panel.
+Allura should sound like a helpful business assistant, not a technical admin panel.
 
 Tone should be:
 - Clear
@@ -354,7 +354,7 @@ Avoid:
 
 ## 10. Multi-Tenant Data Rules
 
-Beautiq is a multi-tenant SaaS product.
+Allura is a multi-tenant SaaS product.
 
 Tenant isolation is critical.
 
@@ -733,7 +733,7 @@ When implementing:
 After this file is added to the project, the first instruction to Claude Code should be:
 
 ```text
-Please read CLAUDE.md carefully and confirm that you understand the Beautiq project rules.
+Please read CLAUDE.md carefully and confirm that you understand the Allura project rules.
 
 Do not create the project yet.
 Do not write code yet.
@@ -750,7 +750,7 @@ After reading the rules, summarize:
 
 ## 23. Current Instruction Priority
 
-These project rules should guide all future work on Beautiq.
+These project rules should guide all future work on Allura.
 
 When the user asks for a new feature, always keep in mind:
 - Hebrew-only UI

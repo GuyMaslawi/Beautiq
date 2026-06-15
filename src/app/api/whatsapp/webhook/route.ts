@@ -272,8 +272,15 @@ export async function POST(request: NextRequest) {
       console.warn("[WhatsApp webhook] POST rejected — invalid X-Hub-Signature-256");
       return new NextResponse("Unauthorized", { status: 401 });
     }
+  } else if (process.env.NODE_ENV === "production") {
+    // Fail closed: in production an unsigned webhook could be forged to trigger
+    // global opt-outs. Never process unverified payloads when running live.
+    console.error(
+      "[WhatsApp webhook] META_WEBHOOK_APP_SECRET not set in production — rejecting unverified POST",
+    );
+    return new NextResponse("Forbidden", { status: 403 });
   } else {
-    console.warn("[WhatsApp webhook] META_WEBHOOK_APP_SECRET not set — signature verification skipped");
+    console.warn("[WhatsApp webhook] META_WEBHOOK_APP_SECRET not set — signature verification skipped (non-production)");
   }
 
   let payload: MetaWebhookPayload;
