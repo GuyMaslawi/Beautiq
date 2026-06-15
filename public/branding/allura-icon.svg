@@ -1,0 +1,25 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Premium calm blue gradient, diagonal top-left -> bottom-right -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1024" y2="1024" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#4F86F7"/>
+      <stop offset="0.55" stop-color="#2C5BE0"/>
+      <stop offset="1" stop-color="#1B36A8"/>
+    </linearGradient>
+    <!-- Soft top highlight for subtle premium depth (no harsh shadow) -->
+    <radialGradient id="glow" cx="0.5" cy="0.28" r="0.75">
+      <stop offset="0" stop-color="#ffffff" stop-opacity="0.16"/>
+      <stop offset="0.6" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Full-bleed opaque background (no transparency) -->
+  <rect x="0" y="0" width="1024" height="1024" fill="url(#bg)"/>
+  <rect x="0" y="0" width="1024" height="1024" fill="url(#glow)"/>
+
+  <!-- Centered white "A" built from strokes: crisp at every size, font-independent -->
+  <g fill="none" stroke="#ffffff" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M 300 782 L 512 250 L 724 782" stroke-width="122"/>
+    <line x1="374" y1="600" x2="650" y2="600" stroke-width="108"/>
+  </g>
+</svg>
