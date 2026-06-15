@@ -13,13 +13,11 @@ const FULL_CTX: GeneratorContext = {
   bookingDate: "12 בינואר",
   bookingTime: "14:30",
   price: "150",
-  depositAmount: "50",
 };
 
 const ALL_SCENARIOS: MessageScenario[] = [
   "booking_confirmation",
   "booking_reminder",
-  "deposit_request",
   "booking_cancelled",
   "booking_rescheduled",
   "after_treatment",
@@ -58,9 +56,8 @@ describe("generateMessage — full context", () => {
     expect(res.body).toContain("14:30");
   });
 
-  it("interpolates the deposit amount into the deposit request", () => {
-    const res = generateMessage("deposit_request", FULL_CTX, "regular");
-    expect(res.body).toContain("50");
+  it("never offers a deposit-request scenario", () => {
+    expect(ALL_SCENARIOS).not.toContain("deposit_request" as MessageScenario);
   });
 });
 
@@ -101,16 +98,6 @@ describe("generateMessage — missing required context", () => {
       expect(res.body).toBeTruthy();
       expect(res.missingContext).toEqual([]);
     }
-  });
-
-  it("deposit_request fails without depositAmount", () => {
-    const res = generateMessage("deposit_request", {
-      businessName: "סטודיו",
-      clientName: "דנה",
-      serviceName: "מניקור",
-      bookingDate: "12 בינואר",
-    });
-    expect(res.body).toBeNull();
   });
 });
 

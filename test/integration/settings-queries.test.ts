@@ -40,7 +40,6 @@ describe("getCancellationPolicy", () => {
       enabled: true,
       policyText: null,
       minNoticeHours: 24,
-      requireDepositToBook: false,
       lateCancellationHours: 12,
       lateCancellationFeeType: "fixed",
       lateCancellationFeeAmount: new Prisma.Decimal(50),

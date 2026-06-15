@@ -4,8 +4,7 @@
  * Shared by the public booking flow (create a hosted payment link) and the
  * webhook handler (apply a verified provider event). All writes are scoped by
  * businessId. A booking is NEVER auto-confirmed here — the booking stays
- * `pending`; only the money state (BookingPayment + Booking.depositStatus)
- * changes.
+ * `pending`; only the money state (the BookingPayment record) changes.
  *
  * Server-only.
  */
@@ -162,22 +161,16 @@ export async function applyPaymentWebhookEvent(
   }
 
   if (event.status === "paid") {
-    await prisma.$transaction([
-      prisma.bookingPayment.update({
-        where: { id: payment.id },
-        data: {
-          status: "paid",
-          paidAt: event.paidAt ?? new Date(),
-          providerPayloadJson: event.raw as object,
-        },
-      }),
-      // Reflect on the booking's deposit lifecycle. Booking stays `pending`
-      // (awaiting owner approval) — we never auto-confirm.
-      prisma.booking.update({
-        where: { id: payment.bookingId },
-        data: { depositStatus: "paid" },
-      }),
-    ]);
+    // The BookingPayment record is the authoritative money state. The booking
+    // stays `pending` (awaiting owner approval) — we never auto-confirm.
+    await prisma.bookingPayment.update({
+      where: { id: payment.id },
+      data: {
+        status: "paid",
+        paidAt: event.paidAt ?? new Date(),
+        providerPayloadJson: event.raw as object,
+      },
+    });
     return { applied: true };
   }
 
@@ -189,19 +182,13 @@ export async function applyPaymentWebhookEvent(
         ? "expired"
         : "failed";
 
-  await prisma.$transaction([
-    prisma.bookingPayment.update({
-      where: { id: payment.id },
-      data: {
-        status: nextStatus,
-        failedAt: new Date(),
-        providerPayloadJson: event.raw as object,
-      },
-    }),
-    prisma.booking.update({
-      where: { id: payment.bookingId },
-      data: { depositStatus: "failed" },
-    }),
-  ]);
+  await prisma.bookingPayment.update({
+    where: { id: payment.id },
+    data: {
+      status: nextStatus,
+      failedAt: new Date(),
+      providerPayloadJson: event.raw as object,
+    },
+  });
   return { applied: true };
 }

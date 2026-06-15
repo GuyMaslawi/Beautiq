@@ -50,17 +50,6 @@ export function generateGuidanceItems(
     });
   }
 
-  // C. Bookings with a pending deposit
-  if (data.pendingDepositCount > 0) {
-    items.push({
-      id: "pending-deposits",
-      title: GUIDANCE.rules.pendingDeposits.title,
-      description: GUIDANCE.rules.pendingDeposits.body,
-      priority: "important",
-      actionLabel: GUIDANCE.rules.pendingDeposits.action,
-      href: "/bookings",
-    });
-  }
 
   // E. Bookings awaiting approval
   if (data.pendingBookingsCount > 0) {
@@ -154,7 +143,7 @@ export function generateGuidanceItems(
     });
   }
 
-  // K. Pricing concerns — long services without deposit or price below manual range
+  // K. Pricing concerns — price below the manually defined market range
   if (data.pricingConcernCount > 0) {
     items.push({
       id: "pricing-concerns",

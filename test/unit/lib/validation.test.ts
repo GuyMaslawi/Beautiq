@@ -98,7 +98,15 @@ describe("validateService", () => {
     if (r.ok) {
       expect(r.value.durationMinutes).toBe(60);
       expect(r.value.price).toBe(150);
-      expect(r.value.requiresDeposit).toBe(false);
+    }
+  });
+
+  it("never surfaces deposit fields on a validated service", () => {
+    const r = validateService(base);
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect("requiresDeposit" in r.value).toBe(false);
+      expect("depositAmount" in r.value).toBe(false);
     }
   });
 
@@ -118,34 +126,18 @@ describe("validateService", () => {
     expect(validateService({ ...base, price: "-1" }).ok).toBe(false);
   });
 
-  it("requires deposit amount when requiresDeposit is checked", () => {
-    const r = validateService({ ...base, requiresDeposit: "true" });
-    expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.errors.depositAmount).toBeTruthy();
-  });
-
-  it("rejects deposit higher than price", () => {
+  it("ignores any deposit fields sent from the client", () => {
     const r = validateService({
       ...base,
       requiresDeposit: "true",
       depositAmount: "200",
     });
-    expect(r.ok).toBe(false);
-    if (!r.ok) expect(r.errors.depositAmount).toBeTruthy();
-  });
-
-  it("accepts a valid deposit and only keeps it when required", () => {
-    const r = validateService({
-      ...base,
-      requiresDeposit: "on",
-      depositAmount: "50",
-    });
+    // No deposit validation exists anymore — the service still validates fine.
     expect(r.ok).toBe(true);
-    if (r.ok) expect(r.value.depositAmount).toBe(50);
-
-    const noDep = validateService({ ...base, depositAmount: "50" });
-    expect(noDep.ok).toBe(true);
-    if (noDep.ok) expect(noDep.value.depositAmount).toBeUndefined();
+    if (r.ok) {
+      expect("requiresDeposit" in r.value).toBe(false);
+      expect("depositAmount" in r.value).toBe(false);
+    }
   });
 
   it("ignores an invalid category key but keeps valid ones", () => {

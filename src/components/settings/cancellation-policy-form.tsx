@@ -71,9 +71,6 @@ export function CancellationPolicyForm({
   const [feePercentage, setFeePercentage] = useState(
     initialValues?.lateCancellationFeePercentage ?? "",
   );
-  const [requireDepositToBook, setRequireDepositToBook] = useState(
-    initialValues?.requireDepositToBook ?? false,
-  );
 
   const resolvedHours =
     lateWindowPreset === "custom"
@@ -329,26 +326,6 @@ export function CancellationPolicyForm({
           </div>
         </div>
       )}
-
-      {/* Require deposit */}
-      <div className="space-y-1">
-        <label className="flex cursor-pointer items-center gap-3">
-          <input
-            type="checkbox"
-            name="requireDepositToBook"
-            value="true"
-            checked={requireDepositToBook}
-            onChange={(e) => setRequireDepositToBook(e.target.checked)}
-            className="h-5 w-5 rounded accent-primary"
-          />
-          <span className="text-foreground font-medium">
-            {SETTINGS.cancellationPolicy.requireDepositLabel}
-          </span>
-        </label>
-        <p className="text-muted pr-8 text-xs leading-relaxed">
-          {SETTINGS.cancellationPolicy.requireDepositHint}
-        </p>
-      </div>
 
       <Button type="submit" className="w-full sm:w-auto" disabled={isPending}>
         {isPending

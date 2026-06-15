@@ -20,18 +20,11 @@ const STATUS_LABELS: Record<BookingStatusFilter, string> = {
   cancelled: "בוטלו",
 };
 
-const DEPOSIT_OPTIONS = [
-  { value: "pending", label: "מקדמה שלא שולמה" },
-  { value: "paid", label: "מקדמה שולמה" },
-  { value: "not_required", label: "ללא מקדמה" },
-];
-
 interface BookingAdvancedFilterProps {
   services: Service[];
   currentStatus: BookingStatusFilter;
   currentServiceId: string | undefined;
-  currentDeposit: string | undefined;
-  /** Serialized params for everything except status/serviceId/deposit (filter, q, sort, dir) */
+  /** Serialized params for everything except status/serviceId (filter, q, sort, dir) */
   baseParams: string;
 }
 
@@ -39,7 +32,6 @@ export function BookingAdvancedFilter({
   services,
   currentStatus,
   currentServiceId,
-  currentDeposit,
   baseParams,
 }: BookingAdvancedFilterProps) {
   const [open, setOpen] = useState(false);
@@ -48,8 +40,7 @@ export function BookingAdvancedFilter({
 
   const activeCount =
     (currentStatus !== "all" ? 1 : 0) +
-    (currentServiceId ? 1 : 0) +
-    (currentDeposit ? 1 : 0);
+    (currentServiceId ? 1 : 0);
 
   // Close on click-outside
   useEffect(() => {
@@ -78,7 +69,6 @@ export function BookingAdvancedFilter({
     const advanced: Record<string, string | undefined> = {
       status: currentStatus !== "all" ? currentStatus : undefined,
       serviceId: currentServiceId,
-      deposit: currentDeposit,
       ...overrides,
     };
     Object.entries(advanced).forEach(([k, v]) => {
@@ -101,10 +91,6 @@ export function BookingAdvancedFilter({
   if (currentServiceId) {
     const svc = services.find((s) => s.id === currentServiceId);
     chips.push({ label: svc?.name ?? currentServiceId, clearUrl: buildUrl({ serviceId: undefined }) });
-  }
-  if (currentDeposit) {
-    const dep = DEPOSIT_OPTIONS.find((d) => d.value === currentDeposit);
-    chips.push({ label: dep?.label ?? currentDeposit, clearUrl: buildUrl({ deposit: undefined }) });
   }
 
   const isActive = open || activeCount > 0;
@@ -196,23 +182,6 @@ export function BookingAdvancedFilter({
                   </FilterSection>
                 )}
 
-                {/* Deposit */}
-                <FilterSection title="מקדמה">
-                  <FilterPill
-                    label="כל המקדמות"
-                    active={!currentDeposit}
-                    onClick={() => navigate(buildUrl({ deposit: undefined }))}
-                  />
-                  {DEPOSIT_OPTIONS.map((opt) => (
-                    <FilterPill
-                      key={opt.value}
-                      label={opt.label}
-                      active={currentDeposit === opt.value}
-                      onClick={() => navigate(buildUrl({ deposit: opt.value }))}
-                    />
-                  ))}
-                </FilterSection>
-
                 {/* Clear all */}
                 {activeCount > 0 && (
                   <div
@@ -221,7 +190,7 @@ export function BookingAdvancedFilter({
                   >
                     <button
                       onClick={() =>
-                        navigate(buildUrl({ status: undefined, serviceId: undefined, deposit: undefined }))
+                        navigate(buildUrl({ status: undefined, serviceId: undefined }))
                       }
                       className="w-full rounded-xl py-2 text-sm font-medium transition-opacity hover:opacity-75"
                       style={{ color: "#b86b8c", background: "rgba(184,107,140,0.07)" }}

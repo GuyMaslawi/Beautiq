@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import Link from "next/link";
-import { FileText, Clock, CreditCard, Settings2, ToggleLeft, Save } from "lucide-react";
+import { FileText, Clock, Settings2, ToggleLeft, Save } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Field } from "@/components/ui/field";
 import { Input } from "@/components/ui/input";
@@ -16,8 +16,6 @@ export interface ServiceInitialValues {
   description?: string;
   durationMinutes?: number;
   price?: string;
-  requiresDeposit?: boolean;
-  depositAmount?: string;
   bufferBeforeMinutes?: number;
   bufferAfterMinutes?: number;
   categoryKey?: string;
@@ -68,11 +66,6 @@ function initValues(
       initialValues?.durationMinutes?.toString() ??
       "",
     price: serverValues?.price ?? initialValues?.price ?? "",
-    requiresDeposit:
-      serverValues?.requiresDeposit ??
-      (initialValues?.requiresDeposit ? "true" : "false"),
-    depositAmount:
-      serverValues?.depositAmount ?? initialValues?.depositAmount ?? "",
     bufferBeforeMinutes:
       serverValues?.bufferBeforeMinutes ??
       initialValues?.bufferBeforeMinutes?.toString() ??
@@ -159,7 +152,6 @@ export function ServiceForm({
   const set = (field: keyof typeof fields) => (value: string) =>
     setFields((prev) => ({ ...prev, [field]: value }));
 
-  const showDeposit = fields.requiresDeposit === "true";
   const isActive = fields.isActive === "true";
 
   const initialDuration = initialValues?.durationMinutes;
@@ -255,59 +247,7 @@ export function ServiceForm({
           </Field>
         </SectionCard>
 
-        {/* Card 3: Deposit */}
-        <SectionCard
-          icon={CreditCard}
-          title={SERVICES.form.sectionDeposit}
-          subtitle="ניתן לגבות מקדמה בין 10₪ ל-500₪"
-        >
-          <label className="flex cursor-pointer items-center gap-3">
-            <input
-              type="checkbox"
-              name="requiresDeposit"
-              value="true"
-              checked={showDeposit}
-              onChange={(e) => set("requiresDeposit")(e.target.checked ? "true" : "false")}
-              className="h-5 w-5 rounded accent-primary"
-            />
-            <span className="text-foreground font-medium text-sm">
-              {SERVICES.form.requiresDepositLabel}
-            </span>
-          </label>
-          <p className="text-xs" style={{ color: "var(--muted)" }}>
-            {SERVICES.form.depositHint}
-          </p>
-
-          {showDeposit && (
-            <Field
-              label={SERVICES.form.depositAmountLabel}
-              htmlFor="depositAmount"
-              error={state.errors?.depositAmount}
-            >
-              <div className="relative">
-                <span
-                  className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 select-none text-base"
-                  style={{ color: "var(--muted)" }}
-                >
-                  ₪
-                </span>
-                <Input
-                  id="depositAmount"
-                  name="depositAmount"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  placeholder={SERVICES.form.depositAmountPlaceholder}
-                  value={fields.depositAmount}
-                  onChange={(e) => set("depositAmount")(e.target.value)}
-                  className="pr-10"
-                />
-              </div>
-            </Field>
-          )}
-        </SectionCard>
-
-        {/* Card 4: Advanced settings */}
+        {/* Card 3: Advanced settings */}
         <SectionCard
           icon={Settings2}
           title={SERVICES.form.sectionAdvanced}

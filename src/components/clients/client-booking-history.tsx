@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { BookingStatusBadge } from "@/components/bookings/booking-status-badge";
-import { DepositStatusBadge } from "@/components/deposits/deposit-status-badge";
 import { CLIENTS, BOOKINGS } from "@/lib/constants/he";
 import type { ClientBookingHistoryItem } from "@/server/clients/queries";
 
@@ -89,7 +88,7 @@ export function ClientBookingHistory({
               </div>
             </div>
 
-            {/* Status badge + deposit + link */}
+            {/* Status badge + link */}
             <div className="flex shrink-0 flex-col items-end gap-1.5">
               <div className="flex items-center gap-2">
                 <BookingStatusBadge status={booking.status} />
@@ -100,9 +99,6 @@ export function ClientBookingHistory({
                   {CLIENTS.detail.viewBooking}
                 </Link>
               </div>
-              {booking.depositStatus !== "not_required" && (
-                <DepositStatusBadge status={booking.depositStatus} />
-              )}
             </div>
           </div>
         );

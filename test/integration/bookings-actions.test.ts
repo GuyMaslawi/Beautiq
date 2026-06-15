@@ -169,28 +169,23 @@ describe("createBookingAction", () => {
     );
 
     const arg = prisma.booking.create.mock.calls[0][0] as {
-      data: { startTime: Date; endTime: Date; depositStatus: string };
+      data: { startTime: Date; endTime: Date };
     };
     const diffMinutes =
       (arg.data.endTime.getTime() - arg.data.startTime.getTime()) / 60000;
     expect(diffMinutes).toBe(75); // 60 + 10 + 5
-    expect(arg.data.depositStatus).toBe("not_required");
   });
 
-  it("marks deposit pending when the service requires a deposit", async () => {
-    prisma.service.findFirst.mockResolvedValue(
-      makeService({ id: "svc_1", requiresDeposit: true, depositAmount: 50 }),
-    );
+  it("never writes any deposit field when creating a booking", async () => {
+    prisma.service.findFirst.mockResolvedValue(makeService({ id: "svc_1" }));
     prisma.booking.create.mockResolvedValue({ id: "bkg_1" });
 
     await expect(createBookingAction({}, formData(validFields))).rejects.toThrow(
       "NEXT_REDIRECT",
     );
-    expect(prisma.booking.create).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: expect.objectContaining({ depositStatus: "pending" }),
-      }),
-    );
+    const arg = prisma.booking.create.mock.calls[0][0] as { data: Record<string, unknown> };
+    expect("depositStatus" in arg.data).toBe(false);
+    expect("depositAmountSnapshot" in arg.data).toBe(false);
   });
 
   it("returns a generic error (no leak) when booking creation throws", async () => {

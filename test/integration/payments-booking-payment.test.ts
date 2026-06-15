@@ -81,7 +81,7 @@ describe("applyPaymentWebhookEvent", () => {
     raw: { mock: true },
   };
 
-  it("marks the payment paid and the booking depositStatus paid (booking stays pending)", async () => {
+  it("marks the BookingPayment paid and never touches the booking (stays pending)", async () => {
     prisma.bookingPayment.findUnique.mockResolvedValue({
       id: "bp_1",
       status: "payment_link_created",
@@ -97,14 +97,8 @@ describe("applyPaymentWebhookEvent", () => {
         data: expect.objectContaining({ status: "paid" }),
       }),
     );
-    const bookingUpdate = prisma.booking.update.mock.calls[0][0] as {
-      where: { id: string };
-      data: { depositStatus: string };
-    };
-    expect(bookingUpdate.where.id).toBe("bkg_1");
-    expect(bookingUpdate.data.depositStatus).toBe("paid");
-    // Crucially, the booking status itself is never set to approved/confirmed here.
-    expect(bookingUpdate.data).not.toHaveProperty("status");
+    // The booking record is never mutated — payment state lives on BookingPayment.
+    expect(prisma.booking.update).not.toHaveBeenCalled();
   });
 
   it("is idempotent — a repeated event on a terminal payment is a no-op", async () => {
@@ -135,10 +129,7 @@ describe("applyPaymentWebhookEvent", () => {
     expect(prisma.bookingPayment.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: "failed" }) }),
     );
-    const bookingUpdate = prisma.booking.update.mock.calls[0][0] as {
-      data: { depositStatus: string };
-    };
-    expect(bookingUpdate.data.depositStatus).toBe("failed");
+    expect(prisma.booking.update).not.toHaveBeenCalled();
   });
 
   it("ignores an unknown transaction id", async () => {

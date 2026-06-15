@@ -150,20 +150,21 @@ describe("submitPublicBookingAction — validation & tenant safety", () => {
     expect(prisma.booking.create).not.toHaveBeenCalled();
   });
 
-  it("creates a pending public booking on success", async () => {
+  it("creates a pending public booking on success (no deposit fields)", async () => {
     prisma.business.findUnique.mockResolvedValue(makeBusiness({ id: BUSINESS_A }));
-    prisma.service.findFirst.mockResolvedValue(
-      makeService({ id: "svc_1", requiresDeposit: true, depositAmount: 50 }),
-    );
+    prisma.service.findFirst.mockResolvedValue(makeService({ id: "svc_1" }));
     prisma.booking.create.mockResolvedValue({ id: "bkg_1" });
 
     const res = await submitPublicBookingAction("studio-yofi", {}, formData(validFields));
     expect(res.success).toBe(true);
     expect(prisma.booking.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ status: "pending", source: "public", depositStatus: "pending" }),
+        data: expect.objectContaining({ status: "pending", source: "public" }),
       }),
     );
+    const arg = prisma.booking.create.mock.calls[0][0] as { data: Record<string, unknown> };
+    expect("depositStatus" in arg.data).toBe(false);
+    expect("depositAmountSnapshot" in arg.data).toBe(false);
     expect(syncClientStats).toHaveBeenCalled();
   });
 

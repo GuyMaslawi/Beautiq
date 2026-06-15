@@ -46,8 +46,6 @@ const validServiceFields = {
   description: "תיאור",
   durationMinutes: "60",
   price: "150",
-  requiresDeposit: "",
-  depositAmount: "",
   bufferBeforeMinutes: "0",
   bufferAfterMinutes: "0",
   categoryKey: "nails",

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock, Banknote, CreditCard, Sparkles } from "lucide-react";
+import { Clock, Banknote, Sparkles } from "lucide-react";
 import type { Prisma } from "@prisma/client";
 import { ToggleServiceButton } from "./toggle-service-button";
 import { SERVICES } from "@/lib/constants/he";
@@ -11,8 +11,6 @@ type ServiceCardProps = {
     description: string | null;
     durationMinutes: number;
     price: Prisma.Decimal;
-    requiresDeposit: boolean;
-    depositAmount: Prisma.Decimal | null;
     isActive: boolean;
   };
 };
@@ -31,11 +29,6 @@ function formatMinutes(minutes: number): string {
 }
 
 export function ServiceCard({ service }: ServiceCardProps) {
-  const depositDisplay =
-    service.requiresDeposit && service.depositAmount
-      ? `₪${Number(service.depositAmount).toLocaleString("en-US")}`
-      : null;
-
   return (
     <div
       className="overflow-hidden rounded-2xl border transition-shadow hover:shadow-md"
@@ -105,15 +98,6 @@ export function ServiceCard({ service }: ServiceCardProps) {
             </span>
           </span>
 
-          {/* Deposit */}
-          {depositDisplay && (
-            <span className="flex items-center gap-1.5 text-sm">
-              <CreditCard className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--muted)" }} />
-              <span className="font-medium" style={{ color: "var(--foreground-soft)" }}>
-                {SERVICES.card.deposit}: {depositDisplay}
-              </span>
-            </span>
-          )}
         </div>
 
         {/* Action bar */}

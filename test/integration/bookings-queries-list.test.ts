@@ -20,7 +20,6 @@ const prisma = (globalThis as Record<string, unknown>)
 import { resetPrismaMock } from "../helpers/prisma-mock";
 import {
   getBookings,
-  getPendingDepositBookings,
   getCalendarBookings,
   getLateCancellationsThisWeek,
   getBookingSummary,
@@ -79,17 +78,11 @@ describe("getBookings", () => {
     expect(where.client.OR[0].fullName.contains).toBe("אבי");
   });
 
-  it("ignores an invalid deposit-status filter (normalizes to no filter)", async () => {
+  it("never scopes the query by any deposit status (deposits are removed)", async () => {
     prisma.booking.findMany.mockResolvedValue([]);
-    await getBookings(tenant, { depositStatusFilter: "garbage" });
+    await getBookings(tenant);
     const where = prisma.booking.findMany.mock.calls[0][0].where;
     expect(where).not.toHaveProperty("depositStatus");
-  });
-
-  it("applies a valid deposit-status filter", async () => {
-    prisma.booking.findMany.mockResolvedValue([]);
-    await getBookings(tenant, { depositStatusFilter: "paid" });
-    expect(prisma.booking.findMany.mock.calls[0][0].where.depositStatus).toBe("paid");
   });
 
   it("sorts by client name (Hebrew-aware) at the app level when requested", async () => {
@@ -99,17 +92,6 @@ describe("getBookings", () => {
     ]);
     const res = await getBookings(tenant, { sortField: "clientName", sortDir: "asc" });
     expect(res.map((b) => b.client.fullName)).toEqual(["אבי", "תמר"]);
-  });
-});
-
-describe("getPendingDepositBookings", () => {
-  it("filters to pending deposits scoped by businessId", async () => {
-    prisma.booking.findMany.mockResolvedValue([]);
-    await getPendingDepositBookings(tenant);
-    expect(prisma.booking.findMany.mock.calls[0][0].where).toEqual({
-      businessId: BUSINESS_A,
-      depositStatus: "pending",
-    });
   });
 });
 
@@ -201,7 +183,6 @@ describe("getBookingSummary", () => {
       weekCount: 0,
       pendingCount: 0,
       cancelledCount: 0,
-      pendingDepositCount: 0,
     });
     for (const call of prisma.booking.count.mock.calls) {
       expect(call[0].where.businessId).toBe(BUSINESS_A);

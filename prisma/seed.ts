@@ -41,7 +41,7 @@ const CATEGORIES: { key: BusinessCategoryKey; nameHe: string }[] = [
  *
  * Bodies use dynamic variables in {curlyBraces}:
  *   {clientName} {businessName} {serviceName} {bookingDate} {bookingTime}
- *   {price} {depositAmount}
+ *   {price}
  */
 const SYSTEM_TEMPLATES: {
   type: MessageTemplateType;

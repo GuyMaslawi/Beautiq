@@ -57,7 +57,6 @@ export interface RevenueForecastData {
   topServices: TopService[];
 
   // Action context
-  pendingDepositsCount: number;
   atRiskCount: number;
   emptySlotsCount: number;
   avgServicePrice: number; // for empty slot revenue estimate
@@ -157,7 +156,6 @@ export async function getRevenueForecastData(
     lostAgg,
     lastMonthAgg,
     completedBookings,
-    pendingDepositsCount,
     atRiskCount,
     avgServiceAgg,
     activeServicesCount,
@@ -217,16 +215,6 @@ export async function getRevenueForecastData(
       select: {
         priceSnapshot: true,
         service: { select: { id: true, name: true } },
-      },
-    }),
-
-    // Pending deposits — upcoming bookings where deposit is expected but not paid
-    prisma.booking.count({
-      where: {
-        businessId: tenant.businessId,
-        status: { in: ["pending", "approved"] },
-        startTime: { gt: now },
-        depositStatus: "pending",
       },
     }),
 
@@ -367,7 +355,6 @@ export async function getRevenueForecastData(
     avgBookingValue,
     confidence,
     topServices,
-    pendingDepositsCount,
     atRiskCount,
     emptySlotsCount,
     avgServicePrice,

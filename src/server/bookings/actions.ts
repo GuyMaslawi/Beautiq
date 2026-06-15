@@ -101,11 +101,7 @@ export async function createBookingAction(
         endTime,
         status: "approved",
         source: "manual",
-        depositStatus: service.requiresDeposit ? "pending" : "not_required",
         priceSnapshot: new Prisma.Decimal(service.price),
-        depositAmountSnapshot: service.depositAmount
-          ? new Prisma.Decimal(service.depositAmount)
-          : null,
         durationMinutesSnapshot: service.durationMinutes,
         notes: value.notes || null,
       },

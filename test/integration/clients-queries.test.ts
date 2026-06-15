@@ -162,7 +162,6 @@ describe("getClientDetail", () => {
             endTime: past,
             priceSnapshot: 150,
             durationMinutesSnapshot: 60,
-            depositStatus: "paid",
             service: { id: "svc_1", name: "מניקור" },
           }),
         ],

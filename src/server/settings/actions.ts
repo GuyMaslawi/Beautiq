@@ -124,7 +124,6 @@ export async function updateCancellationPolicyAction(
     enabled: String(formData.get("enabled") ?? ""),
     policyText: String(formData.get("policyText") ?? ""),
     minNoticeHours: String(formData.get("minNoticeHours") ?? ""),
-    requireDepositToBook: String(formData.get("requireDepositToBook") ?? ""),
     lateCancellationHours: String(formData.get("lateCancellationHours") ?? ""),
     lateCancellationFeeType: String(formData.get("lateCancellationFeeType") ?? "none"),
     lateCancellationFeeAmount: String(formData.get("lateCancellationFeeAmount") ?? ""),
@@ -144,7 +143,6 @@ export async function updateCancellationPolicyAction(
         enabled: value.enabled,
         policyText: value.policyText ?? null,
         minNoticeHours: value.minNoticeHours ?? null,
-        requireDepositToBook: value.requireDepositToBook,
         lateCancellationHours: value.lateCancellationHours ?? null,
         lateCancellationFeeType: value.lateCancellationFeeType,
         lateCancellationFeeAmount:
@@ -160,7 +158,6 @@ export async function updateCancellationPolicyAction(
         enabled: value.enabled,
         policyText: value.policyText ?? null,
         minNoticeHours: value.minNoticeHours ?? null,
-        requireDepositToBook: value.requireDepositToBook,
         lateCancellationHours: value.lateCancellationHours ?? null,
         lateCancellationFeeType: value.lateCancellationFeeType,
         lateCancellationFeeAmount:

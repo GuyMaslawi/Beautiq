@@ -6,9 +6,6 @@ function raw(over: Record<string, string> = {}) {
     enabled: "true",
     provider: "mock",
     requirement: "none",
-    depositType: "fixed_amount",
-    depositAmount: "",
-    depositPercentage: "",
     allowPayAtBusiness: "true",
     instructions: "",
     ...over,
@@ -26,54 +23,35 @@ describe("validatePaymentSettings", () => {
     }
   });
 
-  it("requires a positive deposit amount for fixed deposits", () => {
-    const res = validatePaymentSettings(
-      raw({ requirement: "deposit", depositType: "fixed_amount", depositAmount: "0" }),
-    );
-    expect(res.ok).toBe(false);
-    if (!res.ok) expect(res.errors.depositAmount).toBeTruthy();
-  });
-
-  it("converts a fixed deposit amount to agorot", () => {
-    const res = validatePaymentSettings(
-      raw({ requirement: "deposit", depositType: "fixed_amount", depositAmount: "50" }),
-    );
+  it("accepts a full_payment policy", () => {
+    const res = validatePaymentSettings(raw({ requirement: "full_payment" }));
     expect(res.ok).toBe(true);
-    if (res.ok) expect(res.value.depositAmountMinor).toBe(5000);
+    if (res.ok) expect(res.value.requirement).toBe("full_payment");
   });
 
-  it("rejects an out-of-range deposit percentage", () => {
-    for (const pct of ["0", "101", "-5", "abc"]) {
-      const res = validatePaymentSettings(
-        raw({ requirement: "deposit", depositType: "percentage", depositPercentage: pct }),
-      );
-      expect(res.ok).toBe(false);
+  it("never accepts a deposit requirement — falls back to none", () => {
+    const res = validatePaymentSettings(raw({ requirement: "deposit" }));
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.value.requirement).toBe("none");
+  });
+
+  it("does not surface any deposit fields on the validated value", () => {
+    const res = validatePaymentSettings(raw({ requirement: "full_payment" }));
+    expect(res.ok).toBe(true);
+    if (res.ok) {
+      expect("depositType" in res.value).toBe(false);
+      expect("depositAmountMinor" in res.value).toBe(false);
+      expect("depositPercentage" in res.value).toBe(false);
     }
   });
 
-  it("accepts a valid deposit percentage", () => {
-    const res = validatePaymentSettings(
-      raw({ requirement: "deposit", depositType: "percentage", depositPercentage: "30" }),
-    );
-    expect(res.ok).toBe(true);
-    if (res.ok) expect(res.value.depositPercentage).toBe(30);
-  });
-
   it("falls back to safe enum defaults on unknown values", () => {
-    const res = validatePaymentSettings(
-      raw({ provider: "evil", requirement: "wat", depositType: "nope" }),
-    );
+    const res = validatePaymentSettings(raw({ provider: "evil", requirement: "wat" }));
     expect(res.ok).toBe(true);
     if (res.ok) {
       expect(res.value.provider).toBe("mock");
       expect(res.value.requirement).toBe("none");
-      expect(res.value.depositType).toBe("fixed_amount");
     }
-  });
-
-  it("does not require deposit fields when requirement is full_payment", () => {
-    const res = validatePaymentSettings(raw({ requirement: "full_payment" }));
-    expect(res.ok).toBe(true);
   });
 
   it("trims and caps instructions length", () => {

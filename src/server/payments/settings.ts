@@ -7,7 +7,6 @@
 
 import type {
   BookingPaymentStatus,
-  DepositKind,
   PaymentProviderKind,
   PaymentRequirement,
 } from "@prisma/client";
@@ -17,10 +16,6 @@ export interface PaymentSettingsData {
   enabled: boolean;
   provider: PaymentProviderKind;
   requirement: PaymentRequirement;
-  depositType: DepositKind;
-  /** Shekels string for the form (e.g. "150") or "". */
-  depositAmount: string;
-  depositPercentage: string;
   allowPayAtBusiness: boolean;
   instructions: string;
 }
@@ -29,9 +24,6 @@ const DEFAULT_SETTINGS: PaymentSettingsData = {
   enabled: false,
   provider: "mock",
   requirement: "none",
-  depositType: "fixed_amount",
-  depositAmount: "",
-  depositPercentage: "",
   allowPayAtBusiness: true,
   instructions: "",
 };
@@ -49,13 +41,6 @@ export async function getPaymentSettings(
     enabled: row.enabled,
     provider: row.provider,
     requirement: row.requirement,
-    depositType: row.depositType,
-    depositAmount:
-      row.depositAmountMinor != null
-        ? String(row.depositAmountMinor / 100)
-        : "",
-    depositPercentage:
-      row.depositPercentage != null ? String(row.depositPercentage) : "",
     allowPayAtBusiness: row.allowPayAtBusiness,
     instructions: row.instructions ?? "",
   };
@@ -63,9 +48,6 @@ export async function getPaymentSettings(
 
 export interface PublicPaymentPolicy {
   requirement: PaymentRequirement;
-  depositType: DepositKind;
-  depositAmountMinor: number | null;
-  depositPercentage: number | null;
   allowPayAtBusiness: boolean;
   instructions: string | null;
   provider: PaymentProviderKind;
@@ -84,9 +66,6 @@ export async function getPublicPaymentPolicy(
     select: {
       enabled: true,
       requirement: true,
-      depositType: true,
-      depositAmountMinor: true,
-      depositPercentage: true,
       allowPayAtBusiness: true,
       instructions: true,
       provider: true,
@@ -94,16 +73,13 @@ export async function getPublicPaymentPolicy(
   });
 
   if (!row || !row.enabled) return null;
-  // Online payment is only surfaced when a deposit or full payment is required.
+  // Online payment is only surfaced when a full payment is required.
   // `allowPayAtBusiness` then acts as a "pay at the business instead" escape
   // hatch shown alongside the secure-payment CTA.
   if (row.requirement === "none") return null;
 
   return {
     requirement: row.requirement,
-    depositType: row.depositType,
-    depositAmountMinor: row.depositAmountMinor,
-    depositPercentage: row.depositPercentage,
     allowPayAtBusiness: row.allowPayAtBusiness,
     instructions: row.instructions,
     provider: row.provider,

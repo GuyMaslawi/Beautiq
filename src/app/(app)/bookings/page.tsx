@@ -80,7 +80,6 @@ const TABLE_COLS: ColDef[] = [
   { sortable: true,  field: "duration",   label: "משך זמן" },
   { sortable: true,  field: "price",      label: "מחיר" },
   { sortable: true,  field: "status",     label: "סטטוס" },
-  { sortable: false, label: "מקדמה" },
   { sortable: false, label: "פעולות" },
 ];
 
@@ -191,7 +190,6 @@ export default async function BookingsPage({
     created?: string;
     q?: string;
     serviceId?: string;
-    deposit?: string;
     sort?: string;
     dir?: string;
   }>;
@@ -206,7 +204,6 @@ export default async function BookingsPage({
     created,
     q: rawSearch,
     serviceId: rawServiceId,
-    deposit: rawDeposit,
     sort: rawSort,
     dir: rawDir,
   } = await searchParams;
@@ -229,7 +226,6 @@ export default async function BookingsPage({
 
   const search = rawSearch?.trim() || undefined;
   const serviceId = rawServiceId || undefined;
-  const depositStatusFilter = rawDeposit || undefined;
 
   const validSortFields: BookingSortField[] = ["startTime", "price", "duration", "status", "createdAt", "clientName"];
   const sortField: BookingSortField =
@@ -246,7 +242,7 @@ export default async function BookingsPage({
   const [bookings, summary, services, cancellationPolicy, calBookings] = await Promise.all([
     isCalendarView
       ? Promise.resolve([])
-      : getBookings(tenant, { filter, statusFilter, search, serviceId, depositStatusFilter, sortField, sortDir, smartSort: !hasExplicitSort }),
+      : getBookings(tenant, { filter, statusFilter, search, serviceId, sortField, sortDir, smartSort: !hasExplicitSort }),
     getBookingSummary(tenant),
     isCalendarView
       ? Promise.resolve([])
@@ -281,7 +277,6 @@ export default async function BookingsPage({
     if (statusFilter !== "all") base.status = statusFilter;
     if (search) base.q = search;
     if (serviceId) base.serviceId = serviceId;
-    if (depositStatusFilter) base.deposit = depositStatusFilter;
     if (sortField !== "startTime") base.sort = sortField;
     if (rawDir) base.dir = sortDir;
     const merged = { ...base, ...overrides };
@@ -304,8 +299,8 @@ export default async function BookingsPage({
   // Params string for search input client component (all except "q")
   const searchOtherParams = buildParams({ q: undefined });
 
-  // Params for advanced filter component — everything except status/serviceId/deposit
-  const advancedFilterBaseParams = buildParams({ status: undefined, serviceId: undefined, deposit: undefined });
+  // Params for advanced filter component — everything except status/serviceId
+  const advancedFilterBaseParams = buildParams({ status: undefined, serviceId: undefined });
 
   return (
     <div className={isCalendarView ? "w-full space-y-3" : "mx-auto w-full max-w-6xl space-y-6"}>
@@ -408,23 +403,6 @@ export default async function BookingsPage({
             icon={<CalendarRange className="h-3.5 w-3.5" />}
             compact
           />
-          {summary.pendingDepositCount > 0 && (
-            <div
-              className="flex items-center gap-2 rounded-xl px-3 py-2 text-xs font-medium"
-              style={{
-                background: "rgba(254,246,228,0.80)",
-                border: "1px solid rgba(184,150,10,0.20)",
-                color: "#7a6400",
-              }}
-            >
-              <span>💳</span>
-              <span>
-                {summary.pendingDepositCount === 1
-                  ? "תור אחד ללא מקדמה"
-                  : `${summary.pendingDepositCount} ללא מקדמה`}
-              </span>
-            </div>
-          )}
         </div>
       ) : (
         <>
@@ -453,21 +431,6 @@ export default async function BookingsPage({
               icon={<CalendarRange className="h-4 w-4" />}
             />
           </div>
-
-          {/* Pending deposit alert — list mode only */}
-          {summary.pendingDepositCount > 0 && (
-            <div
-              className="flex items-center gap-3 rounded-xl border px-4 py-3"
-              style={{ borderColor: "rgba(184,150,10,0.25)", background: "rgba(184,150,10,0.06)" }}
-            >
-              <span className="text-sm" style={{ color: "#b87c1e" }}>💳</span>
-              <p className="text-sm font-medium" style={{ color: "#7a6400" }}>
-                {summary.pendingDepositCount === 1
-                  ? "תור אחד ללא מקדמה — שלחי בקשה ללקוחה"
-                  : `${summary.pendingDepositCount} תורים ללא מקדמה — כדאי לשלוח בקשה`}
-              </p>
-            </div>
-          )}
         </>
       )}
 
@@ -508,7 +471,6 @@ export default async function BookingsPage({
               services={services}
               currentStatus={statusFilter}
               currentServiceId={serviceId}
-              currentDeposit={depositStatusFilter}
               baseParams={advancedFilterBaseParams}
             />
           </div>
@@ -529,12 +491,6 @@ export default async function BookingsPage({
             } else if (statusFilter === "cancelled") {
               title = "אין פגישות שבוטלו";
               body = "פגישות שבוטלו יופיעו כאן.";
-            } else if (depositStatusFilter === "pending") {
-              title = "אין כרגע מקדמות שדורשות טיפול";
-              body = "כל המקדמות מסודרות. כשתור ידרוש מקדמה, הוא יופיע כאן.";
-            } else if (depositStatusFilter === "paid") {
-              title = "לא נמצאו תורים עם מקדמה ששולמה";
-              body = "תורים שבהם המקדמה אושרה יופיעו כאן.";
             }
             return (
               <EmptyState

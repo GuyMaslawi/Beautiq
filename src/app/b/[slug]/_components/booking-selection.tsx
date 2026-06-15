@@ -30,7 +30,7 @@ export interface BookingSelection {
   active: boolean;
   /** Amount required online, in agorot (0 / undefined when none). */
   amountMinor?: number;
-  paymentKind?: "deposit" | "full" | "none";
+  paymentKind?: "full" | "none";
 }
 
 interface Ctx {
@@ -116,9 +116,7 @@ export function AppointmentSummary({
           style={{ background: `${brand}0d` }}
         >
           <span className="text-xs text-[var(--muted)]">
-            {selection.paymentKind === "deposit"
-              ? PAYMENTS.publicStep.depositAmountLabel
-              : PAYMENTS.publicStep.fullAmountLabel}
+            {PAYMENTS.publicStep.fullAmountLabel}
           </span>
           <span className="text-base font-bold" style={{ color: brand }}>
             {amountLabel}

@@ -27,7 +27,7 @@ export default async function NewServicePage() {
           {SERVICES.form.createTitle}
         </h1>
         <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
-          הגדירי שם, מחיר, זמן טיפול ואפשרויות מקדמה
+          הגדירי שם, מחיר וזמן טיפול
         </p>
       </div>
 

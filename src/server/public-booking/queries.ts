@@ -6,8 +6,6 @@ export interface PublicService {
   description: string | null;
   durationMinutes: number;
   price: string;
-  requiresDeposit: boolean;
-  depositAmount: string | null;
 }
 
 export interface PublicCancellationPolicy {
@@ -103,8 +101,6 @@ export async function getPublicBusiness(
           description: true,
           durationMinutes: true,
           price: true,
-          requiresDeposit: true,
-          depositAmount: true,
         },
         orderBy: { name: "asc" },
       },
@@ -179,8 +175,6 @@ export async function getPublicBusiness(
       description: s.description,
       durationMinutes: s.durationMinutes,
       price: s.price.toString(),
-      requiresDeposit: s.requiresDeposit,
-      depositAmount: s.depositAmount ? s.depositAmount.toString() : null,
     })),
     cancellationPolicy,
     galleryImages: business.galleryImages.map((g) => ({

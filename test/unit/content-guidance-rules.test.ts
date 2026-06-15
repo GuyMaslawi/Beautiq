@@ -6,7 +6,6 @@ function data(overrides: Partial<GuidanceQueryData> = {}): GuidanceQueryData {
   return {
     activeServicesCount: 1,
     activeAvailabilityCount: 1,
-    pendingDepositCount: 0,
     todayBookingsCount: 0,
     pendingBookingsCount: 0,
     lostClientsCount: 0,
@@ -44,10 +43,12 @@ describe("generateGuidanceItems — setup blockers (important)", () => {
 });
 
 describe("generateGuidanceItems — individual rules", () => {
-  it("flags pending deposits (C)", () => {
-    expect(ids(generateGuidanceItems(data({ pendingDepositCount: 2 }), 0))).toContain(
-      "pending-deposits",
+  it("never emits a deposit-related guidance card", () => {
+    const items = generateGuidanceItems(
+      data({ pendingBookingsCount: 1, todayBookingsCount: 1 }),
+      0,
     );
+    expect(ids(items)).not.toContain("pending-deposits");
   });
 
   it("flags pending bookings (E)", () => {
@@ -123,7 +124,7 @@ describe("generateGuidanceItems — sorting and capping", () => {
   it("sorts important before recommended before info", () => {
     const items = generateGuidanceItems(
       data({
-        pendingDepositCount: 1, // important
+        pendingBookingsCount: 1, // important
         todayBookingsCount: 1, // recommended
         noShowClientsCount: 1, // info
       }),
@@ -142,7 +143,6 @@ describe("generateGuidanceItems — sorting and capping", () => {
       data({
         activeServicesCount: 0,
         activeAvailabilityCount: 0,
-        pendingDepositCount: 1,
         pendingBookingsCount: 1,
         todayBookingsCount: 1,
         lostClientsCount: 1,
@@ -160,8 +160,8 @@ describe("generateGuidanceItems — sorting and capping", () => {
       data({
         activeServicesCount: 0, // important
         activeAvailabilityCount: 0, // important
-        pendingDepositCount: 1, // important
         pendingBookingsCount: 1, // important
+        todayBookingsCount: 1, // recommended
         noShowClientsCount: 1, // info — should be dropped first
         recentCompletedBookingsCount: 1, // recommended
         pricingConcernCount: 1, // info
@@ -175,7 +175,7 @@ describe("generateGuidanceItems — sorting and capping", () => {
 
   it("each item carries Hebrew title, description and action label", () => {
     const items = generateGuidanceItems(
-      data({ activeServicesCount: 0, pendingDepositCount: 1 }),
+      data({ activeServicesCount: 0, pendingBookingsCount: 1 }),
       0,
     );
     for (const item of items) {

@@ -21,8 +21,6 @@ const SERVICES: PublicService[] = [
     description: "מניקור מלא בגימור ג'ל",
     durationMinutes: 60,
     price: "150",
-    requiresDeposit: false,
-    depositAmount: null,
   },
   {
     id: "svc-2",
@@ -30,8 +28,6 @@ const SERVICES: PublicService[] = [
     description: null,
     durationMinutes: 90,
     price: "200",
-    requiresDeposit: true,
-    depositAmount: "50",
   },
 ];
 
@@ -77,12 +73,12 @@ describe("BookingRequestForm — service step", () => {
     expect(enabled).toBeEnabled();
   });
 
-  it("shows the deposit notice only when a deposit-required service is selected", async () => {
+  it("never shows any deposit notice (deposits are removed)", async () => {
     renderForm();
-    expect(screen.queryByText(/נדרשת מקדמה לשירות זה/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/מקדמה/)).not.toBeInTheDocument();
 
     await userEvent.click(screen.getByText("פדיקור"));
-    expect(screen.getByText(/נדרשת מקדמה לשירות זה/)).toBeInTheDocument();
+    expect(screen.queryByText(/מקדמה/)).not.toBeInTheDocument();
   });
 
   it("shows prices by default and hides them when showPrices is false", () => {

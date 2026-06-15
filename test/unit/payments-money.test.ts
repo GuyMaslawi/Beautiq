@@ -28,12 +28,7 @@ describe("money conversions", () => {
 });
 
 describe("computePaymentAmount", () => {
-  const base: PaymentPolicy = {
-    requirement: "none",
-    depositType: "fixed_amount",
-    depositAmountMinor: null,
-    depositPercentage: null,
-  };
+  const base: PaymentPolicy = { requirement: "none" };
 
   it("requires nothing when requirement is none", () => {
     expect(computePaymentAmount(base, 15000)).toEqual({
@@ -44,56 +39,19 @@ describe("computePaymentAmount", () => {
 
   it("computes full payment as the whole price", () => {
     expect(
-      computePaymentAmount({ ...base, requirement: "full_payment" }, 15000),
+      computePaymentAmount({ requirement: "full_payment" }, 15000),
     ).toEqual({ amountMinor: 15000, kind: "full" });
   });
 
-  it("computes a fixed-amount deposit", () => {
-    expect(
-      computePaymentAmount(
-        {
-          ...base,
-          requirement: "deposit",
-          depositType: "fixed_amount",
-          depositAmountMinor: 5000,
-        },
-        15000,
-      ),
-    ).toEqual({ amountMinor: 5000, kind: "deposit" });
+  it("never produces a partial/deposit amount — full payment equals the price", () => {
+    const result = computePaymentAmount({ requirement: "full_payment" }, 18000);
+    expect(result.kind).toBe("full");
+    expect(result.amountMinor).toBe(18000);
   });
 
-  it("computes a percentage deposit", () => {
+  it("clamps a negative price to zero", () => {
     expect(
-      computePaymentAmount(
-        {
-          ...base,
-          requirement: "deposit",
-          depositType: "percentage",
-          depositPercentage: 30,
-        },
-        15000,
-      ),
-    ).toEqual({ amountMinor: 4500, kind: "deposit" });
-  });
-
-  it("clamps a deposit larger than the price down to the price", () => {
-    expect(
-      computePaymentAmount(
-        {
-          ...base,
-          requirement: "deposit",
-          depositType: "fixed_amount",
-          depositAmountMinor: 99999,
-        },
-        15000,
-      ).amountMinor,
-    ).toBe(15000);
-  });
-
-  it("treats a missing deposit config as zero (no link will be created)", () => {
-    expect(
-      computePaymentAmount({ ...base, requirement: "deposit" }, 15000)
-        .amountMinor,
+      computePaymentAmount({ requirement: "full_payment" }, -500).amountMinor,
     ).toBe(0);
   });
 });

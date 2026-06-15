@@ -412,20 +412,10 @@ function buildRecommendations(data: {
   emptySlotsCount: number;
   avgServicePrice: number;
   atRiskCount: number;
-  pendingDepositsCount: number;
   hasEnoughData: boolean;
 }): ActionRec[] {
   const recs: ActionRec[] = [];
   const RF = REVENUE_FORECAST.recommendations;
-
-  if (data.pendingDepositsCount > 0) {
-    recs.push({
-      text: RF.pendingDeposits(data.pendingDepositsCount),
-      action: RF.pendingDepositsAction,
-      href: RF.pendingDepositsHref,
-      color: "rose",
-    });
-  }
 
   if (data.emptySlotsCount > 0 && data.avgServicePrice > 0) {
     const estimate = data.emptySlotsCount * data.avgServicePrice;
@@ -687,7 +677,6 @@ export default async function RevenueForecastPage() {
     emptySlotsCount: data.emptySlotsCount,
     avgServicePrice: data.avgServicePrice,
     atRiskCount: data.atRiskCount,
-    pendingDepositsCount: data.pendingDepositsCount,
     hasEnoughData: data.hasEnoughData,
   });
 

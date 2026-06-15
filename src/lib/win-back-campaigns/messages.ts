@@ -7,7 +7,6 @@ export type OfferType =
   | "discount_10"
   | "upgrade_gift"
   | "special_slot"
-  | "reduced_deposit"
   | "personal";
 
 export const OFFER_TEXT: Record<OfferType, string> = {
@@ -15,7 +14,6 @@ export const OFFER_TEXT: Record<OfferType, string> = {
   discount_10: "10% הנחה",
   upgrade_gift: "שדרוג טיפול מתנה",
   special_slot: "תור פנוי מיוחד",
-  reduced_deposit: "מקדמה מופחתת",
   personal: "הטבה אישית",
 };
 
@@ -75,7 +73,6 @@ const OFFER_MESSAGE_LINES: Record<OfferType, string> = {
   discount_10: "\n\n🎁 ויש עוד בשורה טובה — הכנתי לך 10% הנחה על התור הקרוב!",
   upgrade_gift: "\n\n🎁 ויש עוד — הכנתי לך שדרוג טיפול מתנה לפגישה הבאה!",
   special_slot: "\n\n📅 שמרתי לך תור פנוי מיוחד — רק תגידי מתי את פנויה.",
-  reduced_deposit: "\n\n💳 והפעם המקדמה תהיה מופחתת במיוחד בשבילך.",
   personal: "\n\n🎁 הכנתי לך הטבה אישית מיוחדת — ספרי לי מתי את פנויה.",
 };
 

@@ -54,7 +54,6 @@ describe("getRevenueForecastData", () => {
       expect(call[0].where.businessId).toBe(BUSINESS_A);
     }
     expect(prisma.booking.findMany.mock.calls[0][0].where.businessId).toBe(BUSINESS_A);
-    expect(prisma.booking.count.mock.calls[0][0].where.businessId).toBe(BUSINESS_A);
     expect(prisma.client.count.mock.calls[0][0].where.businessId).toBe(BUSINESS_A);
     expect(prisma.service.aggregate.mock.calls[0][0].where.businessId).toBe(BUSINESS_A);
     expect(prisma.service.count.mock.calls[0][0].where.businessId).toBe(BUSINESS_A);

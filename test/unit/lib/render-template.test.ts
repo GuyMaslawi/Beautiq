@@ -4,7 +4,7 @@ import { renderTemplate } from "@/lib/messages/render-template";
 describe("renderTemplate", () => {
   it("replaces all known variables", () => {
     const body =
-      "היי {clientName}, התור שלך ל־{serviceName} אצל {businessName} נקבע ל־{bookingDate} בשעה {bookingTime}. מחיר: {price}, מקדמה: {depositAmount}";
+      "היי {clientName}, התור שלך ל־{serviceName} אצל {businessName} נקבע ל־{bookingDate} בשעה {bookingTime}. מחיר: {price}";
     const out = renderTemplate(body, {
       clientName: "דנה",
       serviceName: "מניקור",
@@ -12,7 +12,6 @@ describe("renderTemplate", () => {
       bookingDate: "1 ביולי",
       bookingTime: "10:00",
       price: "150",
-      depositAmount: "50",
     });
     expect(out).toContain("דנה");
     expect(out).toContain("מניקור");

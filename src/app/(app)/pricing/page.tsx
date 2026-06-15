@@ -38,7 +38,6 @@ export default async function PricingPage() {
           {
             durationMinutes: service.durationMinutes,
             price: service.price,
-            requiresDeposit: service.requiresDeposit,
             completedBookingCount: service.completedBookingCount,
             marketMinPrice: service.marketMinPrice,
             marketAveragePrice: service.marketAveragePrice,
@@ -56,7 +55,7 @@ export default async function PricingPage() {
       <PageHeader
         icon={TrendingUp}
         title={PRICING.pageTitle}
-        subtitle="בדיקה מהירה של מחיר, זמן טיפול, מקדמה ורווחיות השירותים."
+        subtitle="בדיקה מהירה של מחיר, זמן טיפול ורווחיות השירותים."
       />
 
       {/* Summary cards */}

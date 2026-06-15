@@ -6,7 +6,6 @@ export const HIGH_HOURLY_THRESHOLD = 1.4; // above 140 % of avg → high
 
 // Duration thresholds (minutes)
 export const LONG_SERVICE_MINUTES = 90; // "long service" label
-export const DEPOSIT_RISK_MINUTES = 60; // deposit suggestion for long services
 
 // How many completed bookings puts a service in the "popular" tier relative to
 // the business average (e.g. 1.5× = 50 % more than the average service).

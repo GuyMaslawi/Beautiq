@@ -61,7 +61,6 @@ describe("validateCancellationPolicy", () => {
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.value.enabled).toBe(false);
-      expect(r.value.requireDepositToBook).toBe(false);
       expect(r.value.lateCancellationFeeType).toBe("none");
       expect(r.value.minNoticeHours).toBeUndefined();
     }
@@ -70,13 +69,17 @@ describe("validateCancellationPolicy", () => {
   it("parses boolean-ish fields from string 'true'", () => {
     const r = validateCancellationPolicy({
       enabled: "true",
-      requireDepositToBook: "true",
     });
     expect(r.ok).toBe(true);
     if (r.ok) {
       expect(r.value.enabled).toBe(true);
-      expect(r.value.requireDepositToBook).toBe(true);
     }
+  });
+
+  it("never surfaces a deposit-requirement field", () => {
+    const r = validateCancellationPolicy({ enabled: "true" });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect("requireDepositToBook" in r.value).toBe(false);
   });
 
   it("rejects a negative minimum notice", () => {

@@ -3,7 +3,6 @@ import {
   LOW_HOURLY_THRESHOLD,
   HIGH_HOURLY_THRESHOLD,
   LONG_SERVICE_MINUTES,
-  DEPOSIT_RISK_MINUTES,
   POPULAR_BOOKING_MULTIPLIER,
 } from "@/lib/pricing/constants";
 
@@ -11,7 +10,6 @@ export type InsightType =
   | "low_hourly_value"
   | "high_hourly_value"
   | "long_low_price"
-  | "no_deposit_long"
   | "popular_service"
   | "below_range"
   | "within_range"
@@ -27,7 +25,6 @@ export interface PricingInsight {
 export interface ServiceInsightInput {
   durationMinutes: number;
   price: number;
-  requiresDeposit: boolean;
   completedBookingCount: number;
   marketMinPrice: number | null;
   marketAveragePrice: number | null;
@@ -124,16 +121,6 @@ export function generateServiceInsights(
     }
   }
 
-  // E. No deposit on long service
-  if (service.durationMinutes >= DEPOSIT_RISK_MINUTES && !service.requiresDeposit) {
-    insights.push({
-      type: "no_deposit_long",
-      title: PRICING.insights.noDepositLong.title,
-      body: PRICING.insights.noDepositLong.body,
-      severity: "info",
-    });
-  }
-
   // F. Popular service
   if (
     businessAvgCompletedBookings > 0 &&
@@ -161,7 +148,6 @@ export function hasPricingConcerns(
       (i) =>
         i.type === "low_hourly_value" ||
         i.type === "long_low_price" ||
-        i.type === "no_deposit_long" ||
         i.type === "below_range",
     );
   });

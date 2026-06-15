@@ -2,7 +2,6 @@
 
 import { useActionState, useState } from "react";
 import { Field } from "@/components/ui/field";
-import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
@@ -16,8 +15,7 @@ import type { PaymentSettingsData } from "@/server/payments/settings";
 const INITIAL: PaymentSettingsFormState = {};
 
 const PROVIDERS = ["mock", "payplus", "grow_meshulam", "tranzila", "disabled"] as const;
-const REQUIREMENTS = ["none", "deposit", "full_payment"] as const;
-const DEPOSIT_TYPES = ["fixed_amount", "percentage"] as const;
+const REQUIREMENTS = ["none", "full_payment"] as const;
 
 function Pill({
   active,
@@ -63,11 +61,6 @@ export function PaymentsSettingsForm({
   const [enabled, setEnabled] = useState(initialValues.enabled);
   const [provider, setProvider] = useState(initialValues.provider);
   const [requirement, setRequirement] = useState(initialValues.requirement);
-  const [depositType, setDepositType] = useState(initialValues.depositType);
-  const [depositAmount, setDepositAmount] = useState(initialValues.depositAmount);
-  const [depositPercentage, setDepositPercentage] = useState(
-    initialValues.depositPercentage,
-  );
   const [allowPayAtBusiness, setAllowPayAtBusiness] = useState(
     initialValues.allowPayAtBusiness,
   );
@@ -162,88 +155,6 @@ export function PaymentsSettingsForm({
             </div>
             <input type="hidden" name="requirement" value={requirement} />
           </div>
-
-          {/* Deposit config — only when requirement = deposit */}
-          {requirement === "deposit" && (
-            <div className="space-y-3 rounded-lg border border-[var(--border)] p-3">
-              <div className="space-y-2">
-                <p className="text-foreground text-sm font-medium">
-                  {PAYMENTS.settings.depositTypeLabel}
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {DEPOSIT_TYPES.map((t) => (
-                    <Pill
-                      key={t}
-                      active={depositType === t}
-                      onClick={() => setDepositType(t)}
-                    >
-                      {PAYMENTS.settings.depositType[t]}
-                    </Pill>
-                  ))}
-                </div>
-                <input type="hidden" name="depositType" value={depositType} />
-              </div>
-
-              {depositType === "fixed_amount" ? (
-                <Field
-                  label={PAYMENTS.settings.depositAmountLabel}
-                  htmlFor="depositAmount"
-                  error={state.errors?.depositAmount}
-                >
-                  <Input
-                    id="depositAmount"
-                    name="depositAmount"
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={depositAmount}
-                    onChange={(e) => setDepositAmount(e.target.value)}
-                    className="w-36"
-                  />
-                </Field>
-              ) : (
-                <Field
-                  label={PAYMENTS.settings.depositPercentageLabel}
-                  htmlFor="depositPercentage"
-                  error={state.errors?.depositPercentage}
-                >
-                  <Input
-                    id="depositPercentage"
-                    name="depositPercentage"
-                    type="number"
-                    min="1"
-                    max="100"
-                    step="1"
-                    value={depositPercentage}
-                    onChange={(e) => setDepositPercentage(e.target.value)}
-                    className="w-36"
-                  />
-                </Field>
-              )}
-            </div>
-          )}
-          {/* Always submit both fields so values round-trip */}
-          {requirement !== "deposit" && (
-            <>
-              <input type="hidden" name="depositType" value={depositType} />
-              <input type="hidden" name="depositAmount" value={depositAmount} />
-              <input
-                type="hidden"
-                name="depositPercentage"
-                value={depositPercentage}
-              />
-            </>
-          )}
-          {requirement === "deposit" && depositType === "fixed_amount" && (
-            <input
-              type="hidden"
-              name="depositPercentage"
-              value={depositPercentage}
-            />
-          )}
-          {requirement === "deposit" && depositType === "percentage" && (
-            <input type="hidden" name="depositAmount" value={depositAmount} />
-          )}
 
           {/* Allow pay at business */}
           <div className="space-y-1">

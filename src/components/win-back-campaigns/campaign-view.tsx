@@ -103,7 +103,6 @@ const OFFER_OPTIONS: OfferType[] = [
   "discount_10",
   "upgrade_gift",
   "special_slot",
-  "reduced_deposit",
   "personal",
 ];
 

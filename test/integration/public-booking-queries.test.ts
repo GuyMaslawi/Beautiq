@@ -46,8 +46,6 @@ function makePublicRow(overrides: Record<string, unknown> = {}) {
         description: null,
         durationMinutes: 60,
         price: new Prisma.Decimal(150),
-        requiresDeposit: true,
-        depositAmount: new Prisma.Decimal(50),
       },
     ],
     cancellationPolicy: null,
@@ -101,12 +99,12 @@ describe("getPublicBusiness", () => {
     expect(select.clientReviews.where).toEqual({ isApproved: true });
   });
 
-  it("serializes Decimal prices/deposits to plain strings", async () => {
+  it("serializes Decimal prices to plain strings", async () => {
     prisma.business.findUnique.mockResolvedValue(makePublicRow());
     const res = await getPublicBusiness("studio-yofi");
     expect(res!.services[0].price).toBe("150");
-    expect(res!.services[0].depositAmount).toBe("50");
     expect(typeof res!.services[0].price).toBe("string");
+    expect("depositAmount" in res!.services[0]).toBe(false);
   });
 
   it("groups availability rules into days with multiple windows", async () => {

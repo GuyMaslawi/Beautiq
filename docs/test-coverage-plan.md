@@ -77,7 +77,7 @@ Legend: ✅ covered · 🟡 partial · ⬜ not yet · 🚫 not unit-testable
 - ✅ clients (actions/queries/stats/find-or-create/import/whatsapp-actions) — dedup by normalizedPhone, opt-in fields, cross-tenant rejection
 - ✅ bookings (actions + queries) — all status transitions guarded + scoped, hasOverlap/getBooking scoped, create endTime math
 - ✅ availability (actions + queries + get-available-slots) — weekly rules, exceptions, slot generation edge cases
-- ✅ finance, deposits, dashboard, settings, business — every aggregate/write businessId-scoped, validation, profit math
+- ✅ finance, dashboard, settings, business — every aggregate/write businessId-scoped, validation, profit math
 - ✅ auth (session/actions/password) + admin gate — passwordHash never selected, require* redirects, hashed-password persistence
 - ✅ whatsapp resolver/owner-status/templates/embedded-signup — full mode matrix, decrypt-failure safety, token never leaked
 - ✅ meta-cloud-api / templates-api / onboarding — `fetch` mocked, payload shape, safe failure reasons, token header-only
@@ -88,7 +88,7 @@ Legend: ✅ covered · 🟡 partial · ⬜ not yet · 🚫 not unit-testable
 - ✅ public-page/queries — businessId-scoped, public-safe fields only (no passwordHash/token/internal fields)
 
 ### Components (`test/component`, jsdom)
-- ✅ `booking-request-form` — service list, disabled→enabled CTA, step progression, deposit notice, RTL, no null leakage
+- ✅ `booking-request-form` — service list, disabled→enabled CTA, step progression, no deposit wording, RTL, no null leakage
 - ✅ public page sections — gallery empty state, reviews safe layout + cap, conditional contact/social, "Powered by Allura" footer
 - ✅ sticky CTA — IntersectionObserver visibility, scroll/focus to `#book`, missing-anchor no-crash
 

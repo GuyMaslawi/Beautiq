@@ -150,7 +150,6 @@ describe("guidance", () => {
 
     const res = await getGuidanceData(A);
     expect(res.activeServicesCount).toBe(0);
-    expect(res.pendingDepositCount).toBe(0);
     expect(res.pricingConcernCount).toBe(0);
 
     for (const call of prisma.booking.count.mock.calls) {

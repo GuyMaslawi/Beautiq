@@ -10,7 +10,6 @@ export interface ComposerBookingOption {
   bookingDate: string;
   bookingTime: string;
   price?: string;
-  depositAmount?: string;
 }
 
 export interface ComposerClientOption {
@@ -72,9 +71,6 @@ export async function getComposerData(tenant: TenantContext): Promise<{
     });
     const priceNum = Number(b.priceSnapshot);
     const price = priceNum > 0 ? `₪${priceNum.toLocaleString("he-IL")}` : undefined;
-    const depositAmount = b.depositAmountSnapshot
-      ? `₪${Number(b.depositAmountSnapshot).toLocaleString("he-IL")}`
-      : undefined;
 
     return {
       id: b.id,
@@ -84,7 +80,6 @@ export async function getComposerData(tenant: TenantContext): Promise<{
       bookingDate: date,
       bookingTime: time,
       price,
-      depositAmount,
     };
   });
 

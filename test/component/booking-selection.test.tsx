@@ -21,8 +21,6 @@ const SERVICES: PublicService[] = [
     description: null,
     durationMinutes: 60,
     price: "150",
-    requiresDeposit: false,
-    depositAmount: null,
   },
 ];
 

@@ -25,8 +25,6 @@ export default async function EditServicePage({
     description: service.description ?? undefined,
     durationMinutes: service.durationMinutes,
     price: service.price.toString(),
-    requiresDeposit: service.requiresDeposit,
-    depositAmount: service.depositAmount?.toString() ?? undefined,
     bufferBeforeMinutes: service.bufferBeforeMinutes,
     bufferAfterMinutes: service.bufferAfterMinutes,
     categoryKey: service.categoryKey ?? undefined,

@@ -8,7 +8,6 @@ export const RETURNING_CLIENT_THRESHOLD_DAYS = 30;
 export interface GuidanceQueryData {
   activeServicesCount: number;
   activeAvailabilityCount: number;
-  pendingDepositCount: number;
   todayBookingsCount: number;
   pendingBookingsCount: number;
   lostClientsCount: number;
@@ -60,7 +59,6 @@ export async function getGuidanceData(
   const [
     activeServicesCount,
     activeAvailabilityCount,
-    pendingDepositCount,
     todayBookingsCount,
     pendingBookingsCount,
     lostClientsCount,
@@ -75,15 +73,6 @@ export async function getGuidanceData(
 
     prisma.availabilityRule.count({
       where: { businessId: tenant.businessId, isActive: true },
-    }),
-
-    // Bookings with a pending deposit that are not cancelled/no-show/rescheduled
-    prisma.booking.count({
-      where: {
-        businessId: tenant.businessId,
-        depositStatus: "pending",
-        status: { notIn: ["cancelled", "no_show", "rescheduled"] },
-      },
     }),
 
     prisma.booking.count({
@@ -150,7 +139,6 @@ export async function getGuidanceData(
   return {
     activeServicesCount,
     activeAvailabilityCount,
-    pendingDepositCount,
     todayBookingsCount,
     pendingBookingsCount,
     lostClientsCount,

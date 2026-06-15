@@ -6,7 +6,7 @@
  *   - Business with categories, services, and weekly availability
  *   - 6 realistic Hebrew clients
  *   - 12 bookings covering every key status and guidance-rule trigger
- *   - Payments for paid deposits
+ *   - Client denormalized counters
  *
  * SAFE TO RE-RUN — data is scoped to slug "yael-studio".
  * On each run the business-specific data (services, clients, bookings …)
@@ -24,7 +24,6 @@ import {
   PrismaClient,
   type BookingStatus,
   type BookingSource,
-  type DepositStatus,
   type Service,
   type Client,
 } from "@prisma/client";
@@ -170,8 +169,6 @@ async function main() {
         description: "לק ג'ל מקצועי בכל צבע, כולל הכנה ועיצוב מלא",
         durationMinutes: 60,
         price: 180,
-        requiresDeposit: true,
-        depositAmount: 50,
         marketMinPrice: 160,
         marketAveragePrice: 195,
         marketMaxPrice: 230,
@@ -185,7 +182,6 @@ async function main() {
         description: "עיצוב מקצועי של הגבות לפי מבנה הפנים",
         durationMinutes: 30,
         price: 90,
-        requiresDeposit: false,
         marketMinPrice: 95,   // intentionally above price → pricing concern
         marketAveragePrice: 115,
         marketMaxPrice: 145,
@@ -199,8 +195,6 @@ async function main() {
         description: "טיפול פנים מעמיק לניקוי, הזנה ולחות",
         durationMinutes: 90,
         price: 320,
-        requiresDeposit: true,
-        depositAmount: 100,
         marketMinPrice: 280,
         marketAveragePrice: 350,
         marketMaxPrice: 430,
@@ -214,7 +208,6 @@ async function main() {
         description: "הסרה עדינה ומקצועית של לק ג'ל",
         durationMinutes: 30,
         price: 60,
-        requiresDeposit: false,
         marketMinPrice: 50,
         marketAveragePrice: 65,
         marketMaxPrice: 85,
@@ -271,7 +264,6 @@ async function main() {
   // ── 9. Bookings ──────────────────────────────────────────────────────────
   //
   // Guidance rules triggered by this data set:
-  //   C  pending deposits    → Lior (future, public) + Dana (future, approved)
   //   D  today bookings      → Noa (10:00) + Dana (14:00)
   //   E  pending bookings    → Dana today + Lior future public
   //   F  lost clients        → Mia (45d) + Roni (40d) — no upcoming booking
@@ -286,7 +278,6 @@ async function main() {
     start: Date;
     status: BookingStatus;
     source: BookingSource;
-    depositStatus: DepositStatus;
     notes?: string;
     cancellationReason?: string;
     cancelledAt?: Date;
@@ -300,13 +291,13 @@ async function main() {
     {
       client: noa, service: svcGel,
       start: at(0, 10, 0),
-      status: "approved", source: "manual", depositStatus: "paid",
+      status: "approved", source: "manual",
     },
     // Dana · עיצוב גבות · 14:00 pending manual                  (rules D + E)
     {
       client: dana, service: svcBrows,
       start: at(0, 14, 0),
-      status: "pending", source: "manual", depositStatus: "not_required",
+      status: "pending", source: "manual",
     },
 
     // ── Upcoming ───────────────────────────────────────────────────────────
@@ -314,20 +305,20 @@ async function main() {
     {
       client: shira, service: svcFacial,
       start: at(1, 11, 0),
-      status: "approved", source: "manual", depositStatus: "paid",
+      status: "approved", source: "manual",
       notes: "להכין מוצרים לפני הטיפול",
     },
-    // Lior · לק ג'ל · +3 days public pending + pending deposit   (rules C + E)
+    // Lior · לק ג'ל · +3 days public pending   (rule E)
     {
       client: lior, service: svcGel,
       start: at(3, 15, 0),
-      status: "pending", source: "public", depositStatus: "pending",
+      status: "pending", source: "public",
     },
-    // Dana · לק ג'ל · +7 days approved but deposit still pending (rule C)
+    // Dana · לק ג'ל · +7 days approved
     {
       client: dana, service: svcGel,
       start: at(7, 9, 30),
-      status: "approved", source: "manual", depositStatus: "pending",
+      status: "approved", source: "manual",
     },
 
     // ── Recent completed — reputation page (rule J, within 14 days) ───────
@@ -335,23 +326,23 @@ async function main() {
     {
       client: shira, service: svcBrows,
       start: at(-3, 11, 0),
-      status: "completed", source: "manual", depositStatus: "not_required",
+      status: "completed", source: "manual",
       completedAt: at(-3, 11, 30),
     },
-    // Noa · טיפול פנים · 5 days ago with paid deposit
+    // Noa · טיפול פנים · 5 days ago
     {
       client: noa, service: svcFacial,
       start: at(-5, 10, 0),
-      status: "completed", source: "manual", depositStatus: "paid",
+      status: "completed", source: "manual",
       completedAt: at(-5, 11, 30),
     },
 
     // ── Older completed ────────────────────────────────────────────────────
-    // Shira · לק ג'ל · 20 days ago with paid deposit
+    // Shira · לק ג'ל · 20 days ago
     {
       client: shira, service: svcGel,
       start: at(-20, 10, 0),
-      status: "completed", source: "manual", depositStatus: "paid",
+      status: "completed", source: "manual",
       completedAt: at(-20, 11, 0),
     },
 
@@ -360,7 +351,7 @@ async function main() {
     {
       client: dana, service: svcRemove,
       start: at(-15, 14, 0),
-      status: "no_show", source: "manual", depositStatus: "not_required",
+      status: "no_show", source: "manual",
       noShowAt: at(-15, 14, 45),
     },
 
@@ -369,7 +360,7 @@ async function main() {
     {
       client: lior, service: svcBrows,
       start: at(-10, 12, 0),
-      status: "cancelled", source: "manual", depositStatus: "not_required",
+      status: "cancelled", source: "manual",
       cancellationReason: "הלקוחה ביטלה בגלל עיסוקים אישיים",
       cancelledAt: at(-11, 18, 0),
     },
@@ -379,14 +370,14 @@ async function main() {
     {
       client: roni, service: svcBrows,
       start: at(-40, 11, 0),
-      status: "completed", source: "manual", depositStatus: "not_required",
+      status: "completed", source: "manual",
       completedAt: at(-40, 11, 30),
     },
     // Mia · לק ג'ל · 45 days ago
     {
       client: mia, service: svcGel,
       start: at(-45, 10, 0),
-      status: "completed", source: "manual", depositStatus: "paid",
+      status: "completed", source: "manual",
       completedAt: at(-45, 11, 0),
     },
   ];
@@ -402,9 +393,7 @@ async function main() {
           endTime: endOf(b.start, b.service.durationMinutes),
           status: b.status,
           source: b.source,
-          depositStatus: b.depositStatus,
           priceSnapshot: b.service.price,
-          depositAmountSnapshot: b.service.depositAmount ?? null,
           durationMinutesSnapshot: b.service.durationMinutes,
           notes: b.notes ?? null,
           cancellationReason: b.cancellationReason ?? null,
@@ -417,32 +406,7 @@ async function main() {
   );
   console.log(`✔  Bookings   ${bookings.length}`);
 
-  // ── 10. Payments for paid deposits ───────────────────────────────────────
-  const paidDeps = defs
-    .map((b, i) => ({ b, booking: bookings[i] }))
-    .filter(({ b }) => b.depositStatus === "paid");
-
-  await Promise.all(
-    paidDeps.map(({ b, booking }) =>
-      prisma.payment.create({
-        data: {
-          businessId: business.id,
-          bookingId: booking.id,
-          clientId: b.client.id,
-          amount: b.service.depositAmount ?? 0,
-          currency: "ILS",
-          type: "deposit",
-          status: "paid",
-          method: "manual",
-          // Marked paid one day before the appointment
-          markedPaidAt: new Date(booking.startTime.getTime() - 24 * 3_600_000),
-        },
-      }),
-    ),
-  );
-  console.log(`✔  Payments   ${paidDeps.length} paid deposits`);
-
-  // ── 11. Client denormalized counters ──────────────────────────────────────
+  // ── 10. Client denormalized counters ──────────────────────────────────────
   // These drive the client profile display (totalSpent, lastVisitAt, etc.).
   await Promise.all([
     prisma.client.update({

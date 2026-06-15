@@ -17,7 +17,6 @@ export interface CancellationPolicyData {
   enabled: boolean;
   policyText: string | null;
   minNoticeHours: number | null;
-  requireDepositToBook: boolean;
   lateCancellationHours: number | null;
   lateCancellationFeeType: string;
   lateCancellationFeeAmount: string | null;
@@ -58,7 +57,6 @@ export async function getCancellationPolicy(
       enabled: true,
       policyText: true,
       minNoticeHours: true,
-      requireDepositToBook: true,
       lateCancellationHours: true,
       lateCancellationFeeType: true,
       lateCancellationFeeAmount: true,

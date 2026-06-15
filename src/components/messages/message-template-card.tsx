@@ -11,7 +11,6 @@ const SAMPLE_VARS = {
   bookingDate: "יום שני, 12 ביוני",
   bookingTime: "10:00",
   price: "₪120",
-  depositAmount: "₪50",
 };
 
 const VARIABLE_KEY_LABELS: Record<string, string> =

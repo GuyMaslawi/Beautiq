@@ -7,10 +7,7 @@
  * payment policy.
  */
 
-import type {
-  DepositKind,
-  PaymentRequirement,
-} from "@prisma/client";
+import type { PaymentRequirement } from "@prisma/client";
 
 /** Convert a shekel amount (number or Prisma.Decimal-like) to agorot (integer). */
 export function toMinor(major: number | string): number {
@@ -38,23 +35,21 @@ export function formatMinorILS(minor: number): string {
 
 export interface PaymentPolicy {
   requirement: PaymentRequirement;
-  depositType: DepositKind;
-  depositAmountMinor: number | null;
-  depositPercentage: number | null;
 }
 
 export interface ComputedAmount {
   /** Amount to collect online, in agorot. 0 when no payment is required. */
   amountMinor: number;
   /** What the amount represents — drives the public-step copy. */
-  kind: "none" | "deposit" | "full";
+  kind: "none" | "full";
 }
 
 /**
  * Compute the amount to collect for a booking given the business policy and
  * the service price (in agorot). Pure & deterministic — safe to unit test.
  *
- * Deposits are clamped to never exceed the full price and never go below 0.
+ * Allura supports only full online payment (the full service price) or no
+ * payment at all — there are no deposits / partial payments.
  */
 export function computePaymentAmount(
   policy: PaymentPolicy,
@@ -62,24 +57,9 @@ export function computePaymentAmount(
 ): ComputedAmount {
   const price = Math.max(0, Math.round(servicePriceMinor));
 
-  if (policy.requirement === "none") {
-    return { amountMinor: 0, kind: "none" };
-  }
-
   if (policy.requirement === "full_payment") {
     return { amountMinor: price, kind: "full" };
   }
 
-  // requirement === "deposit"
-  let deposit: number;
-  if (policy.depositType === "percentage") {
-    const pct = policy.depositPercentage ?? 0;
-    deposit = Math.round((price * pct) / 100);
-  } else {
-    deposit = policy.depositAmountMinor ?? 0;
-  }
-
-  // A deposit larger than the price makes no sense — clamp to the full price.
-  deposit = Math.max(0, Math.min(deposit, price));
-  return { amountMinor: deposit, kind: "deposit" };
+  return { amountMinor: 0, kind: "none" };
 }

@@ -66,7 +66,7 @@ describe("getPublicPaymentPolicy — disabled keeps the old flow", () => {
   it("returns null when payments are disabled", async () => {
     prisma.businessPaymentSettings.findUnique.mockResolvedValue({
       enabled: false,
-      requirement: "deposit",
+      requirement: "full_payment",
       allowPayAtBusiness: true,
     });
     expect(await getPublicPaymentPolicy(BUSINESS_A)).toBeNull();
@@ -81,21 +81,19 @@ describe("getPublicPaymentPolicy — disabled keeps the old flow", () => {
     expect(await getPublicPaymentPolicy(BUSINESS_A)).toBeNull();
   });
 
-  it("returns a policy (no credentials) when a deposit is required", async () => {
+  it("returns a policy (no credentials) when full payment is required", async () => {
     prisma.businessPaymentSettings.findUnique.mockResolvedValue({
       enabled: true,
-      requirement: "deposit",
-      depositType: "percentage",
-      depositAmountMinor: null,
-      depositPercentage: 25,
+      requirement: "full_payment",
       allowPayAtBusiness: true,
       instructions: "note",
       provider: "mock",
     });
     const policy = await getPublicPaymentPolicy(BUSINESS_A);
     expect(policy).not.toBeNull();
-    expect(policy?.requirement).toBe("deposit");
-    expect(policy?.depositPercentage).toBe(25);
+    expect(policy?.requirement).toBe("full_payment");
+    // No deposit fields are ever surfaced.
+    expect(JSON.stringify(policy)).not.toContain("deposit");
     // Public policy must never carry credentials.
     expect(JSON.stringify(policy)).not.toContain("credential");
   });

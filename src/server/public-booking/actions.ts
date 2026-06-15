@@ -30,8 +30,8 @@ export interface PublicBookingFormState {
   values?: Record<string, string>;
   /** Hosted payment page URL — present only when an online payment is required. */
   paymentUrl?: string;
-  /** "deposit" | "full" — what the requested payment represents. */
-  paymentKind?: "deposit" | "full";
+  /** "full" — what the requested payment represents. */
+  paymentKind?: "full";
   /** Amount to collect, in agorot. */
   paymentAmountMinor?: number;
   /** Whether the customer may choose to pay at the business instead. */
@@ -137,11 +137,7 @@ export async function submitPublicBookingAction(
         endTime,
         status: "pending",
         source: "public",
-        depositStatus: service.requiresDeposit ? "pending" : "not_required",
         priceSnapshot: new Prisma.Decimal(service.price),
-        depositAmountSnapshot: service.depositAmount
-          ? new Prisma.Decimal(service.depositAmount)
-          : null,
         durationMinutesSnapshot: service.durationMinutes,
         notes: value.note || null,
       },
@@ -153,9 +149,9 @@ export async function submitPublicBookingAction(
 
   await syncClientStats({ businessId: tenant.businessId, clientId: client.id });
 
-  // ── Online payment (deposit / full) ──────────────────────────────────────
+  // ── Online payment (full) ─────────────────────────────────────────────────
   // The booking is already created as `pending` (never auto-confirmed). If the
-  // business requires an online payment, create a hosted payment link now and
+  // business requires full online payment, create a hosted payment link now and
   // return it so the customer can pay on the provider's secure page. Payment is
   // only ever confirmed via a verified provider webhook — never a client redirect.
   let paymentState: Partial<PublicBookingFormState> = {};
@@ -166,7 +162,7 @@ export async function submitPublicBookingAction(
         policy,
         Math.round(Number(service.price) * 100),
       );
-      if (amountMinor > 0 && (kind === "deposit" || kind === "full")) {
+      if (amountMinor > 0 && kind === "full") {
         const payment = await createBookingPayment({
           businessId: tenant.businessId,
           bookingId: newBookingId,

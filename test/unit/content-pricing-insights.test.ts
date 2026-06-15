@@ -12,7 +12,6 @@ function svc(overrides: Partial<ServiceInsightInput> = {}): ServiceInsightInput 
   return {
     durationMinutes: 60,
     price: 150,
-    requiresDeposit: false,
     completedBookingCount: 0,
     marketMinPrice: null,
     marketAveragePrice: null,
@@ -162,32 +161,13 @@ describe("generateServiceInsights — long low price (B) vs low/high hourly (C/D
   });
 });
 
-describe("generateServiceInsights — no deposit on long service (E)", () => {
-  it("flags no_deposit_long at the 60-minute threshold without deposit", () => {
-    const out = generateServiceInsights(
-      svc({ durationMinutes: 60, requiresDeposit: false }),
-      0,
-      0,
-    );
-    expect(out.map((i) => i.type)).toContain("no_deposit_long");
-  });
-
-  it("does not flag when deposit is required", () => {
-    const out = generateServiceInsights(
-      svc({ durationMinutes: 90, requiresDeposit: true }),
-      0,
-      0,
-    );
-    expect(out.map((i) => i.type)).not.toContain("no_deposit_long");
-  });
-
-  it("does not flag short services (below 60 min)", () => {
-    const out = generateServiceInsights(
-      svc({ durationMinutes: 45, requiresDeposit: false }),
-      0,
-      0,
-    );
-    expect(out.map((i) => i.type)).not.toContain("no_deposit_long");
+describe("generateServiceInsights — no deposit insight exists", () => {
+  it("never emits a deposit-related insight, regardless of duration", () => {
+    for (const durationMinutes of [45, 60, 90, 120]) {
+      const out = generateServiceInsights(svc({ durationMinutes }), 0, 0);
+      const types = out.map((i) => i.type as string);
+      expect(types).not.toContain("no_deposit_long");
+    }
   });
 });
 
@@ -218,7 +198,6 @@ describe("generateServiceInsights — every insight has Hebrew title + body", ()
       svc({
         durationMinutes: 120,
         price: 100,
-        requiresDeposit: false,
         completedBookingCount: 20,
         marketMinPrice: 150,
         marketMaxPrice: 250,

@@ -72,15 +72,6 @@ enum BookingSource {
   waitlist
 }
 
-/// Deposit lifecycle for a booking.
-enum DepositStatus {
-  not_required
-  pending
-  paid
-  failed
-  refunded
-}
-
 /// Status of an individual Payment record.
 enum PaymentStatus {
   not_required
@@ -92,7 +83,6 @@ enum PaymentStatus {
 
 /// What a payment represents.
 enum PaymentType {
-  deposit
   full
   balance
   refund
@@ -111,14 +101,7 @@ enum PaymentProviderKind {
 /// Whether a booking requires upfront online payment.
 enum PaymentRequirement {
   none
-  deposit
   full_payment
-}
-
-/// How a required deposit is computed.
-enum DepositKind {
-  fixed_amount
-  percentage
 }
 
 /// Connection state of a business's payment provider credentials.
@@ -182,7 +165,6 @@ enum RecommendationStatus {
 enum RecommendationType {
   client_not_returned
   empty_slot
-  missing_deposit
   repeat_cancellations
   no_show
   revenue_drop
@@ -413,8 +395,6 @@ model Service {
   price               Decimal              @db.Decimal(10, 2)
   bufferBeforeMinutes Int                  @default(0)
   bufferAfterMinutes  Int                  @default(0)
-  requiresDeposit     Boolean              @default(false)
-  depositAmount       Decimal?             @db.Decimal(10, 2)
   /// Optional manual market price range set by the business owner (no external market data).
   marketMinPrice      Decimal?             @db.Decimal(10, 2)
   marketAveragePrice  Decimal?             @db.Decimal(10, 2)
@@ -469,7 +449,7 @@ model Client {
   @@index([businessId, normalizedPhone])
 }
 
-/// A booking. Price/deposit/duration are snapshotted at creation time so that
+/// A booking. Price/duration are snapshotted at creation time so that
 /// later changes to the Service do not rewrite history.
 model Booking {
   id                       String        @id @default(cuid())
@@ -480,9 +460,7 @@ model Booking {
   endTime                  DateTime
   status                   BookingStatus @default(pending)
   source                   BookingSource @default(public)
-  depositStatus            DepositStatus @default(not_required)
   priceSnapshot            Decimal       @db.Decimal(10, 2)
-  depositAmountSnapshot    Decimal?      @db.Decimal(10, 2)
   durationMinutesSnapshot  Int
   notes                    String?
   cancellationReason       String?
@@ -594,7 +572,6 @@ model CancellationPolicy {
   enabled                      Boolean  @default(false)
   policyText                   String?
   minNoticeHours               Int?
-  requireDepositToBook         Boolean  @default(false)
   /// Hours before appointment that mark a cancellation as "late" (6, 12, 24, 48, or custom)
   lateCancellationHours        Int?
   /// "none" | "fixed" | "percentage"
@@ -937,7 +914,7 @@ model AutomationMessage {
 }
 
 // ---------------------------------------------------------------------------
-// Booking payments (online clearing / deposits)
+// Booking payments (online clearing)
 //
 // Money is stored in MINOR units (agorot, Int) on these models — payment
 // providers (PayPlus / Grow / Tranzila) all work in agorot. This is distinct
@@ -955,11 +932,6 @@ model BusinessPaymentSettings {
   enabled            Boolean             @default(false)
   provider           PaymentProviderKind @default(mock)
   requirement        PaymentRequirement  @default(none)
-  depositType        DepositKind         @default(fixed_amount)
-  /// Fixed deposit amount in agorot (used when depositType = fixed_amount).
-  depositAmountMinor Int?
-  /// Percentage of the service price (0–100, used when depositType = percentage).
-  depositPercentage  Int?
   /// Allow the customer to choose "I'll pay at the business" instead of paying now.
   allowPayAtBusiness Boolean             @default(true)
   /// Optional free-text instructions / cancellation note shown near the pay step.

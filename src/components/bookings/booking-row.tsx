@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { Clock, Banknote } from "lucide-react";
 import { BookingStatusBadge } from "@/components/bookings/booking-status-badge";
-import { DepositStatusBadge } from "@/components/bookings/deposit-status-badge";
 import { BookingRowActions } from "@/components/bookings/booking-row-actions";
 import { isLateCancellation } from "@/lib/cancellation";
 import { BOOKINGS } from "@/lib/constants/he";
@@ -64,7 +63,6 @@ export function BookingRow({
     booking.status === "pending" || booking.status === "approved";
 
   const isPendingApproval = booking.status === "pending";
-  const hasDepositPending = booking.depositStatus === "pending" && isActive;
 
   const isCancelled =
     booking.status === "cancelled" || booking.status === "no_show";
@@ -85,11 +83,6 @@ export function BookingRow({
           ? {
               background: "rgba(184,107,140,0.07)",
               boxShadow: "inset -3px 0 0 #b86b8c",
-            }
-          : hasDepositPending
-          ? {
-              background: "rgba(184,150,10,0.08)",
-              boxShadow: "inset -3px 0 0 #d4a017",
             }
           : {}),
       }}
@@ -207,15 +200,6 @@ export function BookingRow({
             </span>
           )}
         </div>
-      </td>
-
-      {/* Deposit */}
-      <td className="px-4 py-3 whitespace-nowrap">
-        <DepositStatusBadge
-          bookingId={booking.id}
-          depositStatus={booking.depositStatus}
-          isActive={isActive}
-        />
       </td>
 
       {/* Actions */}

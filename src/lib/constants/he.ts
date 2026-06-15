@@ -187,18 +187,6 @@ export const DASHBOARD = {
     },
   },
 
-  /** התראת מקדמות ממתינות */
-  pendingDeposits: {
-    alertSingular: "תור אחד ממתין לאישור מקדמה",
-    alertPluralSuffix: "תורים ממתינים לאישור מקדמה",
-    expandHint: "לפרטים ▼",
-    collapseHint: "סגירה ▲",
-    markPaid: "שולמה ✓",
-    marking: "מסמן…",
-    viewDetails: "פרטים",
-    deposit: "מקדמה",
-  },
-
   /** כרטיס הנחיה חכמה — גוף הטקסט ו-CTA משתנים לפי מצב ההגדרה */
   guidance: {
     title: "מה כדאי לעשות עכשיו?",
@@ -258,7 +246,6 @@ export const SERVICES = {
 
     sectionBasic: "פרטי השירות",
     sectionPriceAndTime: "מחיר וזמן",
-    sectionDeposit: "מקדמה",
     sectionAdvanced: "אפשרויות מתקדמות",
     advancedOptional: "אופציונלי",
 
@@ -273,11 +260,6 @@ export const SERVICES = {
 
     priceLabel: "מחיר",
     pricePlaceholder: "לדוגמה: 180",
-
-    requiresDepositLabel: "נדרשת מקדמה לקביעת תור",
-    depositHint: "מקדמה עוזרת לצמצם ביטולים. בשלב הזה המעקב ידני.",
-    depositAmountLabel: "סכום מקדמה",
-    depositAmountPlaceholder: "לדוגמה: 50",
 
     bufferBeforeLabel: "זמן הכנה לפני השירות",
     bufferBeforeHint: "לדוגמה: 10 דקות להכנת העמדה",
@@ -294,8 +276,6 @@ export const SERVICES = {
   card: {
     duration: "משך טיפול",
     price: "מחיר",
-    deposit: "מקדמה",
-    noDeposit: "לא נדרשת",
     active: "פעיל",
     inactive: "כבוי",
     editButton: "עריכה",
@@ -310,9 +290,6 @@ export const SERVICES = {
     durationInvalid: "משך הטיפול אינו תקין",
     priceRequired: "יש למלא מחיר",
     priceInvalid: "המחיר אינו תקין",
-    depositAmountRequired: "יש למלא סכום מקדמה",
-    depositAmountInvalid: "סכום המקדמה אינו תקין",
-    depositHigherThanPrice: "סכום המקדמה לא יכול להיות גבוה ממחיר השירות",
     bufferInvalid: "הזמן אינו תקין",
     generic: "משהו השתבש. יש לנסות שוב בעוד רגע",
     notFound: "השירות לא נמצא",
@@ -706,52 +683,11 @@ export const CLIENTS = {
   },
 } as const;
 
-/** טקסטים לניהול מקדמות */
-export const DEPOSITS = {
-  sectionTitle: "מקדמה",
-
-  status: {
-    not_required: "לא נדרשת",
-    pending: "ממתינה",
-    paid: "שולמה",
-    failed: "נכשלה",
-    refunded: "הוחזרה",
-  },
-
-  labels: {
-    status: "סטטוס מקדמה",
-    amount: "סכום מקדמה",
-    paidAt: "תאריך אישור תשלום",
-    refundedAt: "תאריך החזר",
-  },
-
-  actions: {
-    sendRequest: "שלח בקשת מקדמה",
-    markPaidShort: "שולמה",
-    markPaid: "סימון כמקדמה שולמה",
-    markRefunded: "סימון כהוחזרה",
-    markPending: "סימון כממתינה",
-  },
-
-  success: {
-    markedPaid: "המקדמה סומנה כשולמה",
-    markedRefunded: "המקדמה סומנה כהוחזרה",
-    markedPending: "המקדמה סומנה כממתינה",
-  },
-
-  errors: {
-    notFound: "לא נמצאה מקדמה לתור הזה",
-    notAllowed: "לא ניתן לעדכן מקדמה לתור הזה",
-    invalidTransition: "הפעולה המבוקשת אינה אפשרית עבור הסטטוס הנוכחי",
-    generic: "משהו השתבש. יש לנסות שוב בעוד רגע",
-  },
-} as const;
-
 /** טקסטים לניהול הודעות וואטסאפ */
 export const MESSAGES = {
   pageTitle: "הודעות",
   pageSubtitle:
-    "הכינו הודעות מוכנות ללקוחות לפי תורים, מקדמות ומצבים נפוצים",
+    "הכינו הודעות מוכנות ללקוחות לפי תורים ומצבים נפוצים",
   explanation:
     "ההודעות לא נשלחות אוטומטית. Allura מכינה ניסוח מוכן, ואתם מעתיקים ושולחים בוואטסאפ.",
   templatesTitle: "תבניות קיימות",
@@ -785,7 +721,6 @@ export const MESSAGES = {
     scenarios: {
       booking_confirmation: "אישור תור",
       booking_reminder: "תזכורת לתור",
-      deposit_request: "בקשת מקדמה",
       booking_cancelled: "ביטול תור",
       booking_rescheduled: "שינוי מועד",
       after_treatment: "הודעה אחרי טיפול",
@@ -830,7 +765,6 @@ export const MESSAGES = {
     bookingDate: "תאריך התור",
     bookingTime: "שעת התור",
     price: "מחיר",
-    depositAmount: "סכום מקדמה",
   },
   templateVariablesHint: "משתנים:",
 } as const;
@@ -858,11 +792,6 @@ export const GUIDANCE = {
       body: "כדי לדעת מתי אפשר לקבוע תורים, כדאי להגדיר את שעות הפעילות של העסק.",
       action: "הגדרת שעות פעילות",
     },
-    pendingDeposits: {
-      title: "יש תורים עם מקדמה ממתינה",
-      body: "יש תורים שנקבעו עם מקדמה שעדיין לא סומנה כשולמה.",
-      action: "צפייה בתורים",
-    },
     todayBookings: {
       title: "יש תורים להיום",
       body: "כדאי לעבור על התורים של היום ולוודא שהכול מוכן.",
@@ -880,7 +809,7 @@ export const GUIDANCE = {
     },
     noShowClients: {
       title: "יש לקוחות עם היסטוריית אי־הגעה",
-      body: "כדאי לשים לב ללקוחות שלא הגיעו בעבר ולשקול לבקש מקדמה בתורים הבאים.",
+      body: "כדאי לשים לב ללקוחות שלא הגיעו בעבר ולעקוב אחריהם בתורים הבאים.",
       action: "צפייה בלקוחות",
     },
     noUpcomingBookings: {
@@ -954,9 +883,6 @@ export const SETTINGS = {
     policyTextHint: "הטקסט יוצג ללקוחות בעמוד ההזמנה. ניתן להשתמש במשתנים: {שעות}, {דמי_ביטול}, {שם_העסק}.",
     generateTextButton: "הפקת טקסט אוטומטי",
 
-    requireDepositLabel: "נדרשת מקדמה כברירת מחדל לתורים חדשים",
-    requireDepositHint: "כרגע המקדמה מוגדרת ברמת השירות. הגדרה זו תשמש בהמשך.",
-
     manualFeeNote: "גבייה אוטומטית של דמי ביטול תתווסף בהמשך. כרגע ניתן לעקוב ולסמן ידנית.",
 
     saveButton: "שמירת מדיניות",
@@ -1000,7 +926,6 @@ export const PUBLIC_BOOKING = {
     servicePlaceholder: "בחרו שירות…",
     serviceDurationSuffix: "דק׳",
     servicePricePrefix: "₪",
-    depositNote: "נדרשת מקדמה — התשלום יתואם מול העסק",
 
     clientNameLabel: "שם מלא",
     clientNamePlaceholder: "לדוגמה: נועה כהן",
@@ -1206,8 +1131,6 @@ export const PRICING = {
     pricePerHour: "לשעה",
     duration: "משך טיפול",
     price: "מחיר",
-    deposit: "מקדמה",
-    noDeposit: "ללא מקדמה",
     completedBookings: "תורים שהושלמו",
     editRange: "עריכת טווח",
     cancelEdit: "ביטול",
@@ -1231,10 +1154,6 @@ export const PRICING = {
     longLowPrice: {
       title: "שירות ארוך עם מחיר נמוך לשעה",
       body: "זה שירות ארוך יחסית עם מחיר נמוך לשעה. כדאי לבדוק אם המחיר עדיין משתלם.",
-    },
-    noDepositLong: {
-      title: "שירות ארוך ללא מקדמה",
-      body: "שירותים ארוכים בלי מקדמה עלולים להיות חשופים יותר לביטולים.",
     },
     popularService: {
       title: "שירות מבוקש",
@@ -1474,7 +1393,6 @@ export const WIN_BACK = {
     discount_10: "10% הנחה",
     upgrade_gift: "שדרוג טיפול מתנה",
     special_slot: "תור פנוי מיוחד",
-    reduced_deposit: "מקדמה מופחתת",
     personal: "הטבה אישית",
   },
 
@@ -1553,10 +1471,6 @@ export const REVENUE_FORECAST = {
       `יש ${count} לקוחות בסיכון עם פוטנציאל הכנסה שטרם מומש`,
     atRiskAction: "צפייה בלקוחות בסיכון",
     atRiskHref: "/bring-back",
-    pendingDeposits: (count: number) =>
-      `יש ${count} מקדמות שעדיין לא שולמו`,
-    pendingDepositsAction: "מעבר לתורים",
-    pendingDepositsHref: "/bookings?deposit=pending",
     winBack: "שלחי קמפיין החזרה ללקוחות שלא הגיעו",
     winBackAction: "יצירת קמפיין החזרה",
     winBackHref: "/win-back-campaigns",
@@ -2415,7 +2329,7 @@ export const PAYMENTS = {
   settings: {
     sectionTitle: "סליקה ותשלומים",
     sectionHint:
-      "אפשר ללקוחות לשלם אונליין או לשלם מקדמה בזמן קביעת התור בעמוד הציבורי.",
+      "אפשר ללקוחות לשלם תשלום מלא אונליין בזמן קביעת התור בעמוד הציבורי.",
 
     enableLabel: "אפשר תשלום אונליין",
     enableHint:
@@ -2428,17 +2342,8 @@ export const PAYMENTS = {
     requirementLabel: "דרישת תשלום בהזמנה",
     requirement: {
       none: "ללא תשלום",
-      deposit: "מקדמה",
       full_payment: "תשלום מלא",
     },
-
-    depositTypeLabel: "אופן חישוב המקדמה",
-    depositType: {
-      fixed_amount: "סכום קבוע",
-      percentage: "אחוז מהמחיר",
-    },
-    depositAmountLabel: "סכום מקדמה (₪)",
-    depositPercentageLabel: "אחוז מקדמה (%)",
 
     allowPayAtBusinessLabel: "אפשר תשלום במקום",
     allowPayAtBusinessHint:
@@ -2454,7 +2359,7 @@ export const PAYMENTS = {
     },
 
     instructionsLabel: "הערת תשלום ללקוחה (לא חובה)",
-    instructionsPlaceholder: "לדוגמה: המקדמה אינה מוחזרת בביטול פחות מ־24 שעות.",
+    instructionsPlaceholder: "לדוגמה: התשלום אינו מוחזר בביטול פחות מ־24 שעות.",
 
     save: "שמירת הגדרות",
     success: "הגדרות התשלום נשמרו",
@@ -2466,8 +2371,6 @@ export const PAYMENTS = {
 
   errors: {
     generic: "משהו השתבש. יש לנסות שוב בעוד רגע",
-    depositAmountRequired: "יש להזין סכום מקדמה",
-    depositPercentageRequired: "יש להזין אחוז מקדמה בין 1 ל־100",
     amountTooLow: "סכום התשלום אינו תקין",
     paymentsDisabled: "התשלומים אינם פעילים בעסק זה",
     notConfigured: "מדיניות התשלום אינה מוגדרת במלואה",
@@ -2477,10 +2380,8 @@ export const PAYMENTS = {
   // ── שלב התשלום בעמוד הציבורי ─────────────────────────────────────────────
   publicStep: {
     optionalTitle: "אפשר לשלם עכשיו או לשלם במקום",
-    depositTitle: "נדרשת מקדמה לשמירת התור",
     fullTitle: "לתור זה נדרש תשלום מלא מראש",
 
-    depositAmountLabel: "סה״כ לתשלום",
     fullAmountLabel: "סה״כ לתשלום",
 
     payNow: "תשלום עכשיו",

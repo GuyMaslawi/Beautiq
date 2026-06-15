@@ -15,7 +15,6 @@ import type { ComposerBookingOption, ComposerClientOption } from "@/server/messa
 const SCENARIOS: { value: MessageScenario; label: string }[] = [
   { value: "booking_confirmation", label: MESSAGES.smartComposer.scenarios.booking_confirmation },
   { value: "booking_reminder", label: MESSAGES.smartComposer.scenarios.booking_reminder },
-  { value: "deposit_request", label: MESSAGES.smartComposer.scenarios.deposit_request },
   { value: "booking_cancelled", label: MESSAGES.smartComposer.scenarios.booking_cancelled },
   { value: "booking_rescheduled", label: MESSAGES.smartComposer.scenarios.booking_rescheduled },
   { value: "after_treatment", label: MESSAGES.smartComposer.scenarios.after_treatment },
@@ -30,7 +29,6 @@ const TONES: MessageTone[] = ["regular", "warm", "concise"];
 const BOOKING_SCENARIOS = new Set<MessageScenario>([
   "booking_confirmation",
   "booking_reminder",
-  "deposit_request",
   "booking_cancelled",
   "booking_rescheduled",
   "after_treatment",
@@ -78,7 +76,6 @@ export function SmartComposer({ businessName, bookings, clients }: SmartComposer
         bookingDate: selectedBooking.bookingDate,
         bookingTime: selectedBooking.bookingTime,
         price: selectedBooking.price,
-        depositAmount: selectedBooking.depositAmount,
       };
     } else if (selectedClient) {
       context = { ...context, clientName: selectedClient.clientName };

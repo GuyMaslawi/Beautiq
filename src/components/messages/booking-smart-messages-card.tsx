@@ -10,7 +10,6 @@ import {
 } from "@/lib/messages/smart-message-generator";
 import { CopyMessageButton } from "@/components/messages/copy-message-button";
 
-type DepositStatus = "not_required" | "pending" | "paid" | "failed" | "refunded";
 type BookingStatus =
   | "pending"
   | "approved"
@@ -26,8 +25,6 @@ interface BookingSmartMessagesCardProps {
   bookingDate: string;
   bookingTime: string;
   price?: string;
-  depositAmount?: string;
-  depositStatus: DepositStatus;
   bookingStatus: BookingStatus;
 }
 
@@ -40,8 +37,6 @@ export function BookingSmartMessagesCard({
   bookingDate,
   bookingTime,
   price,
-  depositAmount,
-  depositStatus,
   bookingStatus,
 }: BookingSmartMessagesCardProps) {
   const [activeScenario, setActiveScenario] = useState<MessageScenario | null>(null);
@@ -54,7 +49,6 @@ export function BookingSmartMessagesCard({
     bookingDate,
     bookingTime,
     price,
-    depositAmount,
   };
 
   // Build contextual scenario list based on booking status
@@ -68,13 +62,6 @@ export function BookingSmartMessagesCard({
     scenarios.push({
       value: "booking_reminder",
       label: MESSAGES.smartComposer.scenarios.booking_reminder,
-    });
-  }
-
-  if (depositAmount && depositStatus === "pending") {
-    scenarios.push({
-      value: "deposit_request",
-      label: MESSAGES.smartComposer.scenarios.deposit_request,
     });
   }
 

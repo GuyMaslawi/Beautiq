@@ -1,10 +1,15 @@
 # Booking Payments & Clearing
 
-Online payment / deposit support for the **public customer booking page**. This
+Online **full-payment** support for the **public customer booking page**. This
 is Phase 1: the product + backend foundation, a provider abstraction, a safe
 **mock provider**, and a webhook/return architecture. **No real money moves by
 default.** PayPlus / Grow-Meshulam / Tranzila are documented as the next
 providers.
+
+> **Allura does not support deposits / prepayments (“מקדמה”).** The only payment
+> modes are: **no payment**, **full online payment**, or **pay at the business**
+> (when enabled). There is no partial / advance / deposit amount anywhere in the
+> product, and Allura never stores credit-card details.
 
 ## PCI / safety note
 
@@ -26,8 +31,9 @@ booking creation:
 2. If the business requires a payment, a `BookingPayment` row + a hosted payment
    link are created, and the link is returned to the customer.
 3. Payment is confirmed **only** by a verified provider **webhook**, which sets
-   `BookingPayment.status = paid` and `Booking.depositStatus = paid`. The booking
-   **stays `pending`** — the owner still approves it.
+   `BookingPayment.status = paid`. The booking record itself is never mutated —
+   it **stays `pending`** and the owner still approves it. The `BookingPayment`
+   row is the authoritative money state.
 
 This never creates a *confirmed* booking without payment, and a client-side
 "success" redirect is **never** treated as proof of payment.
@@ -39,9 +45,7 @@ This never creates a *confirmed* booking without payment, and a client-side
 ## Data model
 
 - **`BusinessPaymentSettings`** (1/business) — `enabled`, `provider`,
-  `requirement` (`none|deposit|full_payment`), `depositType`
-  (`fixed_amount|percentage`), `depositAmountMinor`, `depositPercentage`,
-  `allowPayAtBusiness`, `instructions`.
+  `requirement` (`none|full_payment`), `allowPayAtBusiness`, `instructions`.
 - **`PaymentProviderConnection`** (1/business) — `provider`, `status`,
   `credentialsEncrypted`, `publicConfigJson`, `lastVerifiedAt`, `lastError`.
 - **`BookingPayment`** (1/booking) — `provider`, `status`

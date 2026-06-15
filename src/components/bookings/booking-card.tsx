@@ -1,9 +1,6 @@
-import Link from "next/link";
 import { Phone, Clock, Banknote, CalendarDays } from "lucide-react";
 import { BookingStatusBadge } from "@/components/bookings/booking-status-badge";
 import { BookingCardActions } from "@/components/bookings/booking-card-actions";
-import { DepositStatusBadge } from "@/components/deposits/deposit-status-badge";
-import { DEPOSITS } from "@/lib/constants/he";
 import type { BookingListItem } from "@/server/bookings/queries";
 
 const TZ = "Asia/Jerusalem";
@@ -138,31 +135,14 @@ export function BookingCard({ booking }: { booking: BookingListItem }) {
           </div>
 
           {/* Badges row */}
-          {(booking.depositStatus !== "not_required" || booking.source === "public") && (
+          {booking.source === "public" && (
             <div className="mt-2.5 flex flex-wrap gap-2">
-              {booking.depositStatus === "pending" && isActive ? (
-                <Link
-                  href={`/bookings/${booking.id}`}
-                  className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium transition-opacity hover:opacity-75"
-                  style={{
-                    background: "rgba(184,150,10,0.12)",
-                    color: "#7a6400",
-                    border: "1px solid rgba(184,150,10,0.32)",
-                  }}
-                >
-                  {DEPOSITS.actions.sendRequest}
-                </Link>
-              ) : booking.depositStatus !== "not_required" ? (
-                <DepositStatusBadge status={booking.depositStatus} />
-              ) : null}
-              {booking.source === "public" && (
-                <span
-                  className="rounded-full px-2.5 py-0.5 text-xs font-medium"
-                  style={{ background: "rgba(59,122,181,0.09)", color: "#2e5c8a", border: "1px solid rgba(59,122,181,0.18)" }}
-                >
-                  קישור הזמנה
-                </span>
-              )}
+              <span
+                className="rounded-full px-2.5 py-0.5 text-xs font-medium"
+                style={{ background: "rgba(59,122,181,0.09)", color: "#2e5c8a", border: "1px solid rgba(59,122,181,0.18)" }}
+              >
+                קישור הזמנה
+              </span>
             </div>
           )}
         </div>

@@ -1120,7 +1120,6 @@ export function SetupChecklist({
   const extraUrgent = guidanceItems.filter(
     (item) =>
       item.priority === "important" &&
-      item.id !== "pending-deposits" &&
       item.id !== "pending-bookings" &&
       item.id !== "today-bookings" &&
       item.id !== "no-upcoming-bookings",

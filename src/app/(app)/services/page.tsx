@@ -18,7 +18,7 @@ export default async function ServicesPage() {
       <PageHeader
         icon={Sparkles}
         title={SERVICES.pageTitle}
-        subtitle="כאן מגדירים את השירותים שהעסק מציע, משך הטיפול, מחיר ומקדמה."
+        subtitle="כאן מגדירים את השירותים שהעסק מציע, משך הטיפול והמחיר."
         action={
           <Link href="/services/new">
             <Button size="sm">{SERVICES.addButton}</Button>

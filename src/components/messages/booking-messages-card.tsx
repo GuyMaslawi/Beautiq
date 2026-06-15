@@ -14,7 +14,6 @@ interface BookingMessagesCardProps {
   bookingDate: string;
   bookingTime: string;
   price?: string;
-  depositAmount?: string;
 }
 
 const BOOKING_MESSAGE_TYPES: {
@@ -47,7 +46,6 @@ export async function BookingMessagesCard({
   bookingDate,
   bookingTime,
   price,
-  depositAmount,
 }: BookingMessagesCardProps) {
   const vars = {
     clientName,
@@ -56,7 +54,6 @@ export async function BookingMessagesCard({
     bookingDate,
     bookingTime,
     price,
-    depositAmount,
   };
 
   const bodies = await Promise.all(

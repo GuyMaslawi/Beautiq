@@ -41,9 +41,8 @@ const BADGE_STYLES: Record<BookingPaymentStatus, CSSProperties> = {
 };
 
 /**
- * Read-only online-payment status badge for owner booking views. Distinct from
- * DepositStatusBadge (manual deposit tracking) — this reflects the hosted
- * payment-link state.
+ * Read-only online-payment status badge for owner booking views. Reflects the
+ * hosted payment-link state for a full online payment.
  */
 export function PaymentStatusBadge({ status }: { status: BookingPaymentStatus }) {
   return (

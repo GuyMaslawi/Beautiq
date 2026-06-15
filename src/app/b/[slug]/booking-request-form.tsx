@@ -25,10 +25,7 @@ const DEFAULT_BRAND = "#b86b8c";
 
 /** Public-safe payment policy passed to the form (never includes credentials). */
 export interface PaymentPolicyClient {
-  requirement: "none" | "deposit" | "full_payment";
-  depositType: "fixed_amount" | "percentage";
-  depositAmountMinor: number | null;
-  depositPercentage: number | null;
+  requirement: "none" | "full_payment";
   allowPayAtBusiness: boolean;
   instructions: string | null;
 }
@@ -474,7 +471,7 @@ function SuccessView({
   brandColor: string;
   payment?: {
     paymentUrl?: string;
-    paymentKind?: "deposit" | "full";
+    paymentKind?: "full";
     paymentAmountMinor?: number;
     payAtBusinessAllowed?: boolean;
     paymentLinkFailed?: boolean;
@@ -515,21 +512,13 @@ function SuccessView({
         </p>
       </div>
 
-      {/* Online payment (deposit / full) — booking is already saved as pending */}
+      {/* Online payment (full) — booking is already saved as pending */}
       {payment?.paymentKind && (
         <div className="mx-auto max-w-sm text-right">
           {payment.paymentUrl ? (
             <SecurePaymentCard
-              title={
-                payment.paymentKind === "deposit"
-                  ? PAYMENTS.publicStep.depositTitle
-                  : PAYMENTS.publicStep.fullTitle
-              }
-              amountLabel={
-                payment.paymentKind === "deposit"
-                  ? PAYMENTS.publicStep.depositAmountLabel
-                  : PAYMENTS.publicStep.fullAmountLabel
-              }
+              title={PAYMENTS.publicStep.fullTitle}
+              amountLabel={PAYMENTS.publicStep.fullAmountLabel}
               amountMinor={payment.paymentAmountMinor}
               brandColor={brandColor}
             >
@@ -757,7 +746,7 @@ export function BookingRequestForm({
   const requiresPayment =
     !!paymentPreview &&
     paymentPreview.amountMinor > 0 &&
-    (paymentPreview.kind === "deposit" || paymentPreview.kind === "full");
+    paymentPreview.kind === "full";
 
   return (
     <form action={formAction} noValidate>
@@ -786,12 +775,6 @@ export function BookingRequestForm({
               />
             ))}
           </div>
-
-          {selectedService?.requiresDeposit && (
-            <p className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              נדרשת מקדמה לשירות זה — התשלום יתואם מול העסק
-            </p>
-          )}
 
           <PrimaryBtn
             disabled={!selectedServiceId}
@@ -1068,16 +1051,8 @@ export function BookingRequestForm({
           {/* Secure-payment preview — shown only when a payment is required */}
           {requiresPayment && paymentPreview && (
             <SecurePaymentCard
-              title={
-                paymentPreview.kind === "deposit"
-                  ? PAYMENTS.publicStep.depositTitle
-                  : PAYMENTS.publicStep.fullTitle
-              }
-              amountLabel={
-                paymentPreview.kind === "deposit"
-                  ? PAYMENTS.publicStep.depositAmountLabel
-                  : PAYMENTS.publicStep.fullAmountLabel
-              }
+              title={PAYMENTS.publicStep.fullTitle}
+              amountLabel={PAYMENTS.publicStep.fullAmountLabel}
               amountMinor={paymentPreview.amountMinor}
               brandColor={brandColor}
               instructions={paymentPolicy?.instructions}

@@ -5,7 +5,6 @@ export interface MessageVars {
   bookingDate?: string;
   bookingTime?: string;
   price?: string;
-  depositAmount?: string;
 }
 
 const FALLBACK = "לא צוין";
@@ -18,6 +17,5 @@ export function renderTemplate(body: string, vars: MessageVars): string {
     .replace(/\{serviceName\}/g, vars.serviceName ?? FALLBACK)
     .replace(/\{bookingDate\}/g, vars.bookingDate ?? FALLBACK)
     .replace(/\{bookingTime\}/g, vars.bookingTime ?? FALLBACK)
-    .replace(/\{price\}/g, vars.price ?? FALLBACK)
-    .replace(/\{depositAmount\}/g, vars.depositAmount ?? FALLBACK);
+    .replace(/\{price\}/g, vars.price ?? FALLBACK);
 }

@@ -11,8 +11,6 @@ import {
   markLateCancellationFeePendingAction,
   markLateCancellationFeePaidAction,
 } from "@/server/bookings/actions";
-import { updateDepositStatusAction } from "@/server/deposits/actions";
-import { getBookingDepositPayment } from "@/server/deposits/queries";
 import { getBookingPaymentForBooking } from "@/server/payments/settings";
 import { PaymentStatusBadge } from "@/components/payments/payment-status-badge";
 import { formatMinorILS } from "@/lib/payments/money";
@@ -23,7 +21,6 @@ import { Button } from "@/components/ui/button";
 import { BookingStatusBadge } from "@/components/bookings/booking-status-badge";
 import { BookingNotesForm } from "@/components/bookings/booking-notes-form";
 import { BookingActions } from "@/components/bookings/booking-actions";
-import { BookingDepositCard } from "@/components/deposits/booking-deposit-card";
 import { BookingSmartMessagesCard } from "@/components/messages/booking-smart-messages-card";
 import { BookingReputationCard } from "@/components/reputation/booking-reputation-card";
 import { BOOKINGS } from "@/lib/constants/he";
@@ -103,10 +100,9 @@ export default async function BookingDetailPage({
   const { bookingId } = await params;
   const business = await requireCurrentBusiness();
   const tenant = { businessId: business.id };
-  const [booking, depositPayment, cancellationPolicy, onlinePayment] =
+  const [booking, cancellationPolicy, onlinePayment] =
     await Promise.all([
       getBooking(tenant, bookingId),
-      getBookingDepositPayment(tenant, bookingId),
       getActiveCancellationPolicy(tenant),
       getBookingPaymentForBooking(tenant.businessId, bookingId),
     ]);
@@ -118,15 +114,11 @@ export default async function BookingDetailPage({
   const cancelAction = cancelBookingAction.bind(null, bookingId);
   const noShowAction = noShowBookingAction.bind(null, bookingId);
   const notesAction = updateBookingNotesAction.bind(null, bookingId);
-  const updateDepositAction = updateDepositStatusAction.bind(null, bookingId);
   const markFeePendingAction = markLateCancellationFeePendingAction.bind(null, bookingId);
   const markFeePaidAction = markLateCancellationFeePaidAction.bind(null, bookingId);
 
   const price = Number(booking.priceSnapshot);
   const duration = booking.durationMinutesSnapshot;
-  const depositAmount = booking.depositAmountSnapshot
-    ? Number(booking.depositAmountSnapshot)
-    : null;
 
   const isCancelled =
     booking.status === "cancelled" || booking.status === "no_show";
@@ -212,14 +204,6 @@ export default async function BookingDetailPage({
         completeAction={completeAction}
         cancelAction={cancelAction}
         noShowAction={noShowAction}
-      />
-
-      {/* Deposit card */}
-      <BookingDepositCard
-        depositStatus={booking.depositStatus}
-        depositAmountSnapshot={depositAmount}
-        depositPayment={depositPayment}
-        updateDepositAction={updateDepositAction}
       />
 
       {/* Online payment card — only when the booking has a hosted payment */}
@@ -371,12 +355,6 @@ export default async function BookingDetailPage({
         bookingDate={formatMsgDate(booking.startTime)}
         bookingTime={formatMsgTime(booking.startTime)}
         price={price > 0 ? `₪${price.toLocaleString("he-IL")}` : undefined}
-        depositAmount={
-          depositAmount != null
-            ? `₪${depositAmount.toLocaleString("he-IL")}`
-            : undefined
-        }
-        depositStatus={booking.depositStatus}
         bookingStatus={booking.status}
       />
 

@@ -98,9 +98,6 @@ export default async function PublicBusinessPage({
           paymentPolicy
             ? {
                 requirement: paymentPolicy.requirement,
-                depositType: paymentPolicy.depositType,
-                depositAmountMinor: paymentPolicy.depositAmountMinor,
-                depositPercentage: paymentPolicy.depositPercentage,
                 allowPayAtBusiness: paymentPolicy.allowPayAtBusiness,
                 instructions: paymentPolicy.instructions,
               }

@@ -1,4 +1,4 @@
-import type { BookingStatus, DepositStatus } from "@prisma/client";
+import type { BookingStatus } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
 import type { TenantContext } from "@/server/db/tenant";
@@ -41,7 +41,6 @@ export interface ClientSummary {
 export interface ClientBookingHistoryItem {
   id: string;
   status: BookingStatus;
-  depositStatus: DepositStatus;
   startTime: Date;
   endTime: Date;
   priceSnapshot: Prisma.Decimal;
@@ -276,7 +275,6 @@ export async function getClientDetail(
     bookings: bookings.map((b) => ({
       id: b.id,
       status: b.status,
-      depositStatus: b.depositStatus,
       startTime: b.startTime,
       endTime: b.endTime,
       priceSnapshot: b.priceSnapshot,

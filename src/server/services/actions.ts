@@ -22,8 +22,6 @@ function extractRaw(formData: FormData): Record<string, string> {
     description: String(formData.get("description") ?? ""),
     durationMinutes: String(formData.get("durationMinutes") ?? ""),
     price: String(formData.get("price") ?? ""),
-    requiresDeposit: String(formData.get("requiresDeposit") ?? ""),
-    depositAmount: String(formData.get("depositAmount") ?? ""),
     bufferBeforeMinutes: String(formData.get("bufferBeforeMinutes") ?? ""),
     bufferAfterMinutes: String(formData.get("bufferAfterMinutes") ?? ""),
     categoryKey: String(formData.get("categoryKey") ?? ""),
@@ -51,11 +49,6 @@ export async function createServiceAction(
         description: value.description ?? null,
         durationMinutes: value.durationMinutes,
         price: new Prisma.Decimal(value.price),
-        requiresDeposit: value.requiresDeposit,
-        depositAmount:
-          value.depositAmount !== undefined
-            ? new Prisma.Decimal(value.depositAmount)
-            : null,
         bufferBeforeMinutes: value.bufferBeforeMinutes,
         bufferAfterMinutes: value.bufferAfterMinutes,
         categoryKey: value.categoryKey ?? null,
@@ -97,11 +90,6 @@ export async function updateServiceAction(
         description: value.description ?? null,
         durationMinutes: value.durationMinutes,
         price: new Prisma.Decimal(value.price),
-        requiresDeposit: value.requiresDeposit,
-        depositAmount:
-          value.depositAmount !== undefined
-            ? new Prisma.Decimal(value.depositAmount)
-            : null,
         bufferBeforeMinutes: value.bufferBeforeMinutes,
         bufferAfterMinutes: value.bufferAfterMinutes,
         categoryKey: value.categoryKey ?? null,

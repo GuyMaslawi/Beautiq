@@ -1,7 +1,6 @@
 export type MessageScenario =
   | "booking_confirmation"
   | "booking_reminder"
-  | "deposit_request"
   | "booking_cancelled"
   | "booking_rescheduled"
   | "after_treatment"
@@ -18,7 +17,6 @@ export interface GeneratorContext {
   bookingDate?: string;
   bookingTime?: string;
   price?: string;
-  depositAmount?: string;
 }
 
 export interface GeneratorResult {
@@ -34,8 +32,7 @@ function fill(template: string, ctx: GeneratorContext): string {
     .replace(/\{serviceName\}/g, ctx.serviceName ?? "")
     .replace(/\{bookingDate\}/g, ctx.bookingDate ?? "")
     .replace(/\{bookingTime\}/g, ctx.bookingTime ?? "")
-    .replace(/\{price\}/g, ctx.price ?? "")
-    .replace(/\{depositAmount\}/g, ctx.depositAmount ?? "");
+    .replace(/\{price\}/g, ctx.price ?? "");
 }
 
 type ToneTemplates = Record<MessageTone, string>;
@@ -66,18 +63,6 @@ const SCENARIO_CONFIG: Record<
         "היי {clientName}! רצינו להזכיר לך שיש לך תור ל־{serviceName} אצל {businessName} ב־{bookingDate} בשעה {bookingTime}.\nאם משהו השתנה, אפשר לפנות אלינו. נתראה ❤️",
       concise:
         "היי {clientName}, תזכורת לתור {serviceName} ב־{bookingDate} בשעה {bookingTime}.",
-    },
-  },
-  deposit_request: {
-    requires: ["clientName", "serviceName", "bookingDate", "depositAmount"],
-    missingMsg: "כדי להכין בקשת מקדמה, יש לבחור תור שמחייב מקדמה.",
-    templates: {
-      regular:
-        "היי {clientName}, כדי לשמור את התור שלך ל־{serviceName} בתאריך {bookingDate}, יש צורך במקדמה של {depositAmount}.\nאחרי התשלום התור יישמר במערכת. תודה ❤️",
-      warm:
-        "היי {clientName}! שמחים שקבעת תור ל־{serviceName} ב־{bookingDate} אצל {businessName}.\nכדי לשמור את המקום, נשמח לקבל מקדמה של {depositAmount}.\nתודה רבה ❤️",
-      concise:
-        "היי {clientName}, לשמירת תור {serviceName} ב־{bookingDate} נדרשת מקדמה: {depositAmount}.",
     },
   },
   booking_cancelled: {

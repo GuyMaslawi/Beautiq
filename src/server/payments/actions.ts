@@ -28,9 +28,6 @@ export async function updatePaymentSettingsAction(
     enabled: String(formData.get("enabled") ?? ""),
     provider: String(formData.get("provider") ?? "mock"),
     requirement: String(formData.get("requirement") ?? "none"),
-    depositType: String(formData.get("depositType") ?? "fixed_amount"),
-    depositAmount: String(formData.get("depositAmount") ?? ""),
-    depositPercentage: String(formData.get("depositPercentage") ?? ""),
     allowPayAtBusiness: String(formData.get("allowPayAtBusiness") ?? ""),
     instructions: String(formData.get("instructions") ?? ""),
   };

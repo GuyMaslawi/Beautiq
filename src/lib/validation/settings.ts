@@ -55,7 +55,6 @@ export interface CancellationPolicyInput {
   enabled: boolean;
   policyText?: string;
   minNoticeHours?: number;
-  requireDepositToBook: boolean;
   lateCancellationHours?: number;
   lateCancellationFeeType: string;
   lateCancellationFeeAmount?: number;
@@ -131,7 +130,6 @@ export function validateCancellationPolicy(
       enabled: raw.enabled === "true",
       policyText: (raw.policyText ?? "").trim() || undefined,
       minNoticeHours,
-      requireDepositToBook: raw.requireDepositToBook === "true",
       lateCancellationHours,
       lateCancellationFeeType: feeType,
       lateCancellationFeeAmount,

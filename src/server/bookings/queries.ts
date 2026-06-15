@@ -96,14 +96,13 @@ export interface GetBookingsParams {
   statusFilter?: BookingStatusFilter;
   search?: string;
   serviceId?: string;
-  depositStatusFilter?: string;
   sortField?: BookingSortField;
   sortDir?: BookingSortDir;
   smartSort?: boolean;
 }
 
 // Smart default sort: today → future requiring action → future → history (desc)
-function applySmartSort<T extends { startTime: Date; status: string; depositStatus: string }>(
+function applySmartSort<T extends { startTime: Date; status: string }>(
   bookings: T[],
 ): T[] {
   const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: TZ });
@@ -115,8 +114,7 @@ function applySmartSort<T extends { startTime: Date; status: string; depositStat
   function getGroup(b: T): number {
     const day = ds(b.startTime);
     if (day === todayStr) return 0;
-    const isActive = b.status === "pending" || b.status === "approved";
-    const needsAction = b.status === "pending" || (b.depositStatus === "pending" && isActive);
+    const needsAction = b.status === "pending";
     const isFuture = day > todayStr;
     if (isFuture && needsAction) return 1;
     if (isFuture) return 2;
@@ -151,8 +149,6 @@ const DB_SORT_FIELD: Partial<Record<BookingSortField, string>> = {
   createdAt: "createdAt",
 };
 
-const VALID_DEPOSIT_STATUSES = ["not_required", "pending", "paid", "failed", "refunded"];
-
 export async function getBookings(
   tenant: TenantContext,
   params: GetBookingsParams = {},
@@ -162,7 +158,6 @@ export async function getBookings(
     statusFilter = "all",
     search,
     serviceId,
-    depositStatusFilter,
     sortField = "startTime",
     sortDir,
     smartSort = false,
@@ -184,10 +179,6 @@ export async function getBookings(
   }
 
   const statuses = STATUS_FILTER_MAP[statusFilter];
-  const validDeposit =
-    depositStatusFilter && VALID_DEPOSIT_STATUSES.includes(depositStatusFilter)
-      ? depositStatusFilter
-      : undefined;
 
   // Smart sort and clientName sort are handled at app level; use startTime for DB ordering
   const dbSortKey =
@@ -212,9 +203,6 @@ export async function getBookings(
           }
         : {}),
       ...(serviceId ? { serviceId } : {}),
-      ...(validDeposit
-        ? { depositStatus: validDeposit as "not_required" | "pending" | "paid" | "failed" | "refunded" }
-        : {}),
     },
     include: bookingInclude,
     orderBy: { [dbSortKey]: dbSortDir },
@@ -264,26 +252,11 @@ export async function hasBookings(tenant: TenantContext): Promise<boolean> {
   return count > 0;
 }
 
-export async function getPendingDepositBookings(tenant: TenantContext) {
-  return prisma.booking.findMany({
-    where: { businessId: tenant.businessId, depositStatus: "pending" },
-    select: {
-      id: true,
-      startTime: true,
-      depositAmountSnapshot: true,
-      client: { select: { fullName: true } },
-      service: { select: { name: true } },
-    },
-    orderBy: { startTime: "asc" },
-  });
-}
-
 export interface BookingSummary {
   todayCount: number;
   weekCount: number;
   pendingCount: number;
   cancelledCount: number;
-  pendingDepositCount: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -380,7 +353,7 @@ export async function getBookingSummary(
   const weekStart = todayStart;
   const weekEnd = new Date(todayStart.getTime() + 7 * 86400000 - 1);
 
-  const [todayCount, weekCount, pendingCount, cancelledCount, pendingDepositCount] =
+  const [todayCount, weekCount, pendingCount, cancelledCount] =
     await Promise.all([
       prisma.booking.count({
         where: {
@@ -403,10 +376,7 @@ export async function getBookingSummary(
           status: { in: ["cancelled", "no_show"] },
         },
       }),
-      prisma.booking.count({
-        where: { businessId: tenant.businessId, depositStatus: "pending" },
-      }),
     ]);
 
-  return { todayCount, weekCount, pendingCount, cancelledCount, pendingDepositCount };
+  return { todayCount, weekCount, pendingCount, cancelledCount };
 }

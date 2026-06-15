@@ -5,7 +5,6 @@ export type ServiceField =
   | "name"
   | "durationMinutes"
   | "price"
-  | "depositAmount"
   | "bufferBeforeMinutes"
   | "bufferAfterMinutes"
   | "form";
@@ -15,8 +14,6 @@ export interface ServiceInput {
   description?: string;
   durationMinutes: number;
   price: number;
-  requiresDeposit: boolean;
-  depositAmount?: number;
   bufferBeforeMinutes: number;
   bufferAfterMinutes: number;
   categoryKey?: BusinessCategoryKey;
@@ -67,23 +64,6 @@ export function validateService(
     errors.price = SERVICES.errors.priceInvalid;
   }
 
-  // checkbox sends "true" when checked, nothing when unchecked
-  const requiresDeposit =
-    raw.requiresDeposit === "true" || raw.requiresDeposit === "on";
-  let depositAmount: number | undefined;
-
-  if (requiresDeposit) {
-    const depositRaw = (raw.depositAmount ?? "").trim();
-    depositAmount = parseFloat(depositRaw);
-    if (!depositRaw) {
-      errors.depositAmount = SERVICES.errors.depositAmountRequired;
-    } else if (isNaN(depositAmount) || depositAmount < 0) {
-      errors.depositAmount = SERVICES.errors.depositAmountInvalid;
-    } else if (!errors.price && !isNaN(price) && depositAmount > price) {
-      errors.depositAmount = SERVICES.errors.depositHigherThanPrice;
-    }
-  }
-
   const bufferBeforeRaw = (raw.bufferBeforeMinutes ?? "0").trim();
   const bufferBeforeMinutes = parseInt(bufferBeforeRaw, 10);
   if (bufferBeforeRaw && (isNaN(bufferBeforeMinutes) || bufferBeforeMinutes < 0)) {
@@ -111,8 +91,6 @@ export function validateService(
       description: (raw.description ?? "").trim() || undefined,
       durationMinutes,
       price,
-      requiresDeposit,
-      depositAmount: requiresDeposit ? depositAmount : undefined,
       bufferBeforeMinutes: isNaN(bufferBeforeMinutes) ? 0 : bufferBeforeMinutes,
       bufferAfterMinutes: isNaN(bufferAfterMinutes) ? 0 : bufferAfterMinutes,
       categoryKey,

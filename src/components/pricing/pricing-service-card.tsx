@@ -100,7 +100,7 @@ export function PricingServiceCard({ service, insights }: PricingServiceCardProp
         </div>
 
         {/* Key metrics row */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <div className="space-y-0.5">
             <p className="text-xs" style={{ color: "#8a8190" }}>{PRICING.card.price}</p>
             <p className="text-base font-bold" style={{ color: "#2b2530" }}>
@@ -117,16 +117,6 @@ export function PricingServiceCard({ service, insights }: PricingServiceCardProp
             <p className="text-xs" style={{ color: "#8a8190" }}>{PRICING.card.duration}</p>
             <p className="text-sm font-medium" style={{ color: "#2b2530" }}>
               {formatDuration(service.durationMinutes)}
-            </p>
-          </div>
-          <div className="space-y-0.5">
-            <p className="text-xs" style={{ color: "#8a8190" }}>{PRICING.card.deposit}</p>
-            <p className="text-sm font-medium" style={{ color: "#2b2530" }}>
-              {service.requiresDeposit && service.depositAmount !== null
-                ? formatILS(service.depositAmount)
-                : service.requiresDeposit
-                  ? "נדרשת"
-                  : PRICING.card.noDeposit}
             </p>
           </div>
         </div>

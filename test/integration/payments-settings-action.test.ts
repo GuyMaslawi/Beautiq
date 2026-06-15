@@ -40,20 +40,22 @@ describe("updatePaymentSettingsAction", () => {
       fd({
         enabled: "true",
         provider: "mock",
-        requirement: "deposit",
-        depositType: "fixed_amount",
-        depositAmount: "50",
+        requirement: "full_payment",
         allowPayAtBusiness: "true",
       }),
     );
     expect(res.success).toBe(PAYMENTS.settings.success);
     const arg = prisma.businessPaymentSettings.upsert.mock.calls[0][0] as {
       where: { businessId: string };
-      create: { businessId: string; depositAmountMinor: number | null };
+      create: Record<string, unknown>;
     };
     expect(arg.where.businessId).toBe(BUSINESS_A);
     expect(arg.create.businessId).toBe(BUSINESS_A);
-    expect(arg.create.depositAmountMinor).toBe(5000);
+    expect(arg.create.requirement).toBe("full_payment");
+    // No deposit fields are ever persisted.
+    expect("depositAmountMinor" in arg.create).toBe(false);
+    expect("depositType" in arg.create).toBe(false);
+    expect("depositPercentage" in arg.create).toBe(false);
   });
 
   it("never targets a businessId injected via the form", async () => {
@@ -68,19 +70,16 @@ describe("updatePaymentSettingsAction", () => {
     expect(arg.where.businessId).toBe(BUSINESS_A);
   });
 
-  it("rejects an invalid deposit before writing", async () => {
-    const res = await updatePaymentSettingsAction(
+  it("coerces a legacy 'deposit' requirement down to 'none' before writing", async () => {
+    prisma.businessPaymentSettings.upsert.mockResolvedValue({});
+    await updatePaymentSettingsAction(
       {},
-      fd({
-        enabled: "true",
-        provider: "mock",
-        requirement: "deposit",
-        depositType: "fixed_amount",
-        depositAmount: "0",
-      }),
+      fd({ enabled: "true", provider: "mock", requirement: "deposit" }),
     );
-    expect(res.errors?.depositAmount).toBeTruthy();
-    expect(prisma.businessPaymentSettings.upsert).not.toHaveBeenCalled();
+    const arg = prisma.businessPaymentSettings.upsert.mock.calls[0][0] as {
+      create: { requirement: string };
+    };
+    expect(arg.create.requirement).toBe("none");
   });
 
   it("returns a safe generic error when the write throws", async () => {
