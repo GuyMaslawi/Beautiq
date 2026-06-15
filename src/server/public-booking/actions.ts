@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
 import { findOrCreateClient } from "@/server/clients/find-or-create";
@@ -11,6 +12,9 @@ import { validatePublicBooking } from "@/lib/validation/public-booking";
 import { parseIsraelDateTime } from "@/lib/time";
 import { PUBLIC_BOOKING } from "@/lib/constants/he";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { getPublicPaymentPolicy } from "@/server/payments/settings";
+import { createBookingPayment } from "@/server/payments/booking-payment";
+import { computePaymentAmount } from "@/lib/payments/money";
 import { sendBookingConfirmation } from "./send-confirmation";
 
 const BOOKING_RATE_WINDOW_MS = 10 * 60_000; // 10 minutes
@@ -24,6 +28,16 @@ export interface PublicBookingFormState {
   errors?: Partial<Record<string, string>>;
   formError?: string;
   values?: Record<string, string>;
+  /** Hosted payment page URL — present only when an online payment is required. */
+  paymentUrl?: string;
+  /** "deposit" | "full" — what the requested payment represents. */
+  paymentKind?: "deposit" | "full";
+  /** Amount to collect, in agorot. */
+  paymentAmountMinor?: number;
+  /** Whether the customer may choose to pay at the business instead. */
+  payAtBusinessAllowed?: boolean;
+  /** True when payment is required but the link could not be created. */
+  paymentLinkFailed?: boolean;
 }
 
 /**
@@ -139,6 +153,42 @@ export async function submitPublicBookingAction(
 
   await syncClientStats({ businessId: tenant.businessId, clientId: client.id });
 
+  // ── Online payment (deposit / full) ──────────────────────────────────────
+  // The booking is already created as `pending` (never auto-confirmed). If the
+  // business requires an online payment, create a hosted payment link now and
+  // return it so the customer can pay on the provider's secure page. Payment is
+  // only ever confirmed via a verified provider webhook — never a client redirect.
+  let paymentState: Partial<PublicBookingFormState> = {};
+  try {
+    const policy = await getPublicPaymentPolicy(tenant.businessId);
+    if (policy) {
+      const { amountMinor, kind } = computePaymentAmount(
+        policy,
+        Math.round(Number(service.price) * 100),
+      );
+      if (amountMinor > 0 && (kind === "deposit" || kind === "full")) {
+        const payment = await createBookingPayment({
+          businessId: tenant.businessId,
+          bookingId: newBookingId,
+          clientId: client.id,
+          amountMinor,
+          customerName: value.clientName,
+          customerPhone: value.phone,
+          description: `${service.name} · ${business.name}`,
+        });
+        paymentState = {
+          paymentKind: kind,
+          paymentAmountMinor: amountMinor,
+          payAtBusinessAllowed: policy.allowPayAtBusiness,
+          paymentUrl: payment.ok ? (payment.paymentUrl ?? undefined) : undefined,
+          paymentLinkFailed: !payment.ok,
+        };
+      }
+    }
+  } catch (err) {
+    console.error("[submitPublicBookingAction] payment setup failed:", err);
+  }
+
   // Best-effort WhatsApp confirmation — never blocks the response
   sendBookingConfirmation({
     bookingId: newBookingId,
@@ -153,7 +203,18 @@ export async function submitPublicBookingAction(
     console.error("[submitPublicBookingAction] WA confirmation failed:", err),
   );
 
-  return { success: true };
+  // Pay-first flow: when an online payment is required and a hosted link was
+  // created, send the customer straight to the secure payment page. The
+  // booking-success screen ("התור נקבע בהצלחה") is shown only AFTER payment
+  // completes, on the return status page (/pay/status). `redirect` throws, so
+  // it must stay outside any try/catch.
+  if (paymentState.paymentUrl) {
+    redirect(paymentState.paymentUrl);
+  }
+
+  // Otherwise (no payment required, or the link could not be created) show the
+  // in-form confirmation — including a graceful fallback when the link failed.
+  return { success: true, ...paymentState };
 }
 
 // ---------------------------------------------------------------------------

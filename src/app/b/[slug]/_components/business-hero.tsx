@@ -15,11 +15,17 @@ export function PublicBusinessHero({
   brand,
   avgRating,
   bookingForm,
+  secondaryContent,
+  hideBookingHeader = false,
 }: {
   business: PublicBusiness;
   brand: string;
   avgRating: number | null;
   bookingForm: ReactNode;
+  /** Desktop-only cards rendered under the hero in the right column. */
+  secondaryContent?: ReactNode;
+  /** Hide the "קביעת תור ב־3 צעדים" card header (e.g. for the success view). */
+  hideBookingHeader?: boolean;
 }) {
   const grd = brandGradient(brand);
   const location = [business.city, business.area].filter(Boolean).join(", ");
@@ -53,7 +59,7 @@ export function PublicBusinessHero({
         <div
           className={`pt-6 lg:pt-12 ${
             bookingForm
-              ? "lg:grid lg:grid-cols-[1fr_minmax(360px,390px)] lg:gap-8 lg:items-start"
+              ? "lg:grid lg:grid-cols-[1fr_minmax(420px,480px)] lg:gap-8 lg:items-start"
               : ""
           }`}
         >
@@ -202,6 +208,14 @@ export function PublicBusinessHero({
                 </div>
               </div>
             )}
+
+            {/* Desktop-only secondary cards — keep the right column balanced
+                while the booking card grows. */}
+            {secondaryContent && (
+              <div className="mt-5 hidden space-y-4 lg:block">
+                {secondaryContent}
+              </div>
+            )}
           </div>
 
           {/* ── Booking column (left in RTL) ── */}
@@ -213,16 +227,18 @@ export function PublicBusinessHero({
             >
               <div className="overflow-hidden rounded-3xl border border-[var(--border)] bg-white shadow-lg">
                 {/* Card header */}
-                <div
-                  className="px-6 pt-6 pb-5 text-center text-white"
-                  style={{ background: grd }}
-                >
-                  <h2 className="text-lg font-bold">קביעת תור ב־3 צעדים</h2>
-                  <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-white/90">
-                    <ShieldCheck className="h-3.5 w-3.5" />
-                    מאובטח · מהיר · ללא התחייבות
-                  </p>
-                </div>
+                {!hideBookingHeader && (
+                  <div
+                    className="px-6 pt-6 pb-5 text-center text-white"
+                    style={{ background: grd }}
+                  >
+                    <h2 className="text-lg font-bold">קביעת תור ב־3 צעדים</h2>
+                    <p className="mt-1 inline-flex items-center gap-1.5 text-xs text-white/90">
+                      <ShieldCheck className="h-3.5 w-3.5" />
+                      מאובטח · מהיר · ללא התחייבות
+                    </p>
+                  </div>
+                )}
                 <div className="p-5 sm:p-6">{bookingForm}</div>
               </div>
             </div>

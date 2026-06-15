@@ -43,6 +43,9 @@ const MODELS = [
   "automationSetting",
   "automationRun",
   "automationMessage",
+  "businessPaymentSettings",
+  "paymentProviderConnection",
+  "bookingPayment",
 ] as const;
 
 const DELEGATE_METHODS = [

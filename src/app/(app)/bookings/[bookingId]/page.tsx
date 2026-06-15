@@ -13,6 +13,10 @@ import {
 } from "@/server/bookings/actions";
 import { updateDepositStatusAction } from "@/server/deposits/actions";
 import { getBookingDepositPayment } from "@/server/deposits/queries";
+import { getBookingPaymentForBooking } from "@/server/payments/settings";
+import { PaymentStatusBadge } from "@/components/payments/payment-status-badge";
+import { formatMinorILS } from "@/lib/payments/money";
+import { PAYMENTS } from "@/lib/constants/he";
 import { isLateCancellation, computeLateCancellationFee } from "@/lib/cancellation";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -99,11 +103,13 @@ export default async function BookingDetailPage({
   const { bookingId } = await params;
   const business = await requireCurrentBusiness();
   const tenant = { businessId: business.id };
-  const [booking, depositPayment, cancellationPolicy] = await Promise.all([
-    getBooking(tenant, bookingId),
-    getBookingDepositPayment(tenant, bookingId),
-    getActiveCancellationPolicy(tenant),
-  ]);
+  const [booking, depositPayment, cancellationPolicy, onlinePayment] =
+    await Promise.all([
+      getBooking(tenant, bookingId),
+      getBookingDepositPayment(tenant, bookingId),
+      getActiveCancellationPolicy(tenant),
+      getBookingPaymentForBooking(tenant.businessId, bookingId),
+    ]);
 
   if (!booking) notFound();
 
@@ -215,6 +221,21 @@ export default async function BookingDetailPage({
         depositPayment={depositPayment}
         updateDepositAction={updateDepositAction}
       />
+
+      {/* Online payment card — only when the booking has a hosted payment */}
+      {onlinePayment && (
+        <Card className="p-5 space-y-3">
+          <p className="text-muted text-xs font-semibold uppercase tracking-wider">
+            {PAYMENTS.settings.sectionTitle}
+          </p>
+          <div className="flex items-center justify-between">
+            <span className="text-foreground text-sm font-semibold">
+              {formatMinorILS(onlinePayment.amountMinor)}
+            </span>
+            <PaymentStatusBadge status={onlinePayment.status} />
+          </div>
+        </Card>
+      )}
 
       {/* Late cancellation card — only for cancelled/no-show bookings when policy is enabled */}
       {isCancelled && lateCancelled !== null && (

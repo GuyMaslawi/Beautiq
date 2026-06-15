@@ -98,6 +98,47 @@ enum PaymentType {
   refund
 }
 
+/// Online payment / clearing provider for booking payments.
+/// `mock` is the safe dev/test default; real providers are added incrementally.
+enum PaymentProviderKind {
+  mock
+  payplus
+  grow_meshulam
+  tranzila
+  disabled
+}
+
+/// Whether a booking requires upfront online payment.
+enum PaymentRequirement {
+  none
+  deposit
+  full_payment
+}
+
+/// How a required deposit is computed.
+enum DepositKind {
+  fixed_amount
+  percentage
+}
+
+/// Connection state of a business's payment provider credentials.
+enum PaymentConnectionStatus {
+  not_connected
+  active
+  error
+}
+
+/// Lifecycle of a single hosted-payment-link booking payment.
+enum BookingPaymentStatus {
+  pending
+  payment_link_created
+  paid
+  failed
+  cancelled
+  expired
+  refunded
+}
+
 enum MessageTemplateType {
   booking_confirmation
   booking_reminder
@@ -319,6 +360,9 @@ model Business {
   automationSettings     AutomationSetting[]
   automationRuns         AutomationRun[]
   automationMessages     AutomationMessage[]
+  paymentSettings        BusinessPaymentSettings?
+  paymentConnection      PaymentProviderConnection?
+  bookingPayments        BookingPayment[]
 }
 
 /// Membership join between a global User and a Business, carrying the role.
@@ -417,6 +461,7 @@ model Client {
   waitlistEntries    WaitlistEntry[]
   recommendations    Recommendation[]
   automationMessages AutomationMessage[]
+  bookingPayments    BookingPayment[]
 
   @@unique([businessId, normalizedPhone])
   @@index([businessId])
@@ -465,6 +510,7 @@ model Booking {
   reminders          Reminder[]
   recommendations    Recommendation[]
   automationMessages AutomationMessage[]
+  bookingPayment     BookingPayment?
 
   @@index([businessId, startTime])
   @@index([businessId, status])
@@ -888,4 +934,93 @@ model AutomationMessage {
   @@index([runId])
   @@index([status])
   @@index([providerMessageId])
+}
+
+// ---------------------------------------------------------------------------
+// Booking payments (online clearing / deposits)
+//
+// Money is stored in MINOR units (agorot, Int) on these models — payment
+// providers (PayPlus / Grow / Tranzila) all work in agorot. This is distinct
+// from the Decimal(10,2) major-unit amounts used elsewhere (Service.price,
+// Payment.amount); conversion happens at the boundary.
+// ---------------------------------------------------------------------------
+
+/// Per-business payment policy for the public booking page. One row per business.
+/// Owners can configure this freely; real money never moves until a provider
+/// connection is active AND server-side env gating is enabled.
+model BusinessPaymentSettings {
+  id                 String              @id @default(cuid())
+  businessId         String              @unique
+  /// Master switch — show an online payment step on the public booking page.
+  enabled            Boolean             @default(false)
+  provider           PaymentProviderKind @default(mock)
+  requirement        PaymentRequirement  @default(none)
+  depositType        DepositKind         @default(fixed_amount)
+  /// Fixed deposit amount in agorot (used when depositType = fixed_amount).
+  depositAmountMinor Int?
+  /// Percentage of the service price (0–100, used when depositType = percentage).
+  depositPercentage  Int?
+  /// Allow the customer to choose "I'll pay at the business" instead of paying now.
+  allowPayAtBusiness Boolean             @default(true)
+  /// Optional free-text instructions / cancellation note shown near the pay step.
+  instructions       String?
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+/// Encrypted provider credentials + connection state. One row per business.
+/// Mirrors WhatsAppConnection: secrets are AES-256-GCM encrypted and never
+/// returned to the client.
+model PaymentProviderConnection {
+  id                   String                  @id @default(cuid())
+  businessId           String                  @unique
+  provider             PaymentProviderKind     @default(mock)
+  status               PaymentConnectionStatus @default(not_connected)
+  /// Encrypted JSON blob of provider credentials — never returned to the client.
+  credentialsEncrypted String?
+  /// Non-secret public config (e.g. terminal name, page UID) — safe to read.
+  publicConfigJson     Json?
+  lastVerifiedAt       DateTime?
+  /// Last error message — safe to display in admin UI (never contains secrets).
+  lastError            String?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+/// One hosted-payment-link payment per booking. The booking itself stays
+/// `pending` (never auto-confirmed); this record tracks the money. Payment is
+/// only ever confirmed `paid` from a verified provider webhook / server check,
+/// never from a client-side success redirect.
+model BookingPayment {
+  id                    String               @id @default(cuid())
+  businessId            String
+  bookingId            String                @unique
+  clientId             String?
+  provider             PaymentProviderKind
+  status               BookingPaymentStatus  @default(pending)
+  /// Amount to collect, in agorot.
+  amountMinor          Int
+  currency             String                @default("ILS")
+  /// Hosted payment page URL the customer is sent to.
+  paymentUrl           String?
+  /// Provider's transaction / page reference — idempotency key for webhooks.
+  providerTransactionId String?              @unique
+  /// Sanitized provider payload (no PAN, no secrets) for debugging/audit.
+  providerPayloadJson  Json?
+  expiresAt            DateTime?
+  paidAt               DateTime?
+  failedAt             DateTime?
+  createdAt            DateTime              @default(now())
+  updatedAt            DateTime              @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  booking  Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  client   Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  @@index([businessId, status])
+  @@index([businessId, bookingId])
 }

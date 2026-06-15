@@ -2408,3 +2408,153 @@ export const WIN_BACK_AUTOMATION = {
     errorGeneric: "שגיאה פנימית. יש לנסות שוב.",
   },
 } as const;
+
+/** טקסטים לסליקה ותשלומים בהזמנה */
+export const PAYMENTS = {
+  // ── הגדרות בעל/ת העסק ────────────────────────────────────────────────────
+  settings: {
+    sectionTitle: "סליקה ותשלומים",
+    sectionHint:
+      "אפשר ללקוחות לשלם אונליין או לשלם מקדמה בזמן קביעת התור בעמוד הציבורי.",
+
+    enableLabel: "אפשר תשלום אונליין",
+    enableHint:
+      "כשמכובה, ההזמנה הציבורית נשארת בדיוק כמו היום — בלי שלב תשלום.",
+
+    notConnectedTitle: "סליקה עדיין לא מחוברת",
+    notConnectedBody:
+      "אפשר להגדיר את מדיניות התשלום, אבל תשלומים אמיתיים לא יופעלו עד חיבור ספק סליקה.",
+
+    requirementLabel: "דרישת תשלום בהזמנה",
+    requirement: {
+      none: "ללא תשלום",
+      deposit: "מקדמה",
+      full_payment: "תשלום מלא",
+    },
+
+    depositTypeLabel: "אופן חישוב המקדמה",
+    depositType: {
+      fixed_amount: "סכום קבוע",
+      percentage: "אחוז מהמחיר",
+    },
+    depositAmountLabel: "סכום מקדמה (₪)",
+    depositPercentageLabel: "אחוז מקדמה (%)",
+
+    allowPayAtBusinessLabel: "אפשר תשלום במקום",
+    allowPayAtBusinessHint:
+      "הלקוחה תוכל לבחור לשלם בעסק במקום לשלם עכשיו אונליין.",
+
+    providerLabel: "ספק סליקה",
+    provider: {
+      mock: "מצב בדיקה (ללא כסף אמיתי)",
+      payplus: "PayPlus",
+      grow_meshulam: "Grow / משולם",
+      tranzila: "Tranzila",
+      disabled: "מושבת",
+    },
+
+    instructionsLabel: "הערת תשלום ללקוחה (לא חובה)",
+    instructionsPlaceholder: "לדוגמה: המקדמה אינה מוחזרת בביטול פחות מ־24 שעות.",
+
+    save: "שמירת הגדרות",
+    success: "הגדרות התשלום נשמרו",
+
+    connectionActive: "ספק הסליקה מחובר",
+    connectionNotConnected: "ספק הסליקה לא מחובר — תשלומים אמיתיים מושבתים",
+    connectionError: "יש בעיה בחיבור ספק הסליקה",
+  },
+
+  errors: {
+    generic: "משהו השתבש. יש לנסות שוב בעוד רגע",
+    depositAmountRequired: "יש להזין סכום מקדמה",
+    depositPercentageRequired: "יש להזין אחוז מקדמה בין 1 ל־100",
+    amountTooLow: "סכום התשלום אינו תקין",
+    paymentsDisabled: "התשלומים אינם פעילים בעסק זה",
+    notConfigured: "מדיניות התשלום אינה מוגדרת במלואה",
+    providerError: "אירעה שגיאה ביצירת קישור התשלום. אפשר לנסות שוב.",
+  },
+
+  // ── שלב התשלום בעמוד הציבורי ─────────────────────────────────────────────
+  publicStep: {
+    optionalTitle: "אפשר לשלם עכשיו או לשלם במקום",
+    depositTitle: "נדרשת מקדמה לשמירת התור",
+    fullTitle: "לתור זה נדרש תשלום מלא מראש",
+
+    depositAmountLabel: "סה״כ לתשלום",
+    fullAmountLabel: "סה״כ לתשלום",
+
+    payNow: "תשלום עכשיו",
+    payAtBusiness: "אשלם במקום",
+    paySecure: "לתשלום מאובטח",
+
+    trustHostedPage: "התשלום מתבצע בעמוד מאובטח של ספק הסליקה",
+    trustNoCardStored: "Allura לא שומרת פרטי אשראי",
+
+    submitNote: "הבקשה תישלח לעסק לאישור. התור יאושר לאחר שהתשלום יתקבל.",
+
+    redirecting: "מעבירים אותך לעמוד התשלום המאובטח…",
+  },
+
+  // ── מסך חזרה מהתשלום ─────────────────────────────────────────────────────
+  returnStatus: {
+    successTitle: "התשלום התקבל והתור נקבע",
+    successBody: "תודה! קיבלנו את התשלום והבקשה לתור נשלחה לעסק.",
+    failureTitle: "התשלום לא הושלם",
+    failureBody:
+      "אפשר לנסות שוב, או לבחור תשלום במקום אם העסק מאפשר זאת.",
+    pendingTitle: "התשלום בעיבוד",
+    pendingBody: "נעדכן את סטטוס התור ברגע שהתשלום יאומת.",
+    backToBusiness: "חזרה לעמוד העסק",
+  },
+
+  // ── מסך אישור התור בעמוד הציבורי (חזרה מהתשלום) ───────────────────────────
+  successState: {
+    titleBooked: "התור נקבע בהצלחה",
+    titlePaid: "התשלום התקבל והתור נקבע",
+    confirmation: "תודה! פרטי התור נשלחו לעסק.",
+
+    detailsHeading: "פרטי התור",
+    businessLabel: "העסק",
+    serviceLabel: "שירות",
+    dateLabel: "תאריך",
+    timeLabel: "שעה",
+    nameLabel: "שם",
+    phoneLabel: "טלפון",
+    paymentLabel: "תשלום",
+
+    paymentPaid: "שולם",
+    paymentPending: "ממתין לתשלום",
+    paymentAtBusiness: "תשלום במקום",
+
+    addToCalendar: "הוספה ליומן",
+    openWhatsApp: "שליחה בוואטסאפ",
+    backToBusiness: "חזרה לעמוד העסק",
+
+    saveNote: "מומלץ לשמור את פרטי התור ביומן.",
+
+    pendingTitle: "התשלום עדיין בבדיקה",
+    pendingBody:
+      "התור נשמר וממתין לאישור העסק. נעדכן את סטטוס התשלום ברגע שיתקבל אישור מספק הסליקה.",
+    pendingRefresh: "רענון הסטטוס",
+
+    failedTitle: "התשלום לא הושלם",
+    failedBody:
+      "התשלום לא בוצע. אפשר לנסות שוב, או לחזור לעמוד העסק ולקבוע מחדש.",
+    retry: "חזרה לעמוד העסק",
+
+    whatsappMessage: "היי! קבעתי תור ל{service} אצל {business} ב{date} בשעה {time} 🎉",
+  },
+
+  // ── תווית סטטוס תשלום (תצוגת בעל/ת העסק) ─────────────────────────────────
+  ownerStatus: {
+    not_required: "לא נדרש תשלום",
+    pending: "ממתין לתשלום",
+    payment_link_created: "ממתין לתשלום",
+    paid: "שולם",
+    failed: "נכשל",
+    cancelled: "בוטל",
+    expired: "פג תוקף",
+    refunded: "הוחזר",
+    pay_at_business: "תשלום במקום",
+  },
+} as const;
