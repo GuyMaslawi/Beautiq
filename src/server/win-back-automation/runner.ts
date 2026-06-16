@@ -8,6 +8,7 @@ import {
 } from "@/lib/whatsapp/provider";
 import { getWhatsAppProviderForBusiness } from "@/server/whatsapp/resolver";
 import { isValidIsraeliPhone } from "@/lib/phone";
+import { isMinuteTestingAllowed, resolveTimingUnit } from "@/lib/automation/minute-testing";
 
 export interface WinBackRunResult {
   success: boolean;
@@ -68,12 +69,21 @@ export async function runWinBackForBusiness(
     };
   }
 
+  // Test-only minute mode. The runner has no user context (cron-safe), so it
+  // gates purely on the environment: a setting left in "minutes" only fires on
+  // minutes in non-production or when ENABLE_AUTOMATION_MINUTE_TESTING=true.
+  // Otherwise it falls back to days, so production never sends on minutes by accident.
+  const timingUnit = resolveTimingUnit(setting.timingUnit, isMinuteTestingAllowed());
+
   const tenant = { businessId: business.id };
   const eligible = await getEligibleClients(tenant, {
     thresholdDays: setting.thresholdDays,
     cooldownDays: setting.cooldownDays,
     requireOptIn: setting.requireOptIn,
     ignoreCooldown: adminOptions?.ignoreCooldown,
+    timingUnit,
+    thresholdMinutes: setting.testThresholdMinutes,
+    cooldownMinutes: setting.testCooldownMinutes,
   });
 
   const run = await prisma.automationRun.create({
@@ -205,7 +215,7 @@ export async function runWinBackForBusiness(
   });
 
   console.log(
-    `[runWinBackForBusiness] done — businessId=${business.id} ` +
+    `[runWinBackForBusiness] done — businessId=${business.id} timingUnit=${timingUnit} ` +
       `eligible=${eligible.length} sent=${sentCount} failed=${failedCount} ` +
       `skipped=${skippedCount} mock=${mockSkipCount} status=${finalStatus}`,
   );

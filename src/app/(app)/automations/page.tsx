@@ -13,8 +13,11 @@ import { getBookingConfirmationSetting } from "@/server/booking-confirmation/que
 import { getAutomationMessageLog } from "@/server/automations/message-queries";
 import { getLastAutomationRun } from "@/server/automations/run-queries";
 import { getOwnerWhatsAppStatus } from "@/server/whatsapp/owner-status";
+import { getReviewDemoStatus } from "@/server/whatsapp/review-demo";
 import { isRealSendConfigured, isTestModeActive } from "@/lib/whatsapp/provider";
+import { isMinuteTestingAllowed } from "@/lib/automation/minute-testing";
 import { WhatsAppConnectionCard } from "@/components/whatsapp/whatsapp-connection-card";
+import { ReviewDemoCard } from "@/components/whatsapp/review-demo-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { WinBackAutomationCard } from "@/components/automations/win-back-automation-card";
 import { MorningReminderCard } from "@/components/automations/morning-reminder-card";
@@ -61,6 +64,11 @@ export default async function AutomationsPage() {
   // Owner-facing WhatsApp connection + per-automation template readiness.
   const ownerWhatsAppStatus = await getOwnerWhatsAppStatus(business.id);
 
+  // Meta App Review demo status — admin/reviewer-only, business-scoped.
+  const reviewDemoStatus = user?.isAdmin
+    ? await getReviewDemoStatus(business.id)
+    : null;
+
   // Fetch last run summaries (with skipped-reason breakdowns) for all 4 automation types
   const [winBackLastRunSummary, morningReminderLastRunSummary, reviewRequestLastRunSummary, bookingConfirmationLastRunSummary] =
     await Promise.all([
@@ -89,6 +97,9 @@ export default async function AutomationsPage() {
   const automationsLocked =
     realSendConfigured && !testMode && !isEnvFallback && !whatsappConnected;
 
+  // Minute-based test timing is admin/dev-only — hidden from regular owners by default.
+  const allowMinuteTesting = isMinuteTestingAllowed({ isAdmin: user?.isAdmin === true });
+
   return (
     <div className="w-full space-y-6">
       <PageHeader
@@ -105,6 +116,11 @@ export default async function AutomationsPage() {
         graphVersion={process.env.NEXT_PUBLIC_META_GRAPH_VERSION ?? "v19.0"}
         isAdmin={user?.isAdmin ?? false}
       />
+
+      {/* Meta App Review demo panel — admin/reviewer-only */}
+      {reviewDemoStatus && (
+        <ReviewDemoCard status={reviewDemoStatus} businessId={business.id} />
+      )}
 
       {/* WhatsApp status banners — never show technical credentials */}
 
@@ -194,6 +210,7 @@ export default async function AutomationsPage() {
           realSendConfigured={realSendConfigured}
           testMode={testMode}
           locked={automationsLocked}
+          allowMinuteTesting={allowMinuteTesting}
         />
 
         <MorningReminderCard

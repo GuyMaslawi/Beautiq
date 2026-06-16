@@ -1,13 +1,14 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, FlaskConical, AlertTriangle } from "lucide-react";
 import { WIN_BACK_AUTOMATION } from "@/lib/constants/he";
 import { saveWinBackAutomationSetting } from "@/server/win-back-automation/actions";
 import { DEFAULT_WIN_BACK_TEMPLATE } from "@/server/win-back-automation/message-builder";
 import type { AutomationSetting } from "@prisma/client";
 
 const c = WIN_BACK_AUTOMATION.settings;
+const tm = c.testMode;
 
 const PRESET_DAYS = [30, 60, 90] as const;
 type PresetDays = typeof PRESET_DAYS[number];
@@ -36,12 +37,41 @@ interface Props {
   currentEnabled: boolean;
   onSaved?: () => void;
   onPreviewChange?: (template: string, offerType: string, offerValue: string) => void;
+  /** Server-computed: may this user/env use minute-based test timing? */
+  allowMinuteTesting?: boolean;
+  /** Whether real WhatsApp sends are configured (drives the extra minute-mode confirmation). */
+  realSendConfigured?: boolean;
 }
 
-export function WinBackSettingsForm({ setting, currentEnabled, onSaved, onPreviewChange }: Props) {
+export function WinBackSettingsForm({
+  setting,
+  currentEnabled,
+  onSaved,
+  onPreviewChange,
+  allowMinuteTesting = false,
+  realSendConfigured = false,
+}: Props) {
   const [isPending, startTransition] = useTransition();
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // ── Test-mode (minutes) state — only meaningful when allowMinuteTesting ──
+  const [timingUnit, setTimingUnit] = useState<"days" | "minutes">(
+    (setting?.timingUnit as "days" | "minutes") ?? "days",
+  );
+  const [testThresholdInput, setTestThresholdInput] = useState(
+    setting?.testThresholdMinutes != null ? String(setting.testThresholdMinutes) : "5",
+  );
+  const [testCooldownInput, setTestCooldownInput] = useState(
+    setting?.testCooldownMinutes != null ? String(setting.testCooldownMinutes) : "1",
+  );
+  const [minuteConfirm, setMinuteConfirm] = useState(false);
+  const [testModeError, setTestModeError] = useState("");
+
+  // Minute mode is only ever active when the env/user allows it.
+  const minuteModeActive = allowMinuteTesting && timingUnit === "minutes";
+  // Extra confirmation required only when minute mode could send real messages.
+  const needsMinuteConfirm = minuteModeActive && realSendConfigured;
 
   const initialThreshold = getInitialThresholdSelection(setting?.thresholdDays ?? 30);
   const [thresholdSelected, setThresholdSelected] = useState<PresetDays | "custom">(initialThreshold.selected);
@@ -83,6 +113,7 @@ export function WinBackSettingsForm({ setting, currentEnabled, onSaved, onPrevie
     setError(null);
     setSaved(false);
     setCustomDaysError("");
+    setTestModeError("");
 
     if (thresholdSelected === "custom") {
       const days = getEffectiveThresholdDays();
@@ -90,6 +121,24 @@ export function WinBackSettingsForm({ setting, currentEnabled, onSaved, onPrevie
         setCustomDaysError("יש להזין מספר ימים תקין");
         return;
       }
+    }
+
+    // Validate test-mode (minutes) inputs and the safety confirmation.
+    let testThresholdMinutes: number | null = null;
+    let testCooldownMinutes: number | null = null;
+    if (minuteModeActive) {
+      const t = parseInt(testThresholdInput, 10);
+      const cd = parseInt(testCooldownInput, 10);
+      if (isNaN(t) || t < 1 || isNaN(cd) || cd < 1) {
+        setTestModeError(tm.minutesInvalidError);
+        return;
+      }
+      if (needsMinuteConfirm && !minuteConfirm) {
+        setTestModeError(tm.realSendConfirmError);
+        return;
+      }
+      testThresholdMinutes = t;
+      testCooldownMinutes = cd;
     }
 
     const thresholdDays = getEffectiveThresholdDays()!;
@@ -106,6 +155,9 @@ export function WinBackSettingsForm({ setting, currentEnabled, onSaved, onPrevie
         requireOptIn: setting?.requireOptIn ?? true,
         templateName: setting?.templateName ?? null,
         templateLanguage: setting?.templateLanguage ?? "he",
+        timingUnit: minuteModeActive ? "minutes" : "days",
+        testThresholdMinutes,
+        testCooldownMinutes,
       });
       if (result.success) {
         setSaved(true);
@@ -285,6 +337,157 @@ export function WinBackSettingsForm({ setting, currentEnabled, onSaved, onPrevie
 
         </div>
       </details>
+
+      {/* מצב בדיקה — admin/dev only, hidden entirely from regular owners */}
+      {allowMinuteTesting && (
+        <div
+          className="space-y-3 rounded-xl p-4"
+          style={{
+            background: "rgba(107,114,128,0.05)",
+            border: "1px solid var(--border)",
+          }}
+        >
+          <div className="flex items-center gap-2">
+            <FlaskConical className="h-4 w-4 shrink-0" style={{ color: "var(--muted)" }} />
+            <span className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+              {tm.title}
+            </span>
+            <span className="ms-auto rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
+              {tm.adminBadge}
+            </span>
+          </div>
+          <p className="text-xs leading-relaxed" style={{ color: "var(--muted)" }}>
+            {tm.description}
+          </p>
+
+          {/* Timing unit selector */}
+          <div className="space-y-1.5">
+            <label className="block text-xs font-medium" style={{ color: "var(--muted)" }}>
+              {tm.unitLabel}
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {([
+                { value: "days" as const, label: tm.unitDays },
+                { value: "minutes" as const, label: tm.unitMinutes },
+              ]).map((opt) => (
+                <button
+                  key={opt.value}
+                  type="button"
+                  onClick={() => {
+                    setTimingUnit(opt.value);
+                    setTestModeError("");
+                    if (opt.value === "days") setMinuteConfirm(false);
+                  }}
+                  className="rounded-full px-4 py-1.5 text-sm font-medium transition-all"
+                  style={timingUnit === opt.value ? chipActive : chipInactive}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Days mode — informational: production threshold is set above */}
+          {timingUnit === "days" && (
+            <p className="text-xs" style={{ color: "var(--muted)" }}>
+              {tm.sendAfterLabel}: {getEffectiveThresholdDays() ?? "—"} {tm.daysSuffix}
+            </p>
+          )}
+
+          {/* Minutes mode — test inputs + warnings */}
+          {minuteModeActive && (
+            <div className="space-y-3">
+              <div className="flex items-end gap-3 flex-wrap">
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium" style={{ color: "var(--muted)" }}>
+                    {tm.sendAfterLabel}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      value={testThresholdInput}
+                      onChange={(e) => {
+                        setTestThresholdInput(e.target.value);
+                        setTestModeError("");
+                      }}
+                      style={{ ...inputStyle, maxWidth: "100px" }}
+                    />
+                    <span className="text-sm" style={{ color: "var(--muted)" }}>
+                      {tm.minutesSuffix}
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="block text-xs font-medium" style={{ color: "var(--muted)" }}>
+                    {tm.cooldownLabel}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number"
+                      min={1}
+                      value={testCooldownInput}
+                      onChange={(e) => {
+                        setTestCooldownInput(e.target.value);
+                        setTestModeError("");
+                      }}
+                      style={{ ...inputStyle, maxWidth: "100px" }}
+                    />
+                    <span className="text-sm" style={{ color: "var(--muted)" }}>
+                      {tm.minutesSuffix}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Warning: minutes can send very fast */}
+              <div
+                className="flex items-start gap-2 rounded-lg px-3 py-2"
+                style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.28)" }}
+              >
+                <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" style={{ color: "#b45309" }} />
+                <p className="text-xs leading-relaxed" style={{ color: "#92400e" }}>
+                  {tm.minutesWarning}
+                </p>
+              </div>
+
+              {/* Active-mode banner */}
+              <div
+                className="rounded-lg px-3 py-2"
+                style={{ background: "rgba(201,120,152,0.08)", border: "1px solid rgba(201,120,152,0.25)" }}
+              >
+                <p className="text-xs font-medium" style={{ color: "#8a3d60" }}>
+                  {tm.activeBanner}
+                </p>
+              </div>
+
+              {/* Extra confirmation — only when real sends are configured */}
+              {needsMinuteConfirm && (
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={minuteConfirm}
+                    onChange={(e) => {
+                      setMinuteConfirm(e.target.checked);
+                      setTestModeError("");
+                    }}
+                    className="mt-0.5 h-3.5 w-3.5 shrink-0"
+                  />
+                  <span className="text-xs leading-relaxed" style={{ color: "var(--foreground)" }}>
+                    {tm.realSendConfirm}
+                  </span>
+                </label>
+              )}
+            </div>
+          )}
+
+          {testModeError && (
+            <p className="text-xs" style={{ color: "#dc2626" }}>
+              {testModeError}
+            </p>
+          )}
+        </div>
+      )}
 
       {error && (
         <p className="text-sm" style={{ color: "#dc2626" }}>

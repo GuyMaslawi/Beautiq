@@ -54,6 +54,8 @@ export interface EligibilityCheckResult {
   whatsappConnected: boolean;
   realSendConfigured: boolean;
   testModeActive: boolean;
+  /** True when eligibility for this check was computed in minute-based test mode. */
+  minuteModeActive: boolean;
   /** Masked last-4 of WHATSAPP_TEST_PHONE, present only when testModeActive */
   maskedTestPhone?: string;
   breakdown: EligibilityBreakdownResult | null;

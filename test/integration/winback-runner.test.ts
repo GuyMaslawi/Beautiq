@@ -200,3 +200,54 @@ describe("runWinBackForBusiness — admin ignoreCooldown plumbing", () => {
     expect(where.automationMessages).toBeUndefined();
   });
 });
+
+describe("runWinBackForBusiness — minute-mode env gating (cron safety)", () => {
+  function minuteSetting() {
+    return enabledSetting({
+      timingUnit: "minutes",
+      testThresholdMinutes: 10,
+      testCooldownMinutes: 2,
+    });
+  }
+
+  function thresholdAgoMs() {
+    const where = prisma.client.findMany.mock.calls[0][0].where;
+    return Date.now() - where.bookings.some.startTime.lt.getTime();
+  }
+
+  beforeEach(() => {
+    prisma.automationRun.create.mockResolvedValue({ id: "run_1" });
+    prisma.automationRun.update.mockResolvedValue({ id: "run_1" });
+    prisma.whatsAppConnection.findUnique.mockResolvedValue(null);
+    prisma.client.findMany.mockResolvedValue([]);
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("honors minute mode in non-production (dev/test)", async () => {
+    vi.stubEnv("NODE_ENV", "development");
+    prisma.automationSetting.findUnique.mockResolvedValue(minuteSetting());
+    await runWinBackForBusiness(BUSINESS);
+    // ~10 minutes, far below a day
+    expect(thresholdAgoMs()).toBeLessThan(60 * 60 * 1000);
+  });
+
+  it("IGNORES a stored minute mode in production without the env flag (falls back to days)", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("ENABLE_AUTOMATION_MINUTE_TESTING", "");
+    prisma.automationSetting.findUnique.mockResolvedValue(minuteSetting());
+    await runWinBackForBusiness(BUSINESS);
+    // 45-day threshold, NOT 10 minutes — production never auto-sends on minutes
+    expect(thresholdAgoMs()).toBeGreaterThan(44 * 24 * 60 * 60 * 1000);
+  });
+
+  it("honors minute mode in production when ENABLE_AUTOMATION_MINUTE_TESTING=true", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("ENABLE_AUTOMATION_MINUTE_TESTING", "true");
+    prisma.automationSetting.findUnique.mockResolvedValue(minuteSetting());
+    await runWinBackForBusiness(BUSINESS);
+    expect(thresholdAgoMs()).toBeLessThan(60 * 60 * 1000);
+  });
+});

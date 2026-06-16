@@ -2180,6 +2180,26 @@ export const WIN_BACK_AUTOMATION = {
     templateLanguageHelper: "ברירת מחדל: he. אם Meta מחייב — נסי he_IL. לדוגמה: en, ar, he, he_IL.",
     templateMissingWarning: "תבנית WhatsApp מאושרת נדרשת לשליחה אמיתית.",
 
+    // ── מצב בדיקה (admin/dev בלבד) ─────────────────────────────────────────
+    testMode: {
+      title: "מצב בדיקה",
+      description: "מאפשר לבדוק אוטומציות לפי דקות במקום ימים. מיועד לבדיקות בלבד.",
+      adminBadge: "בדיקות",
+      unitLabel: "יחידת זמן",
+      unitDays: "ימים",
+      unitMinutes: "דקות לבדיקה",
+      sendAfterLabel: "שליחה אחרי",
+      daysSuffix: "ימים",
+      minutesSuffix: "דקות",
+      cooldownLabel: "מינימום דקות בין הודעות לאותה לקוחה (בדיקה)",
+      minutesWarning: "מצב דקות מיועד לבדיקה בלבד ועלול לשלוח הודעות מהר מאוד.",
+      activeBanner: "מצב בדיקה פעיל — האוטומציה מחשבת זכאות לפי דקות.",
+      realSendConfirm:
+        "אני מבין/ה שמצב דקות יכול לשלוח הודעות אמיתיות מהר מהרגיל",
+      realSendConfirmError: "יש לאשר את ההבנה לפני שמירה במצב דקות עם שליחה אמיתית.",
+      minutesInvalidError: "יש להזין מספר דקות תקין (לפחות 1).",
+    },
+
     saveButton: "שמירת הגדרות",
     saving: "שומר…",
     saved: "ההגדרות נשמרו",

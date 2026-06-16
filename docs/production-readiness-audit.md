@@ -47,6 +47,7 @@ This was an audit, not a feature pass. Only small, safe fixes were made (listed 
 | `META_WEBHOOK_VERIFY_TOKEN` | ✅ | GET challenge verify. Missing → 403. |
 | `META_WEBHOOK_APP_SECRET` | ✅ | POST HMAC verify. Now required in production (see §2). |
 | `CRON_SECRET` | ✅ | Bearer auth for Vercel cron. |
+| `ENABLE_AUTOMATION_MINUTE_TESTING` | ✅ | Default unset/`false`. Opts a production deploy into minute-based automation timing (test/admin only). See §2a. |
 
 Checks:
 - **Missing envs fail safely** — ✅ Prisma/Auth throw on missing core values; all WhatsApp paths fall back to a disabled/mock provider rather than attempting a real send.
@@ -74,6 +75,19 @@ Verified:
 - **Webhook verify token + app secret validation** — ✅ GET verifies `hub.verify_token`; POST verifies `X-Hub-Signature-256` via timing-safe HMAC. **Hardened:** POST now **rejects (403) in production when `META_WEBHOOK_APP_SECRET` is unset** instead of processing unverified payloads (previously only warned). This closes a forged-STOP / forged-opt-out vector.
 - **STOP / unsubscribe behavior** — ✅ Incoming `stop`/`unsubscribe`/`הסר`/`הסרה` sets `whatsappOptIn=false`, `marketingOptIn=false`, `unsubscribedAt`. By design this opts the phone out across all businesses (privacy-correct) and is documented in the webhook handler.
 - **Test mode wrapper** — ✅ `createTestModeProvider()` blocks every recipient except `WHATSAPP_TEST_PHONE`; missing test phone → blocked, not sent.
+
+---
+
+## 2a. Minute-based automation timing (test/admin only)
+
+**Status: PASS.** Production automation timing is day-based; minute mode exists only to speed up testing of Meta/WhatsApp/automation flows and never relaxes a send guard.
+
+- **What it is** — the win-back automation can measure the inactivity threshold and cooldown in **minutes** instead of days, so a client becomes "eligible" within minutes during testing. Stored on `AutomationSetting` as `timingUnit` (`"days"` default | `"minutes"`), plus `testThresholdMinutes` / `testCooldownMinutes` (nullable, only read in minute mode).
+- **Backwards compatible** — `timingUnit` defaults to `"days"`; existing rows and saves are unchanged and continue to use `thresholdDays` / `cooldownDays`. The minute columns are nullable and ignored in day mode.
+- **Who may use it** — single source of truth `isMinuteTestingAllowed()` in `src/lib/automation/minute-testing.ts`. Allowed when **any** of: `NODE_ENV !== "production"` (dev/test), the caller is an **admin**, or `ENABLE_AUTOMATION_MINUTE_TESTING=true`. A regular owner in production never sees or saves minute mode unless the env flag is set.
+- **UI exposure** — the "מצב בדיקה" section in the win-back settings dialog renders only when the server passes `allowMinuteTesting`. It shows the days→minutes unit toggle, a "מיועד לבדיקה בלבד" warning, an active-mode banner, and — when real sends are configured — an extra confirmation checkbox required before saving. The eligibility ("בדיקת אוטומציה") card shows "בדיקה לפי דקות פעילה" when a check ran in minute mode.
+- **Cron safety (defense in depth)** — `runWinBackForBusiness` has no user context, so it gates on the environment only via `resolveTimingUnit(setting.timingUnit, isMinuteTestingAllowed())`. A setting left in `"minutes"` **falls back to days** in production unless `ENABLE_AUTOMATION_MINUTE_TESTING=true`, so the daily cron never auto-sends on minutes by accident. The save action separately gates on admin/env, so a crafted owner request cannot persist minute mode in production.
+- **Guards untouched** — minute mode only shrinks the inactivity/cooldown date windows. Opt-in, marketing opt-in, unsubscribed exclusion, upcoming-booking exclusion, cooldown dedup, provider/env real-send guards, and `businessId` scoping all still apply (covered by `test/integration/automation-minute-testing.test.ts` and `winback-runner.test.ts`).
 
 ---
 

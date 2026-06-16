@@ -42,6 +42,52 @@ export interface EligibilityOptions {
   requireOptIn: boolean;
   /** Admin-only: bypass cooldown check for manual test runs. Never applies to cron. */
   ignoreCooldown?: boolean;
+  /**
+   * Test-only timing mode. Defaults to "days". When "minutes", the inactivity
+   * and cooldown windows are measured in minutes using the *Minutes fields below.
+   * Callers must gate this with isMinuteTestingAllowed() — eligibility trusts it.
+   * Every other filter (opt-in, marketing, unsubscribed, future booking, dedup)
+   * is unchanged in minute mode.
+   */
+  timingUnit?: "days" | "minutes";
+  /** Inactivity threshold in minutes — used only when timingUnit="minutes". */
+  thresholdMinutes?: number | null;
+  /** Cooldown in minutes — used only when timingUnit="minutes". */
+  cooldownMinutes?: number | null;
+}
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const MINUTE_MS = 60 * 1000;
+
+/**
+ * Compute the inactivity-threshold and cooldown cutoff dates from the options.
+ * Day-based math is the default and is byte-for-byte unchanged for callers that
+ * pass no timingUnit. Minute mode only kicks in when timingUnit="minutes" AND a
+ * positive *Minutes value is provided; otherwise it falls back to the day value.
+ */
+function computeWindows(options: EligibilityOptions): {
+  now: Date;
+  thresholdDate: Date;
+  cooldownDate: Date;
+} {
+  const now = new Date();
+  const useMinutes = options.timingUnit === "minutes";
+
+  const thresholdMs =
+    useMinutes && typeof options.thresholdMinutes === "number" && options.thresholdMinutes > 0
+      ? options.thresholdMinutes * MINUTE_MS
+      : options.thresholdDays * DAY_MS;
+
+  const cooldownMs =
+    useMinutes && typeof options.cooldownMinutes === "number" && options.cooldownMinutes > 0
+      ? options.cooldownMinutes * MINUTE_MS
+      : options.cooldownDays * DAY_MS;
+
+  return {
+    now,
+    thresholdDate: new Date(now.getTime() - thresholdMs),
+    cooldownDate: new Date(now.getTime() - cooldownMs),
+  };
 }
 
 /** Breakdown of why clients were excluded from the eligible set. */
@@ -70,10 +116,8 @@ export async function getEligibleClients(
   tenant: TenantContext,
   options: EligibilityOptions,
 ): Promise<EligibleClient[]> {
-  const { thresholdDays, cooldownDays, requireOptIn, ignoreCooldown } = options;
-  const now = new Date();
-  const thresholdDate = new Date(now.getTime() - thresholdDays * 24 * 60 * 60 * 1000);
-  const cooldownDate = new Date(now.getTime() - cooldownDays * 24 * 60 * 60 * 1000);
+  const { requireOptIn, ignoreCooldown } = options;
+  const { now, thresholdDate, cooldownDate } = computeWindows(options);
 
   const whereOptIn: Prisma.ClientWhereInput = requireOptIn
     ? { whatsappOptIn: true }
@@ -177,10 +221,8 @@ export async function getEligibilityBreakdown(
   tenant: TenantContext,
   options: EligibilityOptions,
 ): Promise<EligibilityBreakdown> {
-  const { thresholdDays, cooldownDays, requireOptIn, ignoreCooldown } = options;
-  const now = new Date();
-  const thresholdDate = new Date(now.getTime() - thresholdDays * 24 * 60 * 60 * 1000);
-  const cooldownDate = new Date(now.getTime() - cooldownDays * 24 * 60 * 60 * 1000);
+  const { requireOptIn, ignoreCooldown } = options;
+  const { now, thresholdDate, cooldownDate } = computeWindows(options);
 
   const [total, eligible, noOptIn, noMarketingOptIn, invalidPhone] = await Promise.all([
     // All active (not unsubscribed) clients

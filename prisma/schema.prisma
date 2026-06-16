@@ -841,6 +841,14 @@ model AutomationSetting {
   cooldownDays    Int                 @default(30)
   /// Only send to clients who have given WhatsApp/marketing opt-in
   requireOptIn    Boolean             @default(true)
+  /// Test-only timing mode: "days" (production default) or "minutes" (admin/dev testing).
+  /// Minute mode is only honored in non-production, by admins, or when
+  /// ENABLE_AUTOMATION_MINUTE_TESTING=true — see lib/automation/minute-testing.ts.
+  timingUnit           String         @default("days")
+  /// Inactivity threshold in MINUTES — only used when timingUnit="minutes" (test mode).
+  testThresholdMinutes Int?
+  /// Cooldown in MINUTES between messages — only used when timingUnit="minutes" (test mode).
+  testCooldownMinutes  Int?
   /// Timestamp of the first successful test send — used to track sandbox validation progress
   testSendPassedAt DateTime?
   createdAt       DateTime            @default(now())

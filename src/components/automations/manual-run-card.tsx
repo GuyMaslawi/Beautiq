@@ -280,6 +280,11 @@ export function ManualRunCard({ isAdmin = false }: { isAdmin?: boolean }) {
                 ולא למספר הטלפון של הלקוחה.
               </InfoBanner>
             )}
+            {eligibilityData.minuteModeActive && (
+              <InfoBanner>
+                <strong>בדיקה לפי דקות פעילה</strong> — הזכאות מחושבת לפי דקות, לא לפי ימים. למצב בדיקה בלבד.
+              </InfoBanner>
+            )}
             {!eligibilityData.automationEnabled && (
               <WarnBanner>
                 האוטומציה כבויה — יש להפעיל אותה כדי לשלוח הודעות.

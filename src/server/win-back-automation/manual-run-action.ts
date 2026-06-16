@@ -6,6 +6,7 @@ import { getEligibleClients, getEligibilityBreakdown } from "./eligibility";
 import { getBlockedClientsByReason } from "./blocked-clients";
 import { runWinBackForBusiness } from "./runner";
 import { isRealSendConfigured, isTestModeActive } from "@/lib/whatsapp/provider";
+import { isMinuteTestingAllowed, resolveTimingUnit } from "@/lib/automation/minute-testing";
 import { revalidatePath } from "next/cache";
 import type {
   EligibilityCheckResult,
@@ -60,6 +61,7 @@ export async function checkWinBackEligibilityAction(
         whatsappConnected: connection?.status === "active",
         realSendConfigured: isRealSendConfigured(),
         testModeActive,
+        minuteModeActive: false,
         maskedTestPhone: testModeActive ? maskTestPhone() : undefined,
         breakdown: null,
         eligibleClients: [],
@@ -67,11 +69,20 @@ export async function checkWinBackEligibilityAction(
       };
     }
 
+    // Honor the stored minute-test unit only when this admin/env may use it.
+    const timingUnit = resolveTimingUnit(
+      setting.timingUnit,
+      isMinuteTestingAllowed({ isAdmin: user?.isAdmin === true }),
+    );
+
     const options = {
       thresholdDays: setting.thresholdDays,
       cooldownDays: setting.cooldownDays,
       requireOptIn: setting.requireOptIn,
       ignoreCooldown,
+      timingUnit,
+      thresholdMinutes: setting.testThresholdMinutes,
+      cooldownMinutes: setting.testCooldownMinutes,
     };
 
     const [breakdown, eligibleClients, blockedClients] = await Promise.all([
@@ -86,6 +97,7 @@ export async function checkWinBackEligibilityAction(
       whatsappConnected: connection?.status === "active",
       realSendConfigured: isRealSendConfigured(),
       testModeActive,
+      minuteModeActive: timingUnit === "minutes",
       maskedTestPhone: testModeActive ? maskTestPhone() : undefined,
       breakdown: {
         total: breakdown.total,
@@ -114,6 +126,7 @@ export async function checkWinBackEligibilityAction(
       whatsappConnected: false,
       realSendConfigured: false,
       testModeActive: false,
+      minuteModeActive: false,
       breakdown: null,
       eligibleClients: [],
       blockedClients: null,

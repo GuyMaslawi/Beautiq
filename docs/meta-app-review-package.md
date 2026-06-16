@@ -144,6 +144,74 @@ show STOP/הסר opt-out safety.
 
 ---
 
+## 5a. Demo recording options (two videos)
+
+Meta App Review needs proof for **two** permissions. Record **two short videos** so
+each permission is demonstrated clearly and honestly. Allura ships a dedicated,
+admin/reviewer-only **"סקירת Meta — מצב הדגמה"** (Meta review — demo mode) panel on the
+**Automations** page that drives the test send and shows every real-send guard. The
+panel is only visible to a reviewer/admin account; regular business owners never see it.
+
+### Video A — `whatsapp_business_management` (Embedded Signup + template sync)
+
+Proves the business can connect its own WABA and manage templates. A live connected
+account is **not** required to demonstrate the flow.
+
+1. Log in to Allura with the reviewer test account and open **אוטומציות / Automations**.
+2. Click **"חיבור WhatsApp Business"** to launch the Meta **Embedded Signup** popup.
+   Show selecting the WhatsApp Business Account and phone number.
+3. After the callback completes, show the connection card change to **"מחובר"** with the
+   connected display phone number and connection health.
+4. Show the per-automation **template rows** with their statuses (e.g. **"מוכן לשליחה"** /
+   **"ממתין לאישור WhatsApp"**), and click **"סנכרון תבניות"** to demonstrate template
+   management/sync.
+
+> If a live connection cannot be completed during the recording, show the Embedded Signup
+> popup opening and narrate that this is the standard Meta dialog. **Do not stage a fake
+> "connected" state** — the demo panel will honestly show "not connected" until Embedded
+> Signup is actually completed.
+
+### Video B — `whatsapp_business_messaging` (real send + received)
+
+Proves a real WhatsApp message is sent and received. This requires the connection from
+Video A to be complete **and** the server-side real-send guards to be enabled.
+
+1. On the **Automations** page, scroll to the **"סקירת Meta — מצב הדגמה"** panel.
+2. Show the guard checklist — every row must be green:
+   - שליחה אמיתית מופעלת (`ENABLE_REAL_WHATSAPP_SEND=true`)
+   - ספק מוגדר ל-`meta_cloud_api` (`WHATSAPP_PROVIDER`)
+   - חיבור WhatsApp פעיל לעסק (active per-business `WhatsAppConnection`)
+   - תבנית הודעה מאושרת זמינה (approved template)
+   - מספר נמען לבדיקה מוגדר (`WHATSAPP_TEST_PHONE`)
+   - The panel shows the reviewer copy **"ניתן לשלוח הודעת בדיקה למספר שהוגדר לצורך סקירת Meta."**
+3. Click **"שליחת הודעת בדיקה ל-Meta"**. The panel shows the provider **Message ID** and
+   status (**sent**).
+4. Switch to **WhatsApp Web / mobile** for the configured test number and show the message
+   **received**.
+5. (Optional) Back in Allura, show the message in the **יומן הודעות** (message log) with its
+   delivery status updating from Meta's webhooks.
+
+> The test send is fully guarded server-side (`sendReviewDemoTestMessage`). If any guard
+> fails the button is disabled and the panel explains why — Allura never fakes a send and
+> never shows a mock message as if WhatsApp delivered it. The message is only ever sent to
+> the configured **test recipient** (`WHATSAPP_TEST_PHONE`), never to real clients.
+
+### Enabling the messaging demo (server-side)
+
+Set these on the review/demo environment **only** (never log the values):
+
+```
+ENABLE_REAL_WHATSAPP_SEND=true
+WHATSAPP_PROVIDER=meta_cloud_api
+WHATSAPP_TEST_MODE=true            # safest: blocks every recipient except the test number
+WHATSAPP_TEST_PHONE=+9725XXXXXXXX  # the reviewer/our controlled test WhatsApp number
+```
+
+With `WHATSAPP_TEST_MODE=true`, the only number that can ever receive a message is
+`WHATSAPP_TEST_PHONE`, so the live messaging demo cannot reach a real client.
+
+---
+
 ## 6. Reviewer test notes
 
 - **Where to log in.** Open https://allura.info and sign in with the test credentials
@@ -207,6 +275,10 @@ show STOP/הסר opt-out safety.
 - [x] Terms public at https://allura.info/terms.
 - [x] Support / data contact: support@allura.info.
 - [x] Video script written.
+- [x] Demo recording options documented (Video A: management / Embedded Signup + template
+      sync; Video B: messaging / real send + received).
+- [x] Admin/reviewer-only review-demo panel implemented (guard checklist + guarded test send,
+      no faked sends, no secrets exposed).
 - [x] Reviewer test notes written.
 - [x] Safety notes written.
 - [x] No "Beautiq" branding in public-facing / legal / App Review text (verified; remaining

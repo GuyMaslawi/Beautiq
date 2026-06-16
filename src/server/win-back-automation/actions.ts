@@ -1,12 +1,13 @@
 "use server";
 
 import { prisma } from "@/server/db/prisma";
-import { requireCurrentBusiness } from "@/server/auth/session";
+import { requireCurrentBusiness, getCurrentUser } from "@/server/auth/session";
 import { revalidatePath } from "next/cache";
 import type { AutomationOfferType } from "@prisma/client";
 import { getWhatsAppProviderForBusiness } from "@/server/whatsapp/resolver";
 import { runWinBackForBusiness } from "./runner";
 import { publicBusinessUrl } from "@/lib/config";
+import { isMinuteTestingAllowed } from "@/lib/automation/minute-testing";
 
 // ---------------------------------------------------------------------------
 // Test send — send one real message to WHATSAPP_TEST_PHONE only
@@ -152,13 +153,49 @@ export interface SaveWinBackSettingInput {
   templateName: string | null;
   /** BCP 47 language code for the approved template (default: "he") */
   templateLanguage: string | null;
+  /** Test-only timing unit. "minutes" is ignored unless the caller may use it. */
+  timingUnit?: "days" | "minutes";
+  /** Test-only inactivity threshold in minutes (only persisted in minute mode). */
+  testThresholdMinutes?: number | null;
+  /** Test-only cooldown in minutes (only persisted in minute mode). */
+  testCooldownMinutes?: number | null;
 }
 
 export async function saveWinBackAutomationSetting(
   input: SaveWinBackSettingInput,
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const business = await requireCurrentBusiness();
+    const [business, user] = await Promise.all([
+      requireCurrentBusiness(),
+      getCurrentUser(),
+    ]);
+
+    // Minute mode is gated server-side: a crafted request from a regular owner
+    // in production cannot enable it. When not allowed, force days and drop the
+    // minute values so production behavior can never be changed by accident.
+    const allowMinutes = isMinuteTestingAllowed({ isAdmin: user?.isAdmin === true });
+    const timingUnit: "days" | "minutes" =
+      allowMinutes && input.timingUnit === "minutes" ? "minutes" : "days";
+    const testThresholdMinutes =
+      timingUnit === "minutes" ? input.testThresholdMinutes ?? null : null;
+    const testCooldownMinutes =
+      timingUnit === "minutes" ? input.testCooldownMinutes ?? null : null;
+
+    const data = {
+      enabled: input.enabled,
+      thresholdDays: input.thresholdDays,
+      sendHour: input.sendHour,
+      messageTemplate: input.messageTemplate,
+      offerType: input.offerType,
+      offerValue: input.offerValue,
+      cooldownDays: input.cooldownDays,
+      requireOptIn: input.requireOptIn,
+      templateName: input.templateName,
+      templateLanguage: input.templateLanguage,
+      timingUnit,
+      testThresholdMinutes,
+      testCooldownMinutes,
+    };
 
     await prisma.automationSetting.upsert({
       where: {
@@ -167,9 +204,9 @@ export async function saveWinBackAutomationSetting(
       create: {
         businessId: business.id,
         type: "win_back",
-        ...input,
+        ...data,
       },
-      update: input,
+      update: data,
     });
 
     revalidatePath("/bring-back");
