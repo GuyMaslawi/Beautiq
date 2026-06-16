@@ -11,7 +11,7 @@
 
 import { prisma } from "@/server/db/prisma";
 import { getWhatsAppProviderForBusiness } from "@/server/whatsapp/resolver";
-import { isValidIsraeliPhone } from "@/lib/phone";
+import { isValidIsraeliPhone, toWaPhone } from "@/lib/phone";
 import { publicBusinessUrl } from "@/lib/config";
 
 const DEFAULT_REVIEW_BODY =
@@ -19,11 +19,6 @@ const DEFAULT_REVIEW_BODY =
 
 function applyVariables(body: string, vars: Record<string, string>): string {
   return body.replace(/\{[^}]+\}/g, (m) => vars[m] ?? m);
-}
-
-function toWaNumber(phone: string): string {
-  const digits = phone.replace(/\D/g, "");
-  return digits.startsWith("0") ? "972" + digits.slice(1) : digits;
 }
 
 export interface ReviewRunResult {
@@ -283,7 +278,7 @@ export async function runReviewRequestForBusiness(params: {
 
       const result = await provider.send({
         businessId,
-        toPhone: toWaNumber(phone),
+        toPhone: toWaPhone(phone),
         templateId: templateName ?? undefined,
         templateLanguage: templateLanguage ?? "he",
         templateVariables,

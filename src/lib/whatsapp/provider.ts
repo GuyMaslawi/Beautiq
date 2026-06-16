@@ -20,6 +20,7 @@
  */
 
 import { createMetaCloudApiProvider } from "./meta-cloud-api";
+import { phonesEqual } from "@/lib/phone";
 
 export interface SendMessageParams {
   businessId: string;
@@ -131,7 +132,10 @@ export function createTestModeProvider(inner: WhatsAppProvider): WhatsAppProvide
         };
       }
 
-      if (params.toPhone !== testPhone) {
+      // Compare by normalized E.164 so a recipient like "972544961155" still
+      // matches WHATSAPP_TEST_PHONE="+972544961155" (and vice-versa). An exact
+      // string match here previously blocked even the test number itself.
+      if (!phonesEqual(params.toPhone, testPhone)) {
         console.log(
           `[WhatsApp test_mode] BLOCKED — businessId=${params.businessId} clientId=${params.clientId} provider=${inner.name} status=blocked`,
         );

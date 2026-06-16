@@ -18,15 +18,10 @@
 
 import { prisma } from "@/server/db/prisma";
 import { getWhatsAppProviderForBusiness } from "@/server/whatsapp/resolver";
-import { isValidIsraeliPhone } from "@/lib/phone";
+import { isValidIsraeliPhone, toWaPhone } from "@/lib/phone";
 
 const DEFAULT_BODY =
   "היי {שם הלקוח} 💖\n\nהבקשה לתור שלך התקבלה!\n\n📅 {תאריך}\n🕒 {שעה}\n✨ {שירות}\n\nנאשר את התור בהקדם ❤️\n{שם העסק}";
-
-function toWaNumber(phone: string): string {
-  const digits = phone.replace(/\D/g, "");
-  return digits.startsWith("0") ? "972" + digits.slice(1) : digits;
-}
 
 function formatDate(d: Date): string {
   return new Intl.DateTimeFormat("he-IL", {
@@ -299,7 +294,7 @@ async function _send(params: {
 
     const result = await provider.send({
       businessId,
-      toPhone: toWaNumber(clientPhone),
+      toPhone: toWaPhone(clientPhone),
       templateId: templateName ?? undefined,
       templateLanguage,
       templateVariables,

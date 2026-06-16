@@ -14,6 +14,8 @@ import { getAutomationMessageLog } from "@/server/automations/message-queries";
 import { getLastAutomationRun } from "@/server/automations/run-queries";
 import { getOwnerWhatsAppStatus } from "@/server/whatsapp/owner-status";
 import { getReviewDemoStatus } from "@/server/whatsapp/review-demo";
+import { getDiagnosticClientOptions } from "@/server/whatsapp/diagnostics";
+import { WhatsAppDiagnosticsPanel } from "@/components/whatsapp/whatsapp-diagnostics-panel";
 import { isRealSendConfigured, isTestModeActive } from "@/lib/whatsapp/provider";
 import { isMinuteTestingAllowed } from "@/lib/automation/minute-testing";
 import { WhatsAppConnectionCard } from "@/components/whatsapp/whatsapp-connection-card";
@@ -68,6 +70,11 @@ export default async function AutomationsPage() {
   const reviewDemoStatus = user?.isAdmin
     ? await getReviewDemoStatus(business.id)
     : null;
+
+  // WhatsApp diagnostics client picker — admin-only, business-scoped.
+  const diagnosticClients = user?.isAdmin
+    ? await getDiagnosticClientOptions(business.id)
+    : [];
 
   // Fetch last run summaries (with skipped-reason breakdowns) for all 4 automation types
   const [winBackLastRunSummary, morningReminderLastRunSummary, reviewRequestLastRunSummary, bookingConfirmationLastRunSummary] =
@@ -244,6 +251,9 @@ export default async function AutomationsPage() {
         {user?.isAdmin && <ManualRunCard isAdmin />}
 
         {user?.isAdmin && <AdminCronTestCard businessId={business.id} />}
+
+        {/* WhatsApp send diagnostics (dry-run + controlled test send) — admin-only */}
+        {user?.isAdmin && <WhatsAppDiagnosticsPanel clients={diagnosticClients} />}
       </div>
 
       {/* Message log */}

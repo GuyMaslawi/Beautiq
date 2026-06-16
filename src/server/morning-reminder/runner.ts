@@ -11,7 +11,7 @@
 
 import { prisma } from "@/server/db/prisma";
 import { getWhatsAppProviderForBusiness } from "@/server/whatsapp/resolver";
-import { isValidIsraeliPhone } from "@/lib/phone";
+import { isValidIsraeliPhone, toWaPhone } from "@/lib/phone";
 
 const DEFAULT_REMINDER_BODY =
   "בוקר טוב {שם הלקוח} ☀️\n\nרק תזכורת קטנה שיש לך היום תור ב:\n\n🕒 {שעה}\n✨ {שירות}\n\nמחכות לראותך ❤️\n{שם העסק}";
@@ -29,10 +29,6 @@ function applyVariables(body: string, vars: Record<string, string>): string {
   return body.replace(/\{[^}]+\}/g, (m) => vars[m] ?? m);
 }
 
-function toWaNumber(phone: string): string {
-  const digits = phone.replace(/\D/g, "");
-  return digits.startsWith("0") ? "972" + digits.slice(1) : digits;
-}
 
 function getDateString(date: Date, tz: string): string {
   return new Intl.DateTimeFormat("sv-SE", {
@@ -319,7 +315,7 @@ export async function runMorningReminderForBusiness(params: {
 
       const result = await provider.send({
         businessId,
-        toPhone: toWaNumber(phone),
+        toPhone: toWaPhone(phone),
         templateId: templateName ?? undefined,
         templateLanguage: templateLanguage ?? "he",
         templateVariables,

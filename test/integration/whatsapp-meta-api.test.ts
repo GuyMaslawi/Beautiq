@@ -119,7 +119,10 @@ describe("meta-cloud-api send()", () => {
     const res = await provider.send(baseParams);
     expect(res.success).toBe(false);
     expect(res.providerMessageId).toBeNull();
-    expect(res.failureReason).toBe("Invalid template");
+    // The reason surfaces the human message plus Meta's safe diagnostic fields.
+    expect(res.failureReason).toContain("Invalid template");
+    expect(res.failureReason).toContain("code 132");
+    expect(res.failureReason).toContain("type OAuthException");
     assertTokenOnlyInAuthHeader();
   });
 

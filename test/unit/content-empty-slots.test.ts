@@ -1,10 +1,26 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, beforeAll, afterAll, vi } from "vitest";
 import {
   findEmptySlots,
   type AvailabilityRuleInput,
   type AvailabilityExceptionInput,
   type BookingIntervalInput,
 } from "@/lib/empty-slots/find-empty-slots";
+
+// Freeze the clock so results never depend on the current time-of-day or the
+// host machine's timezone. We pick a fixed UTC instant that resolves to early
+// morning (before 09:00) in Asia/Jerusalem, so "today" is never clipped to the
+// current wall-clock minute and the full open window is always returned.
+// 2026-06-16 is observed under DST (UTC+3), so 03:00Z => 06:00 Jerusalem.
+const FROZEN_NOW = new Date("2026-06-16T03:00:00.000Z");
+
+beforeAll(() => {
+  vi.useFakeTimers();
+  vi.setSystemTime(FROZEN_NOW);
+});
+
+afterAll(() => {
+  vi.useRealTimers();
+});
 
 // All-week 09:00–17:00 availability (540–1020 minutes since midnight).
 function allWeekRules(): AvailabilityRuleInput[] {

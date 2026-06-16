@@ -31,7 +31,31 @@ interface MetaErrorResponse {
     message?: string;
     type?: string;
     code?: number;
+    error_subcode?: number;
+    /** Meta request trace id — safe to surface, helps debugging with Meta support */
+    fbtrace_id?: string;
+    error_data?: { details?: string };
   };
+}
+
+/**
+ * Builds an owner/admin-safe failure reason from a Meta error. Includes the
+ * human message plus the diagnostic fields (code / type / error_subcode /
+ * fbtrace_id) so the audit trail explains exactly why Meta rejected the send.
+ * NEVER includes the access token or any credential — only Meta's own error
+ * fields, which are safe to display.
+ */
+export function buildMetaErrorReason(
+  error: MetaErrorResponse["error"] | undefined,
+  httpStatus: number,
+): string {
+  const message = error?.message ?? `Meta API שגיאה ${httpStatus}`;
+  const parts: string[] = [];
+  if (typeof error?.code === "number") parts.push(`code ${error.code}`);
+  if (error?.type) parts.push(`type ${error.type}`);
+  if (typeof error?.error_subcode === "number") parts.push(`subcode ${error.error_subcode}`);
+  if (error?.fbtrace_id) parts.push(`trace ${error.fbtrace_id}`);
+  return parts.length > 0 ? `${message} [${parts.join(" · ")}]` : message;
 }
 
 /** Converts Record<"1"|"2"|..., string> → positional body component parameters for Meta. */
@@ -148,11 +172,9 @@ export function createMetaCloudApiProvider(
       );
 
       if (!response.ok || body.error) {
-        const reason =
-          body.error?.message ??
-          `Meta API שגיאה ${response.status}`;
+        const reason = buildMetaErrorReason(body.error, response.status);
         console.error(
-          `[WhatsApp meta_cloud_api] API error — businessId=${businessId} code=${body.error?.code} type=${body.error?.type} message=${body.error?.message}`,
+          `[WhatsApp meta_cloud_api] API error — businessId=${businessId} code=${body.error?.code} type=${body.error?.type} subcode=${body.error?.error_subcode} fbtrace=${body.error?.fbtrace_id} message=${body.error?.message}`,
         );
 
         // On "Required parameter is missing" (131008) fetch the template definition
