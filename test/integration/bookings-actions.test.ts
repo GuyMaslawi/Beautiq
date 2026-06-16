@@ -41,6 +41,14 @@ vi.mock("@/server/bookings/queries", () => ({
   getBooking: (...args: unknown[]) => (getBooking as (...a: unknown[]) => unknown)(...args),
 }));
 
+// The confirmation trigger is exercised in depth in
+// booking-confirmation-trigger.test.ts — here we only assert it is wired up.
+const sendBookingConfirmationById = vi.fn(() => Promise.resolve());
+vi.mock("@/server/public-booking/send-confirmation", () => ({
+  sendBookingConfirmationById: (...a: unknown[]) =>
+    (sendBookingConfirmationById as (...a: unknown[]) => unknown)(...a),
+}));
+
 import {
   createBookingAction,
   updateBookingNotesAction,
@@ -73,6 +81,7 @@ beforeEach(() => {
   syncClientStats.mockReset();
   hasOverlap.mockReset().mockResolvedValue(false);
   getBooking.mockReset().mockResolvedValue(null);
+  sendBookingConfirmationById.mockReset().mockResolvedValue(undefined);
 });
 
 // ---------------------------------------------------------------------------
@@ -151,6 +160,21 @@ describe("createBookingAction", () => {
     expect(syncClientStats).toHaveBeenCalledWith(
       expect.objectContaining({ businessId: BUSINESS_A, clientId: "cli_1" }),
     );
+  });
+
+  it("triggers the WhatsApp confirmation for the newly approved booking (owner source)", async () => {
+    prisma.service.findFirst.mockResolvedValue(makeService({ id: "svc_1" }));
+    prisma.booking.create.mockResolvedValue({ id: "bkg_1" });
+
+    await expect(createBookingAction({}, formData(validFields))).rejects.toThrow(
+      "NEXT_REDIRECT",
+    );
+
+    expect(sendBookingConfirmationById).toHaveBeenCalledWith({
+      bookingId: "bkg_1",
+      businessId: BUSINESS_A,
+      source: "manual_owner",
+    });
   });
 
   it("sets endTime = startTime + duration + buffers", async () => {
@@ -240,6 +264,23 @@ describe("status transition actions", () => {
       where: { id: "bkg_1", businessId: BUSINESS_A, status: "pending" },
       data: { status: "approved" },
     });
+  });
+
+  it("approveBookingAction triggers the confirmation once when the transition happens", async () => {
+    prisma.booking.updateMany.mockResolvedValue({ count: 1 });
+    await approveBookingAction("bkg_1");
+    expect(sendBookingConfirmationById).toHaveBeenCalledTimes(1);
+    expect(sendBookingConfirmationById).toHaveBeenCalledWith({
+      bookingId: "bkg_1",
+      businessId: BUSINESS_A,
+      source: "manual_owner",
+    });
+  });
+
+  it("approveBookingAction does NOT trigger the confirmation when nothing changed (re-approve / cross-tenant)", async () => {
+    prisma.booking.updateMany.mockResolvedValue({ count: 0 });
+    await approveBookingAction("bkg_1");
+    expect(sendBookingConfirmationById).not.toHaveBeenCalled();
   });
 
   it("completeBookingAction only transitions from pending/approved and syncs stats", async () => {

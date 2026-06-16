@@ -1,12 +1,19 @@
 /**
- * Best-effort WhatsApp booking confirmation sent immediately after a public
- * booking request is created.
+ * Best-effort WhatsApp booking confirmation.
+ *
+ * Triggered from two places (see {@link sendBookingConfirmation} for the
+ * public flow and {@link sendBookingConfirmationById} for owner/internal
+ * flows):
+ *   - immediately after a public booking request is created;
+ *   - when an owner creates an already-approved booking, or approves a
+ *     pending one, from the internal Bookings page.
  *
  * Every attempt (sent, skipped, or failed) creates an AutomationRun +
- * AutomationMessage so it appears in the message log.
+ * AutomationMessage so it appears in the message log with a safe, non-secret
+ * reason — sending never fails silently.
  *
- * This is fire-and-forget — errors are caught and never propagate to the
- * booking creation flow.
+ * This is best-effort — errors are caught and never propagate to the booking
+ * creation/approval flow.
  */
 
 import { prisma } from "@/server/db/prisma";
@@ -49,6 +56,7 @@ async function createSkippedRun(
   bookingId: string,
   phone: string,
   failureReason: string,
+  source: string,
 ): Promise<void> {
   const run = await prisma.automationRun.create({
     data: {
@@ -71,7 +79,7 @@ async function createSkippedRun(
       messageText: "",
       status: "skipped",
       failureReason,
-      source: "public_booking",
+      source,
     },
   });
 }
@@ -85,11 +93,65 @@ export async function sendBookingConfirmation(params: {
   clientName: string;
   serviceName: string;
   startTime: Date;
+  /** Audit-trail origin. Defaults to the public booking page. */
+  source?: string;
 }): Promise<void> {
   try {
     await _send(params);
   } catch (err) {
     console.error("[sendBookingConfirmation] unexpected error:", err);
+  }
+}
+
+/**
+ * Trigger the confirmation from an owner/internal flow given only a booking id.
+ *
+ * Loads the booking (scoped by businessId — never by id alone, CLAUDE.md §10),
+ * verifies it is approved, and is idempotent: a booking whose
+ * `confirmationSentAt` is already set is a no-op, so re-approving or repeating
+ * the action never double-sends. All other safety guards (phone, opt-out,
+ * template, connection, real-send env) are enforced downstream by {@link _send}.
+ */
+export async function sendBookingConfirmationById(params: {
+  bookingId: string;
+  businessId: string;
+  /** Audit-trail origin. Defaults to an owner-initiated action. */
+  source?: string;
+}): Promise<void> {
+  const { bookingId, businessId, source = "manual_owner" } = params;
+  try {
+    const booking = await prisma.booking.findFirst({
+      where: { id: bookingId, businessId },
+      select: {
+        id: true,
+        status: true,
+        startTime: true,
+        confirmationSentAt: true,
+        client: { select: { id: true, fullName: true, phone: true } },
+        service: { select: { name: true } },
+        business: { select: { name: true } },
+      },
+    });
+
+    // Cross-tenant / missing booking, or not (yet) approved → nothing to send.
+    if (!booking || !booking.client) return;
+    if (booking.status !== "approved") return;
+    // Idempotency: a confirmation already went out for this booking.
+    if (booking.confirmationSentAt) return;
+
+    await _send({
+      bookingId: booking.id,
+      businessId,
+      businessName: booking.business.name,
+      clientId: booking.client.id,
+      clientPhone: booking.client.phone,
+      clientName: booking.client.fullName,
+      serviceName: booking.service.name,
+      startTime: booking.startTime,
+      source,
+    });
+  } catch (err) {
+    console.error("[sendBookingConfirmationById] unexpected error:", err);
   }
 }
 
@@ -102,6 +164,7 @@ async function _send(params: {
   clientName: string;
   serviceName: string;
   startTime: Date;
+  source?: string;
 }): Promise<void> {
   const {
     bookingId,
@@ -112,11 +175,12 @@ async function _send(params: {
     clientName,
     serviceName,
     startTime,
+    source = "public_booking",
   } = params;
 
   // Phone check
   if (!isValidIsraeliPhone(clientPhone)) {
-    await createSkippedRun(businessId, clientId, bookingId, clientPhone, "אין מספר טלפון תקין").catch(() => {});
+    await createSkippedRun(businessId, clientId, bookingId, clientPhone, "אין מספר טלפון תקין", source).catch(() => {});
     return;
   }
 
@@ -139,12 +203,12 @@ async function _send(params: {
   const realSendEnabled = process.env.ENABLE_REAL_WHATSAPP_SEND === "true";
 
   if (client?.unsubscribedAt) {
-    await createSkippedRun(businessId, clientId, bookingId, clientPhone, "הלקוחה לא מעוניינת בקבלת הודעות").catch(() => {});
+    await createSkippedRun(businessId, clientId, bookingId, clientPhone, "הלקוחה לא מעוניינת בקבלת הודעות", source).catch(() => {});
     return;
   }
 
   if (requireOptIn && !client?.whatsappOptIn) {
-    await createSkippedRun(businessId, clientId, bookingId, clientPhone, "הלקוחה לא אישרה קבלת הודעות WhatsApp").catch(() => {});
+    await createSkippedRun(businessId, clientId, bookingId, clientPhone, "הלקוחה לא אישרה קבלת הודעות WhatsApp", source).catch(() => {});
     return;
   }
 
@@ -204,7 +268,7 @@ async function _send(params: {
       phone: clientPhone,
       messageText,
       status: "queued",
-      source: "public_booking",
+      source,
     },
   });
 

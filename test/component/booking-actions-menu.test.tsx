@@ -149,6 +149,46 @@ describe("BookingActionsMenu — destructive confirmation", () => {
   });
 });
 
+describe("BookingActionsMenu — portal escapes the table overflow (Bug fix)", () => {
+  it("renders the menu in a portal outside the component subtree so it is not clipped", async () => {
+    const user = userEvent.setup();
+    const { container } = render(<BookingActionsMenu bookingId="b1" status="pending" />);
+
+    await user.click(screen.getByRole("button", { name: A.more }));
+
+    // The menu is found in the document (portaled to body)…
+    const menu = screen.getByRole("menu");
+    expect(menu).toBeInTheDocument();
+    // …but NOT inside the component's own DOM subtree (the row cell that the
+    // table's overflow-x-auto would otherwise clip).
+    expect(within(container).queryByRole("menu")).toBeNull();
+  });
+
+  it("positions the menu with fixed positioning so it floats above the table", async () => {
+    const user = userEvent.setup();
+    render(<BookingActionsMenu bookingId="b1" status="pending" />);
+
+    await user.click(screen.getByRole("button", { name: A.more }));
+    const menu = screen.getByRole("menu");
+    // Fixed/viewport positioning (Tailwind `fixed`) with measured coordinates is
+    // what lets the menu float above the table instead of being clipped.
+    expect(menu).toHaveClass("fixed");
+    expect(menu.style.top).not.toBe("");
+    expect(menu.style.left).not.toBe("");
+  });
+
+  it("closes the menu on outside click", async () => {
+    const user = userEvent.setup();
+    render(<BookingActionsMenu bookingId="b1" status="pending" />);
+
+    await user.click(screen.getByRole("button", { name: A.more }));
+    expect(screen.getByRole("menu")).toBeInTheDocument();
+
+    await user.click(document.body);
+    expect(screen.queryByRole("menu")).toBeNull();
+  });
+});
+
 describe("BookingActionsMenu — accessibility & layout", () => {
   it("gives the row menu trigger a visible text label and aria-haspopup", () => {
     render(<BookingActionsMenu bookingId="b1" status="pending" />);

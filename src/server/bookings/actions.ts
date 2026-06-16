@@ -8,6 +8,7 @@ import { requireTenant } from "@/server/auth/session";
 import { getBooking, hasOverlap } from "@/server/bookings/queries";
 import { findOrCreateClient } from "@/server/clients/find-or-create";
 import { syncClientStats } from "@/server/clients/stats";
+import { sendBookingConfirmationById } from "@/server/public-booking/send-confirmation";
 import { validateBooking } from "@/lib/validation/booking";
 import { parseIsraelDateTime } from "@/lib/time";
 import { BOOKINGS } from "@/lib/constants/he";
@@ -91,8 +92,9 @@ export async function createBookingAction(
     phone: value.phone,
   });
 
+  let created: { id: string };
   try {
-    await prisma.booking.create({
+    created = await prisma.booking.create({
       data: {
         businessId: tenant.businessId,
         clientId: client.id,
@@ -111,6 +113,15 @@ export async function createBookingAction(
   }
 
   await syncClientStats({ businessId: tenant.businessId, clientId: client.id });
+
+  // An owner-created booking is approved immediately — send the WhatsApp
+  // confirmation (subject to all existing safety guards). Awaited so it runs
+  // before the redirect below terminates this request; it never throws.
+  await sendBookingConfirmationById({
+    bookingId: created.id,
+    businessId: tenant.businessId,
+    source: "manual_owner",
+  });
 
   revalidatePath("/bookings");
   revalidatePath("/clients");
@@ -148,10 +159,20 @@ export async function updateBookingNotesAction(
 
 export async function approveBookingAction(bookingId: string): Promise<void> {
   const tenant = await requireTenant();
-  await prisma.booking.updateMany({
+  // The status guard makes this idempotent: a second approval (or a
+  // cross-tenant id) matches 0 rows, so the confirmation only fires on the
+  // real pending → approved transition.
+  const { count } = await prisma.booking.updateMany({
     where: { id: bookingId, businessId: tenant.businessId, status: "pending" },
     data: { status: "approved" },
   });
+  if (count > 0) {
+    await sendBookingConfirmationById({
+      bookingId,
+      businessId: tenant.businessId,
+      source: "manual_owner",
+    });
+  }
   revalidatePath(`/bookings/${bookingId}`);
   revalidatePath("/bookings");
   revalidatePath("/dashboard");

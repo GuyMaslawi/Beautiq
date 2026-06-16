@@ -1,6 +1,14 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
+import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { ChevronDown, MoreHorizontal } from "lucide-react";
@@ -44,8 +52,11 @@ export function BookingActionsMenu({
   const [isPending, startTransition] = useTransition();
   const [menuOpen, setMenuOpen] = useState(false);
   const [confirmAction, setConfirmAction] = useState<BookingAction | null>(null);
+  // Fixed-viewport coordinates for the portaled menu (null until measured).
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   const primary = getPrimaryBookingAction(status);
   const menuActions = getBookingMenuActions(status);
@@ -87,13 +98,57 @@ export function BookingActionsMenu({
     setConfirmAction(null);
   }
 
-  // Close the menu on click-outside.
+  // Position the portaled menu in fixed/viewport coordinates anchored to the
+  // trigger. RTL: the menu's right edge aligns with the trigger's right edge;
+  // it opens downward, flipping above when there isn't room, and is clamped to
+  // the viewport so it never overflows a screen edge.
+  const MENU_WIDTH = 208; // matches w-52
+  const updatePosition = useCallback(() => {
+    const trigger = triggerRef.current;
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    const gap = 8;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const left = Math.max(
+      gap,
+      Math.min(rect.right - MENU_WIDTH, vw - MENU_WIDTH - gap),
+    );
+    const approxHeight = Math.max(56, menuActions.length * 44 + 12);
+    let top = rect.bottom + gap;
+    if (top + approxHeight > vh && rect.top - gap - approxHeight > 0) {
+      top = rect.top - gap - approxHeight; // flip above near the bottom edge
+    }
+    setCoords({ top, left });
+  }, [menuActions.length]);
+
+  // Measure synchronously when the menu opens (before paint).
+  useLayoutEffect(() => {
+    if (menuOpen) updatePosition();
+  }, [menuOpen, updatePosition]);
+
+  // Keep the menu anchored while open as the page/table scrolls or resizes.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handler = () => updatePosition();
+    window.addEventListener("resize", handler);
+    // Capture phase so inner scroll containers (the table) are caught too.
+    window.addEventListener("scroll", handler, true);
+    return () => {
+      window.removeEventListener("resize", handler);
+      window.removeEventListener("scroll", handler, true);
+    };
+  }, [menuOpen, updatePosition]);
+
+  // Close the menu on click-outside. The menu now lives in a portal, so the
+  // trigger container alone no longer contains it — check both.
   useEffect(() => {
     if (!menuOpen) return;
     function handleClick(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-      }
+      const target = e.target as Node;
+      const inTrigger = containerRef.current?.contains(target);
+      const inMenu = menuRef.current?.contains(target);
+      if (!inTrigger && !inMenu) setMenuOpen(false);
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
@@ -140,7 +195,7 @@ export function BookingActionsMenu({
 
       {/* "פעולות" menu */}
       {menuActions.length > 0 && (
-        <div className="relative" ref={containerRef}>
+        <div ref={containerRef}>
           <button
             ref={triggerRef}
             type="button"
@@ -171,40 +226,52 @@ export function BookingActionsMenu({
             )}
           </button>
 
-          <AnimatePresence>
-            {menuOpen && (
-              <motion.div
-                role="menu"
-                dir="rtl"
-                initial={{ opacity: 0, y: -6, scale: 0.98 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -6, scale: 0.98 }}
-                transition={{ duration: 0.14, ease: "easeOut" }}
-                className="absolute z-50 mt-2 w-52 overflow-hidden rounded-2xl py-1.5"
-                style={{
-                  insetInlineEnd: 0,
-                  top: "100%",
-                  background: "var(--surface)",
-                  border: "1px solid var(--border)",
-                  boxShadow: "0 8px 32px rgba(43,37,48,0.14), 0 2px 8px rgba(43,37,48,0.08)",
-                }}
-              >
-                {menuActions.map((action) => (
-                  <button
-                    key={action.type}
-                    type="button"
-                    role="menuitem"
-                    disabled={isPending}
-                    onClick={() => dispatch(action)}
-                    className="block w-full px-4 py-2.5 text-right text-sm font-medium transition-colors hover:bg-background-alt focus-visible:bg-background-alt focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
-                    style={{ color: action.destructive ? "#dc2626" : "var(--foreground)" }}
+          {/*
+            Rendered in a portal at document.body with fixed positioning so the
+            menu floats above the table and is never clipped by the bookings
+            table's overflow-x-auto scroll container (Bug fix).
+          */}
+          {typeof document !== "undefined" &&
+            createPortal(
+              <AnimatePresence>
+                {menuOpen && coords && (
+                  <motion.div
+                    ref={menuRef}
+                    role="menu"
+                    dir="rtl"
+                    initial={{ opacity: 0, y: -6, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -6, scale: 0.98 }}
+                    transition={{ duration: 0.14, ease: "easeOut" }}
+                    className="fixed z-50 overflow-hidden rounded-2xl py-1.5"
+                    style={{
+                      top: coords.top,
+                      left: coords.left,
+                      width: MENU_WIDTH,
+                      background: "var(--surface)",
+                      border: "1px solid var(--border)",
+                      boxShadow:
+                        "0 8px 32px rgba(43,37,48,0.14), 0 2px 8px rgba(43,37,48,0.08)",
+                    }}
                   >
-                    {action.label}
-                  </button>
-                ))}
-              </motion.div>
+                    {menuActions.map((action) => (
+                      <button
+                        key={action.type}
+                        type="button"
+                        role="menuitem"
+                        disabled={isPending}
+                        onClick={() => dispatch(action)}
+                        className="block w-full px-4 py-2.5 text-right text-sm font-medium transition-colors hover:bg-background-alt focus-visible:bg-background-alt focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+                        style={{ color: action.destructive ? "#dc2626" : "var(--foreground)" }}
+                      >
+                        {action.label}
+                      </button>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>,
+              document.body,
             )}
-          </AnimatePresence>
         </div>
       )}
 
