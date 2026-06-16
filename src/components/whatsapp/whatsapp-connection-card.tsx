@@ -10,15 +10,29 @@
  * Embedded Signup requires (client-side, public) NEXT_PUBLIC_META_APP_ID and
  * NEXT_PUBLIC_META_CONFIG_ID. When those are absent the connect button is
  * disabled with a friendly note (admins configure them server-side).
+ *
+ * POST-COMPLETION REFRESH: the Embedded Signup popup is launched via the FB SDK
+ * (FB.login), so the popup result is delivered to THIS page through the FB.login
+ * callback — there is no separate callback page. After the owner finishes the
+ * Meta flow we:
+ *   1. show "בודקים את החיבור מול Meta..." while we verify,
+ *   2. run the server completion action (exchanges the code, stores the token),
+ *   3. refetch the live, server-scoped connection status and call router.refresh()
+ *      so the card flips to the correct state with NO manual browser refresh.
+ * We also poll the status action as a robustness fallback, and listen for the
+ * SDK's CANCEL event so closing the popup without finishing shows a clear
+ * "החיבור לא הושלם" state instead of staying stuck on "WhatsApp לא מחובר".
  */
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import Script from "next/script";
 import { MessageCircle, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import {
   completeEmbeddedSignupAction,
   disconnectWhatsAppAction,
 } from "@/server/whatsapp/embedded-signup-actions";
+import { getWhatsAppConnectionStatusAction } from "@/server/whatsapp/connection-status-actions";
 import {
   createDefaultTemplatesAction,
   syncTemplatesAction,
@@ -56,10 +70,29 @@ type DebugStep =
   | "missing_code"
   | "missing_whatsapp_ids"
   | "calling_server_action"
+  | "checking_status"
   | "server_action_success"
   | "server_action_failed";
 
+/**
+ * Transient client-side flow phase that overlays the server-provided status
+ * while the owner is actively connecting. When "idle", the card is driven
+ * entirely by the server `status` prop (the source of truth).
+ */
+type FlowPhase = "idle" | "opening" | "waiting" | "checking" | "cancelled";
+
 const LOG = "[WA Embedded Signup]";
+
+// Polling cadence for the post-popup status check (robustness fallback).
+const POLL_INTERVAL_MS = 1500;
+const POLL_MAX_MS = 45000;
+
+const FLOW_LABEL: Record<Exclude<FlowPhase, "idle">, string> = {
+  opening: "פותחים את חלון Meta...",
+  waiting: "ממתינים לסיום החיבור ב־Meta...",
+  checking: "בודקים את החיבור מול Meta...",
+  cancelled: "החיבור לא הושלם",
+};
 
 const PILL: Record<
   OwnerWhatsAppStatus["connection"]["state"],
@@ -70,6 +103,9 @@ const PILL: Record<
   active: { bg: "rgba(22,163,74,0.08)", border: "rgba(22,163,74,0.25)", color: "#15803d" },
   error: { bg: "rgba(239,68,68,0.08)", border: "rgba(239,68,68,0.25)", color: "#dc2626" },
 };
+
+// Neutral "in progress" pill used while a transient flow phase is active.
+const BUSY_PILL = { bg: "rgba(59,130,246,0.08)", border: "rgba(59,130,246,0.25)", color: "#2563eb" };
 
 function ownerLabelColor(label: string): string {
   if (label === "מוכן לשליחה") return "#15803d";
@@ -85,29 +121,107 @@ export function WhatsAppConnectionCard({
   graphVersion,
   isAdmin = false,
 }: Props) {
+  const router = useRouter();
   const embeddedSignupEnabled = !!appId && !!configId;
   const sdkReady = useRef(false);
   // Session info (waba_id, phone_number_id) captured from the Embedded Signup popup.
   const sessionInfo = useRef<{ wabaId?: string; phoneNumberId?: string }>({});
 
   const [pending, startTransition] = useTransition();
-  const [connecting, setConnecting] = useState(false);
+  const [flowPhase, setFlowPhase] = useState<FlowPhase>("idle");
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null);
+  // Template preparation result surfaced separately from the connection itself.
+  const [templateNotice, setTemplateNotice] = useState<{ ok: boolean; text: string } | null>(null);
   const [templateResult, setTemplateResult] = useState<TemplateSetupResult | null>(null);
   const [debugStep, setDebugStep] = useState<DebugStep>("idle");
   const [sdkLoaded, setSdkLoaded] = useState(false);
 
+  // Keep the latest flow phase readable inside async callbacks/effects without
+  // re-creating them on every render.
+  const flowPhaseRef = useRef<FlowPhase>("idle");
+  useEffect(() => {
+    flowPhaseRef.current = flowPhase;
+  }, [flowPhase]);
+
+  // Poll lifecycle control — lets us cancel an in-flight poll on unmount/retry.
+  const pollActive = useRef(false);
+  const pollTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
   // Record + log a client-side step in one place (never logs tokens).
-  function track(step: DebugStep, extra?: Record<string, unknown>) {
+  const track = useCallback((step: DebugStep, extra?: Record<string, unknown>) => {
     setDebugStep(step);
     if (extra) console.log(`${LOG} step=${step}`, extra);
     else console.log(`${LOG} step=${step}`);
-  }
+  }, []);
 
   const state = status.connection.state;
-  const pill = PILL[state];
+  // The server status is the source of truth. Once it resolves to a terminal
+  // state (active/error), the transient "checking" overlay is dropped
+  // automatically — so the card flips to the real state with no manual refresh.
+  const serverResolved = state === "active" || state === "error";
+  const isTransient =
+    flowPhase === "opening" ||
+    flowPhase === "waiting" ||
+    (flowPhase === "checking" && !serverResolved);
 
-  // Capture session info messages from the Meta popup.
+  const stopPolling = useCallback(() => {
+    pollActive.current = false;
+    if (pollTimer.current) {
+      clearTimeout(pollTimer.current);
+      pollTimer.current = null;
+    }
+  }, []);
+
+  // Cancel any in-flight poll when the card unmounts.
+  useEffect(() => stopPolling, [stopPolling]);
+
+  /**
+   * Poll the server-scoped status until the connection resolves (active/error)
+   * or we time out. On resolution we router.refresh() so the server component
+   * re-renders the card with the live status. We never trust the popup itself
+   * as proof of connection — only this server read.
+   */
+  const pollUntilResolved = useCallback(() => {
+    stopPolling();
+    pollActive.current = true;
+    const startedAt = Date.now();
+
+    const tick = async () => {
+      if (!pollActive.current) return;
+      try {
+        const s = await getWhatsAppConnectionStatusAction();
+        if (!pollActive.current) return;
+        if (s.state === "active" || s.state === "error") {
+          stopPolling();
+          // Resolved — drop the transient overlay and pull the fresh status
+          // into the server-rendered card (no manual refresh needed).
+          setFlowPhase("idle");
+          router.refresh();
+          return;
+        }
+      } catch {
+        // Ignore transient read errors and keep polling until timeout.
+      }
+      if (!pollActive.current) return;
+      if (Date.now() - startedAt >= POLL_MAX_MS) {
+        stopPolling();
+        // Still pending after the window — leave a calm "still checking" note
+        // and refresh so any later server update is reflected.
+        if (flowPhaseRef.current === "checking") setFlowPhase("idle");
+        setMessage({
+          ok: false,
+          text: "החיבור עדיין מתעדכן מול Meta. רעננו את העמוד עוד רגע כדי לראות את הסטטוס.",
+        });
+        router.refresh();
+        return;
+      }
+      pollTimer.current = setTimeout(tick, POLL_INTERVAL_MS);
+    };
+
+    void tick();
+  }, [router, stopPolling]);
+
+  // Capture session info + lifecycle events from the Meta popup.
   useEffect(() => {
     function onMessage(event: MessageEvent) {
       if (typeof event.origin !== "string" || !event.origin.endsWith("facebook.com")) return;
@@ -120,11 +234,20 @@ export function WhatsAppConnectionCard({
             hasWabaId: !!data?.data?.waba_id,
             hasPhoneNumberId: !!data?.data?.phone_number_id,
           });
+          // Popup is open and active — move to the "waiting for completion" copy.
+          if (flowPhaseRef.current === "opening") setFlowPhase("waiting");
+
           if (data?.event === "FINISH" && data?.data) {
             sessionInfo.current = {
               wabaId: data.data.waba_id,
               phoneNumberId: data.data.phone_number_id,
             };
+          } else if (data?.event === "CANCEL") {
+            // Owner backed out of the Meta flow — show a clear, non-error state.
+            // postMessage alone is only a UX trigger, never proof of (dis)connection.
+            stopPolling();
+            setFlowPhase("cancelled");
+            setMessage(null);
           }
         }
       } catch {
@@ -133,7 +256,7 @@ export function WhatsAppConnectionCard({
     }
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, []);
+  }, [stopPolling]);
 
   function initFbSdk() {
     if (!appId) {
@@ -150,9 +273,11 @@ export function WhatsAppConnectionCard({
 
   function handleConnect() {
     console.log(`${LOG} connect button clicked`);
-    // Clear any stale red error immediately so a new attempt starts clean
-    // (the old "לא הצלחנו לחבר" must not linger behind the popup).
+    // Clear any stale messages/notices immediately so a new attempt starts clean
+    // (the old "לא הצלחנו לחבר" / cancelled note must not linger behind the popup).
     setMessage(null);
+    setTemplateNotice(null);
+    stopPolling();
 
     if (!embeddedSignupEnabled || !window.FB) {
       console.warn(`${LOG} cannot start`, {
@@ -160,12 +285,13 @@ export function WhatsAppConnectionCard({
         fbLoaded: !!window.FB,
         sdkReady: sdkReady.current,
       });
+      setFlowPhase("idle");
       setMessage({ ok: false, text: "חיבור WhatsApp עדיין לא זמין. נסי שוב מאוחר יותר." });
       return;
     }
 
     sessionInfo.current = {};
-    setConnecting(true);
+    setFlowPhase("opening");
     track("popup_opened");
     console.log(`${LOG} FB.login called`, {
       hasConfigId: !!configId,
@@ -187,9 +313,11 @@ export function WhatsAppConnectionCard({
         const code = response?.authResponse?.code as string | undefined;
         if (!code) {
           track("missing_code", { status: response?.status });
-          setConnecting(false);
-          // Covers both "popup closed/cancelled" and "Meta returned no code".
-          setMessage({ ok: false, text: "לא התקבל אישור חיבור מ־Meta. נסו שוב." });
+          stopPolling();
+          // Covers "popup closed/cancelled" and "Meta returned no code" — a
+          // clear "not completed" state, not a hard error.
+          setFlowPhase("cancelled");
+          setMessage(null);
           return;
         }
 
@@ -199,12 +327,15 @@ export function WhatsAppConnectionCard({
         // never actually selected a WhatsApp Business account in the popup.
         if (!wabaId) {
           track("missing_whatsapp_ids", { hasWabaId: false, hasPhoneNumberId: !!phoneNumberId });
-          setConnecting(false);
+          stopPolling();
+          setFlowPhase("cancelled");
           setMessage({ ok: false, text: "לא נבחר מספר WhatsApp Business." });
           return;
         }
 
         track("calling_server_action", { hasWabaId: true, hasPhoneNumberId: !!phoneNumberId });
+        setFlowPhase("checking");
+        track("checking_status");
         startTransition(async () => {
           try {
             const result = await completeEmbeddedSignupAction({
@@ -214,14 +345,38 @@ export function WhatsAppConnectionCard({
             });
             track(result.success ? "server_action_success" : "server_action_failed", {
               success: result.success,
+              templatesPrepared: result.templatesPrepared,
             });
-            setConnecting(false);
-            setMessage({ ok: result.success, text: result.statusLabel });
+
+            if (result.success) {
+              // Connection succeeded. Surface template preparation separately so
+              // a template failure never looks like a connection failure.
+              setMessage({ ok: true, text: "WhatsApp מחובר" });
+              if (result.templatesPrepared === false) {
+                setTemplateNotice({
+                  ok: false,
+                  text:
+                    "WhatsApp מחובר, אך יצירת התבניות נכשלה" +
+                    (isAdmin && result.templateError ? ` (${result.templateError})` : ""),
+                });
+              }
+              // Refetch the live server status + re-render the card; poll as a
+              // fallback until the state flips to active/error.
+              router.refresh();
+              pollUntilResolved();
+            } else {
+              stopPolling();
+              setFlowPhase("idle");
+              setMessage({ ok: false, text: result.statusLabel });
+              router.refresh();
+            }
           } catch (err) {
             console.error(`${LOG} server action threw`, err);
             track("server_action_failed");
-            setConnecting(false);
+            stopPolling();
+            setFlowPhase("idle");
             setMessage({ ok: false, text: "אירעה שגיאה בחיבור. נסו שוב." });
+            router.refresh();
           }
         });
       },
@@ -236,18 +391,24 @@ export function WhatsAppConnectionCard({
 
   function handleDisconnect() {
     if (!confirm("לנתק את חיבור ה-WhatsApp של העסק?")) return;
+    stopPolling();
     startTransition(async () => {
       await disconnectWhatsAppAction();
+      setFlowPhase("idle");
       setMessage(null);
+      setTemplateNotice(null);
       setTemplateResult(null);
+      router.refresh();
     });
   }
 
   function handleCreateTemplates() {
     setTemplateResult(null);
+    setTemplateNotice(null);
     startTransition(async () => {
       const result = await createDefaultTemplatesAction();
       setTemplateResult(result);
+      router.refresh();
     });
   }
 
@@ -256,10 +417,16 @@ export function WhatsAppConnectionCard({
     startTransition(async () => {
       const result = await syncTemplatesAction();
       setTemplateResult(result);
+      router.refresh();
     });
   }
 
-  const busy = pending || connecting;
+  const busy = pending || isTransient;
+
+  // The pill reflects the transient flow phase while connecting; otherwise it
+  // mirrors the live server status.
+  const pill = isTransient ? BUSY_PILL : PILL[state];
+  const pillLabel = isTransient ? FLOW_LABEL[flowPhase as Exclude<FlowPhase, "idle">] : status.connection.statusLabel;
 
   return (
     <div
@@ -294,15 +461,38 @@ export function WhatsAppConnectionCard({
           </div>
         </div>
         <span
-          className="shrink-0 rounded-full px-3 py-1 text-xs font-semibold"
+          className="shrink-0 inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold"
           style={{ background: pill.bg, border: `1px solid ${pill.border}`, color: pill.color }}
         >
-          {status.connection.statusLabel}
+          {isTransient && <Loader2 className="h-3 w-3 animate-spin" />}
+          {pillLabel}
         </span>
       </div>
 
+      {/* Transient progress note — keeps the owner informed while we verify. */}
+      {isTransient && (
+        <div
+          className="flex items-center gap-2 rounded-xl px-3.5 py-2.5 text-sm"
+          style={{ background: "rgba(59,130,246,0.06)", border: "1px solid rgba(59,130,246,0.18)", color: "#2563eb" }}
+        >
+          <Loader2 className="h-4 w-4 animate-spin shrink-0" />
+          <span>{FLOW_LABEL[flowPhase as Exclude<FlowPhase, "idle">]}</span>
+        </div>
+      )}
+
+      {/* Cancelled / closed without completion */}
+      {flowPhase === "cancelled" && !isTransient && (
+        <div
+          className="rounded-xl px-3.5 py-2.5 text-sm"
+          style={{ background: "rgba(107,114,128,0.06)", border: "1px solid rgba(107,114,128,0.20)", color: "var(--foreground)" }}
+        >
+          <p className="font-semibold">החיבור לא הושלם</p>
+          <p className="text-xs" style={{ color: "var(--muted)" }}>אפשר לנסות שוב בכל זמן.</p>
+        </div>
+      )}
+
       {/* Connected — show display phone */}
-      {state === "active" && status.connection.displayPhoneNumber && (
+      {!isTransient && state === "active" && status.connection.displayPhoneNumber && (
         <div className="flex items-center gap-2 text-xs" style={{ color: "#15803d" }}>
           <CheckCircle2 className="h-4 w-4" />
           <span>מחובר למספר {status.connection.displayPhoneNumber}</span>
@@ -310,7 +500,7 @@ export function WhatsAppConnectionCard({
       )}
 
       {/* Error reason — owner-friendly, admin sees the detail */}
-      {state === "error" && (
+      {!isTransient && state === "error" && (
         <div className="flex items-start gap-2 text-xs" style={{ color: "#dc2626" }}>
           <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
           <span>
@@ -323,7 +513,7 @@ export function WhatsAppConnectionCard({
       )}
 
       {/* First-time onboarding — calm setup steps, shown before any connection exists */}
-      {state === "not_connected" && (
+      {!isTransient && flowPhase !== "cancelled" && state === "not_connected" && (
         <div
           className="space-y-3 rounded-xl px-4 py-3.5"
           style={{ background: "rgba(184,107,140,0.05)", border: "1px solid rgba(184,107,140,0.14)" }}
@@ -397,7 +587,7 @@ export function WhatsAppConnectionCard({
         </p>
       )}
 
-      {/* Inline message */}
+      {/* Inline connection message */}
       {message && (
         <div
           className="rounded-xl px-3.5 py-2.5 text-sm"
@@ -411,8 +601,23 @@ export function WhatsAppConnectionCard({
         </div>
       )}
 
+      {/* Template preparation notice — distinct from the connection state. A
+          template failure is shown in amber (warning), not red (connection error). */}
+      {templateNotice && (
+        <div
+          className="rounded-xl px-3.5 py-2.5 text-sm"
+          style={{
+            background: templateNotice.ok ? "rgba(22,163,74,0.07)" : "rgba(234,179,8,0.08)",
+            border: `1px solid ${templateNotice.ok ? "rgba(22,163,74,0.22)" : "rgba(234,179,8,0.28)"}`,
+            color: templateNotice.ok ? "#15803d" : "#92400e",
+          }}
+        >
+          {templateNotice.text}
+        </div>
+      )}
+
       {/* Template setup — only when connected */}
-      {state === "active" && (
+      {!isTransient && state === "active" && (
         <div className="space-y-3 pt-2" style={{ borderTop: "1px solid var(--border)" }}>
           <div className="pt-3">
             <h4 className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
@@ -500,6 +705,7 @@ export function WhatsAppConnectionCard({
           </p>
           <p>
             שלב נוכחי: <span style={{ fontFamily: "monospace" }}>{debugStep}</span>
+            {" · "}flow: <span style={{ fontFamily: "monospace" }}>{flowPhase}</span>
           </p>
           <p className="opacity-80">
             SDK: {sdkLoaded ? "loaded" : "not loaded"} · appId: {appId ? "set" : "missing"} ·

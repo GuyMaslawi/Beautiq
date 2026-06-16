@@ -44,11 +44,21 @@ export interface EmbeddedSignupInput {
 }
 
 export interface EmbeddedSignupResult {
+  /** True only when the WhatsApp connection itself succeeded. */
   success: boolean;
   /** Owner-facing Hebrew status label. */
   statusLabel: string;
   /** Owner-safe display phone (the business's own number) — never an internal id. */
   displayPhoneNumber?: string;
+  /**
+   * Whether the default message templates were prepared after connecting.
+   * A `false` here when `success` is `true` means the connection is live but
+   * template creation failed — this must NOT be presented as a connection
+   * failure (the owner can retry templates from the connected card).
+   */
+  templatesPrepared?: boolean;
+  /** Admin-only, token-scrubbed template error detail (never a credential). */
+  templateError?: string;
 }
 
 async function saveError(
@@ -208,22 +218,35 @@ export async function completeEmbeddedSignupAction(
   //    so re-running is safe. A failure here must NOT fail the connection itself —
   //    the owner can retry from the single "הכנת תבניות WhatsApp" button.
   let templatesPrepared = false;
+  let templateError: string | undefined;
   try {
     const tplResult = await createDefaultTemplatesForBusiness(businessId);
     templatesPrepared = tplResult.success;
+    if (!tplResult.success) {
+      // First per-template error (already owner/admin-safe), scrubbed defensively.
+      const firstErr = tplResult.items.find((i) => i.error)?.error;
+      templateError = scrubToken(firstErr ?? tplResult.statusLabel);
+    }
     console.log(
       `[EmbeddedSignup] auto template setup businessId=${businessId}: ${tplResult.statusLabel}`,
     );
   } catch (err) {
+    templateError = "יצירת התבניות נכשלה";
     console.error(`[EmbeddedSignup] auto template setup failed businessId=${businessId}:`, err);
   }
 
   revalidatePath("/automations");
 
+  // The connection itself succeeded regardless of template outcome. Template
+  // failure is surfaced separately so it never reads as a connection failure.
   return {
     success: true,
-    statusLabel: templatesPrepared ? "WhatsApp מחובר — מכינים תבניות הודעה" : "WhatsApp מחובר",
+    statusLabel: templatesPrepared
+      ? "WhatsApp מחובר"
+      : "WhatsApp מחובר, אך יצירת התבניות נכשלה",
     displayPhoneNumber,
+    templatesPrepared,
+    templateError,
   };
 }
 

@@ -41,11 +41,14 @@ vi.mock("@/lib/whatsapp/meta-onboarding", () => ({
   scrubToken: (m: string) => m.replace(/EAA\S+/g, "[token]"),
 }));
 
-const createDefaultTemplatesForBusiness = vi.fn(async () => ({
-  success: true,
-  statusLabel: "ok",
-  items: [],
-}));
+type TplItem = { label: string; name: string; status: string; error?: string };
+const createDefaultTemplatesForBusiness = vi.fn(
+  async (): Promise<{ success: boolean; statusLabel: string; items: TplItem[] }> => ({
+    success: true,
+    statusLabel: "ok",
+    items: [],
+  }),
+);
 vi.mock("@/server/whatsapp/templates-core", () => ({
   createDefaultTemplatesForBusiness: (...a: unknown[]) => (createDefaultTemplatesForBusiness as (...x: unknown[]) => unknown)(...a),
 }));
@@ -155,6 +158,46 @@ describe("completeEmbeddedSignupAction", () => {
     exchangeCodeForToken.mockResolvedValue({ ok: true, accessToken: REAL_TOKEN });
     const res = await completeEmbeddedSignupAction({ code: "c", phoneNumberId: "p" });
     expect(res.success).toBe(false);
+  });
+
+  it("template creation failure keeps the connection SUCCESSFUL (separated from connection failure)", async () => {
+    exchangeCodeForToken.mockResolvedValue({ ok: true, accessToken: REAL_TOKEN, expiresInSeconds: 3600 });
+    createDefaultTemplatesForBusiness.mockResolvedValueOnce({
+      success: false,
+      statusLabel: "חלק מהתבניות נכשלו",
+      items: [{ label: "תזכורת", name: "reminder", status: "error", error: "Template text too long" }],
+    });
+
+    const res = await completeEmbeddedSignupAction({
+      code: "auth_code",
+      wabaId: "waba_1",
+      phoneNumberId: "phone_1",
+    });
+
+    // The connection itself succeeded — template failure must NOT reset it.
+    expect(res.success).toBe(true);
+    expect(res.templatesPrepared).toBe(false);
+    expect(res.statusLabel).toBe("WhatsApp מחובר, אך יצירת התבניות נכשלה");
+    expect(res.templateError).toBeDefined();
+
+    // The connection was still saved as ACTIVE.
+    const activeUpsert = prisma.whatsAppConnection.upsert.mock.calls
+      .map((c) => c[0] as { create: { status?: string } })
+      .find((c) => c.create.status === "active");
+    expect(activeUpsert).toBeDefined();
+  });
+
+  it("template success returns a clean 'WhatsApp מחובר' with templatesPrepared=true", async () => {
+    exchangeCodeForToken.mockResolvedValue({ ok: true, accessToken: REAL_TOKEN, expiresInSeconds: 3600 });
+    // default createDefaultTemplatesForBusiness mock resolves success:true
+    const res = await completeEmbeddedSignupAction({
+      code: "auth_code",
+      wabaId: "waba_1",
+      phoneNumberId: "phone_1",
+    });
+    expect(res.success).toBe(true);
+    expect(res.templatesPrepared).toBe(true);
+    expect(res.statusLabel).toBe("WhatsApp מחובר");
   });
 });
 

@@ -1,14 +1,28 @@
 import { prisma } from "@/server/db/prisma";
-import { parseIsraelDateTime } from "@/lib/time";
+import { parseIsraelDateTime, israeliWeekday } from "@/lib/time";
 
 const SLOT_STEP = 30;
 
 /**
- * Return available HH:MM slot strings for a given business, date, and service.
- * Uses Asia/Jerusalem wall-clock time for all comparisons.
- * Filters out past slots and slots that overlap existing pending/approved bookings.
+ * Result of a day availability lookup. `open` distinguishes a day the business
+ * is closed (no availability rule for that weekday) from an open day that simply
+ * has no free times left — the two need different messaging in the UI.
  */
-export async function getAvailableSlots({
+export interface DayAvailability {
+  open: boolean;
+  slots: string[];
+}
+
+/**
+ * Return the day's availability for a given business, date, and service:
+ * whether the business is open that weekday, plus the free HH:MM slot strings.
+ *
+ * Uses Asia/Jerusalem wall-clock time for all comparisons (weekday, day
+ * boundaries, and per-slot times) so the result is correct regardless of the
+ * server's own timezone. Filters out past slots and slots that overlap existing
+ * pending/approved bookings.
+ */
+export async function getDayAvailability({
   businessId,
   date,
   serviceId,
@@ -16,7 +30,7 @@ export async function getAvailableSlots({
   businessId: string;
   date: string;
   serviceId: string;
-}): Promise<string[]> {
+}): Promise<DayAvailability> {
   const service = await prisma.service.findFirst({
     where: { id: serviceId, businessId, isActive: true },
     select: {
@@ -25,17 +39,18 @@ export async function getAvailableSlots({
       bufferAfterMinutes: true,
     },
   });
-  if (!service) return [];
+  // No service in this tenant → nothing to offer (and not a "closed day").
+  if (!service) return { open: false, slots: [] };
 
-  const [y, m, d] = date.split("-").map(Number);
-  const weekday = new Date(y, m - 1, d).getDay();
+  const weekday = israeliWeekday(date);
 
   const rules = await prisma.availabilityRule.findMany({
     where: { businessId, weekday, isActive: true },
     select: { startMinutes: true, endMinutes: true },
     orderBy: { startMinutes: "asc" },
   });
-  if (rules.length === 0) return [];
+  // No rule for this weekday → the business is closed that day.
+  if (rules.length === 0) return { open: false, slots: [] };
 
   // Day boundaries in Israel wall-clock time
   const dayStart = parseIsraelDateTime(date, "00:00");
@@ -82,5 +97,17 @@ export async function getAvailableSlots({
     }
   }
 
-  return slots;
+  return { open: true, slots };
+}
+
+/**
+ * Convenience wrapper returning only the free HH:MM slot strings. Used by the
+ * public booking routes that don't need the open/closed distinction.
+ */
+export async function getAvailableSlots(args: {
+  businessId: string;
+  date: string;
+  serviceId: string;
+}): Promise<string[]> {
+  return (await getDayAvailability(args)).slots;
 }

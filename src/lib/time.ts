@@ -66,3 +66,31 @@ export function parseIsraelDateTime(date: string, time: string): Date {
   // Fallback: assume UTC+3 (Israel summer time)
   return new Date(Date.UTC(y, mo - 1, d, h - 3, mi, 0));
 }
+
+const WEEKDAY_INDEX: Record<string, number> = {
+  Sun: 0,
+  Mon: 1,
+  Tue: 2,
+  Wed: 3,
+  Thu: 4,
+  Fri: 5,
+  Sat: 6,
+};
+
+/**
+ * Return the weekday (0 = Sunday … 6 = Saturday, Israeli week order) for a
+ * "YYYY-MM-DD" date as it falls in Asia/Jerusalem — independent of the server's
+ * own timezone.
+ *
+ * This matches the `AvailabilityRule.weekday` convention (JS getDay order). We
+ * anchor at local noon to stay clear of any midnight/DST edge, then read the
+ * weekday back in Asia/Jerusalem so the calendar day is always preserved.
+ */
+export function israeliWeekday(date: string): number {
+  const noon = parseIsraelDateTime(date, "12:00");
+  const short = new Intl.DateTimeFormat("en-US", {
+    timeZone: TZ,
+    weekday: "short",
+  }).format(noon);
+  return WEEKDAY_INDEX[short];
+}

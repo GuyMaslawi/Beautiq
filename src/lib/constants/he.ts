@@ -456,7 +456,10 @@ export const BOOKINGS = {
     startTimeLabel: "שעה",
     startTimePlaceholder: "בחירת שעה…",
     overlapHelper: "מוצגות רק השעות הפנויות לשירות שנבחר",
-    loadingSlots: "טוען שעות פנויות…",
+    loadingSlots: "בודקים שעות פנויות…",
+    noServiceForSlots: "בחרי שירות כדי לראות שעות פנויות",
+    closedDay: "העסק סגור ביום הזה",
+    slotsError: "לא הצלחנו לטעון שעות פנויות",
     noSlots: "אין שעות פנויות ביום הזה",
   },
 

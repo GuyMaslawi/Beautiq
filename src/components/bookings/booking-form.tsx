@@ -58,6 +58,11 @@ export function BookingForm({
 
   // Available slots fetched from /api/owner/slots
   const [availableSlots, setAvailableSlots] = useState<string[] | null>(null);
+  // Whether the business is open on the selected day (false = closed that day).
+  const [dayOpen, setDayOpen] = useState(true);
+  // True when the last slot fetch failed (network/HTTP error) — distinct from
+  // a successful "no free times" response so we can show a real error message.
+  const [slotError, setSlotError] = useState(false);
   // Key whose slots are currently loaded; loading is derived from it below.
   const [loadedSlotsKey, setLoadedSlotsKey] = useState("");
   // Track the last fetch key to discard stale responses
@@ -86,6 +91,8 @@ export function BookingForm({
     setPrevSlotsKey(slotsKey);
     if (!slotsKey) {
       setAvailableSlots(null);
+      setSlotError(false);
+      setDayOpen(true);
     }
   }
   const isFetchingSlots = slotsKey !== "" && slotsKey !== loadedSlotsKey;
@@ -102,11 +109,17 @@ export function BookingForm({
     fetch(
       `/api/owner/slots?date=${encodeURIComponent(fields.date)}&serviceId=${encodeURIComponent(fields.serviceId)}`,
     )
-      .then((r) => r.json())
-      .then((data: { slots?: string[] }) => {
+      .then(async (r) => {
+        // Don't swallow HTTP/auth errors as an empty list — surface them.
+        if (!r.ok) throw new Error(`slots request failed: ${r.status}`);
+        return (await r.json()) as { open?: boolean; slots?: string[] };
+      })
+      .then((data) => {
         if (fetchKeyRef.current !== key) return; // stale response, discard
         const slots = data.slots ?? [];
         setAvailableSlots(slots);
+        setDayOpen(data.open ?? slots.length > 0);
+        setSlotError(false);
         setLoadedSlotsKey(key);
         // Reset startTime to first available slot, or clear if none
         setFields((prev) => ({
@@ -123,6 +136,9 @@ export function BookingForm({
         if (fetchKeyRef.current !== key) return;
         setLoadedSlotsKey(key);
         setAvailableSlots([]);
+        setSlotError(true);
+        setDayOpen(true);
+        setFields((prev) => ({ ...prev, startTime: "" }));
       });
   }, [fields.serviceId, fields.date]);
 
@@ -283,24 +299,43 @@ export function BookingForm({
             htmlFor="startTime"
             error={state.errors?.startTime}
           >
-            {isFetchingSlots ? (
+            {!fields.serviceId ? (
+              <>
+                <input type="hidden" name="startTime" value="" />
+                <div
+                  className={`${selectClass} flex items-center`}
+                  style={{ color: "var(--muted)", opacity: 0.7 }}
+                >
+                  {BOOKINGS.form.noServiceForSlots}
+                </div>
+              </>
+            ) : isFetchingSlots ? (
               <div
                 className={`${selectClass} flex items-center`}
                 style={{ color: "var(--muted)" }}
               >
                 {BOOKINGS.form.loadingSlots}
               </div>
-            ) : !fields.serviceId ? (
-              <select
-                id="startTime"
-                name="startTime"
-                value={fields.startTime}
-                disabled
-                className={selectClass}
-                style={{ opacity: 0.5 }}
-              >
-                <option value="">{BOOKINGS.form.startTimePlaceholder}</option>
-              </select>
+            ) : slotError ? (
+              <>
+                <input type="hidden" name="startTime" value="" />
+                <div
+                  className={`${selectClass} flex items-center`}
+                  style={{ color: "var(--muted)" }}
+                >
+                  {BOOKINGS.form.slotsError}
+                </div>
+              </>
+            ) : availableSlots !== null && !dayOpen ? (
+              <>
+                <input type="hidden" name="startTime" value="" />
+                <div
+                  className={`${selectClass} flex items-center`}
+                  style={{ color: "var(--muted)" }}
+                >
+                  {BOOKINGS.form.closedDay}
+                </div>
+              </>
             ) : availableSlots !== null && availableSlots.length === 0 ? (
               <>
                 <input type="hidden" name="startTime" value="" />
