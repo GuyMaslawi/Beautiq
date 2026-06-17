@@ -9,7 +9,7 @@ import {
 } from "@/lib/whatsapp/provider";
 import { getWhatsAppProviderForBusiness } from "@/server/whatsapp/resolver";
 import { isValidIsraeliPhone } from "@/lib/phone";
-import { buildWinBackMessage, buildOfferText } from "@/server/win-back-automation/message-builder";
+import { buildWinBackMessage } from "@/server/win-back-automation/message-builder";
 
 export type ManualSendMessageType =
   | "win_back"
@@ -149,10 +149,6 @@ export async function sendManualClientWhatsAppAction(
       return { error: "תבנית ההודעה עדיין לא מוגדרת — יש להגדיר תבנית WhatsApp מאושרת בהגדרות אוטומציית החזרת הלקוחות" };
     }
 
-    const offerText = buildOfferText(
-      setting?.offerType ?? "none",
-      setting?.offerValue ?? null,
-    );
     messageText = buildWinBackMessage({
       clientName: client.fullName,
       businessName: business.name,
@@ -163,12 +159,11 @@ export async function sendManualClientWhatsAppAction(
     });
     effectiveTemplateName = setting?.templateName ?? undefined;
     effectiveTemplateLanguage = setting?.templateLanguage ?? "he";
+    // The neutral win-back template carries exactly 2 vars (name + business).
     if (effectiveTemplateName) {
       templateVariables = {
         "1": client.fullName,
         "2": business.name,
-        "3": lastServiceName ?? "",
-        "4": offerText,
       };
     }
 

@@ -21,11 +21,18 @@ export function TemplateReadinessBadge({
   testMode,
   templateName,
   templateStatus,
+  marketing = false,
 }: {
   realSendConfigured: boolean;
   testMode: boolean;
   templateName?: string | null;
   templateStatus?: string | null;
+  /**
+   * Marketing (optional) template variant. Meta reviews marketing templates more
+   * strictly, so its pending/rejected copy is framed as optional ("תבנית שיווקית
+   * ממתינה/נכשלה") rather than as a blocking problem.
+   */
+  marketing?: boolean;
 }) {
   if (!realSendConfigured) return null;
 
@@ -43,16 +50,16 @@ export function TemplateReadinessBadge({
     return (
       <div className="flex items-center gap-1.5 text-xs" style={{ color: "#b45309" }}>
         <Clock className="h-3 w-3 shrink-0" />
-        מכינים תבניות הודעה
+        {marketing ? "תבנית שיווקית בהכנה" : "מכינים תבניות הודעה"}
       </div>
     );
   }
 
   if (templateStatus === "rejected") {
     return (
-      <div className="flex items-center gap-1.5 text-xs" style={{ color: "#dc2626" }}>
+      <div className="flex items-center gap-1.5 text-xs" style={{ color: marketing ? "#b45309" : "#dc2626" }}>
         <AlertTriangle className="h-3 w-3 shrink-0" />
-        חלק מהתבניות נדחו — פני לתמיכה
+        {marketing ? "תבנית שיווקית נכשלה — אופציונלי" : "חלק מהתבניות נדחו — פני לתמיכה"}
       </div>
     );
   }
@@ -70,7 +77,7 @@ export function TemplateReadinessBadge({
   return (
     <div className="flex items-center gap-1.5 text-xs" style={{ color: "#b45309" }}>
       <Clock className="h-3 w-3 shrink-0" />
-      ממתין לאישור WhatsApp
+      {marketing ? "תבנית שיווקית ממתינה לאישור" : "ממתין לאישור WhatsApp"}
     </div>
   );
 }

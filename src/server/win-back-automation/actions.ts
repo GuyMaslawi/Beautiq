@@ -60,11 +60,11 @@ export async function sendWhatsAppTestMessage(): Promise<TestSendResult> {
       return { success: false, errorCode: "missing_template" };
     }
 
-    // Safe sample fallback text — no real customer data
+    // Safe sample fallback text — no real customer data, neutral (no offer/discount)
     const bookingUrl = publicBusinessUrl(business.slug);
     const sampleFallbackText =
-      `היי בדיקה, עבר זמן מה מאז הביקור האחרון שלך בטיפול לדוגמה אצל ${business.name}.\n` +
-      `10% הנחה\nנשמח לראות אותך שוב ❤️\nלקביעת תור: ${bookingUrl}`;
+      `היי בדיקה, מזמן לא ראינו אותך ב${business.name}.\n` +
+      `נשמח לקבוע לך תור חדש בזמן שנוח לך 🙂\nלקביעת תור: ${bookingUrl}`;
 
     const run = await prisma.automationRun.create({
       data: {
@@ -81,11 +81,10 @@ export async function sendWhatsAppTestMessage(): Promise<TestSendResult> {
       toPhone: testPhone,
       templateId: setting.templateName,
       templateLanguage: setting.templateLanguage ?? "he",
+      // The neutral win-back template carries exactly 2 vars (name + business).
       templateVariables: {
         "1": "בדיקה",
         "2": business.name,
-        "3": "טיפול לדוגמה",
-        "4": "10% הנחה",
       },
       fallbackText: sampleFallbackText,
       automationRunId: run.id,

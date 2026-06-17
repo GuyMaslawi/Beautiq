@@ -62,12 +62,19 @@ export interface EmbeddedSignupResult {
   /** Owner-safe display phone (the business's own number) — never an internal id. */
   displayPhoneNumber?: string;
   /**
-   * Whether the default message templates were prepared after connecting.
-   * A `false` here when `success` is `true` means the connection is live but
-   * template creation failed — this must NOT be presented as a connection
-   * failure (the owner can retry templates from the connected card).
+   * Whether the OPERATIONAL (core) message templates were prepared after
+   * connecting. A `false` here when `success` is `true` means the connection is
+   * live but operational template creation failed — this must NOT be presented
+   * as a connection failure (the owner can retry templates from the connected
+   * card). The optional marketing template is tracked separately and never
+   * affects this flag.
    */
   templatesPrepared?: boolean;
+  /**
+   * True when only the optional marketing (win-back) template failed while the
+   * operational templates succeeded. Surfaced as a calm, non-blocking notice.
+   */
+  marketingTemplateFailed?: boolean;
   /** Admin-only, token-scrubbed template error detail (never a credential). */
   templateError?: string;
 }
@@ -222,11 +229,15 @@ export async function completeEmbeddedSignupAction(
   //    so re-running is safe. A failure here must NOT fail the connection itself —
   //    the owner can retry from the single "הכנת תבניות WhatsApp" button.
   let templatesPrepared = false;
+  let marketingTemplateFailed = false;
   let templateError: string | undefined;
   try {
     const tplResult = await createDefaultTemplatesForBusiness(businessId);
-    templatesPrepared = tplResult.success;
-    if (!tplResult.success) {
+    // "Prepared" tracks the OPERATIONAL templates only — a marketing failure
+    // must never read as "template setup failed".
+    templatesPrepared = tplResult.operationalReady;
+    marketingTemplateFailed = tplResult.operationalReady && tplResult.marketingFailed;
+    if (!tplResult.operationalReady) {
       // First per-template error (already owner/admin-safe), scrubbed defensively.
       const firstErr = tplResult.items.find((i) => i.error)?.error;
       templateError = scrubToken(firstErr ?? tplResult.statusLabel);
@@ -250,6 +261,7 @@ export async function completeEmbeddedSignupAction(
       : "WhatsApp מחובר, אך יצירת התבניות נכשלה",
     displayPhoneNumber,
     templatesPrepared,
+    marketingTemplateFailed,
     templateError,
   };
 }

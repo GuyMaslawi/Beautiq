@@ -19,6 +19,15 @@ import { APP_URL } from "@/lib/config";
 export type MetaTemplateCategory = "UTILITY" | "MARKETING";
 
 /**
+ * Readiness group. Operational/transactional templates (UTILITY) are the core of
+ * WhatsApp setup — booking confirmation, appointment reminder, review request.
+ * The single marketing template (win-back) is OPTIONAL: Meta reviews MARKETING
+ * templates more strictly, so a marketing failure must never block the core
+ * operational setup. See getOwnerWhatsAppStatus / createDefaultTemplatesForBusiness.
+ */
+export type TemplateGroup = "operational" | "marketing";
+
+/**
  * Example review link sent to Meta for approval. Must be a non-empty absolute
  * URL even when APP_URL is unset in the environment, otherwise Meta rejects the
  * example value.
@@ -32,6 +41,8 @@ export interface DefaultTemplate {
   label: string;
   language: string;
   category: MetaTemplateCategory;
+  /** Readiness group — operational (core) vs marketing (optional). */
+  group: TemplateGroup;
   /** Body text with Meta {{n}} placeholders. */
   body: string;
   /** Example values for each {{n}} variable, in order (for Meta approval). */
@@ -48,6 +59,7 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     label: "אישור תור",
     language: "he",
     category: "UTILITY",
+    group: "operational",
     // Minimal BODY-only utility template. No header / footer / buttons. Kept
     // deliberately simple and clearly transactional so Meta accepts it as UTILITY
     // (the previous, busier wording was rejected with code 100 / subcode 2388024).
@@ -61,6 +73,7 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     label: "תזכורת לתור",
     language: "he",
     category: "UTILITY",
+    group: "operational",
     // Minimal BODY-only utility template with 3 sequential variables. Dropped the
     // trailing business-name variable (the old {{4}} sat near the end of the body)
     // to keep the reminder short and unambiguous after the 2388024 rejection.
@@ -74,6 +87,7 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     label: "בקשת ביקורת",
     language: "he",
     category: "UTILITY",
+    group: "operational",
     // Variables must appear in order {{1}}..{{4}} and the body must not end with a
     // variable — Meta rejects out-of-order or trailing variables as "Invalid parameter".
     body: "שלום {{1}}, תודה שבחרת ל{{2}} ב{{3}}! נשמח אם תדרגי את החוויה כאן: {{4}} 🙏",
@@ -82,20 +96,47 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     automationType: "review_request",
   },
   {
+    // Optional MARKETING template — kept deliberately NEUTRAL. Meta reviews
+    // marketing templates more strictly and previously rejected the busier
+    // discount/offer wording (code 100 / subcode 2388024). This default carries
+    // NO offer, discount, percentage, urgency, header, footer, buttons or URL —
+    // just a warm check-in. The owner-configured offer still lives in the in-app
+    // free-text message builder, not in this approved template.
     name: "win_back_offer_he",
-    label: "החזרת לקוחה",
+    label: "החזרת לקוחות",
     language: "he",
     category: "MARKETING",
-    // Trailing emoji keeps the body from ending with the {{4}} variable.
-    body: "שלום {{1}}, מתגעגעים אליך ב{{2}}! נשמח לראותך שוב ל{{3}} — {{4}} 💛",
-    example: ["דנה", "סטודיו ביוטי", "מניקור ג'ל", "10% הנחה על התור הבא"],
-    variables: ["clientName", "businessName", "serviceName", "offer"],
+    // Trailing emoji keeps the body from ending with the {{2}} variable.
+    body: "היי {{1}}, מזמן לא ראינו אותך ב{{2}}. נשמח לקבוע לך תור חדש בזמן שנוח לך 🙂",
+    example: ["נועה", "הסטודיו של יעל"],
+    variables: ["clientName", "businessName"],
+    group: "marketing",
     automationType: "win_back",
   },
 ];
 
 /** The Meta template names we expect, for sync matching. */
 export const DEFAULT_TEMPLATE_NAMES = DEFAULT_TEMPLATES.map((t) => t.name);
+
+/** Operational (core/transactional) templates — must all be ready for usable setup. */
+export const OPERATIONAL_TEMPLATES = DEFAULT_TEMPLATES.filter(
+  (t) => t.group === "operational",
+);
+
+/** Marketing templates — optional; a failure here never blocks operational setup. */
+export const MARKETING_TEMPLATES = DEFAULT_TEMPLATES.filter(
+  (t) => t.group === "marketing",
+);
+
+/** True when the template name belongs to the operational (core) group. */
+export function isOperationalTemplateName(name: string): boolean {
+  return OPERATIONAL_TEMPLATES.some((t) => t.name === name);
+}
+
+/** True when the template name belongs to the marketing (optional) group. */
+export function isMarketingTemplateName(name: string): boolean {
+  return MARKETING_TEMPLATES.some((t) => t.name === name);
+}
 
 export function getDefaultTemplateForType(
   type: AutomationType,

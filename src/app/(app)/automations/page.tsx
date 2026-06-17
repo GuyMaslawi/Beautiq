@@ -289,7 +289,7 @@ export default async function AutomationsPage() {
             }}
           >
             <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
-            בדיקות טכניות
+            אזור בדיקות למנהל בלבד
             <span className="ms-auto rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
               Admin
             </span>

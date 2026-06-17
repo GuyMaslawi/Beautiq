@@ -3,6 +3,8 @@ import {
   validateTemplate,
   validateTemplateBatch,
   extractBodyVariables,
+  findMarketingRiskWords,
+  MARKETING_RISK_WORDS,
 } from "@/lib/whatsapp/template-validation";
 import { DEFAULT_TEMPLATES } from "@/lib/whatsapp/default-templates";
 import type { DefaultTemplate } from "@/lib/whatsapp/default-templates";
@@ -13,6 +15,7 @@ function makeTemplate(overrides: Partial<DefaultTemplate> = {}): DefaultTemplate
     label: "אישור תור",
     language: "he",
     category: "UTILITY",
+    group: "operational",
     body: "שלום {{1}}, התור שלך ל{{2}} נקבע ל{{3}} בשעה {{4}}. נתראה!",
     example: ["דנה", "מניקור", "12 ביוני", "14:30"],
     variables: ["clientName", "serviceName", "bookingDate", "bookingTime"],
@@ -152,6 +155,65 @@ describe("validateTemplate", () => {
     );
     expect(res.ok).toBe(false);
     expect(res.errors.join(" ")).toContain("חסרה דוגמה");
+  });
+});
+
+describe("marketing template content", () => {
+  function makeMarketing(overrides: Partial<DefaultTemplate> = {}): DefaultTemplate {
+    return makeTemplate({
+      name: "win_back_offer_he",
+      category: "MARKETING",
+      group: "marketing",
+      body: "היי {{1}}, מזמן לא ראינו אותך ב{{2}}. נשמח לקבוע לך תור חדש בזמן שנוח לך 🙂",
+      example: ["נועה", "הסטודיו של יעל"],
+      variables: ["clientName", "businessName"],
+      automationType: "win_back",
+      ...overrides,
+    });
+  }
+
+  it("accepts the neutral default win-back template (no offer/discount language)", () => {
+    const tpl = DEFAULT_TEMPLATES.find((t) => t.name === "win_back_offer_he")!;
+    const res = validateTemplate(tpl);
+    expect(res.ok, res.errors.join(" | ")).toBe(true);
+    expect(tpl.category).toBe("MARKETING");
+    expect(extractBodyVariables(tpl.body)).toEqual([1, 2]);
+    expect(tpl.example).toHaveLength(2);
+  });
+
+  it("the default win-back template contains none of the discount/offer risk words", () => {
+    const tpl = DEFAULT_TEMPLATES.find((t) => t.name === "win_back_offer_he")!;
+    expect(findMarketingRiskWords(tpl.body)).toEqual([]);
+    for (const word of MARKETING_RISK_WORDS) {
+      expect(tpl.body).not.toContain(word);
+    }
+  });
+
+  it("findMarketingRiskWords flags promotional words", () => {
+    expect(findMarketingRiskWords("הזמן תור עם 10% הנחה היום")).toContain("הנחה");
+    expect(findMarketingRiskWords("מבצע מיוחד רק היום!")).toEqual(
+      expect.arrayContaining(["מבצע", "רק היום"]),
+    );
+    expect(findMarketingRiskWords("היי, מזמן לא ראינו אותך")).toEqual([]);
+  });
+
+  it("blocks a MARKETING default that contains a discount/offer word", () => {
+    const res = validateTemplate(
+      makeMarketing({
+        body: "היי {{1}}, מגיעה לך הנחה ב{{2}}. נשמח לראותך 🙂",
+      }),
+    );
+    expect(res.ok).toBe(false);
+    expect(res.errors.join(" ")).toContain("תבנית שיווקית");
+    expect(res.errors.join(" ")).toContain("הנחה");
+  });
+
+  it("does NOT apply the marketing word check to UTILITY templates", () => {
+    // A utility body that happens to include 'חינם' is fine (utility isn't promotional review-gated).
+    const res = validateTemplate(
+      makeTemplate({ body: "שלום {{1}}, ה{{2}} שלך ב{{3}} ניתן חינם {{4}}. נתראה!" }),
+    );
+    expect(res.ok).toBe(true);
   });
 });
 

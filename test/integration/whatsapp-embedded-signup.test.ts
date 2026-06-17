@@ -42,11 +42,22 @@ vi.mock("@/lib/whatsapp/meta-onboarding", () => ({
 }));
 
 type TplItem = { label: string; name: string; status: string; error?: string };
+type TplResult = {
+  success: boolean;
+  statusLabel: string;
+  items: TplItem[];
+  operationalReady: boolean;
+  marketingReady: boolean;
+  marketingFailed: boolean;
+};
 const createDefaultTemplatesForBusiness = vi.fn(
-  async (): Promise<{ success: boolean; statusLabel: string; items: TplItem[] }> => ({
+  async (): Promise<TplResult> => ({
     success: true,
     statusLabel: "ok",
     items: [],
+    operationalReady: true,
+    marketingReady: true,
+    marketingFailed: false,
   }),
 );
 vi.mock("@/server/whatsapp/templates-core", () => ({
@@ -167,6 +178,9 @@ describe("completeEmbeddedSignupAction", () => {
       success: false,
       statusLabel: "חלק מהתבניות נכשלו",
       items: [{ label: "תזכורת", name: "reminder", status: "error", error: "Template text too long" }],
+      operationalReady: false,
+      marketingReady: false,
+      marketingFailed: false,
     });
 
     const res = await completeEmbeddedSignupAction({
@@ -199,6 +213,34 @@ describe("completeEmbeddedSignupAction", () => {
     expect(res.success).toBe(true);
     expect(res.templatesPrepared).toBe(true);
     expect(res.statusLabel).toBe("WhatsApp מחובר");
+  });
+
+  it("an OPTIONAL marketing-only template failure keeps templatesPrepared=true and flags it separately", async () => {
+    exchangeCodeForToken.mockResolvedValue({ ok: true, accessToken: REAL_TOKEN, expiresInSeconds: 3600 });
+    // Operational templates are ready; only the marketing win-back template failed.
+    createDefaultTemplatesForBusiness.mockResolvedValueOnce({
+      success: true,
+      statusLabel:
+        "WhatsApp מחובר. תבניות תפעוליות נשלחו לאישור. תבנית החזרת לקוחות נכשלה ותטופל בנפרד.",
+      items: [],
+      operationalReady: true,
+      marketingReady: false,
+      marketingFailed: true,
+    });
+
+    const res = await completeEmbeddedSignupAction({
+      code: "auth_code",
+      wabaId: "waba_1",
+      phoneNumberId: "phone_1",
+    });
+
+    // Core setup is considered prepared; marketing failure is surfaced separately,
+    // never as a connection or a template-setup failure.
+    expect(res.success).toBe(true);
+    expect(res.templatesPrepared).toBe(true);
+    expect(res.marketingTemplateFailed).toBe(true);
+    expect(res.statusLabel).toBe("WhatsApp מחובר");
+    expect(res.templateError).toBeUndefined();
   });
 
   it("stores the chosen onboarding intent as connectionSource and starts UNCONFIRMED", async () => {

@@ -163,6 +163,7 @@ export function WinBackAutomationCard({ setting, lastRun, realSendConfigured = f
             testMode={testMode}
             templateName={setting?.templateName}
             templateStatus={setting?.templateStatus}
+            marketing
           />
         )}
 

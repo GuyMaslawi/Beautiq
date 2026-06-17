@@ -96,4 +96,139 @@ describe("getOwnerWhatsAppStatus", () => {
     expect(rejected?.ownerLabel).toBe("נדחתה — פני לתמיכה");
     expect(rejected?.ready).toBe(false);
   });
+
+  it("splits automations into operational and marketing groups", async () => {
+    prisma.whatsAppConnection.findUnique.mockResolvedValue(
+      makeWhatsAppConnection({ status: "active", useEnvFallback: true }),
+    );
+    prisma.automationSetting.findMany.mockResolvedValue([]);
+
+    const status = await getOwnerWhatsAppStatus(BUSINESS_A);
+    // Operational = booking confirmation, reminder, review; marketing = win-back only.
+    expect(status.operational.every((a) => a.group === "operational")).toBe(true);
+    expect(status.marketing.every((a) => a.group === "marketing")).toBe(true);
+    expect(status.marketing.map((a) => a.type)).toEqual(["win_back"]);
+    expect(status.operational.length).toBe(DEFAULT_TEMPLATES.length - 1);
+  });
+
+  it("operational readiness is independent of a failed marketing template", async () => {
+    prisma.whatsAppConnection.findUnique.mockResolvedValue(
+      makeWhatsAppConnection({ status: "active", useEnvFallback: true }),
+    );
+    // Every operational template is pending; the marketing win-back was rejected.
+    prisma.automationSetting.findMany.mockResolvedValue(
+      DEFAULT_TEMPLATES.map((t) => ({
+        type: t.automationType,
+        templateName: t.name,
+        templateStatus: t.group === "marketing" ? "rejected" : "pending",
+      })),
+    );
+
+    const status = await getOwnerWhatsAppStatus(BUSINESS_A);
+    // Core operational setup is ready (all submitted) even though marketing failed.
+    expect(status.operationalReady).toBe(true);
+    expect(status.marketingFailed).toBe(true);
+    expect(status.marketingReady).toBe(false);
+    const winBack = status.marketing.find((a) => a.type === "win_back");
+    expect(winBack?.failed).toBe(true);
+    expect(winBack?.ownerLabel).toBe("נדחתה — פני לתמיכה");
+  });
+
+  it("readiness levels: approved operational templates -> ready + canSendOperationalMessages", async () => {
+    prisma.whatsAppConnection.findUnique.mockResolvedValue(
+      makeWhatsAppConnection({ status: "active", useEnvFallback: true }),
+    );
+    prisma.automationSetting.findMany.mockResolvedValue(
+      DEFAULT_TEMPLATES.map((t) => ({
+        type: t.automationType,
+        templateName: t.name,
+        templateStatus: "approved",
+      })),
+    );
+
+    const status = await getOwnerWhatsAppStatus(BUSINESS_A);
+    expect(status.ownerSetupState).toBe("ready");
+    expect(status.ownerSetupLabel).toBe("WhatsApp מוכן לשליחה");
+    expect(status.readiness.connectionReady).toBe(true);
+    expect(status.readiness.numberConfirmed).toBe(true);
+    expect(status.readiness.operationalTemplatesReadyOrPending).toBe(true);
+    expect(status.readiness.canSendOperationalMessages).toBe(true);
+    expect(status.readiness.canSendMarketingMessages).toBe(true);
+  });
+
+  it("readiness levels: pending operational templates -> pending_approval, cannot send yet", async () => {
+    prisma.whatsAppConnection.findUnique.mockResolvedValue(
+      makeWhatsAppConnection({ status: "active", useEnvFallback: true }),
+    );
+    prisma.automationSetting.findMany.mockResolvedValue(
+      DEFAULT_TEMPLATES.map((t) => ({
+        type: t.automationType,
+        templateName: t.name,
+        templateStatus: "pending",
+      })),
+    );
+
+    const status = await getOwnerWhatsAppStatus(BUSINESS_A);
+    expect(status.ownerSetupState).toBe("pending_approval");
+    expect(status.ownerSetupLabel).toBe("ממתין לאישור WhatsApp");
+    expect(status.readiness.operationalTemplatesReadyOrPending).toBe(true);
+    expect(status.readiness.canSendOperationalMessages).toBe(false);
+  });
+
+  it("readiness levels: a rejected operational template -> needs_support", async () => {
+    prisma.whatsAppConnection.findUnique.mockResolvedValue(
+      makeWhatsAppConnection({ status: "active", useEnvFallback: true }),
+    );
+    prisma.automationSetting.findMany.mockResolvedValue(
+      DEFAULT_TEMPLATES.map((t, i) => ({
+        type: t.automationType,
+        templateName: t.name,
+        // Reject the first operational template; the rest are pending.
+        templateStatus: t.group === "operational" && i === 0 ? "rejected" : "pending",
+      })),
+    );
+
+    const status = await getOwnerWhatsAppStatus(BUSINESS_A);
+    expect(status.ownerSetupState).toBe("needs_support");
+    expect(status.ownerSetupLabel).toBe("נדרשת בדיקה");
+    expect(status.readiness.canSendOperationalMessages).toBe(false);
+  });
+
+  it("a marketing-only failure never pushes the owner setup state to needs_support", async () => {
+    prisma.whatsAppConnection.findUnique.mockResolvedValue(
+      makeWhatsAppConnection({ status: "active", useEnvFallback: true }),
+    );
+    prisma.automationSetting.findMany.mockResolvedValue(
+      DEFAULT_TEMPLATES.map((t) => ({
+        type: t.automationType,
+        templateName: t.name,
+        templateStatus: t.group === "marketing" ? "rejected" : "approved",
+      })),
+    );
+
+    const status = await getOwnerWhatsAppStatus(BUSINESS_A);
+    expect(status.ownerSetupState).toBe("ready");
+    expect(status.marketingFailed).toBe(true);
+    expect(status.readiness.canSendOperationalMessages).toBe(true);
+  });
+
+  it("connected but number not confirmed -> needs_confirmation, cannot send", async () => {
+    prisma.whatsAppConnection.findUnique.mockResolvedValue(
+      makeWhatsAppConnection({
+        status: "active",
+        useEnvFallback: true,
+        numberConfirmedAt: null,
+        connectionSource: "existing_business_app",
+      }),
+    );
+    prisma.automationSetting.findMany.mockResolvedValue([]);
+
+    const status = await getOwnerWhatsAppStatus(BUSINESS_A);
+    // A guided-flow connection (connectionSource set, not yet confirmed) must
+    // require number confirmation before anything can send.
+    expect(status.connection.needsNumberConfirmation).toBe(true);
+    expect(status.ownerSetupState).toBe("needs_confirmation");
+    expect(status.readiness.numberConfirmed).toBe(false);
+    expect(status.readiness.canSendOperationalMessages).toBe(false);
+  });
 });

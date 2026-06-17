@@ -35,7 +35,8 @@
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Script from "next/script";
-import { MessageCircle, CheckCircle2, AlertCircle, Loader2, X, ShieldCheck } from "lucide-react";
+import { MessageCircle, CheckCircle2, AlertCircle, Loader2, X, ShieldCheck, Clock, LifeBuoy } from "lucide-react";
+import { SUPPORT_EMAIL } from "@/lib/config";
 import {
   completeEmbeddedSignupAction,
   disconnectWhatsAppAction,
@@ -47,7 +48,11 @@ import {
   syncTemplatesAction,
 } from "@/server/whatsapp/templates-actions";
 import type { TemplateSetupResult } from "@/server/whatsapp/templates-core";
-import type { OwnerWhatsAppStatus } from "@/server/whatsapp/owner-status";
+import type {
+  OwnerWhatsAppStatus,
+  AutomationTemplateStatus,
+  OwnerSetupState,
+} from "@/server/whatsapp/owner-status";
 import {
   CONNECTION_TRACKS,
   getTrackInfo,
@@ -125,6 +130,106 @@ const PILL: Record<
 
 // Neutral "in progress" pill used while a transient flow phase is active.
 const BUSY_PILL = { bg: "rgba(59,130,246,0.08)", border: "rgba(59,130,246,0.25)", color: "#2563eb" };
+
+/** One owner-facing automation readiness row (label + plain-Hebrew status). */
+function AutomationReadinessRow({
+  a,
+  isAdmin,
+}: {
+  a: AutomationTemplateStatus;
+  isAdmin: boolean;
+}) {
+  return (
+    <li className="flex items-center justify-between gap-2 text-xs">
+      <span style={{ color: "var(--foreground)" }}>
+        {a.label}
+        {isAdmin && a.templateName ? (
+          <span style={{ color: "var(--muted)" }}> · {a.templateName}</span>
+        ) : null}
+      </span>
+      <span className="font-semibold" style={{ color: ownerLabelColor(a.ownerLabel) }}>
+        {a.ownerLabel}
+      </span>
+    </li>
+  );
+}
+
+/**
+ * Owner-facing setup status banner (Part 1, states D/E/F). Shows ONE simple,
+ * plain-Hebrew status with no technical detail. Operational readiness is
+ * prioritised; a marketing-only failure never shows here as a problem.
+ */
+function OwnerSetupBanner({ status }: { status: OwnerWhatsAppStatus }) {
+  const state: OwnerSetupState = status.ownerSetupState;
+
+  // Each owner-facing setup state maps to calm copy + a colour. We only render
+  // this once the connection is active and the number is confirmed, so the
+  // relevant states are: preparing, pending_approval, ready, needs_support.
+  const view: {
+    title: string;
+    text: string;
+    bg: string;
+    border: string;
+    color: string;
+    Icon: typeof Clock;
+    showSupport?: boolean;
+  } =
+    state === "ready"
+      ? {
+          title: "WhatsApp מוכן לשליחה",
+          text: "אפשר להפעיל תזכורות, אישורי תור והודעות חזרה ללקוחות.",
+          bg: "rgba(22,163,74,0.07)",
+          border: "rgba(22,163,74,0.22)",
+          color: "#15803d",
+          Icon: CheckCircle2,
+        }
+      : state === "needs_support"
+        ? {
+            title: "נדרשת בדיקה",
+            text: "לא הצלחנו להכין את כל הודעות WhatsApp. התמיכה של Allura תוכל לבדוק את זה.",
+            bg: "rgba(239,68,68,0.06)",
+            border: "rgba(239,68,68,0.22)",
+            color: "#dc2626",
+            Icon: AlertCircle,
+            showSupport: true,
+          }
+        : {
+            // preparing / pending_approval — both read as a calm "waiting" state.
+            title: "ממתין לאישור WhatsApp",
+            text: "ההודעות נשלחו לאישור WhatsApp. בדרך כלל זה מסתיים בזמן קצר.",
+            bg: "rgba(234,179,8,0.08)",
+            border: "rgba(234,179,8,0.28)",
+            color: "#b45309",
+            Icon: Clock,
+          };
+
+  return (
+    <div
+      className="rounded-xl px-4 py-3.5 space-y-2"
+      style={{ background: view.bg, border: `1px solid ${view.border}` }}
+    >
+      <div className="flex items-start gap-2" style={{ color: view.color }}>
+        <view.Icon className="h-4 w-4 mt-0.5 shrink-0" />
+        <div>
+          <p className="text-sm font-semibold">{view.title}</p>
+          <p className="text-xs leading-relaxed" style={{ color: "var(--foreground)" }}>
+            {view.text}
+          </p>
+        </div>
+      </div>
+      {view.showSupport && (
+        <a
+          href={`mailto:${SUPPORT_EMAIL}`}
+          className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold"
+          style={{ background: "#dc2626", color: "#fff" }}
+        >
+          <LifeBuoy className="h-4 w-4" />
+          פנייה לתמיכה
+        </a>
+      )}
+    </div>
+  );
+}
 
 function ownerLabelColor(label: string): string {
   if (label === "מוכן לשליחה") return "#15803d";
@@ -432,6 +537,13 @@ export function WhatsAppConnectionCard({
                   text:
                     "WhatsApp מחובר, אך יצירת התבניות נכשלה" +
                     (isAdmin && result.templateError ? ` (${result.templateError})` : ""),
+                });
+              } else if (result.marketingTemplateFailed) {
+                // Operational templates went through; only the optional marketing
+                // (win-back) template failed — calm, non-blocking note.
+                setTemplateNotice({
+                  ok: false,
+                  text: "תבנית החזרת לקוחות לא אושרה כרגע. שאר הודעות התורים ממשיכות כרגיל.",
                 });
               }
               // Refetch the live server status + re-render the card; poll as a
@@ -799,117 +911,163 @@ export function WhatsAppConnectionCard({
         </div>
       )}
 
-      {/* Template setup — only when connected AND confirmed */}
+      {/* Setup status — only when connected AND confirmed.
+          OWNER view: one simple status banner (ready / pending / needs-support),
+          plus a small non-blocking note if only the marketing template failed.
+          ADMIN view: a clearly-labelled diagnostics area with the full template
+          table, prepare/sync controls, and per-template Meta error detail. */}
       {!isTransient && state === "active" && !needsNumberConfirmation && (
         <div className="space-y-3 pt-2" style={{ borderTop: "1px solid var(--border)" }}>
-          <div className="pt-3">
-            <h4 className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
-              תבניות הודעות
-            </h4>
-            <p className="text-xs" style={{ color: "var(--muted)" }}>
-              התבניות מוכנות אוטומטית אחרי החיבור. WhatsApp צריך לאשר אותן — זה יכול לקחת זמן קצר.
-            </p>
-          </div>
+          <div className="pt-3 space-y-3">
+            {/* Owner-facing single status (shown to everyone). */}
+            <OwnerSetupBanner status={status} />
 
-          {/* Per-automation readiness */}
-          <ul className="space-y-1.5">
-            {status.automations.map((a) => (
-              <li key={a.type} className="flex items-center justify-between gap-2 text-xs">
-                <span style={{ color: "var(--foreground)" }}>
-                  {a.label}
-                  {isAdmin && a.templateName ? (
-                    <span style={{ color: "var(--muted)" }}> · {a.templateName}</span>
-                  ) : null}
-                </span>
-                <span className="font-semibold" style={{ color: ownerLabelColor(a.ownerLabel) }}>
-                  {a.ownerLabel}
-                </span>
-              </li>
-            ))}
-          </ul>
-
-          {/* Owner: a single retry button (templates already auto-prepare on connect). */}
-          {/* Admin: also gets an explicit sync button + per-template diagnostics below. */}
-          <div className="flex flex-wrap gap-2.5">
-            <button
-              onClick={handleCreateTemplates}
-              disabled={busy}
-              className="rounded-xl px-4 py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
-              style={{ background: "#b86b8c", color: "#fff" }}
-            >
-              {busy ? "פועל..." : "הכנת תבניות WhatsApp"}
-            </button>
-            {isAdmin && (
-              <button
-                onClick={handleSyncTemplates}
-                disabled={busy}
-                className="rounded-xl px-4 py-2.5 text-sm font-medium transition-opacity disabled:opacity-50"
-                style={{ background: "rgba(184,107,140,0.10)", color: "#b86b8c", border: "1px solid rgba(184,107,140,0.25)" }}
-              >
-                סנכרון תבניות
-              </button>
+            {/* Marketing-only failure — small, non-blocking note. Operational
+                messages (reminders / confirmations) keep working regardless. */}
+            {status.marketingFailed && status.ownerSetupState !== "needs_support" && (
+              <p className="text-xs leading-relaxed" style={{ color: "#92400e" }}>
+                הודעות החזרת לקוחות עדיין בהכנה. שאר הודעות התורים ממשיכות כרגיל.
+              </p>
             )}
           </div>
 
-          {templateResult && (
+          {/* ---------- Admin-only diagnostics area ---------- */}
+          {isAdmin && (
             <div
-              className="rounded-xl px-3.5 py-2.5 text-sm space-y-2"
-              style={{
-                background: templateResult.success ? "rgba(22,163,74,0.07)" : "rgba(234,179,8,0.08)",
-                border: `1px solid ${templateResult.success ? "rgba(22,163,74,0.22)" : "rgba(234,179,8,0.28)"}`,
-                color: templateResult.success ? "#15803d" : "#92400e",
-              }}
+              className="rounded-xl p-3.5 space-y-3"
+              style={{ background: "rgba(107,114,128,0.04)", border: "1px dashed rgba(107,114,128,0.3)" }}
             >
-              <p className="font-semibold">{templateResult.statusLabel}</p>
+              <div className="flex items-center justify-between gap-2">
+                <h4 className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+                  אזור בדיקות למנהל בלבד
+                </h4>
+                <span className="rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
+                  Admin
+                </span>
+              </div>
+              <p className="text-xs" style={{ color: "var(--muted)" }}>
+                התבניות מוכנות אוטומטית אחרי החיבור. WhatsApp צריך לאשר אותן — זה יכול לקחת זמן קצר.
+              </p>
 
-              {/* Admin-only template debug table: name · category · language ·
-                  local validation · Meta status · last error · fbtrace_id. */}
-              {isAdmin && templateResult.items.length > 0 && (
-                <div className="space-y-2 pt-1">
-                  <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>
-                    פרטים טכניים (אדמין בלבד)
-                  </p>
-                  <ul className="space-y-2 text-xs">
-                    {templateResult.items.map((it) => (
-                      <li
-                        key={it.name}
-                        className="rounded-lg px-2.5 py-2 space-y-1"
-                        style={{ background: "rgba(255,255,255,0.5)", border: "1px solid var(--border)", color: "var(--foreground)" }}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span style={{ fontFamily: "monospace" }}>{it.name}</span>
-                          <span
-                            className="font-semibold"
-                            style={{ color: it.status === "error" || it.status === "invalid" ? "#dc2626" : "#15803d" }}
-                          >
-                            {it.status}
-                          </span>
-                        </div>
-                        <div className="opacity-75">
-                          קטגוריה: {it.category} · שפה: {it.language} · בדיקה מקומית:{" "}
-                          {it.localValid ? "תקין" : "נכשל"}
-                        </div>
-                        {it.error && (
-                          <div style={{ color: "#dc2626" }}>שגיאה: {it.error}</div>
-                        )}
-                        {it.fbtraceId && (
-                          <div className="opacity-60" style={{ fontFamily: "monospace" }}>
-                            fbtrace_id: {it.fbtraceId}
-                          </div>
-                        )}
-                        {(it.status === "error" || it.status === "invalid") && (
-                          <button
-                            onClick={() => handleRetryTemplate(it.name)}
-                            disabled={busy}
-                            className="mt-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition-opacity disabled:opacity-50"
-                            style={{ background: "rgba(184,107,140,0.12)", color: "#b86b8c", border: "1px solid rgba(184,107,140,0.25)" }}
-                          >
-                            נסה ליצור שוב
-                          </button>
-                        )}
-                      </li>
+              {/* Operational (core) templates — the heart of WhatsApp setup. */}
+              <div className="space-y-1.5">
+                <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>
+                  תבניות תפעוליות
+                </p>
+                <ul className="space-y-1.5">
+                  {status.operational.map((a) => (
+                    <AutomationReadinessRow key={a.type} a={a} isAdmin={isAdmin} />
+                  ))}
+                </ul>
+              </div>
+
+              {/* Marketing (optional) template — separated so a marketing failure
+                  never reads as a failure of the core operational setup. */}
+              {status.marketing.length > 0 && (
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>
+                      תבנית שיווקית
+                    </p>
+                    <span className="text-[11px]" style={{ color: "var(--muted)" }}>
+                      אופציונלי
+                    </span>
+                  </div>
+                  <ul className="space-y-1.5">
+                    {status.marketing.map((a) => (
+                      <AutomationReadinessRow key={a.type} a={a} isAdmin={isAdmin} />
                     ))}
                   </ul>
+                  {status.marketingFailed && (
+                    <p className="text-xs leading-relaxed" style={{ color: "#92400e" }}>
+                      תבנית החזרת לקוחות לא אושרה כרגע. שאר הודעות התורים ממשיכות כרגיל.
+                    </p>
+                  )}
+                </div>
+              )}
+
+              {/* Admin controls: re-prepare + sync (owners never need these —
+                  templates auto-prepare on connect). */}
+              <div className="flex flex-wrap gap-2.5">
+                <button
+                  onClick={handleCreateTemplates}
+                  disabled={busy}
+                  className="rounded-xl px-4 py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
+                  style={{ background: "#b86b8c", color: "#fff" }}
+                >
+                  {busy ? "פועל..." : "הכנת תבניות WhatsApp"}
+                </button>
+                <button
+                  onClick={handleSyncTemplates}
+                  disabled={busy}
+                  className="rounded-xl px-4 py-2.5 text-sm font-medium transition-opacity disabled:opacity-50"
+                  style={{ background: "rgba(184,107,140,0.10)", color: "#b86b8c", border: "1px solid rgba(184,107,140,0.25)" }}
+                >
+                  סנכרון תבניות
+                </button>
+              </div>
+
+              {templateResult && (
+                <div
+                  className="rounded-xl px-3.5 py-2.5 text-sm space-y-2"
+                  style={{
+                    background: templateResult.success ? "rgba(22,163,74,0.07)" : "rgba(234,179,8,0.08)",
+                    border: `1px solid ${templateResult.success ? "rgba(22,163,74,0.22)" : "rgba(234,179,8,0.28)"}`,
+                    color: templateResult.success ? "#15803d" : "#92400e",
+                  }}
+                >
+                  <p className="font-semibold">{templateResult.statusLabel}</p>
+
+                  {/* Template debug table: name · category · language · local
+                      validation · Meta status · last error · fbtrace_id. */}
+                  {templateResult.items.length > 0 && (
+                    <div className="space-y-2 pt-1">
+                      <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>
+                        פרטים טכניים (אדמין בלבד)
+                      </p>
+                      <ul className="space-y-2 text-xs">
+                        {templateResult.items.map((it) => (
+                          <li
+                            key={it.name}
+                            className="rounded-lg px-2.5 py-2 space-y-1"
+                            style={{ background: "rgba(255,255,255,0.5)", border: "1px solid var(--border)", color: "var(--foreground)" }}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span style={{ fontFamily: "monospace" }}>{it.name}</span>
+                              <span
+                                className="font-semibold"
+                                style={{ color: it.status === "error" || it.status === "invalid" ? "#dc2626" : "#15803d" }}
+                              >
+                                {it.status}
+                              </span>
+                            </div>
+                            <div className="opacity-75">
+                              קטגוריה: {it.category} · שפה: {it.language} · בדיקה מקומית:{" "}
+                              {it.localValid ? "תקין" : "נכשל"}
+                            </div>
+                            {it.error && (
+                              <div style={{ color: "#dc2626" }}>שגיאה: {it.error}</div>
+                            )}
+                            {it.fbtraceId && (
+                              <div className="opacity-60" style={{ fontFamily: "monospace" }}>
+                                fbtrace_id: {it.fbtraceId}
+                              </div>
+                            )}
+                            {(it.status === "error" || it.status === "invalid") && (
+                              <button
+                                onClick={() => handleRetryTemplate(it.name)}
+                                disabled={busy}
+                                className="mt-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition-opacity disabled:opacity-50"
+                                style={{ background: "rgba(184,107,140,0.12)", color: "#b86b8c", border: "1px solid rgba(184,107,140,0.25)" }}
+                              >
+                                נסה ליצור שוב
+                              </button>
+                            )}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

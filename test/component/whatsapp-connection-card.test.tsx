@@ -22,10 +22,26 @@ const m = vi.hoisted(() => ({
   confirmConnectedNumberAction: vi.fn(() => Promise.resolve({ success: true })),
   getWhatsAppConnectionStatusAction: vi.fn(),
   createDefaultTemplatesAction: vi.fn(
-    (): Promise<TemplateSetupResult> => Promise.resolve({ success: true, statusLabel: "ok", items: [] }),
+    (): Promise<TemplateSetupResult> =>
+      Promise.resolve({
+        success: true,
+        statusLabel: "ok",
+        items: [],
+        operationalReady: true,
+        marketingReady: true,
+        marketingFailed: false,
+      }),
   ),
   syncTemplatesAction: vi.fn(
-    (): Promise<TemplateSetupResult> => Promise.resolve({ success: true, statusLabel: "ok", items: [] }),
+    (): Promise<TemplateSetupResult> =>
+      Promise.resolve({
+        success: true,
+        statusLabel: "ok",
+        items: [],
+        operationalReady: true,
+        marketingReady: true,
+        marketingFailed: false,
+      }),
   ),
   refresh: vi.fn(),
 }));
@@ -48,9 +64,34 @@ vi.mock("next/navigation", () => ({
 // next/script: render nothing (no external SDK load in tests).
 vi.mock("next/script", () => ({ default: () => null }));
 
+type TplStatus = "approved" | "pending" | "rejected" | "none";
+
+/** Build an operational automation readiness row from a raw template status. */
+function opRow(status: TplStatus): OwnerWhatsAppStatus["operational"][number] {
+  const map: Record<TplStatus, OwnerWhatsAppStatus["operational"][number]["ownerLabel"]> = {
+    approved: "מוכן לשליחה",
+    pending: "ממתין לאישור WhatsApp",
+    rejected: "נדחתה — פני לתמיכה",
+    none: "מכינים תבניות הודעה",
+  };
+  return {
+    type: "booking_confirmation",
+    label: "אישור תור",
+    ownerLabel: map[status],
+    group: "operational",
+    ready: status === "approved",
+    submitted: status === "approved" || status === "pending",
+    failed: status === "rejected",
+    templateName: status === "none" ? null : "booking_confirmation_he",
+    templateStatus: status === "none" ? null : status,
+  };
+}
+
 function makeStatus(
   state: OwnerWhatsAppStatus["connection"]["state"],
   extra: Partial<OwnerWhatsAppStatus["connection"]> = {},
+  /** Owner setup override — drives the operational readiness banner (states D/E/F). */
+  setup: { operational?: TplStatus; ownerSetupState?: OwnerWhatsAppStatus["ownerSetupState"] } = {},
 ): OwnerWhatsAppStatus {
   const labels: Record<string, string> = {
     not_connected: "WhatsApp לא מחובר",
@@ -58,16 +99,64 @@ function makeStatus(
     active: "WhatsApp מחובר",
     error: "יש בעיה בחיבור WhatsApp",
   };
+  const connection = {
+    ready: state === "active",
+    state,
+    statusLabel: labels[state],
+    displayPhoneNumber: state === "active" ? "+972 50-123-4567" : undefined,
+    ...extra,
+  };
+  const operational = setup.operational ? [opRow(setup.operational)] : [];
+  const operationalApproved = operational.length > 0 && operational.every((a) => a.ready);
+  const operationalReady = operational.length > 0 && operational.every((a) => a.submitted);
+  const operationalFailed = operational.some((a) => a.failed);
+  const numberConfirmed = state === "active" && !connection.needsNumberConfirmation;
+
+  let ownerSetupState: OwnerWhatsAppStatus["ownerSetupState"];
+  if (setup.ownerSetupState) {
+    ownerSetupState = setup.ownerSetupState;
+  } else if (state !== "active") {
+    ownerSetupState = state === "pending" ? "connecting" : "not_connected";
+  } else if (connection.needsNumberConfirmation) {
+    ownerSetupState = "needs_confirmation";
+  } else if (operationalFailed) {
+    ownerSetupState = "needs_support";
+  } else if (operationalApproved) {
+    ownerSetupState = "ready";
+  } else if (operationalReady) {
+    ownerSetupState = "pending_approval";
+  } else {
+    ownerSetupState = "preparing";
+  }
+  const ownerLabels: Record<OwnerWhatsAppStatus["ownerSetupState"], string> = {
+    not_connected: "WhatsApp לא מחובר",
+    connecting: "בודקים את החיבור",
+    needs_confirmation: "נדרש אישור מספר",
+    preparing: "מכינים את הודעות WhatsApp",
+    pending_approval: "ממתין לאישור WhatsApp",
+    ready: "WhatsApp מוכן לשליחה",
+    needs_support: "נדרשת בדיקה",
+  };
+
   return {
-    connection: {
-      ready: state === "active",
-      state,
-      statusLabel: labels[state],
-      displayPhoneNumber: state === "active" ? "+972 50-123-4567" : undefined,
-      ...extra,
+    connection,
+    automations: operational,
+    operational,
+    marketing: [],
+    anyReady: operationalApproved,
+    operationalReady,
+    marketingReady: false,
+    marketingFailed: false,
+    readiness: {
+      connectionReady: state === "active",
+      numberConfirmed,
+      operationalTemplatesReadyOrPending: operationalReady,
+      marketingTemplateReadyOrPending: false,
+      canSendOperationalMessages: numberConfirmed && operationalApproved,
+      canSendMarketingMessages: false,
     },
-    automations: [],
-    anyReady: false,
+    ownerSetupState,
+    ownerSetupLabel: ownerLabels[ownerSetupState],
   };
 }
 
@@ -413,6 +502,9 @@ describe("WhatsAppConnectionCard — admin template debug table", () => {
           fbtraceId: "TraceXYZ",
         },
       ],
+      operationalReady: false,
+      marketingReady: false,
+      marketingFailed: false,
     });
 
     const user = userEvent.setup();
@@ -440,6 +532,9 @@ describe("WhatsAppConnectionCard — admin template debug table", () => {
           status: "pending",
         },
       ],
+      operationalReady: true,
+      marketingReady: false,
+      marketingFailed: false,
     });
     await user.click(screen.getByRole("button", { name: /נסה ליצור שוב/ }));
     await waitFor(() =>
@@ -447,31 +542,105 @@ describe("WhatsAppConnectionCard — admin template debug table", () => {
     );
   });
 
-  it("does not show the technical details table to non-admins", async () => {
-    m.createDefaultTemplatesAction.mockResolvedValueOnce({
-      success: false,
-      statusLabel: "WhatsApp מחובר, אך יצירת התבניות נכשלה",
-      items: [
-        {
-          label: "אישור תור",
-          name: "booking_confirmation_he",
-          category: "UTILITY",
-          language: "he",
-          localValid: true,
-          status: "error",
-          error: "Invalid parameter",
-        },
-      ],
-    });
+  it("a non-admin owner sees NONE of the admin diagnostics area", () => {
+    render(
+      <WhatsAppConnectionCard
+        status={makeStatus("active", { needsNumberConfirmation: false }, { operational: "pending" })}
+        {...PROPS}
+        isAdmin={false}
+      />,
+    );
 
-    const user = userEvent.setup();
-    render(<WhatsAppConnectionCard status={activeStatus()} {...PROPS} isAdmin={false} />);
-
-    await user.click(screen.getByRole("button", { name: /הכנת תבניות WhatsApp/ }));
-
-    // Owners see the summary label but never the technical table / template name.
-    expect(await screen.findByText(/יצירת התבניות נכשלה/)).toBeInTheDocument();
+    // No admin area, no manual template controls, no per-template table.
+    expect(screen.queryByText("אזור בדיקות למנהל בלבד")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /הכנת תבניות WhatsApp/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /סנכרון תבניות/ })).not.toBeInTheDocument();
     expect(screen.queryByText("פרטים טכניים (אדמין בלבד)")).not.toBeInTheDocument();
     expect(screen.queryByText("booking_confirmation_he")).not.toBeInTheDocument();
+    // The browser-step debug panel is admin-only too.
+    expect(screen.queryByText("דיבאג (אדמין בלבד)")).not.toBeInTheDocument();
+  });
+
+  it("admin DOES see the diagnostics area + technical controls", () => {
+    render(
+      <WhatsAppConnectionCard
+        status={makeStatus("active", { needsNumberConfirmation: false }, { operational: "pending" })}
+        {...PROPS}
+        isAdmin
+      />,
+    );
+
+    expect(screen.getByText("אזור בדיקות למנהל בלבד")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /הכנת תבניות WhatsApp/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /סנכרון תבניות/ })).toBeInTheDocument();
+    expect(screen.getByText("דיבאג (אדמין בלבד)")).toBeInTheDocument();
+  });
+});
+
+describe("WhatsAppConnectionCard — owner setup status (states D/E/F)", () => {
+  it("pending operational templates show 'ממתין לאישור WhatsApp' to the owner", () => {
+    render(
+      <WhatsAppConnectionCard
+        status={makeStatus("active", { needsNumberConfirmation: false }, { operational: "pending" })}
+        {...PROPS}
+        isAdmin={false}
+      />,
+    );
+
+    expect(screen.getByText("ממתין לאישור WhatsApp")).toBeInTheDocument();
+    expect(
+      screen.getByText(/ההודעות נשלחו לאישור WhatsApp/),
+    ).toBeInTheDocument();
+    // No support button while merely pending.
+    expect(screen.queryByRole("link", { name: /פנייה לתמיכה/ })).not.toBeInTheDocument();
+  });
+
+  it("approved operational templates show 'WhatsApp מוכן לשליחה'", () => {
+    render(
+      <WhatsAppConnectionCard
+        status={makeStatus("active", { needsNumberConfirmation: false }, { operational: "approved" })}
+        {...PROPS}
+        isAdmin={false}
+      />,
+    );
+
+    expect(screen.getByText("WhatsApp מוכן לשליחה")).toBeInTheDocument();
+    expect(
+      screen.getByText(/אפשר להפעיל תזכורות, אישורי תור והודעות חזרה/),
+    ).toBeInTheDocument();
+  });
+
+  it("a rejected operational template shows 'נדרשת בדיקה' + a support contact (no codes)", () => {
+    render(
+      <WhatsAppConnectionCard
+        status={makeStatus("active", { needsNumberConfirmation: false }, { operational: "rejected" })}
+        {...PROPS}
+        isAdmin={false}
+      />,
+    );
+
+    expect(screen.getByText("נדרשת בדיקה")).toBeInTheDocument();
+    expect(
+      screen.getByText(/לא הצלחנו להכין את כל הודעות WhatsApp/),
+    ).toBeInTheDocument();
+    const support = screen.getByRole("link", { name: /פנייה לתמיכה/ });
+    expect(support).toHaveAttribute("href", expect.stringContaining("mailto:"));
+    // Never a technical reason / template name for the owner.
+    expect(screen.queryByText("booking_confirmation_he")).not.toBeInTheDocument();
+  });
+
+  it("a marketing-only failure stays a calm note, never 'נדרשת בדיקה'", () => {
+    const status = makeStatus(
+      "active",
+      { needsNumberConfirmation: false },
+      { operational: "pending" },
+    );
+    status.marketingFailed = true;
+    render(<WhatsAppConnectionCard status={status} {...PROPS} isAdmin={false} />);
+
+    expect(screen.getByText(/הודעות החזרת לקוחות עדיין בהכנה/)).toBeInTheDocument();
+    // Operational still pending (not blocked); never escalated to needs-support.
+    expect(screen.getByText("ממתין לאישור WhatsApp")).toBeInTheDocument();
+    expect(screen.queryByText("נדרשת בדיקה")).not.toBeInTheDocument();
   });
 });

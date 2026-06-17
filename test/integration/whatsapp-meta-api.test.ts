@@ -10,7 +10,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
  */
 
 import { createMetaCloudApiProvider } from "@/lib/whatsapp/meta-cloud-api";
-import { createTemplate, listTemplates } from "@/lib/whatsapp/meta-templates-api";
+import {
+  createTemplate,
+  listTemplates,
+  buildSanitizedTemplatePayload,
+} from "@/lib/whatsapp/meta-templates-api";
 import {
   exchangeCodeForToken,
   registerPhoneNumber,
@@ -256,6 +260,22 @@ describe("meta-templates-api", () => {
     const res = await listTemplates("waba_1", REAL_TOKEN);
     expect(res.ok).toBe(false);
     expect(res.error).not.toContain("EAAbadtoken");
+  });
+
+  it("buildSanitizedTemplatePayload carries no token/credential — safe to log in the admin debug table", () => {
+    for (const t of DEFAULT_TEMPLATES) {
+      const payload = buildSanitizedTemplatePayload(t);
+      const serialized = JSON.stringify(payload);
+      // The sanitized payload exposes only template content, never any credential.
+      expect(serialized).not.toContain(REAL_TOKEN);
+      expect(serialized.toLowerCase()).not.toContain("authorization");
+      expect(serialized.toLowerCase()).not.toContain("bearer");
+      expect(serialized).not.toContain("accessToken");
+      // It is exactly the content fields we POST — name/language/category/body/examples.
+      expect(Object.keys(payload).sort()).toEqual(
+        ["bodyText", "category", "componentTypes", "language", "name", "variableExamples"].sort(),
+      );
+    }
   });
 });
 

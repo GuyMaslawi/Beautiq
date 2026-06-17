@@ -203,6 +203,54 @@ describe("createDefaultTemplatesForBusiness", () => {
     // Failure copy frames this as a template problem, NOT a connection problem.
     expect(res.statusLabel).toContain("WhatsApp מחובר");
     expect(res.statusLabel).toContain("יצירת התבניות נכשלה");
+    expect(res.operationalReady).toBe(false);
+  });
+
+  it("a win_back (marketing) failure does NOT fail the whole setup — operational stays ready", async () => {
+    getCreds.mockResolvedValue({ accessToken: REAL_TOKEN, wabaId: "waba_1", apiVersion: "v19.0" });
+    // Operational templates succeed; only the marketing win-back template fails.
+    createTemplate.mockImplementation((_waba, _token, tpl: { name: string }) =>
+      tpl.name === "win_back_offer_he"
+        ? Promise.resolve({
+            ok: false,
+            error: "Invalid parameter [code 100 · subcode 2388024]",
+            metaError: { message: "Invalid parameter", code: 100, errorSubcode: 2388024, fbtraceId: "TrM" },
+          })
+        : Promise.resolve({ ok: true, status: "pending" }),
+    );
+
+    const res = await createDefaultTemplatesForBusiness(BUSINESS_A);
+
+    // Operational readiness is separate from (and unaffected by) marketing failure.
+    expect(res.operationalReady).toBe(true);
+    expect(res.marketingFailed).toBe(true);
+    expect(res.marketingReady).toBe(false);
+    // Setup is still considered usable — never a global failure.
+    expect(res.success).toBe(true);
+    // Owner-facing copy: operational fine, marketing handled separately.
+    expect(res.statusLabel).toContain("תבניות תפעוליות נשלחו לאישור");
+    expect(res.statusLabel).toContain("תבנית החזרת לקוחות נכשלה ותטופל בנפרד");
+    // The marketing error is surfaced per-template for the admin debug table.
+    const marketingItem = res.items.find((i) => i.name === "win_back_offer_he");
+    expect(marketingItem?.status).toBe("error");
+    expect(marketingItem?.errorSubcode).toBe(2388024);
+  });
+
+  it("retrying ONLY the marketing template never recreates the pending utility templates", async () => {
+    getCreds.mockResolvedValue({ accessToken: REAL_TOKEN, wabaId: "waba_1", apiVersion: "v19.0" });
+    createTemplate.mockResolvedValue({ ok: true, status: "pending" });
+
+    const res = await createDefaultTemplatesForBusiness(BUSINESS_A, "win_back_offer_he");
+
+    // Exactly one create call — only the marketing template was retried.
+    expect(createTemplate).toHaveBeenCalledTimes(1);
+    const sentNames = createTemplate.mock.calls.map((c) => (c[2] as { name: string }).name);
+    expect(sentNames).toEqual(["win_back_offer_he"]);
+    expect(sentNames).not.toContain("booking_confirmation_he");
+    expect(sentNames).not.toContain("appointment_reminder_he");
+    expect(sentNames).not.toContain("review_request_he");
+    expect(res.items).toHaveLength(1);
+    expect(res.items[0].name).toBe("win_back_offer_he");
   });
 });
 

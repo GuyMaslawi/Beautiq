@@ -17,6 +17,7 @@ import { prisma } from "@/server/db/prisma";
 import { getDecryptedCredentialsForBusiness } from "@/server/whatsapp/resolver";
 import {
   DEFAULT_TEMPLATES,
+  isOperationalTemplateName,
   type DefaultTemplate,
 } from "@/lib/whatsapp/default-templates";
 import {
@@ -53,6 +54,68 @@ export interface TemplateSetupResult {
   statusLabel: string;
   /** Per-template outcome for admin diagnostics. */
   items: TemplateSetupItem[];
+  /**
+   * True when every OPERATIONAL (core/transactional) template in this run is
+   * pending/approved — i.e. the WhatsApp setup is usable for booking/reminder/
+   * review messages, regardless of the optional marketing template.
+   */
+  operationalReady: boolean;
+  /** True when every MARKETING template in this run is pending/approved. */
+  marketingReady: boolean;
+  /** True when at least one MARKETING template failed (Meta error / invalid). */
+  marketingFailed: boolean;
+}
+
+/** A per-template item is "ok" when it reached Meta as pending/approved/unknown. */
+function itemOk(i: TemplateSetupItem): boolean {
+  return i.status !== "error" && i.status !== "invalid";
+}
+
+/**
+ * Builds the readiness summary for a set of per-template results, splitting the
+ * optional marketing template from the core operational ones so a marketing
+ * failure never reports the whole setup as failed.
+ */
+function summarize(items: TemplateSetupItem[]): {
+  operationalReady: boolean;
+  marketingReady: boolean;
+  marketingFailed: boolean;
+  success: boolean;
+  statusLabel: string;
+} {
+  const operational = items.filter((i) => isOperationalTemplateName(i.name));
+  const marketing = items.filter((i) => !isOperationalTemplateName(i.name));
+
+  const operationalReady = operational.length > 0 && operational.every(itemOk);
+  const marketingReady = marketing.length > 0 && marketing.every(itemOk);
+  const marketingFailed = marketing.some((i) => !itemOk(i));
+  const operationalCreated = operational.filter(itemOk).length;
+
+  // Success = the setup is usable. When operational templates are present, that
+  // means at least one operational template made it; a single-template (marketing)
+  // retry succeeds on its own outcome.
+  const success =
+    operational.length > 0 ? operationalCreated > 0 : items.some(itemOk);
+
+  let statusLabel: string;
+  if (operational.length === 0) {
+    // Single-template run (e.g. a marketing-only retry) — report just that one.
+    statusLabel = items.every(itemOk)
+      ? "התבנית נשלחה לאישור WhatsApp — ממתין לאישור"
+      : "יצירת התבנית נכשלה";
+  } else if (operationalReady && marketingReady) {
+    statusLabel = "התבניות נשלחו לאישור WhatsApp — ממתין לאישור";
+  } else if (operationalReady && marketingFailed) {
+    // The exact owner-facing message: operational fine, marketing handled separately.
+    statusLabel =
+      "WhatsApp מחובר. תבניות תפעוליות נשלחו לאישור. תבנית החזרת לקוחות נכשלה ותטופל בנפרד.";
+  } else if (operationalCreated > 0) {
+    statusLabel = `נוצרו ${operationalCreated} מתוך ${operational.length} תבניות תפעוליות — חלק נכשלו`;
+  } else {
+    statusLabel = "WhatsApp מחובר, אך יצירת התבניות נכשלה";
+  }
+
+  return { operationalReady, marketingReady, marketingFailed, success, statusLabel };
 }
 
 function baseItem(tpl: DefaultTemplate): TemplateSetupItem {
@@ -112,6 +175,9 @@ export async function createDefaultTemplatesForBusiness(
       success: false,
       statusLabel: "WhatsApp לא מחובר — יש לחבר את WhatsApp לפני יצירת תבניות",
       items: [],
+      operationalReady: false,
+      marketingReady: false,
+      marketingFailed: false,
     };
   }
 
@@ -185,18 +251,8 @@ export async function createDefaultTemplatesForBusiness(
 
   revalidatePath("/automations");
 
-  const created = items.filter((i) => i.status !== "error" && i.status !== "invalid").length;
-  const total = items.length;
-  return {
-    success: created > 0,
-    statusLabel:
-      created === total
-        ? "התבניות נשלחו לאישור WhatsApp — ממתין לאישור"
-        : created > 0
-          ? `נוצרו ${created} מתוך ${total} תבניות — חלק נכשלו`
-          : "WhatsApp מחובר, אך יצירת התבניות נכשלה",
-    items,
-  };
+  const summary = summarize(items);
+  return { ...summary, items };
 }
 
 /** Option B — sync template statuses by reading the WABA's existing templates. */
@@ -209,6 +265,9 @@ export async function syncTemplatesForBusiness(
       success: false,
       statusLabel: "WhatsApp לא מחובר — יש לחבר את WhatsApp לפני סנכרון תבניות",
       items: [],
+      operationalReady: false,
+      marketingReady: false,
+      marketingFailed: false,
     };
   }
 
@@ -218,6 +277,9 @@ export async function syncTemplatesForBusiness(
       success: false,
       statusLabel: list.error ? `סנכרון נכשל — ${list.error}` : "סנכרון נכשל",
       items: [],
+      operationalReady: false,
+      marketingReady: false,
+      marketingFailed: false,
     };
   }
 
@@ -242,6 +304,7 @@ export async function syncTemplatesForBusiness(
 
   revalidatePath("/automations");
 
+  const summary = summarize(items);
   return {
     success: matched > 0,
     statusLabel:
@@ -251,5 +314,8 @@ export async function syncTemplatesForBusiness(
           ? `סונכרנו ${matched} מתוך ${DEFAULT_TEMPLATES.length} תבניות`
           : "לא נמצאו תבניות תואמות — ודאי שהן נוצרו ב-WhatsApp",
     items,
+    operationalReady: summary.operationalReady,
+    marketingReady: summary.marketingReady,
+    marketingFailed: summary.marketingFailed,
   };
 }

@@ -9,7 +9,7 @@ import {
   TEST_MODE_BLOCKED_REASON,
 } from "@/lib/whatsapp/provider";
 import { getWhatsAppProviderForBusiness } from "@/server/whatsapp/resolver";
-import { buildWinBackMessage, buildOfferText } from "@/server/win-back-automation/message-builder";
+import { buildWinBackMessage } from "@/server/win-back-automation/message-builder";
 import type { ManualSendMessageType, ManualSendResult } from "@/server/clients/whatsapp-actions";
 
 export interface AdminUpdateClientState {
@@ -231,10 +231,6 @@ export async function adminSendManualClientWhatsAppAction(
   }
 
   const lastServiceName = client.bookings[0]?.service.name;
-  const offerText = buildOfferText(
-    setting?.offerType ?? "none",
-    setting?.offerValue ?? null,
-  );
 
   const messageText =
     messageType === "manual_test"
@@ -292,13 +288,12 @@ export async function adminSendManualClientWhatsAppAction(
   });
 
   const provider = await getWhatsAppProviderForBusiness(businessId);
+  // The neutral win-back template carries exactly 2 vars (name + business).
   const templateVariables =
     effectiveTemplateName && effectiveTemplateName !== "hello_world"
       ? {
           "1": client.fullName,
           "2": client.business.name,
-          "3": lastServiceName ?? "",
-          "4": offerText,
         }
       : undefined;
 

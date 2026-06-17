@@ -52,6 +52,29 @@ export interface TemplateValidationResult {
   errors: string[];
 }
 
+/**
+ * Risk words for default MARKETING templates. Meta reviews marketing templates
+ * far more strictly than utility ones, and promotional/discount/urgency wording
+ * is a common rejection cause (the win-back template previously failed with code
+ * 100 / subcode 2388024). Our shipped MARKETING defaults must stay neutral, so we
+ * flag these words locally before ever calling Meta.
+ */
+export const MARKETING_RISK_WORDS = [
+  "הנחה",
+  "מבצע",
+  "קופון",
+  "אחוז",
+  "חינם",
+  "רק היום",
+  "מוגבל בזמן",
+] as const;
+
+/** Returns the risk words found in a marketing body (empty when neutral). */
+export function findMarketingRiskWords(body: string): string[] {
+  const text = body ?? "";
+  return MARKETING_RISK_WORDS.filter((w) => text.includes(w));
+}
+
 /** Returns the variable numbers in the order they appear in the body text. */
 export function extractBodyVariables(body: string): number[] {
   return [...body.matchAll(VARIABLE_RE)].map((m) => Number(m[1]));
@@ -147,6 +170,19 @@ export function validateTemplate(tpl: DefaultTemplate): TemplateValidationResult
       errors.push(`הדוגמה למשתנה {{${i + 1}}} מכילה תו לא חוקי (שורה חדשה או תו בקרה).`);
     }
   });
+
+  // --- marketing risk words ---
+  // Our shipped MARKETING defaults must stay low-risk for Meta review, so a
+  // promotional/discount/urgency word in a default MARKETING body is blocked
+  // locally before it can trigger a Meta rejection.
+  if (tpl.category === "MARKETING") {
+    const risky = findMarketingRiskWords(body);
+    if (risky.length > 0) {
+      errors.push(
+        `תבנית שיווקית: מומלץ להימנע ממילים שעלולות להידחות (${risky.join(", ")}). תבנית ברירת המחדל צריכה להישאר ניטרלית.`,
+      );
+    }
+  }
 
   return { ok: errors.length === 0, errors };
 }

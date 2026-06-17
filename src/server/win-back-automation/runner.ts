@@ -1,6 +1,6 @@
 import { prisma } from "@/server/db/prisma";
 import { getEligibleClients } from "./eligibility";
-import { buildWinBackMessage, buildOfferText } from "./message-builder";
+import { buildWinBackMessage } from "./message-builder";
 import {
   DEV_MOCK_SKIP_REASON,
   TEST_MODE_BLOCKED_REASON,
@@ -129,8 +129,6 @@ export async function runWinBackForBusiness(
       template: setting.messageTemplate,
     });
 
-    const offerText = buildOfferText(setting.offerType, setting.offerValue);
-
     const automationMessage = await prisma.automationMessage.create({
       data: {
         businessId: business.id,
@@ -146,15 +144,14 @@ export async function runWinBackForBusiness(
     });
 
     // hello_world is Meta's zero-variable sandbox template; sending body
-    // components against it triggers error 131008. Real templates carry 4 vars.
+    // components against it triggers error 131008. The neutral win-back template
+    // carries exactly 2 vars: client name + business name (no service/offer var).
     const templateVariables =
       setting.templateName === "hello_world"
         ? undefined
         : {
             "1": client.fullName,
             "2": business.name,
-            "3": client.lastServiceName ?? "",
-            "4": offerText,
           };
 
     const result = await provider.send({
