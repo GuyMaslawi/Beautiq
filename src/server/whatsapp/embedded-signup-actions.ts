@@ -36,11 +36,22 @@ import {
   scrubToken,
 } from "@/lib/whatsapp/meta-onboarding";
 import { createDefaultTemplatesForBusiness } from "@/server/whatsapp/templates-core";
+import type { ConnectionSource, ConnectionTrack } from "@/lib/whatsapp/connection-tracks";
 
 export interface EmbeddedSignupInput {
   code: string;
   wabaId?: string;
   phoneNumberId?: string;
+  /**
+   * The onboarding track the owner chose in the pre-connection step. Stored as
+   * the connection source for owner-facing guidance + the confirmation gate.
+   * Optional and backward-compatible: when absent the source is "unknown".
+   */
+  intent?: ConnectionTrack;
+}
+
+function intentToSource(intent?: ConnectionTrack): ConnectionSource {
+  return intent ?? "unknown";
 }
 
 export interface EmbeddedSignupResult {
@@ -177,37 +188,30 @@ export async function completeEmbeddedSignupAction(
     ? new Date(now.getTime() + tokenRes.expiresInSeconds * 1000)
     : null;
 
+  // The owner's chosen onboarding track (guidance + confirmation gate only).
+  const connectionSource = intentToSource(input.intent);
+  // A connection created through the guided flow starts UNCONFIRMED: real sends
+  // stay blocked (see the WhatsApp resolver) until the owner confirms the number.
+  const shared = {
+    provider: "meta_cloud" as const,
+    status: "active" as const,
+    phoneNumberId,
+    displayPhoneNumber: displayPhoneNumber ?? null,
+    wabaId,
+    accessTokenEncrypted,
+    useEnvFallback: false,
+    tokenExpiresAt,
+    lastVerifiedAt: now,
+    connectedAt: now,
+    lastError: null,
+    disconnectedAt: null,
+    connectionSource,
+    numberConfirmedAt: null,
+  };
   await prisma.whatsAppConnection.upsert({
     where: { businessId },
-    create: {
-      businessId,
-      provider: "meta_cloud",
-      status: "active",
-      phoneNumberId,
-      displayPhoneNumber: displayPhoneNumber ?? null,
-      wabaId,
-      accessTokenEncrypted,
-      useEnvFallback: false,
-      tokenExpiresAt,
-      lastVerifiedAt: now,
-      connectedAt: now,
-      lastError: null,
-      disconnectedAt: null,
-    },
-    update: {
-      provider: "meta_cloud",
-      status: "active",
-      phoneNumberId,
-      displayPhoneNumber: displayPhoneNumber ?? null,
-      wabaId,
-      accessTokenEncrypted,
-      useEnvFallback: false,
-      tokenExpiresAt,
-      lastVerifiedAt: now,
-      connectedAt: now,
-      lastError: null,
-      disconnectedAt: null,
-    },
+    create: { businessId, ...shared },
+    update: shared,
   });
 
   console.log(`[EmbeddedSignup] connected businessId=${businessId} (Mode B, encrypted token stored)`);
@@ -248,6 +252,23 @@ export async function completeEmbeddedSignupAction(
     templatesPrepared,
     templateError,
   };
+}
+
+/**
+ * Owner/admin: confirm that the connected display number is the correct one.
+ *
+ * Real sends stay blocked for a guided-flow connection until this is called
+ * (see resolveWhatsAppConnectionForBusiness). Business-scoped: only confirms the
+ * current business's own active connection, never by raw record id.
+ */
+export async function confirmConnectedNumberAction(): Promise<{ success: boolean }> {
+  const business = await requireCurrentBusiness();
+  await prisma.whatsAppConnection.updateMany({
+    where: { businessId: business.id, status: "active" },
+    data: { numberConfirmedAt: new Date() },
+  });
+  revalidatePath("/automations");
+  return { success: true };
 }
 
 /** Owner/admin: disconnect WhatsApp for the current business. */

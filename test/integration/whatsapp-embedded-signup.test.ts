@@ -57,6 +57,7 @@ import { resetPrismaMock } from "../helpers/prisma-mock";
 import {
   completeEmbeddedSignupAction,
   disconnectWhatsAppAction,
+  confirmConnectedNumberAction,
 } from "@/server/whatsapp/embedded-signup-actions";
 import { decryptToken } from "@/lib/whatsapp/crypto";
 
@@ -198,6 +199,49 @@ describe("completeEmbeddedSignupAction", () => {
     expect(res.success).toBe(true);
     expect(res.templatesPrepared).toBe(true);
     expect(res.statusLabel).toBe("WhatsApp מחובר");
+  });
+
+  it("stores the chosen onboarding intent as connectionSource and starts UNCONFIRMED", async () => {
+    exchangeCodeForToken.mockResolvedValue({ ok: true, accessToken: REAL_TOKEN, expiresInSeconds: 3600 });
+
+    await completeEmbeddedSignupAction({
+      code: "auth_code",
+      wabaId: "waba_1",
+      phoneNumberId: "phone_1",
+      intent: "existing_business_app",
+    });
+
+    const activeUpsert = prisma.whatsAppConnection.upsert.mock.calls
+      .map((c) => c[0] as { create: { status?: string; connectionSource?: string; numberConfirmedAt?: unknown } })
+      .find((c) => c.create.status === "active");
+    expect(activeUpsert).toBeDefined();
+    expect(activeUpsert!.create.connectionSource).toBe("existing_business_app");
+    // Guided-flow connection must require explicit number confirmation before sends.
+    expect(activeUpsert!.create.numberConfirmedAt).toBeNull();
+  });
+
+  it("defaults connectionSource to 'unknown' when no intent is provided (backward compatible)", async () => {
+    exchangeCodeForToken.mockResolvedValue({ ok: true, accessToken: REAL_TOKEN, expiresInSeconds: 3600 });
+
+    await completeEmbeddedSignupAction({ code: "auth_code", wabaId: "waba_1", phoneNumberId: "phone_1" });
+
+    const activeUpsert = prisma.whatsAppConnection.upsert.mock.calls
+      .map((c) => c[0] as { create: { status?: string; connectionSource?: string } })
+      .find((c) => c.create.status === "active");
+    expect(activeUpsert!.create.connectionSource).toBe("unknown");
+  });
+});
+
+describe("confirmConnectedNumberAction", () => {
+  it("marks the active connection confirmed, scoped to the business", async () => {
+    const res = await confirmConnectedNumberAction();
+    expect(res.success).toBe(true);
+    expect(prisma.whatsAppConnection.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { businessId: BUSINESS_A, status: "active" },
+        data: expect.objectContaining({ numberConfirmedAt: expect.any(Date) }),
+      }),
+    );
   });
 });
 

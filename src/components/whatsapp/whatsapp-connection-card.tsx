@@ -3,34 +3,43 @@
 /**
  * Owner-facing WhatsApp connection card.
  *
- * Drives Meta Embedded Signup from a single button ("חיבור WhatsApp Business")
- * and shows owner-friendly states. The owner never sees tokens, WABA ids, or
- * phone number ids — only their own display phone and plain-Hebrew statuses.
+ * Drives Meta Embedded Signup and shows owner-friendly states. The owner never
+ * sees tokens, WABA ids, or phone number ids — only their own display phone and
+ * plain-Hebrew statuses.
+ *
+ * PRE-CONNECTION CHOICE (existing-number / coexistence support): most beauty
+ * business owners in Israel already use the WhatsApp Business App. Before we open
+ * Meta we ask which kind of number they want to connect:
+ *   A. existing WhatsApp Business App number  → try to connect it (coexistence)
+ *   B. personal/regular WhatsApp number       → discouraged, with a warning gate
+ *   C. a brand-new business number            → the technically simplest path
+ * The chosen track is owner guidance + is stored as the connection source. The
+ * actual Embedded Signup launch is the same supported FB.login flow; whether
+ * coexistence is offered depends on the Meta configuration and the account's
+ * eligibility (see docs/whatsapp-existing-number-coexistence.md).
+ *
+ * POST-COMPLETION REFRESH: the popup result is delivered through the FB.login
+ * callback (no separate callback page). After the owner finishes we verify with a
+ * server-scoped status read + router.refresh() so the card flips with no manual
+ * refresh. We also poll as a fallback and listen for the SDK's CANCEL event.
+ *
+ * NUMBER CONFIRMATION: a guided-flow connection starts UNCONFIRMED. Real sends
+ * stay blocked (server resolver) until the owner confirms the connected number,
+ * which also surfaces a warning if the number looks like a Meta +1 555 test number.
  *
  * Embedded Signup requires (client-side, public) NEXT_PUBLIC_META_APP_ID and
  * NEXT_PUBLIC_META_CONFIG_ID. When those are absent the connect button is
  * disabled with a friendly note (admins configure them server-side).
- *
- * POST-COMPLETION REFRESH: the Embedded Signup popup is launched via the FB SDK
- * (FB.login), so the popup result is delivered to THIS page through the FB.login
- * callback — there is no separate callback page. After the owner finishes the
- * Meta flow we:
- *   1. show "בודקים את החיבור מול Meta..." while we verify,
- *   2. run the server completion action (exchanges the code, stores the token),
- *   3. refetch the live, server-scoped connection status and call router.refresh()
- *      so the card flips to the correct state with NO manual browser refresh.
- * We also poll the status action as a robustness fallback, and listen for the
- * SDK's CANCEL event so closing the popup without finishing shows a clear
- * "החיבור לא הושלם" state instead of staying stuck on "WhatsApp לא מחובר".
  */
 
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Script from "next/script";
-import { MessageCircle, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import { MessageCircle, CheckCircle2, AlertCircle, Loader2, X, ShieldCheck } from "lucide-react";
 import {
   completeEmbeddedSignupAction,
   disconnectWhatsAppAction,
+  confirmConnectedNumberAction,
 } from "@/server/whatsapp/embedded-signup-actions";
 import { getWhatsAppConnectionStatusAction } from "@/server/whatsapp/connection-status-actions";
 import {
@@ -39,6 +48,14 @@ import {
 } from "@/server/whatsapp/templates-actions";
 import type { TemplateSetupResult } from "@/server/whatsapp/templates-core";
 import type { OwnerWhatsAppStatus } from "@/server/whatsapp/owner-status";
+import {
+  CONNECTION_TRACKS,
+  getTrackInfo,
+  connectionSourceLabel,
+  looksLikeMetaTestNumber,
+  classifyMetaConnectError,
+  type ConnectionTrack,
+} from "@/lib/whatsapp/connection-tracks";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 declare global {
@@ -65,10 +82,12 @@ interface Props {
 type DebugStep =
   | "idle"
   | "sdk_loaded"
+  | "chooser_opened"
   | "popup_opened"
   | "callback_received"
   | "missing_code"
   | "missing_whatsapp_ids"
+  | "popup_error"
   | "calling_server_action"
   | "checking_status"
   | "server_action_success"
@@ -126,6 +145,8 @@ export function WhatsAppConnectionCard({
   const sdkReady = useRef(false);
   // Session info (waba_id, phone_number_id) captured from the Embedded Signup popup.
   const sessionInfo = useRef<{ wabaId?: string; phoneNumberId?: string }>({});
+  // Any error_message surfaced by the popup during this attempt (never a secret).
+  const popupError = useRef<string | null>(null);
 
   const [pending, startTransition] = useTransition();
   const [flowPhase, setFlowPhase] = useState<FlowPhase>("idle");
@@ -135,6 +156,17 @@ export function WhatsAppConnectionCard({
   const [templateResult, setTemplateResult] = useState<TemplateSetupResult | null>(null);
   const [debugStep, setDebugStep] = useState<DebugStep>("idle");
   const [sdkLoaded, setSdkLoaded] = useState(false);
+
+  // Pre-connection chooser state.
+  const [chooserOpen, setChooserOpen] = useState(false);
+  const [selectedTrack, setSelectedTrack] = useState<ConnectionTrack | null>(null);
+  const [personalAck, setPersonalAck] = useState(false);
+
+  // Already-registered / generic Meta error modal. Carries owner-safe content;
+  // the raw detail is admin-only.
+  const [connectError, setConnectError] = useState<
+    { kind: "already_registered" | "generic"; raw?: string } | null
+  >(null);
 
   // Keep the latest flow phase readable inside async callbacks/effects without
   // re-creating them on every render.
@@ -155,6 +187,9 @@ export function WhatsAppConnectionCard({
   }, []);
 
   const state = status.connection.state;
+  const needsNumberConfirmation = !!status.connection.needsNumberConfirmation;
+  const displayPhoneNumber = status.connection.displayPhoneNumber;
+  const isTestLookingNumber = looksLikeMetaTestNumber(displayPhoneNumber);
   // The server status is the source of truth. Once it resolves to a terminal
   // state (active/error), the transient "checking" overlay is dropped
   // automatically — so the card flips to the real state with no manual refresh.
@@ -233,9 +268,17 @@ export function WhatsAppConnectionCard({
             hasData: !!data?.data,
             hasWabaId: !!data?.data?.waba_id,
             hasPhoneNumberId: !!data?.data?.phone_number_id,
+            hasError: !!(data?.data?.error_message || data?.error_message),
           });
           // Popup is open and active — move to the "waiting for completion" copy.
           if (flowPhaseRef.current === "opening") setFlowPhase("waiting");
+
+          // Some SDK versions surface a recoverable error (e.g. number already
+          // registered) through the session info channel. Capture the message so
+          // we can explain it after the popup closes without a code.
+          const errMsg: string | undefined =
+            data?.data?.error_message ?? data?.error_message;
+          if (errMsg) popupError.current = String(errMsg);
 
           if (data?.event === "FINISH" && data?.data) {
             sessionInfo.current = {
@@ -271,13 +314,27 @@ export function WhatsAppConnectionCard({
     }
   }
 
-  function handleConnect() {
-    console.log(`${LOG} connect button clicked`);
-    // Clear any stale messages/notices immediately so a new attempt starts clean
-    // (the old "לא הצלחנו לחבר" / cancelled note must not linger behind the popup).
+  /** Open the pre-connection chooser (does NOT launch Meta yet). */
+  function openChooser() {
     setMessage(null);
     setTemplateNotice(null);
+    setConnectError(null);
+    setSelectedTrack(null);
+    setPersonalAck(false);
+    setChooserOpen(true);
+    track("chooser_opened");
+  }
+
+  /** Launch Embedded Signup for the chosen track. */
+  function startConnect(chosen: ConnectionTrack) {
+    console.log(`${LOG} connect launched`, { track: chosen });
+    // Clear any stale messages/notices immediately so a new attempt starts clean.
+    setMessage(null);
+    setTemplateNotice(null);
+    setConnectError(null);
+    setChooserOpen(false);
     stopPolling();
+    popupError.current = null;
 
     if (!embeddedSignupEnabled || !window.FB) {
       console.warn(`${LOG} cannot start`, {
@@ -292,11 +349,12 @@ export function WhatsAppConnectionCard({
 
     sessionInfo.current = {};
     setFlowPhase("opening");
-    track("popup_opened");
+    track("popup_opened", { track: chosen });
     console.log(`${LOG} FB.login called`, {
       hasConfigId: !!configId,
       responseType: "code",
       overrideDefaultResponseType: true,
+      track: chosen,
     });
 
     window.FB.login(
@@ -312,8 +370,17 @@ export function WhatsAppConnectionCard({
 
         const code = response?.authResponse?.code as string | undefined;
         if (!code) {
-          track("missing_code", { status: response?.status });
           stopPolling();
+          // If the popup surfaced an error (e.g. number already registered) show
+          // a helpful, owner-safe explanation instead of a bare "not completed".
+          if (popupError.current) {
+            track("popup_error");
+            const kind = classifyMetaConnectError(popupError.current);
+            setFlowPhase("idle");
+            setConnectError({ kind, raw: popupError.current });
+            return;
+          }
+          track("missing_code", { status: response?.status });
           // Covers "popup closed/cancelled" and "Meta returned no code" — a
           // clear "not completed" state, not a hard error.
           setFlowPhase("cancelled");
@@ -328,6 +395,12 @@ export function WhatsAppConnectionCard({
         if (!wabaId) {
           track("missing_whatsapp_ids", { hasWabaId: false, hasPhoneNumberId: !!phoneNumberId });
           stopPolling();
+          if (popupError.current) {
+            const kind = classifyMetaConnectError(popupError.current);
+            setFlowPhase("idle");
+            setConnectError({ kind, raw: popupError.current });
+            return;
+          }
           setFlowPhase("cancelled");
           setMessage({ ok: false, text: "לא נבחר מספר WhatsApp Business." });
           return;
@@ -342,6 +415,7 @@ export function WhatsAppConnectionCard({
               code,
               wabaId,
               phoneNumberId,
+              intent: chosen,
             });
             track(result.success ? "server_action_success" : "server_action_failed", {
               success: result.success,
@@ -384,6 +458,10 @@ export function WhatsAppConnectionCard({
         config_id: configId,
         response_type: "code",
         override_default_response_type: true,
+        // The same supported Embedded Signup payload for every track. Whether an
+        // existing WhatsApp Business App number can be connected (coexistence) is
+        // governed by the Meta configuration + account eligibility, not by a
+        // runtime flag here — see docs/whatsapp-existing-number-coexistence.md.
         extras: { setup: {}, featureType: "", sessionInfoVersion: "3" },
       },
     );
@@ -398,6 +476,14 @@ export function WhatsAppConnectionCard({
       setMessage(null);
       setTemplateNotice(null);
       setTemplateResult(null);
+      router.refresh();
+    });
+  }
+
+  function handleConfirmNumber() {
+    startTransition(async () => {
+      await confirmConnectedNumberAction();
+      setMessage({ ok: true, text: "המספר אושר. אפשר להתחיל לשלוח הודעות ללקוחות." });
       router.refresh();
     });
   }
@@ -427,6 +513,10 @@ export function WhatsAppConnectionCard({
   // mirrors the live server status.
   const pill = isTransient ? BUSY_PILL : PILL[state];
   const pillLabel = isTransient ? FLOW_LABEL[flowPhase as Exclude<FlowPhase, "idle">] : status.connection.statusLabel;
+
+  // Continue button gating in the chooser: personal track needs acknowledgement.
+  const canContinue =
+    selectedTrack !== null && (selectedTrack !== "personal" || personalAck);
 
   return (
     <div
@@ -469,6 +559,19 @@ export function WhatsAppConnectionCard({
         </span>
       </div>
 
+      {/* Owner guidance: you don't always need a new number. */}
+      {!isTransient && (state === "not_connected" || state === "error") && (
+        <div
+          className="rounded-xl px-3.5 py-2.5 text-xs leading-relaxed"
+          style={{ background: "rgba(37,211,102,0.06)", border: "1px solid rgba(37,211,102,0.18)", color: "var(--foreground)" }}
+        >
+          <p className="font-semibold" style={{ color: "#15803d" }}>לא תמיד צריך מספר חדש</p>
+          <p style={{ color: "var(--muted)" }}>
+            אם יש לך WhatsApp Business, ייתכן שאפשר לחבר את אותו מספר. אם יש לך WhatsApp אישי רגיל — מומלץ לא לחבר אותו.
+          </p>
+        </div>
+      )}
+
       {/* Transient progress note — keeps the owner informed while we verify. */}
       {isTransient && (
         <div
@@ -483,19 +586,69 @@ export function WhatsAppConnectionCard({
       {/* Cancelled / closed without completion */}
       {flowPhase === "cancelled" && !isTransient && (
         <div
-          className="rounded-xl px-3.5 py-2.5 text-sm"
+          className="rounded-xl px-3.5 py-2.5 text-sm space-y-2"
           style={{ background: "rgba(107,114,128,0.06)", border: "1px solid rgba(107,114,128,0.20)", color: "var(--foreground)" }}
         >
-          <p className="font-semibold">החיבור לא הושלם</p>
-          <p className="text-xs" style={{ color: "var(--muted)" }}>אפשר לנסות שוב בכל זמן.</p>
+          <div>
+            <p className="font-semibold">החיבור לא הושלם</p>
+            <p className="text-xs" style={{ color: "var(--muted)" }}>אפשר לנסות שוב בכל זמן.</p>
+          </div>
+          <button
+            onClick={() => setConnectError({ kind: "already_registered" })}
+            className="text-xs font-semibold underline"
+            style={{ color: "#b86b8c" }}
+          >
+            המספר כבר רשום ב־WhatsApp? כך מחברים מספר קיים
+          </button>
         </div>
       )}
 
       {/* Connected — show display phone */}
-      {!isTransient && state === "active" && status.connection.displayPhoneNumber && (
+      {!isTransient && state === "active" && displayPhoneNumber && !needsNumberConfirmation && (
         <div className="flex items-center gap-2 text-xs" style={{ color: "#15803d" }}>
           <CheckCircle2 className="h-4 w-4" />
-          <span>מחובר למספר {status.connection.displayPhoneNumber}</span>
+          <span>מחובר למספר {displayPhoneNumber}</span>
+        </div>
+      )}
+
+      {/* Connected but awaiting number confirmation — blocks sends until confirmed */}
+      {!isTransient && state === "active" && needsNumberConfirmation && (
+        <div
+          className="rounded-xl px-4 py-3.5 text-sm space-y-3"
+          style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.30)", color: "#92400e" }}
+        >
+          <div className="flex items-start gap-2">
+            <ShieldCheck className="h-4 w-4 mt-0.5 shrink-0" />
+            <div>
+              <p className="font-semibold">אישור המספר המחובר</p>
+              <p className="text-xs">לפני שליחת הודעות, נא לאשר שזה המספר הנכון.</p>
+            </div>
+          </div>
+          <div className="rounded-lg px-3 py-2 text-sm" style={{ background: "rgba(255,255,255,0.5)", border: "1px solid rgba(234,179,8,0.25)" }}>
+            <p style={{ color: "var(--foreground)" }}>
+              מספר מחובר: <span className="font-semibold">{displayPhoneNumber ?? "לא ידוע"}</span>
+            </p>
+            <p className="text-xs" style={{ color: "var(--muted)" }}>
+              מקור החיבור: {connectionSourceLabel(status.connection.connectionSource)}
+            </p>
+          </div>
+          {isTestLookingNumber && (
+            <div
+              className="rounded-lg px-3 py-2 text-xs"
+              style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", color: "#dc2626" }}
+            >
+              שימי לב: המספר נראה כמו מספר בדיקה של Meta (מתחיל ב־555). אם זה לא המספר העסקי שלך, אל תאשרי — נתקי ונסי שוב.
+            </div>
+          )}
+          <button
+            onClick={handleConfirmNumber}
+            disabled={busy}
+            className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
+            style={{ background: "#15803d", color: "#fff" }}
+          >
+            {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />}
+            זה המספר הנכון
+          </button>
         </div>
       )}
 
@@ -520,9 +673,10 @@ export function WhatsAppConnectionCard({
         >
           <p className="text-xs leading-relaxed" style={{ color: "var(--foreground)" }}>
             כדי לשלוח הודעות אוטומטיות ללקוחות, צריך לחבר את WhatsApp Business של העסק.
+            התהליך מתבצע דרך Meta בצורה מאובטחת ולוקח כמה דקות.
           </p>
           <ol className="space-y-2">
-            {["חיבור WhatsApp", "הכנת תבניות הודעה", "הפעלת אוטומציות"].map((step, i) => (
+            {["בחירת סוג המספר", "אישור ב־Meta", "בדיקת החיבור והכנת הודעות"].map((step, i) => (
               <li key={step} className="flex items-center gap-2.5 text-xs" style={{ color: "var(--foreground)" }}>
                 <span
                   className="flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold shrink-0"
@@ -541,7 +695,7 @@ export function WhatsAppConnectionCard({
       <div className="flex flex-wrap gap-2.5">
         {(state === "not_connected" || state === "error") && (
           <button
-            onClick={handleConnect}
+            onClick={openChooser}
             disabled={busy || !embeddedSignupEnabled}
             className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
             style={{ background: "#25d366", color: "#fff" }}
@@ -553,7 +707,7 @@ export function WhatsAppConnectionCard({
 
         {state === "pending" && (
           <button
-            onClick={handleConnect}
+            onClick={openChooser}
             disabled={busy || !embeddedSignupEnabled}
             className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
             style={{ background: "rgba(234,179,8,0.12)", color: "#b45309", border: "1px solid rgba(234,179,8,0.30)" }}
@@ -578,6 +732,7 @@ export function WhatsAppConnectionCard({
       {(state === "not_connected" || state === "error") && (
         <p className="text-xs leading-relaxed" style={{ color: "var(--muted)" }}>
           החיבור מתבצע דרך Meta בצורה מאובטחת. אנחנו לא מציגים ללקוחות פרטים טכניים.
+          אם Meta חוסמת מספר שכבר רשום, זו דרישה של Meta — לא תקלה ב־Allura.
         </p>
       )}
 
@@ -616,8 +771,8 @@ export function WhatsAppConnectionCard({
         </div>
       )}
 
-      {/* Template setup — only when connected */}
-      {!isTransient && state === "active" && (
+      {/* Template setup — only when connected AND confirmed */}
+      {!isTransient && state === "active" && !needsNumberConfirmation && (
         <div className="space-y-3 pt-2" style={{ borderTop: "1px solid var(--border)" }}>
           <div className="pt-3">
             <h4 className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
@@ -713,6 +868,254 @@ export function WhatsAppConnectionCard({
           </p>
         </div>
       )}
+
+      {/* ---------- Pre-connection chooser modal ---------- */}
+      {chooserOpen && (
+        <ChooserModal
+          selectedTrack={selectedTrack}
+          onSelect={(t) => {
+            setSelectedTrack(t);
+            setPersonalAck(false);
+          }}
+          personalAck={personalAck}
+          onPersonalAckChange={setPersonalAck}
+          canContinue={canContinue}
+          onCancel={() => setChooserOpen(false)}
+          onContinue={() => selectedTrack && startConnect(selectedTrack)}
+        />
+      )}
+
+      {/* ---------- Already-registered / generic error modal ---------- */}
+      {connectError && (
+        <ConnectErrorModal
+          error={connectError}
+          isAdmin={isAdmin}
+          onRetryExisting={() => {
+            setConnectError(null);
+            startConnect("existing_business_app");
+          }}
+          onUseNew={() => {
+            setConnectError(null);
+            startConnect("new_number");
+          }}
+          onDismiss={() => setConnectError(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * Pre-connection chooser modal
+ * ------------------------------------------------------------------------- */
+
+function ChooserModal({
+  selectedTrack,
+  onSelect,
+  personalAck,
+  onPersonalAckChange,
+  canContinue,
+  onCancel,
+  onContinue,
+}: {
+  selectedTrack: ConnectionTrack | null;
+  onSelect: (t: ConnectionTrack) => void;
+  personalAck: boolean;
+  onPersonalAckChange: (v: boolean) => void;
+  canContinue: boolean;
+  onCancel: () => void;
+  onContinue: () => void;
+}) {
+  const info = selectedTrack ? getTrackInfo(selectedTrack) : null;
+  return (
+    <div
+      dir="rtl"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.45)" }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="בחירת מספר WhatsApp לחיבור"
+    >
+      <div
+        className="w-full max-w-md rounded-2xl p-5 space-y-4 max-h-[90vh] overflow-y-auto"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+      >
+        <div className="flex items-center justify-between gap-3">
+          <h3 className="text-base font-semibold" style={{ color: "var(--foreground)" }}>
+            איזה מספר WhatsApp תרצי לחבר?
+          </h3>
+          <button onClick={onCancel} aria-label="סגירה" className="shrink-0">
+            <X className="h-5 w-5" style={{ color: "var(--muted)" }} />
+          </button>
+        </div>
+
+        <p className="text-xs leading-relaxed" style={{ color: "var(--muted)" }}>
+          התהליך מתבצע דרך Meta בצורה מאובטחת. בסיום תחזרי ל־Allura ונבדוק שהחיבור הצליח.
+        </p>
+
+        <div className="space-y-2.5">
+          {CONNECTION_TRACKS.map((t) => {
+            const active = selectedTrack === t.track;
+            return (
+              <button
+                key={t.track}
+                onClick={() => onSelect(t.track)}
+                className="w-full text-right rounded-xl px-3.5 py-3 transition-colors"
+                style={{
+                  background: active ? "rgba(37,211,102,0.08)" : "var(--surface)",
+                  border: `1px solid ${active ? "rgba(37,211,102,0.45)" : "var(--border)"}`,
+                }}
+              >
+                <div className="flex items-center gap-2">
+                  <span className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+                    {t.title}
+                  </span>
+                  {t.recommendedBadge && (
+                    <span
+                      className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                      style={{ background: "rgba(37,211,102,0.14)", color: "#15803d" }}
+                    >
+                      {t.recommendedBadge}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs mt-1 leading-relaxed" style={{ color: "var(--muted)" }}>
+                  {t.description}
+                </p>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Explanation for the selected track */}
+        {info && (
+          <div
+            className="rounded-xl px-3.5 py-3 text-xs leading-relaxed space-y-2"
+            style={{ background: "rgba(184,107,140,0.05)", border: "1px solid rgba(184,107,140,0.16)", color: "var(--foreground)" }}
+          >
+            <p>{info.explanation}</p>
+
+            {info.warning && (
+              <p
+                className="rounded-lg px-2.5 py-2 font-semibold"
+                style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.22)", color: "#dc2626" }}
+              >
+                {info.warning}
+              </p>
+            )}
+
+            {/* Personal track acknowledgement gate */}
+            {selectedTrack === "personal" && info.ackWarning && (
+              <label className="flex items-start gap-2 cursor-pointer pt-1" style={{ color: "#92400e" }}>
+                <input
+                  type="checkbox"
+                  checked={personalAck}
+                  onChange={(e) => onPersonalAckChange(e.target.checked)}
+                  className="mt-0.5"
+                />
+                <span>{info.ackWarning}</span>
+              </label>
+            )}
+          </div>
+        )}
+
+        <div className="flex items-center justify-between gap-2.5 pt-1">
+          <button
+            onClick={onCancel}
+            className="rounded-xl px-4 py-2.5 text-sm font-medium"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted)" }}
+          >
+            ביטול
+          </button>
+          <button
+            onClick={onContinue}
+            disabled={!canContinue}
+            className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-opacity disabled:opacity-40"
+            style={{ background: "#25d366", color: "#fff" }}
+          >
+            <MessageCircle className="h-4 w-4" />
+            המשך לחיבור ב־Meta
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * Already-registered / generic error modal
+ * ------------------------------------------------------------------------- */
+
+function ConnectErrorModal({
+  error,
+  isAdmin,
+  onRetryExisting,
+  onUseNew,
+  onDismiss,
+}: {
+  error: { kind: "already_registered" | "generic"; raw?: string };
+  isAdmin: boolean;
+  onRetryExisting: () => void;
+  onUseNew: () => void;
+  onDismiss: () => void;
+}) {
+  const alreadyRegistered = error.kind === "already_registered";
+  return (
+    <div
+      dir="rtl"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      style={{ background: "rgba(0,0,0,0.45)" }}
+      role="dialog"
+      aria-modal="true"
+      aria-label="בעיה בחיבור המספר"
+    >
+      <div
+        className="w-full max-w-md rounded-2xl p-5 space-y-4"
+        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+      >
+        <div className="flex items-start gap-2.5">
+          <AlertCircle className="h-5 w-5 mt-0.5 shrink-0" style={{ color: "#b45309" }} />
+          <div>
+            <h3 className="text-base font-semibold" style={{ color: "var(--foreground)" }}>
+              {alreadyRegistered ? "המספר כבר רשום ב־WhatsApp" : "לא הצלחנו להשלים את החיבור"}
+            </h3>
+            <p className="text-sm mt-1 leading-relaxed" style={{ color: "var(--muted)" }}>
+              {alreadyRegistered
+                ? "אם זה מספר WhatsApp Business, נסי לבחור במסלול ‘יש לי WhatsApp Business קיים’. אם זה מספר אישי רגיל, מומלץ להשתמש במספר עסקי ייעודי או להעביר אותו ל־WhatsApp Business."
+                : "משהו השתבש בתהליך החיבור מול Meta. אפשר לנסות שוב, ואם הבעיה נמשכת פני לתמיכה."}
+            </p>
+            {isAdmin && error.raw && (
+              <p className="text-xs mt-2 opacity-70" style={{ fontFamily: "monospace", color: "var(--muted)" }}>
+                {error.raw}
+              </p>
+            )}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2.5">
+          <button
+            onClick={onRetryExisting}
+            className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"
+            style={{ background: "#25d366", color: "#fff" }}
+          >
+            לנסות שוב עם WhatsApp Business קיים
+          </button>
+          <button
+            onClick={onUseNew}
+            className="rounded-xl px-4 py-2.5 text-sm font-medium"
+            style={{ background: "rgba(184,107,140,0.10)", color: "#b86b8c", border: "1px solid rgba(184,107,140,0.25)" }}
+          >
+            להשתמש במספר חדש
+          </button>
+          <button
+            onClick={onDismiss}
+            className="rounded-xl px-4 py-2.5 text-sm font-medium"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted)" }}
+          >
+            קראתי והבנתי
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

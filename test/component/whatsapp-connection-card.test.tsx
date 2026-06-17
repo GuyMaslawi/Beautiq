@@ -18,6 +18,7 @@ import type { OwnerWhatsAppStatus } from "@/server/whatsapp/owner-status";
 const m = vi.hoisted(() => ({
   completeEmbeddedSignupAction: vi.fn(),
   disconnectWhatsAppAction: vi.fn(() => Promise.resolve({ success: true })),
+  confirmConnectedNumberAction: vi.fn(() => Promise.resolve({ success: true })),
   getWhatsAppConnectionStatusAction: vi.fn(),
   createDefaultTemplatesAction: vi.fn(() => Promise.resolve({ success: true, statusLabel: "ok", items: [] })),
   syncTemplatesAction: vi.fn(() => Promise.resolve({ success: true, statusLabel: "ok", items: [] })),
@@ -27,6 +28,7 @@ const m = vi.hoisted(() => ({
 vi.mock("@/server/whatsapp/embedded-signup-actions", () => ({
   completeEmbeddedSignupAction: m.completeEmbeddedSignupAction,
   disconnectWhatsAppAction: m.disconnectWhatsAppAction,
+  confirmConnectedNumberAction: m.confirmConnectedNumberAction,
 }));
 vi.mock("@/server/whatsapp/connection-status-actions", () => ({
   getWhatsAppConnectionStatusAction: m.getWhatsAppConnectionStatusAction,
@@ -41,7 +43,10 @@ vi.mock("next/navigation", () => ({
 // next/script: render nothing (no external SDK load in tests).
 vi.mock("next/script", () => ({ default: () => null }));
 
-function makeStatus(state: OwnerWhatsAppStatus["connection"]["state"]): OwnerWhatsAppStatus {
+function makeStatus(
+  state: OwnerWhatsAppStatus["connection"]["state"],
+  extra: Partial<OwnerWhatsAppStatus["connection"]> = {},
+): OwnerWhatsAppStatus {
   const labels: Record<string, string> = {
     not_connected: "WhatsApp לא מחובר",
     pending: "מחברים את WhatsApp",
@@ -54,10 +59,24 @@ function makeStatus(state: OwnerWhatsAppStatus["connection"]["state"]): OwnerWha
       state,
       statusLabel: labels[state],
       displayPhoneNumber: state === "active" ? "+972 50-123-4567" : undefined,
+      ...extra,
     },
     automations: [],
     anyReady: false,
   };
+}
+
+/**
+ * Drive the pre-connection chooser: open it, pick a track, and continue to Meta.
+ * Defaults to the "new number" track (the simplest, no acknowledgement gate).
+ */
+async function openConnect(
+  user: ReturnType<typeof userEvent.setup>,
+  trackTitle = "אין לי מספר עסקי / אני רוצה מספר חדש",
+) {
+  await user.click(screen.getByRole("button", { name: /חיבור WhatsApp Business/ }));
+  await user.click(await screen.findByText(trackTitle));
+  await user.click(screen.getByRole("button", { name: /המשך לחיבור ב־Meta/ }));
 }
 
 /** Install a fake FB SDK whose login() drives the requested popup outcome. */
@@ -107,13 +126,14 @@ describe("WhatsAppConnectionCard — post-popup completion", () => {
     const user = userEvent.setup();
     render(<WhatsAppConnectionCard status={makeStatus("not_connected")} {...PROPS} />);
 
-    await user.click(screen.getByRole("button", { name: /חיבור WhatsApp Business/ }));
+    await openConnect(user);
 
     await waitFor(() => {
       expect(m.completeEmbeddedSignupAction).toHaveBeenCalledWith({
         code: "auth_code_123",
         wabaId: "w1",
         phoneNumberId: "p1",
+        intent: "new_number",
       });
     });
     // Parent refetches server-side status and refreshes the route.
@@ -128,7 +148,7 @@ describe("WhatsAppConnectionCard — post-popup completion", () => {
 
     const user = userEvent.setup();
     render(<WhatsAppConnectionCard status={makeStatus("not_connected")} {...PROPS} />);
-    await user.click(screen.getByRole("button", { name: /חיבור WhatsApp Business/ }));
+    await openConnect(user);
 
     await waitFor(() => expect(m.getWhatsAppConnectionStatusAction).toHaveBeenCalledTimes(1));
     // Give any erroneous extra poll a chance to fire, then assert it did not.
@@ -141,7 +161,7 @@ describe("WhatsAppConnectionCard — post-popup completion", () => {
     const user = userEvent.setup();
     render(<WhatsAppConnectionCard status={makeStatus("not_connected")} {...PROPS} />);
 
-    await user.click(screen.getByRole("button", { name: /חיבור WhatsApp Business/ }));
+    await openConnect(user);
 
     await waitFor(() => expect(screen.getByText("החיבור לא הושלם")).toBeInTheDocument());
     expect(screen.getByText("אפשר לנסות שוב בכל זמן.")).toBeInTheDocument();
@@ -183,7 +203,7 @@ describe("WhatsAppConnectionCard — post-popup completion", () => {
 
     const user = userEvent.setup();
     render(<WhatsAppConnectionCard status={makeStatus("not_connected")} {...PROPS} />);
-    await user.click(screen.getByRole("button", { name: /חיבור WhatsApp Business/ }));
+    await openConnect(user);
 
     // Connection succeeded (success message) AND the template warning is separate.
     await waitFor(() => expect(screen.getByText("WhatsApp מחובר")).toBeInTheDocument());
@@ -199,5 +219,134 @@ describe("WhatsAppConnectionCard — post-popup completion", () => {
 
     expect(screen.getByText(/לא הצלחנו להשלים את החיבור/)).toBeInTheDocument();
     expect(screen.queryByText(/Phone Number ID חסר/)).not.toBeInTheDocument();
+  });
+});
+
+describe("WhatsAppConnectionCard — pre-connection chooser", () => {
+  it("opens the chooser with all three onboarding options (no Meta launch yet)", async () => {
+    installFb("success");
+    const user = userEvent.setup();
+    render(<WhatsAppConnectionCard status={makeStatus("not_connected")} {...PROPS} />);
+
+    await user.click(screen.getByRole("button", { name: /חיבור WhatsApp Business/ }));
+
+    expect(await screen.findByText("איזה מספר WhatsApp תרצי לחבר?")).toBeInTheDocument();
+    expect(screen.getByText("יש לי WhatsApp Business קיים")).toBeInTheDocument();
+    expect(screen.getByText("יש לי WhatsApp רגיל/אישי")).toBeInTheDocument();
+    expect(screen.getByText("אין לי מספר עסקי / אני רוצה מספר חדש")).toBeInTheDocument();
+    expect(screen.getByText("מומלץ לרוב העסקים")).toBeInTheDocument();
+    // Picking a track must NOT launch Meta until "המשך" is pressed.
+    expect(m.completeEmbeddedSignupAction).not.toHaveBeenCalled();
+  });
+
+  it("selecting 'existing WhatsApp Business' shows its explanation and sends intent=existing_business_app", async () => {
+    installFb("success");
+    m.completeEmbeddedSignupAction.mockResolvedValue({ success: true, statusLabel: "WhatsApp מחובר", templatesPrepared: true });
+    m.getWhatsAppConnectionStatusAction.mockResolvedValue({ connected: true, state: "active", statusLabel: "WhatsApp מחובר" });
+
+    const user = userEvent.setup();
+    render(<WhatsAppConnectionCard status={makeStatus("not_connected")} {...PROPS} />);
+
+    await user.click(screen.getByRole("button", { name: /חיבור WhatsApp Business/ }));
+    await user.click(await screen.findByText("יש לי WhatsApp Business קיים"));
+    expect(screen.getByText(/בחלון של Meta בחרי את חשבון ה־WhatsApp Business הקיים/)).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /המשך לחיבור ב־Meta/ }));
+    await waitFor(() =>
+      expect(m.completeEmbeddedSignupAction).toHaveBeenCalledWith(
+        expect.objectContaining({ intent: "existing_business_app" }),
+      ),
+    );
+  });
+
+  it("personal track shows a warning and blocks continue until acknowledged", async () => {
+    const user = userEvent.setup();
+    render(<WhatsAppConnectionCard status={makeStatus("not_connected")} {...PROPS} />);
+
+    await user.click(screen.getByRole("button", { name: /חיבור WhatsApp Business/ }));
+    await user.click(await screen.findByText("יש לי WhatsApp רגיל/אישי"));
+
+    expect(screen.getByText("מספר אישי שכבר רשום ב־WhatsApp עלול להיחסם בתהליך החיבור.")).toBeInTheDocument();
+    const continueBtn = screen.getByRole("button", { name: /המשך לחיבור ב־Meta/ });
+    expect(continueBtn).toBeDisabled();
+
+    await user.click(screen.getByRole("checkbox"));
+    expect(continueBtn).toBeEnabled();
+  });
+});
+
+describe("WhatsAppConnectionCard — already-registered error", () => {
+  it("maps an already-registered popup error to a friendly Hebrew explanation with safe actions", async () => {
+    // FB popup surfaces an already-registered error, then returns no code.
+    (window as unknown as { FB: unknown }).FB = {
+      init: vi.fn(),
+      login: (cb: (r: unknown) => void) => {
+        window.dispatchEvent(
+          new MessageEvent("message", {
+            origin: "https://www.facebook.com",
+            data: JSON.stringify({
+              type: "WA_EMBEDDED_SIGNUP",
+              event: "ERROR",
+              data: { error_message: "This phone number is already registered" },
+            }),
+          }),
+        );
+        cb({ status: "unknown", authResponse: null });
+      },
+    };
+
+    const user = userEvent.setup();
+    render(<WhatsAppConnectionCard status={makeStatus("not_connected")} {...PROPS} isAdmin={false} />);
+
+    await openConnect(user);
+
+    expect(await screen.findByText("המספר כבר רשום ב־WhatsApp")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /לנסות שוב עם WhatsApp Business קיים/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /להשתמש במספר חדש/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /קראתי והבנתי/ })).toBeInTheDocument();
+    // Raw Meta error must NOT be shown to a non-admin owner.
+    expect(screen.queryByText(/already registered/)).not.toBeInTheDocument();
+    // No connection was claimed.
+    expect(m.completeEmbeddedSignupAction).not.toHaveBeenCalled();
+  });
+});
+
+describe("WhatsAppConnectionCard — connected number confirmation", () => {
+  it("shows the confirmation step and blocks until the owner confirms the number", async () => {
+    const user = userEvent.setup();
+    render(
+      <WhatsAppConnectionCard
+        status={makeStatus("active", {
+          needsNumberConfirmation: true,
+          connectionSource: "existing_business_app",
+          displayPhoneNumber: "+972 50-123-4567",
+        })}
+        {...PROPS}
+      />,
+    );
+
+    expect(screen.getByText("אישור המספר המחובר")).toBeInTheDocument();
+    expect(screen.getByText(/\+972 50-123-4567/)).toBeInTheDocument();
+    // Template setup must NOT be available until the number is confirmed.
+    expect(screen.queryByText("תבניות הודעות")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: /זה המספר הנכון/ }));
+    await waitFor(() => expect(m.confirmConnectedNumberAction).toHaveBeenCalled());
+    expect(m.refresh).toHaveBeenCalled();
+  });
+
+  it("warns when the connected number looks like a Meta +1 555 test number", () => {
+    render(
+      <WhatsAppConnectionCard
+        status={makeStatus("active", {
+          needsNumberConfirmation: true,
+          connectionSource: "new_number",
+          displayPhoneNumber: "+1 555-000-0000",
+        })}
+        {...PROPS}
+      />,
+    );
+
+    expect(screen.getByText(/נראה כמו מספר בדיקה של Meta/)).toBeInTheDocument();
   });
 });

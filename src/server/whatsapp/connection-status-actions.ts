@@ -26,6 +26,8 @@ export interface WhatsAppConnectionStatusView {
   statusLabel: string;
   /** The business's own display phone (never an internal id). */
   displayPhoneNumber?: string;
+  /** True when active but the owner still needs to confirm the connected number. */
+  needsNumberConfirmation?: boolean;
   /** Safe provider name (e.g. "meta_cloud"). */
   provider?: string;
   /** Raw connection status column (admin diagnostics). */
@@ -62,6 +64,7 @@ export async function getWhatsAppConnectionStatusAction(): Promise<WhatsAppConne
     state: readiness.state,
     statusLabel: readiness.statusLabel,
     displayPhoneNumber: readiness.displayPhoneNumber,
+    needsNumberConfirmation: readiness.needsNumberConfirmation,
     provider: connection?.provider ?? undefined,
     status: connection?.status ?? undefined,
     lastVerifiedAt: connection?.lastVerifiedAt?.toISOString() ?? undefined,

@@ -226,6 +226,60 @@ describe("resolveWhatsAppConnectionForBusiness — Mode B (encrypted token)", ()
   });
 });
 
+describe("resolveWhatsAppConnectionForBusiness — number confirmation gate", () => {
+  beforeEach(() => {
+    process.env.ENABLE_REAL_WHATSAPP_SEND = "true";
+    process.env.WHATSAPP_CREDENTIALS_ENCRYPTION_KEY = ENCRYPTION_KEY;
+  });
+
+  function guidedConnection(overrides: Record<string, unknown> = {}) {
+    return makeWhatsAppConnection({
+      useEnvFallback: false,
+      accessTokenEncrypted: encryptToken(REAL_TOKEN),
+      phoneNumberId: "phone_b",
+      connectionSource: "existing_business_app",
+      numberConfirmedAt: null,
+      ...overrides,
+    });
+  }
+
+  it("BLOCKS sends for a guided-flow connection that is not yet confirmed", async () => {
+    prisma.whatsAppConnection.findUnique.mockResolvedValue(guidedConnection());
+
+    const resolved = await resolveWhatsAppConnectionForBusiness(BUSINESS_A);
+
+    expect(resolved.provider.name).toBe("disabled");
+    expect(resolved.uiStatus).toContain("אישור");
+    const send = await resolved.provider.send({
+      businessId: BUSINESS_A,
+      toPhone: "+972500000000",
+      fallbackText: "x",
+      automationRunId: "r",
+      clientId: "c",
+    });
+    expect(send.success).toBe(false);
+    assertNoTokenLeak();
+  });
+
+  it("ALLOWS sends once the number is confirmed", async () => {
+    prisma.whatsAppConnection.findUnique.mockResolvedValue(
+      guidedConnection({ numberConfirmedAt: new Date("2026-06-16T00:00:00Z") }),
+    );
+
+    const resolved = await resolveWhatsAppConnectionForBusiness(BUSINESS_A);
+    expect(resolved.provider.name).toBe("meta_cloud_api");
+  });
+
+  it("does NOT gate legacy connections (connectionSource null) — existing businesses keep sending", async () => {
+    prisma.whatsAppConnection.findUnique.mockResolvedValue(
+      guidedConnection({ connectionSource: null, numberConfirmedAt: null }),
+    );
+
+    const resolved = await resolveWhatsAppConnectionForBusiness(BUSINESS_A);
+    expect(resolved.provider.name).toBe("meta_cloud_api");
+  });
+});
+
 describe("resolveWhatsAppConnectionForBusiness — Priority 2 env fallback (no connection)", () => {
   beforeEach(() => {
     process.env.ENABLE_REAL_WHATSAPP_SEND = "true";

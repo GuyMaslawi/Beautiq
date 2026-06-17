@@ -113,6 +113,28 @@ export async function resolveWhatsAppConnectionForBusiness(
       };
     }
 
+    // Confirmation gate: a connection created through the guided onboarding flow
+    // (connectionSource set) must have its number explicitly confirmed by the
+    // owner/admin before any real send. Legacy connections (connectionSource null)
+    // are unaffected, so existing live businesses keep sending.
+    if (connection.connectionSource && !connection.numberConfirmedAt) {
+      return {
+        mode: "per_business",
+        provider: createDisabledProvider(
+          "יש לאשר את מספר ה-WhatsApp המחובר לפני שליחת הודעות",
+        ),
+        isEnvFallback: connection.useEnvFallback,
+        isTestMode,
+        phoneNumberId,
+        wabaId: connection.wabaId ?? undefined,
+        displayPhoneNumber:
+          connection.displayPhoneNumber ?? connection.phoneNumber ?? undefined,
+        connectionId: connection.id,
+        uiStatus: "ממתין לאישור המספר המחובר",
+        uiDetail: "אשרי שזה המספר הנכון בעמוד האוטומציות כדי להתחיל לשלוח",
+      };
+    }
+
     const baseProvider = createMetaCloudApiProvider({ accessToken, phoneNumberId, apiVersion });
     const provider = isTestMode ? createTestModeProvider(baseProvider) : baseProvider;
 
@@ -353,6 +375,14 @@ export interface WhatsAppReadiness {
   displayPhoneNumber?: string;
   /** Admin-only safe reason when not ready (never a credential). */
   reason?: string;
+  /**
+   * True when the connection is active but the owner has not yet confirmed the
+   * connected number. Sends are blocked until confirmed. Drives the confirmation
+   * card. Only set for guided-flow connections (connectionSource present).
+   */
+  needsNumberConfirmation?: boolean;
+  /** Owner's chosen onboarding track ("existing_business_app" | ...), if known. */
+  connectionSource?: string;
 }
 
 /**
@@ -377,6 +407,8 @@ export async function getWhatsAppReadiness(
       displayPhoneNumber: true,
       phoneNumber: true,
       lastError: true,
+      connectionSource: true,
+      numberConfirmedAt: true,
     },
   });
 
@@ -424,10 +456,17 @@ export async function getWhatsAppReadiness(
     }
   }
 
+  // Active + valid credentials, but a guided-flow connection still needs the
+  // owner to confirm the number before sends are allowed.
+  const needsNumberConfirmation =
+    !!connection.connectionSource && !connection.numberConfirmedAt;
+
   return {
-    ready: true,
+    ready: !needsNumberConfirmation,
     state: "active",
-    statusLabel: "WhatsApp מחובר",
+    statusLabel: needsNumberConfirmation ? "ממתין לאישור המספר המחובר" : "WhatsApp מחובר",
     displayPhoneNumber,
+    needsNumberConfirmation,
+    connectionSource: connection.connectionSource ?? undefined,
   };
 }

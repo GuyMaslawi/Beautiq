@@ -802,6 +802,15 @@ model WhatsAppConnection {
   disconnectedAt       DateTime?
   /// Access token expiry — for future long-lived tokens from Embedded Signup
   tokenExpiresAt       DateTime?
+  /// How the owner chose to onboard this number in Embedded Signup. One of:
+  /// "new_number" | "existing_business_app" | "personal" | "unknown".
+  /// Reflects the owner's stated intent (Meta does not reliably report the real
+  /// path back), and is used only for owner-facing guidance + the confirmation step.
+  connectionSource     String?
+  /// When the owner/admin explicitly confirmed the connected display number is
+  /// correct. While a connection created through the guided flow (connectionSource
+  /// set) has this null, real sends are blocked — see the WhatsApp resolver.
+  numberConfirmedAt    DateTime?
   /// Timestamp of the last webhook event received from Meta (any type)
   lastWebhookReceivedAt DateTime?
   /// Timestamp of the last delivery status event received via webhook
