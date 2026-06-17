@@ -429,7 +429,7 @@ describe("WhatsAppConnectionCard — connected number confirmation", () => {
     expect(m.refresh).toHaveBeenCalled();
   });
 
-  it("warns when the connected number looks like a Meta +1 555 test number", () => {
+  it("warns ADMINS when the connected number looks like a Meta +1 555 test number", () => {
     render(
       <WhatsAppConnectionCard
         status={makeStatus("active", {
@@ -438,13 +438,34 @@ describe("WhatsAppConnectionCard — connected number confirmation", () => {
           displayPhoneNumber: "+1 555-000-0000",
         })}
         {...PROPS}
+        isAdmin
       />,
     );
 
     expect(screen.getByText(/נראה כמו מספר בדיקה של Meta/)).toBeInTheDocument();
   });
 
-  it("warns on a +1 555 number even after the number is confirmed (still flagged as a test number)", () => {
+  it("a NON-ADMIN owner never sees the 555/Meta test-number warning — only simple copy", () => {
+    render(
+      <WhatsAppConnectionCard
+        status={makeStatus("active", {
+          needsNumberConfirmation: true,
+          connectionSource: "new_number",
+          displayPhoneNumber: "+1 555-000-0000",
+        })}
+        {...PROPS}
+        isAdmin={false}
+      />,
+    );
+
+    // No technical Meta/555 wording for owners.
+    expect(screen.queryByText(/מספר בדיקה של Meta/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/מתחיל ב־555/)).not.toBeInTheDocument();
+    // Simple, owner-safe guidance instead.
+    expect(screen.getByText("אם זה לא המספר העסקי שלך, ניתן לנתק ולחבר מחדש.")).toBeInTheDocument();
+  });
+
+  it("warns ADMINS on a +1 555 number even after the number is confirmed (still flagged as a test number)", () => {
     render(
       <WhatsAppConnectionCard
         status={makeStatus("active", {
@@ -452,6 +473,7 @@ describe("WhatsAppConnectionCard — connected number confirmation", () => {
           displayPhoneNumber: "+1 555-906-9761",
         })}
         {...PROPS}
+        isAdmin
       />,
     );
 
@@ -460,6 +482,23 @@ describe("WhatsAppConnectionCard — connected number confirmation", () => {
     expect(screen.getByText(/נראה כמו מספר בדיקה של Meta/)).toBeInTheDocument();
     // A test number must never read as "not connected".
     expect(screen.queryByText("WhatsApp לא מחובר")).not.toBeInTheDocument();
+  });
+
+  it("a NON-ADMIN owner with a confirmed 555 number sees only simple copy, no Meta wording", () => {
+    render(
+      <WhatsAppConnectionCard
+        status={makeStatus("active", {
+          needsNumberConfirmation: false,
+          displayPhoneNumber: "+1 555-906-9761",
+        })}
+        {...PROPS}
+        isAdmin={false}
+      />,
+    );
+
+    expect(screen.getByText(/מחובר למספר/)).toBeInTheDocument();
+    expect(screen.queryByText(/מספר בדיקה של Meta/)).not.toBeInTheDocument();
+    expect(screen.getByText("אם זה לא המספר העסקי שלך, ניתן לנתק ולחבר מחדש.")).toBeInTheDocument();
   });
 
   it("does not warn for a normal Israeli connected number", () => {

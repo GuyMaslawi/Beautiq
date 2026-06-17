@@ -1,4 +1,4 @@
-import { Zap, ChevronDown, MessageSquare, AlertCircle, Info } from "lucide-react";
+import { Zap, ChevronDown, MessageSquare } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getCurrentBusiness, getCurrentUser } from "@/server/auth/session";
 import {
@@ -19,6 +19,7 @@ import { WhatsAppDiagnosticsPanel } from "@/components/whatsapp/whatsapp-diagnos
 import { isRealSendConfigured, isTestModeActive } from "@/lib/whatsapp/provider";
 import { isMinuteTestingAllowed } from "@/lib/automation/minute-testing";
 import { WhatsAppConnectionCard } from "@/components/whatsapp/whatsapp-connection-card";
+import { WhatsAppStatusBanners } from "@/components/whatsapp/whatsapp-status-banners";
 import { ReviewDemoCard } from "@/components/whatsapp/review-demo-card";
 import { PageHeader } from "@/components/ui/page-header";
 import { WinBackAutomationCard } from "@/components/automations/win-back-automation-card";
@@ -105,7 +106,8 @@ export default async function AutomationsPage() {
     realSendConfigured && !testMode && !isEnvFallback && !whatsappConnected;
 
   // Minute-based test timing is admin/dev-only — hidden from regular owners by default.
-  const allowMinuteTesting = isMinuteTestingAllowed({ isAdmin: user?.isAdmin === true });
+  const isAdmin = user?.isAdmin === true;
+  const allowMinuteTesting = isMinuteTestingAllowed({ isAdmin });
 
   return (
     <div className="w-full space-y-6">
@@ -121,7 +123,7 @@ export default async function AutomationsPage() {
         appId={process.env.NEXT_PUBLIC_META_APP_ID}
         configId={process.env.NEXT_PUBLIC_META_CONFIG_ID}
         graphVersion={process.env.NEXT_PUBLIC_META_GRAPH_VERSION ?? "v19.0"}
-        isAdmin={user?.isAdmin ?? false}
+        isAdmin={isAdmin}
       />
 
       {/* Meta App Review demo panel — admin/reviewer-only */}
@@ -129,85 +131,16 @@ export default async function AutomationsPage() {
         <ReviewDemoCard status={reviewDemoStatus} businessId={business.id} />
       )}
 
-      {/* WhatsApp status banners — never show technical credentials */}
-
-      {/* Dev mode: real send not enabled */}
-      {!realSendConfigured && (
-        <div
-          className="flex items-start gap-3 rounded-2xl px-4 py-3.5"
-          dir="rtl"
-          style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.28)" }}
-        >
-          <Info className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#b45309" }} />
-          <p className="text-sm leading-relaxed" style={{ color: "#92400e" }}>
-            <strong>מצב בדיקה</strong> — הודעות לא נשלחות ללקוחות אמיתיים.
-            ניתן להגדיר את האוטומציות, אך שליחה בפועל תופעל רק כאשר WhatsApp Business יהיה מחובר.
-          </p>
-        </div>
-      )}
-
-      {/* Env fallback: connection defined at system level, not per business */}
-      {realSendConfigured && isEnvFallback && (
-        <div
-          className="flex items-start gap-3 rounded-2xl px-4 py-3.5"
-          dir="rtl"
-          style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.28)" }}
-        >
-          <Info className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#b45309" }} />
-          <p className="text-sm leading-relaxed" style={{ color: "#92400e" }}>
-            <strong>מצב בדיקה — החיבור מוגדר ברמת המערכת ולא ברמת העסק.</strong>{" "}
-            הודעות לא מייצגות חיבור אמיתי של העסק.
-          </p>
-        </div>
-      )}
-
-      {/* Test mode active */}
-      {realSendConfigured && testMode && (
-        <div
-          className="flex items-start gap-3 rounded-2xl px-4 py-3.5"
-          dir="rtl"
-          style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.28)" }}
-        >
-          <Info className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#b45309" }} />
-          <p className="text-sm leading-relaxed" style={{ color: "#92400e" }}>
-            <strong>מצב בדיקה פעיל</strong> — הודעות נשלחות רק למספר הבדיקה המוגדר.
-            לקוחות אמיתיים לא יקבלו הודעות עד שמצב הבדיקה יכובה.
-          </p>
-        </div>
-      )}
-
-      {/* Connection failed — red only after an actual attempt failed (never as a first impression) */}
-      {realSendConfigured && !testMode && !isEnvFallback && ownerConnectionState === "error" && (
-        <div
-          className="flex items-start gap-3 rounded-2xl px-4 py-3.5"
-          dir="rtl"
-          style={{ background: "rgba(239,68,68,0.06)", border: "1px solid rgba(239,68,68,0.20)" }}
-        >
-          <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#dc2626" }} />
-          <p className="text-sm leading-relaxed" style={{ color: "#991b1b" }}>
-            <strong>לא הצלחנו לחבר את WhatsApp</strong> — נסי שוב, ואם הבעיה נמשכת פני לתמיכה.
-          </p>
-        </div>
-      )}
-
-      {/* Properly connected — production mode */}
-      {realSendConfigured && !testMode && whatsappConnected && !isEnvFallback && (
-        <div
-          className="flex items-start gap-3 rounded-2xl px-4 py-3.5"
-          dir="rtl"
-          style={{ background: "rgba(22,163,74,0.06)", border: "1px solid rgba(22,163,74,0.20)" }}
-        >
-          <Info className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#15803d" }} />
-          <div className="flex flex-col gap-0.5">
-            <p className="text-sm font-semibold" style={{ color: "#14532d" }}>
-              WhatsApp מחובר
-            </p>
-            <p className="text-xs" style={{ color: "#15803d" }}>
-              מצב בדיקה כבוי · חיבור ברמת העסק · האוטומציות פעילות
-            </p>
-          </div>
-        </div>
-      )}
+      {/* WhatsApp status banners — test-mode/debug banners are admin-only;
+          owners only ever see owner-safe connection state. */}
+      <WhatsAppStatusBanners
+        isAdmin={isAdmin}
+        realSendConfigured={realSendConfigured}
+        testMode={testMode}
+        isEnvFallback={isEnvFallback}
+        connectionState={ownerConnectionState}
+        whatsappConnected={whatsappConnected}
+      />
 
       {/* Automation cards — each shows status, settings, and last run summary */}
       <div className="grid grid-cols-2 gap-3">
@@ -216,6 +149,7 @@ export default async function AutomationsPage() {
           lastRun={winBackLastRunSummary}
           realSendConfigured={realSendConfigured}
           testMode={testMode}
+          isAdmin={isAdmin}
           locked={automationsLocked}
           allowMinuteTesting={allowMinuteTesting}
         />
@@ -226,6 +160,7 @@ export default async function AutomationsPage() {
           lastRun={morningReminderLastRunSummary}
           realSendConfigured={realSendConfigured}
           testMode={testMode}
+          isAdmin={isAdmin}
           locked={automationsLocked}
         />
 
@@ -235,6 +170,7 @@ export default async function AutomationsPage() {
           lastRun={reviewRequestLastRunSummary}
           realSendConfigured={realSendConfigured}
           testMode={testMode}
+          isAdmin={isAdmin}
           locked={automationsLocked}
         />
 
@@ -243,17 +179,17 @@ export default async function AutomationsPage() {
           lastRun={bookingConfirmationLastRunSummary}
           realSendConfigured={realSendConfigured}
           testMode={testMode}
-          isAdmin={user?.isAdmin ?? false}
+          isAdmin={isAdmin}
           locked={automationsLocked}
         />
 
         {/* ManualRunCard (eligibility checker) — admin-only */}
-        {user?.isAdmin && <ManualRunCard isAdmin />}
+        {isAdmin && <ManualRunCard isAdmin />}
 
-        {user?.isAdmin && <AdminCronTestCard businessId={business.id} />}
+        {isAdmin && <AdminCronTestCard businessId={business.id} />}
 
         {/* WhatsApp send diagnostics (dry-run + controlled test send) — admin-only */}
-        {user?.isAdmin && <WhatsAppDiagnosticsPanel clients={diagnosticClients} />}
+        {isAdmin && <WhatsAppDiagnosticsPanel clients={diagnosticClients} />}
       </div>
 
       {/* Message log */}
@@ -278,7 +214,7 @@ export default async function AutomationsPage() {
       </div>
 
       {/* Admin section — hidden from regular users */}
-      {user?.isAdmin && (
+      {isAdmin && (
         <details className="group">
           <summary
             className="flex cursor-pointer list-none items-center gap-2 select-none rounded-xl px-4 py-2.5 text-xs font-medium"

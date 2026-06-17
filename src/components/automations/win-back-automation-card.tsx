@@ -36,13 +36,15 @@ interface Props {
   lastRun?: LastRunSummary | null;
   realSendConfigured?: boolean;
   testMode?: boolean;
+  /** Admin sees the internal test-mode badge; owners see plain product state. */
+  isAdmin?: boolean;
   /** True before WhatsApp is connected — the card is shown but locked. */
   locked?: boolean;
   /** Server-computed: may this user/env use minute-based test timing? */
   allowMinuteTesting?: boolean;
 }
 
-export function WinBackAutomationCard({ setting, lastRun, realSendConfigured = false, testMode = false, locked = false, allowMinuteTesting = false }: Props) {
+export function WinBackAutomationCard({ setting, lastRun, realSendConfigured = false, testMode = false, isAdmin = false, locked = false, allowMinuteTesting = false }: Props) {
   const [isEnabled, setIsEnabled] = useState(setting?.enabled ?? false);
   const [isToggling, startToggle] = useTransition();
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -161,6 +163,7 @@ export function WinBackAutomationCard({ setting, lastRun, realSendConfigured = f
           <TemplateReadinessBadge
             realSendConfigured={realSendConfigured}
             testMode={testMode}
+            isAdmin={isAdmin}
             templateName={setting?.templateName}
             templateStatus={setting?.templateStatus}
             marketing

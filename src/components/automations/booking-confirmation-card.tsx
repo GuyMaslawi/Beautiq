@@ -113,6 +113,7 @@ export function BookingConfirmationCard({
           <TemplateReadinessBadge
             realSendConfigured={realSendConfigured}
             testMode={testMode}
+            isAdmin={isAdmin}
             templateName={setting?.templateName}
             templateStatus={setting?.templateStatus}
           />

@@ -744,8 +744,9 @@ export function WhatsAppConnectionCard({
               className="rounded-xl px-3.5 py-2.5 text-xs leading-relaxed"
               style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.30)", color: "#92400e" }}
             >
-              המספר המחובר נראה כמו מספר בדיקה של Meta. לצורך חיבור מספר עסק אמיתי, יש לנתק
-              ולחבר את מספר ה־WhatsApp Business של העסק דרך Meta.
+              {isAdmin
+                ? "המספר המחובר נראה כמו מספר בדיקה של Meta. לצורך חיבור מספר עסק אמיתי, יש לנתק ולחבר את מספר ה־WhatsApp Business של העסק דרך Meta."
+                : "אם זה לא המספר העסקי שלך, ניתן לנתק ולחבר מחדש."}
             </div>
           )}
         </div>
@@ -777,7 +778,9 @@ export function WhatsAppConnectionCard({
               className="rounded-lg px-3 py-2 text-xs"
               style={{ background: "rgba(239,68,68,0.08)", border: "1px solid rgba(239,68,68,0.25)", color: "#dc2626" }}
             >
-              שימי לב: המספר נראה כמו מספר בדיקה של Meta (מתחיל ב־555). אם זה לא המספר העסקי שלך, אל תאשרי — נתקי ונסי שוב.
+              {isAdmin
+                ? "שימי לב: המספר נראה כמו מספר בדיקה של Meta (מתחיל ב־555). אם זה לא המספר העסקי שלך, אל תאשרי — נתקי ונסי שוב."
+                : "אם זה לא המספר העסקי שלך, ניתן לנתק ולחבר מחדש."}
             </div>
           )}
           <button

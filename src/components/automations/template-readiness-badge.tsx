@@ -22,6 +22,7 @@ export function TemplateReadinessBadge({
   templateName,
   templateStatus,
   marketing = false,
+  isAdmin = false,
 }: {
   realSendConfigured: boolean;
   testMode: boolean;
@@ -33,10 +34,18 @@ export function TemplateReadinessBadge({
    * ממתינה/נכשלה") rather than as a blocking problem.
    */
   marketing?: boolean;
+  /**
+   * Admins see the internal "מצב בדיקה פעיל" diagnostic state. Regular owners must
+   * never see test-mode wording — they fall through to the plain product state
+   * (pending / ready / preparing) based on the template status.
+   */
+  isAdmin?: boolean;
 }) {
   if (!realSendConfigured) return null;
 
-  if (testMode) {
+  // Test-mode is an internal delivery restriction — admin-only. Owners see the
+  // real product state below.
+  if (testMode && isAdmin) {
     return (
       <div className="flex items-center gap-1.5 text-xs" style={{ color: "#b45309" }}>
         <FlaskConical className="h-3 w-3 shrink-0" />
