@@ -119,6 +119,22 @@ export async function createDefaultTemplatesForBusiness(
     ? DEFAULT_TEMPLATES.filter((t) => t.name === onlyName)
     : DEFAULT_TEMPLATES;
 
+  // For a full-batch run (not an explicit per-row retry), skip templates that are
+  // already pending/approved in Meta so we never recreate a live template. A
+  // per-row retry (onlyName) always re-attempts, since that's the failed one.
+  const existingSettings = onlyName
+    ? []
+    : ((await prisma.automationSetting.findMany({
+        where: {
+          businessId,
+          type: { in: templates.map((t) => t.automationType) },
+        },
+        select: { type: true, templateStatus: true },
+      })) ?? []);
+  const existingStatuses = new Map(
+    existingSettings.map((s) => [s.type, s.templateStatus ?? ""]),
+  );
+
   // 1. Validate the whole batch locally — duplicate names are caught here too.
   const validation = new Map(
     validateTemplateBatch(templates).map((v) => [v.name, v.result]),
@@ -128,6 +144,14 @@ export async function createDefaultTemplatesForBusiness(
   for (const tpl of templates) {
     const item = baseItem(tpl);
     const local = validation.get(tpl.name);
+
+    // Do not recreate a template that is already pending/approved in Meta.
+    const existing = existingStatuses.get(tpl.automationType);
+    if (!onlyName && (existing === "pending" || existing === "approved")) {
+      item.status = existing as TemplateStatus;
+      items.push(item);
+      continue;
+    }
 
     // 2. Block invalid payloads before they ever reach Meta.
     if (local && !local.ok) {

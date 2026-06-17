@@ -35,6 +35,45 @@ describe("validateTemplate", () => {
     }
   });
 
+  it("accepts the simplified booking_confirmation_he (4-variable BODY-only utility)", () => {
+    const tpl = DEFAULT_TEMPLATES.find((t) => t.name === "booking_confirmation_he")!;
+    expect(validateTemplate(tpl).ok).toBe(true);
+    expect(tpl.category).toBe("UTILITY");
+    expect(tpl.language).toBe("he");
+    // BODY-only: the template carries no header/footer/button fields at all.
+    expect(Object.keys(tpl)).not.toContain("header");
+    expect(Object.keys(tpl)).not.toContain("buttons");
+    expect(extractBodyVariables(tpl.body)).toEqual([1, 2, 3, 4]);
+    expect(tpl.example).toHaveLength(4);
+  });
+
+  it("accepts the simplified appointment_reminder_he (3-variable BODY-only utility)", () => {
+    const tpl = DEFAULT_TEMPLATES.find((t) => t.name === "appointment_reminder_he")!;
+    expect(validateTemplate(tpl).ok).toBe(true);
+    expect(tpl.category).toBe("UTILITY");
+    expect(tpl.language).toBe("he");
+    // Reduced to 3 sequential variables — examples match exactly.
+    expect(extractBodyVariables(tpl.body)).toEqual([1, 2, 3]);
+    expect(tpl.variables).toHaveLength(3);
+    expect(tpl.example).toHaveLength(3);
+  });
+
+  it("blocks an example value containing a newline (Meta 'Invalid format' class)", () => {
+    const res = validateTemplate(
+      makeTemplate({ example: ["דנה", "מניקור", "12 ביוני", "14:30\nעוד שורה"] }),
+    );
+    expect(res.ok).toBe(false);
+    expect(res.errors.join(" ")).toContain("תו לא חוקי");
+  });
+
+  it("blocks an example value containing a tab/control char", () => {
+    const res = validateTemplate(
+      makeTemplate({ example: ["דנה", "מ\tניקור", "12 ביוני", "14:30"] }),
+    );
+    expect(res.ok).toBe(false);
+    expect(res.errors.join(" ")).toContain("תו לא חוקי");
+  });
+
   it("blocks a name that is not lowercase snake_case", () => {
     const res = validateTemplate(makeTemplate({ name: "BookingConfirmation" }));
     expect(res.ok).toBe(false);

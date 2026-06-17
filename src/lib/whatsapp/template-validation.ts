@@ -18,7 +18,8 @@
  *   - variables must not sit adjacent to each other ("{{1}}{{2}}").
  *   - the body should not begin or end with a bare variable.
  *   - the number of example values must equal the variable count, and every
- *     example must be non-empty.
+ *     example must be non-empty and single-line (no newline/tab/control chars,
+ *     which Meta rejects as "Invalid format" — code 100 / subcode 2388024).
  *   - no duplicate template names within one create/sync batch.
  *
  * This module is pure (no I/O, no secrets) so it is trivially unit-testable and
@@ -39,6 +40,11 @@ const NAME_RE = /^[a-z0-9_]+$/;
 const MAX_NAME_LENGTH = 512;
 const MAX_BODY_LENGTH = 1024;
 const VARIABLE_RE = /\{\{\s*(\d+)\s*\}\}/g;
+// Meta rejects sample/example values that are not single-line plain text. Newlines,
+// tabs and other control characters in an example trigger the generic "Invalid
+// parameter" (code 100, subcode 2388024 "Invalid format") class of errors, so we
+// catch them locally before burning a create call.
+const EXAMPLE_CONTROL_RE = /[\u0000-\u001f\u007f]/;
 
 export interface TemplateValidationResult {
   ok: boolean;
@@ -135,6 +141,10 @@ export function validateTemplate(tpl: DefaultTemplate): TemplateValidationResult
   (tpl.example ?? []).forEach((ex, i) => {
     if (!ex || ex.trim().length === 0) {
       errors.push(`חסרה דוגמה למשתנה {{${i + 1}}}.`);
+    } else if (EXAMPLE_CONTROL_RE.test(ex)) {
+      // Newlines/tabs/control chars in a sample value are the "Invalid format"
+      // (code 100 / subcode 2388024) class — Meta wants single-line plain examples.
+      errors.push(`הדוגמה למשתנה {{${i + 1}}} מכילה תו לא חוקי (שורה חדשה או תו בקרה).`);
     }
   });
 

@@ -304,12 +304,14 @@ export async function runMorningReminderForBusiness(params: {
     });
 
     try {
+      // appointment_reminder_he is a 3-variable BODY-only template:
+      // {{1}} client name, {{2}} service name, {{3}} time. (Business name was
+      // removed from the template — do NOT add a 4th param or Meta rejects the send.)
       const templateVariables = templateName
         ? {
             "1": booking.client.fullName,
             "2": booking.service.name,
             "3": formatTime(booking.startTime, tz),
-            "4": business.name,
           }
         : undefined;
 

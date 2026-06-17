@@ -56,6 +56,8 @@ beforeEach(() => {
     templates.map((t) => ({ name: t.name, result: { ok: true, errors: [] } })),
   );
   prisma.automationSetting.upsert.mockResolvedValue({});
+  // No pre-existing templates by default → nothing is skipped.
+  prisma.automationSetting.findMany.mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -140,6 +142,56 @@ describe("createDefaultTemplatesForBusiness", () => {
     expect(createTemplate).toHaveBeenCalledTimes(1);
     expect(res.items).toHaveLength(1);
     expect(res.items[0].name).toBe(target);
+  });
+
+  it("skips already-pending/approved templates on a full batch — never recreates them", async () => {
+    getCreds.mockResolvedValue({ accessToken: REAL_TOKEN, wabaId: "waba_1", apiVersion: "v19.0" });
+    createTemplate.mockResolvedValue({ ok: true, status: "pending" });
+    // review + win_back are already pending in Meta from the prior attempt.
+    prisma.automationSetting.findMany.mockResolvedValue([
+      { type: "review_request", templateStatus: "pending" },
+      { type: "win_back", templateStatus: "approved" },
+    ]);
+
+    const res = await createDefaultTemplatesForBusiness(BUSINESS_A);
+
+    // Only the 2 not-yet-pending templates reach Meta; the pending pair is left alone.
+    expect(createTemplate).toHaveBeenCalledTimes(DEFAULT_TEMPLATES.length - 2);
+    const sentNames = createTemplate.mock.calls.map((c) => (c[2] as { name: string }).name);
+    expect(sentNames).not.toContain("review_request_he");
+    expect(sentNames).not.toContain("win_back_offer_he");
+    // The skipped templates still appear in the result with their existing status.
+    expect(res.items.find((i) => i.name === "review_request_he")?.status).toBe("pending");
+    expect(res.items.find((i) => i.name === "win_back_offer_he")?.status).toBe("approved");
+  });
+
+  it("per-row retry (onlyName) re-attempts even when other templates are pending", async () => {
+    getCreds.mockResolvedValue({ accessToken: REAL_TOKEN, wabaId: "waba_1", apiVersion: "v19.0" });
+    createTemplate.mockResolvedValue({ ok: true, status: "pending" });
+    // A pending sibling exists, but onlyName must still re-attempt the target.
+    prisma.automationSetting.findMany.mockResolvedValue([
+      { type: "review_request", templateStatus: "pending" },
+    ]);
+
+    const res = await createDefaultTemplatesForBusiness(BUSINESS_A, "booking_confirmation_he");
+    expect(createTemplate).toHaveBeenCalledTimes(1);
+    expect(res.items[0].name).toBe("booking_confirmation_he");
+  });
+
+  it("surfaces Meta code 100 / subcode 2388024 clearly per template", async () => {
+    getCreds.mockResolvedValue({ accessToken: REAL_TOKEN, wabaId: "waba_1", apiVersion: "v19.0" });
+    createTemplate.mockResolvedValue({
+      ok: false,
+      error: "Invalid parameter [code 100 · subcode 2388024 · trace Tr9]",
+      metaError: { message: "Invalid parameter", code: 100, errorSubcode: 2388024, fbtraceId: "Tr9" },
+    });
+
+    const res = await createDefaultTemplatesForBusiness(BUSINESS_A, "booking_confirmation_he");
+    const item = res.items[0];
+    expect(item.status).toBe("error");
+    expect(item.errorSubcode).toBe(2388024);
+    expect(item.fbtraceId).toBe("Tr9");
+    expect(item.error).toContain("100");
   });
 
   it("reports total failure without ever marking the connection disconnected", async () => {

@@ -48,8 +48,11 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     label: "אישור תור",
     language: "he",
     category: "UTILITY",
-    body: "שלום {{1}}, התור שלך ל{{2}} נקבע לתאריך {{3}} בשעה {{4}}. נשמח לראותך! 💛",
-    example: ["דנה", "מניקור ג'ל", "12 ביוני", "14:30"],
+    // Minimal BODY-only utility template. No header / footer / buttons. Kept
+    // deliberately simple and clearly transactional so Meta accepts it as UTILITY
+    // (the previous, busier wording was rejected with code 100 / subcode 2388024).
+    body: "היי {{1}}, התור שלך ל{{2}} נקבע ליום {{3}} בשעה {{4}}. נשמח לראותך 🙂",
+    example: ["נועה", "לק ג'ל", "שלישי 18.6", "10:30"],
     variables: ["clientName", "serviceName", "bookingDate", "bookingTime"],
     automationType: "booking_confirmation",
   },
@@ -58,9 +61,12 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     label: "תזכורת לתור",
     language: "he",
     category: "UTILITY",
-    body: "היי {{1}}, תזכורת לתור שלך ל{{2}} מחר בשעה {{3}} ב{{4}}. נתראה!",
-    example: ["דנה", "מניקור ג'ל", "14:30", "סטודיו ביוטי"],
-    variables: ["clientName", "serviceName", "bookingTime", "businessName"],
+    // Minimal BODY-only utility template with 3 sequential variables. Dropped the
+    // trailing business-name variable (the old {{4}} sat near the end of the body)
+    // to keep the reminder short and unambiguous after the 2388024 rejection.
+    body: "היי {{1}}, תזכורת לתור שלך ל{{2}} מחר בשעה {{3}}. נתראה בקרוב 🙂",
+    example: ["נועה", "לק ג'ל", "10:30"],
+    variables: ["clientName", "serviceName", "bookingTime"],
     automationType: "morning_reminder",
   },
   {
