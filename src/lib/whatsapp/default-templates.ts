@@ -18,6 +18,13 @@ import { APP_URL } from "@/lib/config";
 
 export type MetaTemplateCategory = "UTILITY" | "MARKETING";
 
+/**
+ * Example review link sent to Meta for approval. Must be a non-empty absolute
+ * URL even when APP_URL is unset in the environment, otherwise Meta rejects the
+ * example value.
+ */
+const REVIEW_EXAMPLE_LINK = `${APP_URL || "https://allura.app"}/b/studio#reviews`;
+
 export interface DefaultTemplate {
   /** Meta template name (lowercase, snake_case). */
   name: string;
@@ -61,8 +68,10 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     label: "בקשת ביקורת",
     language: "he",
     category: "UTILITY",
-    body: "תודה שבחרת ב{{3}}, {{1}}! נשמח אם תוכלי לדרג את ה{{2}} שקיבלת: {{4}}",
-    example: ["דנה", "מניקור ג'ל", "סטודיו ביוטי", `${APP_URL}/b/studio#reviews`],
+    // Variables must appear in order {{1}}..{{4}} and the body must not end with a
+    // variable — Meta rejects out-of-order or trailing variables as "Invalid parameter".
+    body: "שלום {{1}}, תודה שבחרת ל{{2}} ב{{3}}! נשמח אם תדרגי את החוויה כאן: {{4}} 🙏",
+    example: ["דנה", "מניקור ג'ל", "סטודיו ביוטי", REVIEW_EXAMPLE_LINK],
     variables: ["clientName", "serviceName", "businessName", "reviewLink"],
     automationType: "review_request",
   },
@@ -71,7 +80,8 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     label: "החזרת לקוחה",
     language: "he",
     category: "MARKETING",
-    body: "שלום {{1}}, מתגעגעים אליך ב{{2}}! נשמח לראותך שוב ל{{3}}. {{4}}",
+    // Trailing emoji keeps the body from ending with the {{4}} variable.
+    body: "שלום {{1}}, מתגעגעים אליך ב{{2}}! נשמח לראותך שוב ל{{3}} — {{4}} 💛",
     example: ["דנה", "סטודיו ביוטי", "מניקור ג'ל", "10% הנחה על התור הבא"],
     variables: ["clientName", "businessName", "serviceName", "offer"],
     automationType: "win_back",

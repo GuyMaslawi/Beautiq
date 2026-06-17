@@ -42,14 +42,91 @@ export function normalizeTemplateStatus(raw: string | undefined): TemplateStatus
   }
 }
 
+/**
+ * Token-free, owner/admin-safe subset of a Meta template error. We surface these
+ * fields in admin diagnostics so an "Invalid parameter" failure is debuggable.
+ * NEVER carries the access token, Authorization header, or raw credentials.
+ */
+export interface SafeMetaTemplateError {
+  message: string;
+  type?: string;
+  code?: number;
+  errorSubcode?: number;
+  /** Safe extra detail from error.error_data (e.g. the offending parameter). */
+  errorData?: string;
+  fbtraceId?: string;
+}
+
+interface RawMetaError {
+  message?: string;
+  type?: string;
+  code?: number;
+  error_subcode?: number;
+  error_data?: { details?: string } | string;
+  fbtrace_id?: string;
+}
+
+/** Extracts the safe, token-scrubbed subset of a Meta error object. */
+export function toSafeMetaError(raw: RawMetaError | undefined, httpStatus: number): SafeMetaTemplateError {
+  const detailsRaw =
+    typeof raw?.error_data === "string" ? raw.error_data : raw?.error_data?.details;
+  return {
+    message: scrubToken(raw?.message ?? `HTTP ${httpStatus}`),
+    type: raw?.type,
+    code: raw?.code,
+    errorSubcode: raw?.error_subcode,
+    errorData: detailsRaw ? scrubToken(String(detailsRaw)) : undefined,
+    fbtraceId: raw?.fbtrace_id,
+  };
+}
+
+/** Builds a single-line human reason from the safe error fields (for the UI). */
+export function formatSafeMetaError(e: SafeMetaTemplateError): string {
+  const parts: string[] = [];
+  if (typeof e.code === "number") parts.push(`code ${e.code}`);
+  if (typeof e.errorSubcode === "number") parts.push(`subcode ${e.errorSubcode}`);
+  if (e.type) parts.push(`type ${e.type}`);
+  if (e.errorData) parts.push(e.errorData);
+  if (e.fbtraceId) parts.push(`trace ${e.fbtraceId}`);
+  return parts.length > 0 ? `${e.message} [${parts.join(" · ")}]` : e.message;
+}
+
 export interface CreateTemplateResult {
   ok: boolean;
   /** Meta template id, if created. */
   id?: string;
   status?: TemplateStatus;
+  /** Single-line human reason (token-scrubbed) — kept for backwards-compat. */
   error?: string;
+  /** Structured, token-free Meta error fields for admin diagnostics. */
+  metaError?: SafeMetaTemplateError;
   /** True when the template already existed (treated as success). */
   alreadyExists?: boolean;
+}
+
+/**
+ * The sanitized outgoing template payload — exactly what we POST to Meta, minus
+ * any transport credentials (there are none in the body). Used for dev/admin
+ * diagnostics so we can see precisely what was sent.
+ */
+export interface SanitizedTemplatePayload {
+  name: string;
+  language: string;
+  category: string;
+  componentTypes: string[];
+  bodyText: string;
+  variableExamples: string[];
+}
+
+export function buildSanitizedTemplatePayload(tpl: DefaultTemplate): SanitizedTemplatePayload {
+  return {
+    name: tpl.name,
+    language: tpl.language,
+    category: tpl.category,
+    componentTypes: ["BODY"],
+    bodyText: tpl.body,
+    variableExamples: tpl.example,
+  };
 }
 
 /** Creates one template in the WABA. Idempotent on "already exists". */
@@ -82,11 +159,7 @@ export async function createTemplate(
       body: JSON.stringify(payload),
       cache: "no-store",
     });
-    const data = (await res.json()) as {
-      id?: string;
-      status?: string;
-      error?: { message?: string; code?: number; error_subcode?: number };
-    };
+    const data = (await res.json()) as { id?: string; status?: string; error?: RawMetaError };
 
     if (res.ok && data.id) {
       return { ok: true, id: data.id, status: normalizeTemplateStatus(data.status) };
@@ -97,9 +170,11 @@ export async function createTemplate(
     if (/already exists|name.*taken|duplicate/i.test(msg)) {
       return { ok: true, alreadyExists: true, status: "unknown" };
     }
-    return { ok: false, error: scrubToken(msg) };
+    const metaError = toSafeMetaError(data.error, res.status);
+    return { ok: false, error: formatSafeMetaError(metaError), metaError };
   } catch (err) {
-    return { ok: false, error: err instanceof Error ? scrubToken(err.message) : "שגיאת רשת" };
+    const message = err instanceof Error ? scrubToken(err.message) : "שגיאת רשת";
+    return { ok: false, error: message, metaError: { message } };
   }
 }
 

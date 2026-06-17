@@ -26,9 +26,12 @@ import {
 // EVERY server action bundled for the page (including sign-out). Consumers import
 // this type directly from `templates-core` instead.
 
-export async function createDefaultTemplatesAction(): Promise<TemplateSetupResult> {
+export async function createDefaultTemplatesAction(
+  /** When given, retries just this one template (per-row "נסה ליצור שוב"). */
+  onlyName?: string,
+): Promise<TemplateSetupResult> {
   const business = await requireCurrentBusiness();
-  return createDefaultTemplatesForBusiness(business.id);
+  return createDefaultTemplatesForBusiness(business.id, onlyName);
 }
 
 export async function syncTemplatesAction(): Promise<TemplateSetupResult> {

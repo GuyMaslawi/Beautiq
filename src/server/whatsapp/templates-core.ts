@@ -4,6 +4,12 @@
  * Shared by the owner actions (templates-actions.ts, scoped to the current
  * business) and the admin actions (whatsapp-actions.ts, scoped to an explicit
  * businessId). Auth is enforced by the callers, never here.
+ *
+ * Flow for "create": validate every template payload LOCALLY first, then call
+ * Meta only for the valid ones. Invalid templates never reach Meta and report an
+ * exact Hebrew reason. Per-template results carry safe Meta diagnostics (code,
+ * subcode, fbtrace_id) for the admin debug table. A single template failure does
+ * NOT fail the whole batch.
  */
 
 import { revalidatePath } from "next/cache";
@@ -16,20 +22,55 @@ import {
 import {
   createTemplate,
   listTemplates,
+  buildSanitizedTemplatePayload,
   type TemplateStatus,
+  type SafeMetaTemplateError,
 } from "@/lib/whatsapp/meta-templates-api";
+import { validateTemplateBatch } from "@/lib/whatsapp/template-validation";
+
+export interface TemplateSetupItem {
+  label: string;
+  name: string;
+  category: string;
+  language: string;
+  /** Whether the payload passed local validation. */
+  localValid: boolean;
+  /** Exact Hebrew reason when local validation failed (never reaches Meta). */
+  validationError?: string;
+  /** "error" = Meta rejected; "invalid" = blocked locally. */
+  status: TemplateStatus | "error" | "invalid";
+  /** Single-line safe reason (Meta or local). */
+  error?: string;
+  /** Safe Meta error subcode, when Meta rejected the payload. */
+  errorSubcode?: number;
+  /** Meta fbtrace_id, when present — lets support correlate the failure. */
+  fbtraceId?: string;
+}
 
 export interface TemplateSetupResult {
   success: boolean;
   /** Owner-facing Hebrew summary. */
   statusLabel: string;
   /** Per-template outcome for admin diagnostics. */
-  items: Array<{
-    label: string;
-    name: string;
-    status: TemplateStatus | "error";
-    error?: string;
-  }>;
+  items: TemplateSetupItem[];
+}
+
+function baseItem(tpl: DefaultTemplate): TemplateSetupItem {
+  return {
+    label: tpl.label,
+    name: tpl.name,
+    category: tpl.category,
+    language: tpl.language,
+    localValid: true,
+    status: "unknown",
+  };
+}
+
+function metaErrorFields(metaError?: SafeMetaTemplateError): {
+  errorSubcode?: number;
+  fbtraceId?: string;
+} {
+  return { errorSubcode: metaError?.errorSubcode, fbtraceId: metaError?.fbtraceId };
 }
 
 async function storeTemplateOnSetting(
@@ -56,9 +97,14 @@ async function storeTemplateOnSetting(
   });
 }
 
-/** Option A — create the 4 default templates via the Meta Message Templates API. */
+/**
+ * Option A — create the default templates via the Meta Message Templates API.
+ *
+ * @param onlyName  When given, creates just that one template (per-row retry).
+ */
 export async function createDefaultTemplatesForBusiness(
   businessId: string,
+  onlyName?: string,
 ): Promise<TemplateSetupResult> {
   const creds = await getDecryptedCredentialsForBusiness(businessId);
   if (!creds?.wabaId) {
@@ -69,29 +115,62 @@ export async function createDefaultTemplatesForBusiness(
     };
   }
 
-  const items: TemplateSetupResult["items"] = [];
-  for (const tpl of DEFAULT_TEMPLATES) {
+  const templates = onlyName
+    ? DEFAULT_TEMPLATES.filter((t) => t.name === onlyName)
+    : DEFAULT_TEMPLATES;
+
+  // 1. Validate the whole batch locally — duplicate names are caught here too.
+  const validation = new Map(
+    validateTemplateBatch(templates).map((v) => [v.name, v.result]),
+  );
+
+  const items: TemplateSetupItem[] = [];
+  for (const tpl of templates) {
+    const item = baseItem(tpl);
+    const local = validation.get(tpl.name);
+
+    // 2. Block invalid payloads before they ever reach Meta.
+    if (local && !local.ok) {
+      item.localValid = false;
+      item.status = "invalid";
+      item.validationError = local.errors.join(" ");
+      item.error = item.validationError;
+      items.push(item);
+      continue;
+    }
+
+    // Dev/admin diagnostics: the exact sanitized payload (no token).
+    if (process.env.NODE_ENV !== "production") {
+      console.log("[WhatsApp templates] creating", buildSanitizedTemplatePayload(tpl));
+    }
+
+    // 3. Create the valid template in Meta.
     const res = await createTemplate(creds.wabaId, creds.accessToken, tpl);
     if (res.ok) {
       const status: TemplateStatus = res.status ?? (res.alreadyExists ? "unknown" : "pending");
       await storeTemplateOnSetting(businessId, tpl, status);
-      items.push({ label: tpl.label, name: tpl.name, status });
+      item.status = status;
+      items.push(item);
     } else {
-      items.push({ label: tpl.label, name: tpl.name, status: "error", error: res.error });
+      item.status = "error";
+      item.error = res.error;
+      Object.assign(item, metaErrorFields(res.metaError));
+      items.push(item);
     }
   }
 
   revalidatePath("/automations");
 
-  const created = items.filter((i) => i.status !== "error").length;
+  const created = items.filter((i) => i.status !== "error" && i.status !== "invalid").length;
+  const total = items.length;
   return {
     success: created > 0,
     statusLabel:
-      created === DEFAULT_TEMPLATES.length
+      created === total
         ? "התבניות נשלחו לאישור WhatsApp — ממתין לאישור"
         : created > 0
-          ? `נוצרו ${created} מתוך ${DEFAULT_TEMPLATES.length} תבניות`
-          : "יצירת התבניות נכשלה",
+          ? `נוצרו ${created} מתוך ${total} תבניות — חלק נכשלו`
+          : "WhatsApp מחובר, אך יצירת התבניות נכשלה",
     items,
   };
 }
@@ -118,18 +197,22 @@ export async function syncTemplatesForBusiness(
     };
   }
 
-  const items: TemplateSetupResult["items"] = [];
+  const items: TemplateSetupItem[] = [];
   let matched = 0;
   for (const tpl of DEFAULT_TEMPLATES) {
+    const item = baseItem(tpl);
     const found = list.templates.find(
       (t) => t.name === tpl.name && t.language === tpl.language,
     );
     if (found) {
       matched++;
       await storeTemplateOnSetting(businessId, tpl, found.status);
-      items.push({ label: tpl.label, name: tpl.name, status: found.status });
+      item.status = found.status;
+      items.push(item);
     } else {
-      items.push({ label: tpl.label, name: tpl.name, status: "error", error: "לא נמצאה תבנית" });
+      item.status = "error";
+      item.error = "לא נמצאה תבנית";
+      items.push(item);
     }
   }
 

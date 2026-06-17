@@ -187,6 +187,54 @@ describe("meta-templates-api", () => {
     expect(res.error).toContain("[token]");
   });
 
+  it("createTemplate captures the full safe Meta error (code, subcode, type, fbtrace_id)", async () => {
+    fetchSpy.mockResolvedValue(
+      jsonResponse(
+        {
+          error: {
+            message: "Invalid parameter",
+            type: "OAuthException",
+            code: 100,
+            error_subcode: 2388043,
+            error_data: { details: "param components[0] is invalid" },
+            fbtrace_id: "Abc123Trace",
+          },
+        },
+        400,
+      ),
+    );
+    const res = await createTemplate("waba_1", REAL_TOKEN, tpl);
+    expect(res.ok).toBe(false);
+    expect(res.metaError).toBeDefined();
+    expect(res.metaError?.message).toBe("Invalid parameter");
+    expect(res.metaError?.type).toBe("OAuthException");
+    expect(res.metaError?.code).toBe(100);
+    expect(res.metaError?.errorSubcode).toBe(2388043);
+    expect(res.metaError?.errorData).toContain("components[0]");
+    expect(res.metaError?.fbtraceId).toBe("Abc123Trace");
+    // The single-line human reason includes the safe diagnostic fields.
+    expect(res.error).toContain("Invalid parameter");
+    expect(res.error).toContain("code 100");
+    expect(res.error).toContain("subcode 2388043");
+    expect(res.error).toContain("trace Abc123Trace");
+    // The token never appears anywhere — header-only, never in logs/result.
+    expect(JSON.stringify(res)).not.toContain(REAL_TOKEN);
+    assertTokenOnlyInAuthHeader();
+  });
+
+  it("createTemplate scrubs a token that leaks into error_data", async () => {
+    fetchSpy.mockResolvedValue(
+      jsonResponse(
+        { error: { message: "Invalid parameter", error_data: { details: `leak ${REAL_TOKEN}` } } },
+        400,
+      ),
+    );
+    const res = await createTemplate("waba_1", REAL_TOKEN, tpl);
+    expect(res.ok).toBe(false);
+    expect(res.metaError?.errorData).not.toContain(REAL_TOKEN);
+    expect(JSON.stringify(res)).not.toContain(REAL_TOKEN);
+  });
+
   it("listTemplates normalizes statuses", async () => {
     fetchSpy.mockResolvedValue(
       jsonResponse({

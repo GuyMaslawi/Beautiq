@@ -507,6 +507,23 @@ export function WhatsAppConnectionCard({
     });
   }
 
+  /** Admin: retry creating a single template by name ("נסה ליצור שוב"). */
+  function handleRetryTemplate(name: string) {
+    startTransition(async () => {
+      const result = await createDefaultTemplatesAction(name);
+      // Merge the single-template outcome back into the current result table.
+      setTemplateResult((prev) => {
+        const updated = result.items[0];
+        if (!prev || !updated) return result;
+        return {
+          ...prev,
+          items: prev.items.map((it) => (it.name === updated.name ? updated : it)),
+        };
+      });
+      router.refresh();
+    });
+  }
+
   const busy = pending || isTransient;
 
   // The pill reflects the transient flow phase while connecting; otherwise it
@@ -605,9 +622,20 @@ export function WhatsAppConnectionCard({
 
       {/* Connected — show display phone */}
       {!isTransient && state === "active" && displayPhoneNumber && !needsNumberConfirmation && (
-        <div className="flex items-center gap-2 text-xs" style={{ color: "#15803d" }}>
-          <CheckCircle2 className="h-4 w-4" />
-          <span>מחובר למספר {displayPhoneNumber}</span>
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-xs" style={{ color: "#15803d" }}>
+            <CheckCircle2 className="h-4 w-4" />
+            <span>מחובר למספר {displayPhoneNumber}</span>
+          </div>
+          {isTestLookingNumber && (
+            <div
+              className="rounded-xl px-3.5 py-2.5 text-xs leading-relaxed"
+              style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.30)", color: "#92400e" }}
+            >
+              המספר המחובר נראה כמו מספר בדיקה של Meta. לצורך חיבור מספר עסק אמיתי, יש לנתק
+              ולחבר את מספר ה־WhatsApp Business של העסק דרך Meta.
+            </div>
+          )}
         </div>
       )}
 
@@ -825,7 +853,7 @@ export function WhatsAppConnectionCard({
 
           {templateResult && (
             <div
-              className="rounded-xl px-3.5 py-2.5 text-sm space-y-1.5"
+              className="rounded-xl px-3.5 py-2.5 text-sm space-y-2"
               style={{
                 background: templateResult.success ? "rgba(22,163,74,0.07)" : "rgba(234,179,8,0.08)",
                 border: `1px solid ${templateResult.success ? "rgba(22,163,74,0.22)" : "rgba(234,179,8,0.28)"}`,
@@ -833,15 +861,56 @@ export function WhatsAppConnectionCard({
               }}
             >
               <p className="font-semibold">{templateResult.statusLabel}</p>
+
+              {/* Admin-only template debug table: name · category · language ·
+                  local validation · Meta status · last error · fbtrace_id. */}
               {isAdmin && templateResult.items.length > 0 && (
-                <ul className="space-y-0.5 text-xs opacity-80">
-                  {templateResult.items.map((it) => (
-                    <li key={it.name}>
-                      {it.label} — {it.status}
-                      {it.error ? ` (${it.error})` : ""}
-                    </li>
-                  ))}
-                </ul>
+                <div className="space-y-2 pt-1">
+                  <p className="text-xs font-semibold" style={{ color: "var(--foreground)" }}>
+                    פרטים טכניים (אדמין בלבד)
+                  </p>
+                  <ul className="space-y-2 text-xs">
+                    {templateResult.items.map((it) => (
+                      <li
+                        key={it.name}
+                        className="rounded-lg px-2.5 py-2 space-y-1"
+                        style={{ background: "rgba(255,255,255,0.5)", border: "1px solid var(--border)", color: "var(--foreground)" }}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span style={{ fontFamily: "monospace" }}>{it.name}</span>
+                          <span
+                            className="font-semibold"
+                            style={{ color: it.status === "error" || it.status === "invalid" ? "#dc2626" : "#15803d" }}
+                          >
+                            {it.status}
+                          </span>
+                        </div>
+                        <div className="opacity-75">
+                          קטגוריה: {it.category} · שפה: {it.language} · בדיקה מקומית:{" "}
+                          {it.localValid ? "תקין" : "נכשל"}
+                        </div>
+                        {it.error && (
+                          <div style={{ color: "#dc2626" }}>שגיאה: {it.error}</div>
+                        )}
+                        {it.fbtraceId && (
+                          <div className="opacity-60" style={{ fontFamily: "monospace" }}>
+                            fbtrace_id: {it.fbtraceId}
+                          </div>
+                        )}
+                        {(it.status === "error" || it.status === "invalid") && (
+                          <button
+                            onClick={() => handleRetryTemplate(it.name)}
+                            disabled={busy}
+                            className="mt-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition-opacity disabled:opacity-50"
+                            style={{ background: "rgba(184,107,140,0.12)", color: "#b86b8c", border: "1px solid rgba(184,107,140,0.25)" }}
+                          >
+                            נסה ליצור שוב
+                          </button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               )}
             </div>
           )}

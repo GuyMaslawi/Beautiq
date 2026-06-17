@@ -28,6 +28,12 @@ const listTemplates = vi.fn();
 vi.mock("@/lib/whatsapp/meta-templates-api", () => ({
   createTemplate: (...a: unknown[]) => createTemplate(...a),
   listTemplates: (...a: unknown[]) => listTemplates(...a),
+  buildSanitizedTemplatePayload: (t: { name: string }) => ({ name: t.name }),
+}));
+
+const validateTemplateBatch = vi.fn();
+vi.mock("@/lib/whatsapp/template-validation", () => ({
+  validateTemplateBatch: (...a: unknown[]) => validateTemplateBatch(...a),
 }));
 
 import { resetPrismaMock } from "../helpers/prisma-mock";
@@ -44,6 +50,11 @@ beforeEach(() => {
   getCreds.mockReset();
   createTemplate.mockReset();
   listTemplates.mockReset();
+  validateTemplateBatch.mockReset();
+  // Default: every template passes local validation.
+  validateTemplateBatch.mockImplementation((templates: Array<{ name: string }>) =>
+    templates.map((t) => ({ name: t.name, result: { ok: true, errors: [] } })),
+  );
   prisma.automationSetting.upsert.mockResolvedValue({});
 });
 
@@ -79,15 +90,67 @@ describe("createDefaultTemplatesForBusiness", () => {
     expect(upsertArg.where.businessId_type.businessId).toBe(BUSINESS_A);
   });
 
-  it("reports partial success when some creations error", async () => {
+  it("reports partial success when some creations error (per-template result)", async () => {
     getCreds.mockResolvedValue({ accessToken: REAL_TOKEN, wabaId: "waba_1", apiVersion: "v19.0" });
     createTemplate
       .mockResolvedValueOnce({ ok: true, status: "pending" })
-      .mockResolvedValue({ ok: false, error: "boom" });
+      .mockResolvedValue({
+        ok: false,
+        error: "Invalid parameter [code 100]",
+        metaError: { message: "Invalid parameter", code: 100, errorSubcode: 2388043, fbtraceId: "Tr1" },
+      });
 
     const res = await createDefaultTemplatesForBusiness(BUSINESS_A);
-    expect(res.success).toBe(true); // at least one created
+    expect(res.success).toBe(true); // at least one created → not a total failure
     expect(res.items.some((i) => i.status === "error")).toBe(true);
+    // Meta diagnostics flow through to the per-template item for the debug table.
+    const failed = res.items.find((i) => i.status === "error");
+    expect(failed?.errorSubcode).toBe(2388043);
+    expect(failed?.fbtraceId).toBe("Tr1");
+  });
+
+  it("blocks a locally-invalid template and never calls Meta for it", async () => {
+    getCreds.mockResolvedValue({ accessToken: REAL_TOKEN, wabaId: "waba_1", apiVersion: "v19.0" });
+    createTemplate.mockResolvedValue({ ok: true, status: "pending" });
+    // Force the first template to fail local validation.
+    validateTemplateBatch.mockImplementation((templates: Array<{ name: string }>) =>
+      templates.map((t, i) => ({
+        name: t.name,
+        result: i === 0 ? { ok: false, errors: ["שם התבנית לא תקין."] } : { ok: true, errors: [] },
+      })),
+    );
+
+    const res = await createDefaultTemplatesForBusiness(BUSINESS_A);
+
+    // Only the valid templates were sent to Meta.
+    expect(createTemplate).toHaveBeenCalledTimes(DEFAULT_TEMPLATES.length - 1);
+    const invalid = res.items.find((i) => i.status === "invalid");
+    expect(invalid).toBeDefined();
+    expect(invalid?.localValid).toBe(false);
+    expect(invalid?.validationError).toContain("שם התבנית");
+  });
+
+  it("creates a single template by name when onlyName is given", async () => {
+    getCreds.mockResolvedValue({ accessToken: REAL_TOKEN, wabaId: "waba_1", apiVersion: "v19.0" });
+    createTemplate.mockResolvedValue({ ok: true, status: "pending" });
+
+    const target = DEFAULT_TEMPLATES[0].name;
+    const res = await createDefaultTemplatesForBusiness(BUSINESS_A, target);
+
+    expect(createTemplate).toHaveBeenCalledTimes(1);
+    expect(res.items).toHaveLength(1);
+    expect(res.items[0].name).toBe(target);
+  });
+
+  it("reports total failure without ever marking the connection disconnected", async () => {
+    getCreds.mockResolvedValue({ accessToken: REAL_TOKEN, wabaId: "waba_1", apiVersion: "v19.0" });
+    createTemplate.mockResolvedValue({ ok: false, error: "Invalid parameter" });
+
+    const res = await createDefaultTemplatesForBusiness(BUSINESS_A);
+    expect(res.success).toBe(false);
+    // Failure copy frames this as a template problem, NOT a connection problem.
+    expect(res.statusLabel).toContain("WhatsApp מחובר");
+    expect(res.statusLabel).toContain("יצירת התבניות נכשלה");
   });
 });
 

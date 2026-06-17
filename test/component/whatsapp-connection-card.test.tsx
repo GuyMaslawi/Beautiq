@@ -4,6 +4,7 @@ import { render, screen, act, waitFor, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { WhatsAppConnectionCard } from "@/components/whatsapp/whatsapp-connection-card";
 import type { OwnerWhatsAppStatus } from "@/server/whatsapp/owner-status";
+import type { TemplateSetupResult } from "@/server/whatsapp/templates-core";
 
 /**
  * The connection card must update WITHOUT a manual browser refresh after the
@@ -20,8 +21,12 @@ const m = vi.hoisted(() => ({
   disconnectWhatsAppAction: vi.fn(() => Promise.resolve({ success: true })),
   confirmConnectedNumberAction: vi.fn(() => Promise.resolve({ success: true })),
   getWhatsAppConnectionStatusAction: vi.fn(),
-  createDefaultTemplatesAction: vi.fn(() => Promise.resolve({ success: true, statusLabel: "ok", items: [] })),
-  syncTemplatesAction: vi.fn(() => Promise.resolve({ success: true, statusLabel: "ok", items: [] })),
+  createDefaultTemplatesAction: vi.fn(
+    (): Promise<TemplateSetupResult> => Promise.resolve({ success: true, statusLabel: "ok", items: [] }),
+  ),
+  syncTemplatesAction: vi.fn(
+    (): Promise<TemplateSetupResult> => Promise.resolve({ success: true, statusLabel: "ok", items: [] }),
+  ),
   refresh: vi.fn(),
 }));
 
@@ -348,5 +353,125 @@ describe("WhatsAppConnectionCard — connected number confirmation", () => {
     );
 
     expect(screen.getByText(/נראה כמו מספר בדיקה של Meta/)).toBeInTheDocument();
+  });
+
+  it("warns on a +1 555 number even after the number is confirmed (still flagged as a test number)", () => {
+    render(
+      <WhatsAppConnectionCard
+        status={makeStatus("active", {
+          needsNumberConfirmation: false,
+          displayPhoneNumber: "+1 555-906-9761",
+        })}
+        {...PROPS}
+      />,
+    );
+
+    // Connection is shown as connected (not disconnected) AND the test-number warning shows.
+    expect(screen.getByText(/מחובר למספר/)).toBeInTheDocument();
+    expect(screen.getByText(/נראה כמו מספר בדיקה של Meta/)).toBeInTheDocument();
+    // A test number must never read as "not connected".
+    expect(screen.queryByText("WhatsApp לא מחובר")).not.toBeInTheDocument();
+  });
+
+  it("does not warn for a normal Israeli connected number", () => {
+    render(
+      <WhatsAppConnectionCard
+        status={makeStatus("active", {
+          needsNumberConfirmation: false,
+          displayPhoneNumber: "+972 50-123-4567",
+        })}
+        {...PROPS}
+      />,
+    );
+
+    expect(screen.queryByText(/נראה כמו מספר בדיקה של Meta/)).not.toBeInTheDocument();
+  });
+});
+
+describe("WhatsAppConnectionCard — admin template debug table", () => {
+  function activeStatus() {
+    return makeStatus("active", {
+      needsNumberConfirmation: false,
+      displayPhoneNumber: "+972 50-123-4567",
+    });
+  }
+
+  it("shows per-template diagnostics with a retry button, then retries a single template", async () => {
+    m.createDefaultTemplatesAction.mockResolvedValueOnce({
+      success: false,
+      statusLabel: "WhatsApp מחובר, אך יצירת התבניות נכשלה",
+      items: [
+        {
+          label: "אישור תור",
+          name: "booking_confirmation_he",
+          category: "UTILITY",
+          language: "he",
+          localValid: true,
+          status: "error",
+          error: "Invalid parameter [code 100 · subcode 2388043]",
+          errorSubcode: 2388043,
+          fbtraceId: "TraceXYZ",
+        },
+      ],
+    });
+
+    const user = userEvent.setup();
+    render(<WhatsAppConnectionCard status={activeStatus()} {...PROPS} isAdmin />);
+
+    await user.click(screen.getByRole("button", { name: /הכנת תבניות WhatsApp/ }));
+
+    // Debug table surfaces the safe Meta error fields for admins.
+    expect(await screen.findByText("פרטים טכניים (אדמין בלבד)")).toBeInTheDocument();
+    expect(screen.getByText("booking_confirmation_he")).toBeInTheDocument();
+    expect(screen.getByText(/subcode 2388043/)).toBeInTheDocument();
+    expect(screen.getByText(/fbtrace_id: TraceXYZ/)).toBeInTheDocument();
+
+    // The per-row "נסה ליצור שוב" retries just that template by name.
+    m.createDefaultTemplatesAction.mockResolvedValueOnce({
+      success: true,
+      statusLabel: "התבניות נשלחו לאישור WhatsApp — ממתין לאישור",
+      items: [
+        {
+          label: "אישור תור",
+          name: "booking_confirmation_he",
+          category: "UTILITY",
+          language: "he",
+          localValid: true,
+          status: "pending",
+        },
+      ],
+    });
+    await user.click(screen.getByRole("button", { name: /נסה ליצור שוב/ }));
+    await waitFor(() =>
+      expect(m.createDefaultTemplatesAction).toHaveBeenLastCalledWith("booking_confirmation_he"),
+    );
+  });
+
+  it("does not show the technical details table to non-admins", async () => {
+    m.createDefaultTemplatesAction.mockResolvedValueOnce({
+      success: false,
+      statusLabel: "WhatsApp מחובר, אך יצירת התבניות נכשלה",
+      items: [
+        {
+          label: "אישור תור",
+          name: "booking_confirmation_he",
+          category: "UTILITY",
+          language: "he",
+          localValid: true,
+          status: "error",
+          error: "Invalid parameter",
+        },
+      ],
+    });
+
+    const user = userEvent.setup();
+    render(<WhatsAppConnectionCard status={activeStatus()} {...PROPS} isAdmin={false} />);
+
+    await user.click(screen.getByRole("button", { name: /הכנת תבניות WhatsApp/ }));
+
+    // Owners see the summary label but never the technical table / template name.
+    expect(await screen.findByText(/יצירת התבניות נכשלה/)).toBeInTheDocument();
+    expect(screen.queryByText("פרטים טכניים (אדמין בלבד)")).not.toBeInTheDocument();
+    expect(screen.queryByText("booking_confirmation_he")).not.toBeInTheDocument();
   });
 });
