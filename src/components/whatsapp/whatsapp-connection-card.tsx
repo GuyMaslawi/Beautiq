@@ -32,7 +32,7 @@
  * disabled with a friendly note (admins configure them server-side).
  */
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import Script from "next/script";
 import { MessageCircle, CheckCircle2, AlertCircle, Loader2, X, ShieldCheck, Clock, LifeBuoy } from "lucide-react";
@@ -61,6 +61,14 @@ import {
   classifyMetaConnectError,
   type ConnectionTrack,
 } from "@/lib/whatsapp/connection-tracks";
+import {
+  buildFbLoginConfig,
+  buildSanitizedLaunchPayload,
+  configIdMatches,
+  maskAppId,
+  EXPECTED_META_CONFIG_ID,
+  type SanitizedLaunchPayload,
+} from "@/lib/whatsapp/embedded-signup-launch";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 declare global {
@@ -104,6 +112,23 @@ type DebugStep =
  * entirely by the server `status` prop (the source of truth).
  */
 type FlowPhase = "idle" | "opening" | "waiting" | "checking" | "cancelled";
+
+/** Facebook JS SDK load state — surfaced in the admin Meta debug box. */
+type SdkState = "not_started" | "loading" | "loaded" | "failed";
+
+/**
+ * What Meta actually showed in the popup. We CANNOT read this programmatically
+ * (Meta does not report which UI flow it rendered), so an admin records it
+ * manually after closing the popup, to confirm whether coexistence is offered.
+ */
+type MetaUiOutcome = "add_number_only" | "existing_option_shown" | "unknown";
+
+/** Admin-only snapshot of the last Embedded Signup launch (never holds secrets). */
+interface LaunchDebug {
+  payload: SanitizedLaunchPayload;
+  popupResultStatus?: string;
+  metaUiOutcome: MetaUiOutcome;
+}
 
 const LOG = "[WA Embedded Signup]";
 
@@ -260,7 +285,12 @@ export function WhatsAppConnectionCard({
   const [templateNotice, setTemplateNotice] = useState<{ ok: boolean; text: string } | null>(null);
   const [templateResult, setTemplateResult] = useState<TemplateSetupResult | null>(null);
   const [debugStep, setDebugStep] = useState<DebugStep>("idle");
-  const [sdkLoaded, setSdkLoaded] = useState(false);
+  // SDK load state + last launch snapshot — admin Meta debug box only.
+  const [sdkState, setSdkState] = useState<SdkState>(
+    !!appId && !!configId ? "loading" : "not_started",
+  );
+  const [windowFbExists, setWindowFbExists] = useState(false);
+  const [launchDebug, setLaunchDebug] = useState<LaunchDebug | null>(null);
 
   // Pre-connection chooser state.
   const [chooserOpen, setChooserOpen] = useState(false);
@@ -409,13 +439,17 @@ export function WhatsAppConnectionCard({
   function initFbSdk() {
     if (!appId) {
       console.warn(`${LOG} SDK loaded but NEXT_PUBLIC_META_APP_ID is missing — cannot init.`);
+      setSdkState("failed");
       return;
     }
     if (window.FB) {
       window.FB.init({ appId, autoLogAppEvents: true, xfbml: true, version: graphVersion });
       sdkReady.current = true;
-      setSdkLoaded(true);
+      setSdkState("loaded");
+      setWindowFbExists(true);
       track("sdk_loaded", { graphVersion, hasConfigId: !!configId });
+    } else {
+      setSdkState("failed");
     }
   }
 
@@ -440,6 +474,7 @@ export function WhatsAppConnectionCard({
     setChooserOpen(false);
     stopPolling();
     popupError.current = null;
+    setWindowFbExists(typeof window !== "undefined" && !!window.FB);
 
     if (!embeddedSignupEnabled || !window.FB) {
       console.warn(`${LOG} cannot start`, {
@@ -455,15 +490,22 @@ export function WhatsAppConnectionCard({
     sessionInfo.current = {};
     setFlowPhase("opening");
     track("popup_opened", { track: chosen });
-    console.log(`${LOG} FB.login called`, {
-      hasConfigId: !!configId,
-      responseType: "code",
-      overrideDefaultResponseType: true,
-      track: chosen,
-    });
+
+    // Build the track-specific FB.login config + a sanitized copy for logging
+    // and the admin debug box. existing_business_app asks Meta for existing
+    // WhatsApp Business App onboarding (coexistence); other tracks do not.
+    const loginConfig = buildFbLoginConfig(configId, chosen);
+    const sanitized = buildSanitizedLaunchPayload({ appId, configId, track: chosen });
+    setLaunchDebug({ payload: sanitized, metaUiOutcome: "unknown" });
+    // Sanitized, secret-free payload — exactly what we hand to Meta.
+    console.log(`${LOG} FB.login launch payload (sanitized)`, sanitized);
 
     window.FB.login(
       (response: any) => {
+        // Record the raw popup status (e.g. "connected"/"unknown") for admins.
+        setLaunchDebug((prev) =>
+          prev ? { ...prev, popupResultStatus: response?.status } : prev,
+        );
         track("callback_received", {
           // keys only — never the token/code values themselves
           responseKeys: response ? Object.keys(response) : [],
@@ -566,16 +608,13 @@ export function WhatsAppConnectionCard({
           }
         });
       },
-      {
-        config_id: configId,
-        response_type: "code",
-        override_default_response_type: true,
-        // The same supported Embedded Signup payload for every track. Whether an
-        // existing WhatsApp Business App number can be connected (coexistence) is
-        // governed by the Meta configuration + account eligibility, not by a
-        // runtime flag here — see docs/whatsapp-existing-number-coexistence.md.
-        extras: { setup: {}, featureType: "", sessionInfoVersion: "3" },
-      },
+      // Track-specific payload (built above). existing_business_app carries
+      // featureType=whatsapp_business_app_onboarding to request coexistence;
+      // new_number/personal use the standard flow. Whether Meta actually offers
+      // coexistence still depends on the Meta config + account/number
+      // eligibility — see docs/whatsapp-existing-number-coexistence.md and
+      // docs/whatsapp-production-embedded-signup-debug.md.
+      loginConfig,
     );
   }
 
@@ -657,7 +696,12 @@ export function WhatsAppConnectionCard({
         <Script
           src="https://connect.facebook.net/en_US/sdk.js"
           strategy="afterInteractive"
+          onReady={() => setSdkState((s) => (s === "loaded" ? s : "loading"))}
           onLoad={initFbSdk}
+          onError={() => {
+            console.error(`${LOG} Facebook SDK failed to load`);
+            setSdkState("failed");
+          }}
         />
       )}
 
@@ -1078,25 +1122,30 @@ export function WhatsAppConnectionCard({
         </div>
       )}
 
-      {/* TEMP admin-only debug panel — last client-side Embedded Signup step.
-          Remove once the client→server handoff is confirmed in production. */}
+      {/* ---------- Admin-only Meta launch diagnostics ---------- */}
       {isAdmin && (
-        <div
-          className="rounded-xl px-3.5 py-2.5 text-xs space-y-1"
-          style={{ background: "rgba(107,114,128,0.06)", border: "1px dashed rgba(107,114,128,0.3)", color: "var(--muted)" }}
-        >
-          <p className="font-semibold" style={{ color: "var(--foreground)" }}>
-            דיבאג (אדמין בלבד)
-          </p>
-          <p>
-            שלב נוכחי: <span style={{ fontFamily: "monospace" }}>{debugStep}</span>
-            {" · "}flow: <span style={{ fontFamily: "monospace" }}>{flowPhase}</span>
-          </p>
-          <p className="opacity-80">
-            SDK: {sdkLoaded ? "loaded" : "not loaded"} · appId: {appId ? "set" : "missing"} ·
-            {" "}configId: {configId ? "set" : "missing"}
-          </p>
-        </div>
+        <MetaLaunchDebugBox
+          appId={appId}
+          configId={configId}
+          sdkState={sdkState}
+          windowFbExists={windowFbExists}
+          debugStep={debugStep}
+          flowPhase={flowPhase}
+          selectedTrack={selectedTrack}
+          launchDebug={launchDebug}
+          onRecordMetaUi={(outcome) =>
+            setLaunchDebug((prev) => {
+              const next = prev
+                ? { ...prev, metaUiOutcome: outcome }
+                : null;
+              console.log(`${LOG} admin recorded Meta UI outcome`, {
+                outcome,
+                track: prev?.payload.selectedConnectionTrack,
+              });
+              return next;
+            })
+          }
+        />
       )}
 
       {/* ---------- Pre-connection chooser modal ---------- */}
@@ -1345,6 +1394,166 @@ function ConnectErrorModal({
             קראתי והבנתי
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------------------------------------------------------------------
+ * Admin-only Meta launch diagnostics box ("דיבאג חיבור Meta")
+ *
+ * Shows, for admins only, exactly what Allura sends to Meta when launching
+ * Embedded Signup — runtime env, App ID (masked), Config ID (exact) + whether it
+ * matches the expected production Config ID, SDK state, selected track, and the
+ * sanitized FB.login payload (config_id, response_type, extras/setup, featureType,
+ * sessionInfoVersion). It carries NO secrets. Meta does not report which UI flow
+ * it rendered, so an admin records the observed outcome (Add-number-only vs
+ * existing-business option) manually after closing the popup.
+ * ------------------------------------------------------------------------- */
+
+function DebugRow({ label, value, mono = true }: { label: string; value: ReactNode; mono?: boolean }) {
+  return (
+    <div className="flex items-start justify-between gap-3">
+      <span style={{ color: "var(--muted)" }}>{label}</span>
+      <span
+        className="text-left"
+        style={{ color: "var(--foreground)", fontFamily: mono ? "monospace" : undefined, direction: "ltr" }}
+      >
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function MetaLaunchDebugBox({
+  appId,
+  configId,
+  sdkState,
+  windowFbExists,
+  debugStep,
+  flowPhase,
+  selectedTrack,
+  launchDebug,
+  onRecordMetaUi,
+}: {
+  appId?: string;
+  configId?: string;
+  sdkState: SdkState;
+  windowFbExists: boolean;
+  debugStep: DebugStep;
+  flowPhase: FlowPhase;
+  selectedTrack: ConnectionTrack | null;
+  launchDebug: LaunchDebug | null;
+  onRecordMetaUi: (outcome: MetaUiOutcome) => void;
+}) {
+  const matches = configIdMatches(configId);
+  // process.env.NEXT_PUBLIC_* / NODE_ENV are inlined at build time on the client.
+  const runtimeEnv = process.env.NODE_ENV ?? "unknown";
+  const payload = launchDebug?.payload;
+
+  return (
+    <div
+      dir="rtl"
+      className="rounded-xl px-3.5 py-3 text-xs space-y-2"
+      style={{ background: "rgba(107,114,128,0.06)", border: "1px dashed rgba(107,114,128,0.3)", color: "var(--muted)" }}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <p className="font-semibold" style={{ color: "var(--foreground)" }}>
+          דיבאג חיבור Meta
+        </p>
+        <span className="rounded-full bg-gray-200 px-2 py-0.5 text-[10px] font-semibold text-gray-600">
+          Admin
+        </span>
+      </div>
+
+      {/* Config match banner */}
+      <div
+        className="rounded-lg px-2.5 py-1.5 font-semibold"
+        style={{
+          background: matches ? "rgba(22,163,74,0.08)" : "rgba(239,68,68,0.08)",
+          border: `1px solid ${matches ? "rgba(22,163,74,0.25)" : "rgba(239,68,68,0.25)"}`,
+          color: matches ? "#15803d" : "#dc2626",
+        }}
+      >
+        {matches ? "הפרודקשן משתמש ב־Config החדש" : "הפרודקשן לא משתמש ב־Config החדש"}
+      </div>
+
+      <div className="space-y-1">
+        <DebugRow label="סביבת ריצה" value={runtimeEnv} />
+        <DebugRow label="NEXT_PUBLIC_META_APP_ID" value={maskAppId(appId)} />
+        <DebugRow label="NEXT_PUBLIC_META_CONFIG_ID" value={configId || "missing"} />
+        <DebugRow label="Config מצופה" value={EXPECTED_META_CONFIG_ID} />
+        <DebugRow label="התאמת Config" value={matches ? "yes" : "no"} />
+        <DebugRow label="מצב Facebook SDK" value={sdkState} />
+        <DebugRow label="window.FB קיים" value={windowFbExists ? "yes" : "no"} />
+        <DebugRow label="מסלול נבחר" value={selectedTrack ?? "—"} />
+        <DebugRow label="שלב" value={debugStep} />
+        <DebugRow label="flow" value={flowPhase} />
+      </div>
+
+      {/* Last attempted launch payload (sanitized) */}
+      <div className="pt-1 space-y-1" style={{ borderTop: "1px solid var(--border)" }}>
+        <p className="font-semibold pt-1" style={{ color: "var(--foreground)" }}>
+          payload אחרון שנשלח ל־Meta (מנוקה)
+        </p>
+        {payload ? (
+          <>
+            <DebugRow label="selectedConnectionTrack" value={payload.selectedConnectionTrack} />
+            <DebugRow label="config_id" value={payload.config_id || "—"} />
+            <DebugRow label="response_type" value={payload.response_type} />
+            <DebugRow
+              label="override_default_response_type"
+              value={String(payload.override_default_response_type)}
+            />
+            <DebugRow label="featureType" value={payload.featureType || '""'} />
+            <DebugRow label="sessionInfoVersion" value={payload.sessionInfoVersion} />
+            <DebugRow label="extras keys" value={payload.extrasKeys.join(", ")} />
+            <DebugRow label="setup" value={JSON.stringify(payload.extras.setup)} />
+            <DebugRow
+              label="popup result status"
+              value={launchDebug?.popupResultStatus ?? "—"}
+            />
+            <pre
+              className="mt-1 overflow-x-auto rounded-lg px-2.5 py-2 text-[11px]"
+              style={{ background: "rgba(0,0,0,0.04)", direction: "ltr", color: "var(--foreground)" }}
+            >
+              {JSON.stringify(payload, null, 2)}
+            </pre>
+          </>
+        ) : (
+          <p>עדיין לא בוצעה ניסיון חיבור בעמוד הזה.</p>
+        )}
+      </div>
+
+      {/* Manual Meta-UI outcome recorder — Meta does not report this. */}
+      <div className="pt-1 space-y-1.5" style={{ borderTop: "1px solid var(--border)" }}>
+        <p className="font-semibold pt-1" style={{ color: "var(--foreground)" }}>
+          מה Meta הציגה בפועל?
+        </p>
+        <p style={{ color: "var(--muted)" }}>
+          Meta לא מדווחת איזה מסך הוצג. אחרי סגירת החלון, סמני מה ראית כדי לאמת אם חיבור משותף זמין.
+        </p>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => onRecordMetaUi("add_number_only")}
+            className="rounded-lg px-2.5 py-1 font-semibold"
+            style={{ background: "rgba(239,68,68,0.10)", color: "#dc2626", border: "1px solid rgba(239,68,68,0.25)" }}
+          >
+            רק &quot;Add a new number&quot;
+          </button>
+          <button
+            type="button"
+            onClick={() => onRecordMetaUi("existing_option_shown")}
+            className="rounded-lg px-2.5 py-1 font-semibold"
+            style={{ background: "rgba(22,163,74,0.10)", color: "#15803d", border: "1px solid rgba(22,163,74,0.25)" }}
+          >
+            הוצגה אפשרות למספר קיים
+          </button>
+        </div>
+        {launchDebug && (
+          <DebugRow label="תוצאה שתועדה" value={launchDebug.metaUiOutcome} />
+        )}
       </div>
     </div>
   );

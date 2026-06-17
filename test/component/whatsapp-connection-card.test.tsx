@@ -612,7 +612,7 @@ describe("WhatsAppConnectionCard — admin template debug table", () => {
     expect(screen.getByText("אזור בדיקות למנהל בלבד")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /הכנת תבניות WhatsApp/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /סנכרון תבניות/ })).toBeInTheDocument();
-    expect(screen.getByText("דיבאג (אדמין בלבד)")).toBeInTheDocument();
+    expect(screen.getByText("דיבאג חיבור Meta")).toBeInTheDocument();
   });
 });
 
@@ -681,5 +681,146 @@ describe("WhatsAppConnectionCard — owner setup status (states D/E/F)", () => {
     // Operational still pending (not blocked); never escalated to needs-support.
     expect(screen.getByText("ממתין לאישור WhatsApp")).toBeInTheDocument();
     expect(screen.queryByText("נדרשת בדיקה")).not.toBeInTheDocument();
+  });
+});
+
+/* --------------------------------------------------------------------------
+ * Admin Meta launch diagnostics ("דיבאג חיבור Meta") + track-specific payload
+ * ------------------------------------------------------------------------ */
+
+/** Install a fake FB SDK whose login() captures the config it was called with. */
+function installCapturingFb(): { configs: unknown[] } {
+  const configs: unknown[] = [];
+  (window as unknown as { FB: unknown }).FB = {
+    init: vi.fn(),
+    login: (_cb: (r: unknown) => void, config: unknown) => {
+      configs.push(config);
+      // Close immediately without a code — we only care about the launch payload.
+      _cb({ status: "unknown", authResponse: null });
+    },
+  };
+  return { configs };
+}
+
+describe("WhatsAppConnectionCard — admin Meta launch diagnostics", () => {
+  const PROD_CFG = "1579233260602857";
+
+  it("admin sees the exact production Config ID + 'using the new Config' banner when it matches", () => {
+    render(
+      <WhatsAppConnectionCard
+        status={makeStatus("not_connected")}
+        appId="1234567890123456"
+        configId={PROD_CFG}
+        graphVersion="v19.0"
+        isAdmin
+      />,
+    );
+    expect(screen.getByText("דיבאג חיבור Meta")).toBeInTheDocument();
+    expect(screen.getByText("הפרודקשן משתמש ב־Config החדש")).toBeInTheDocument();
+    // The exact public Config ID is shown to the admin.
+    expect(screen.getAllByText(PROD_CFG).length).toBeGreaterThan(0);
+  });
+
+  it("admin sees a mismatch warning when the Config ID is not the expected one", () => {
+    render(
+      <WhatsAppConnectionCard
+        status={makeStatus("not_connected")}
+        appId="app"
+        configId="some_other_cfg"
+        graphVersion="v19.0"
+        isAdmin
+      />,
+    );
+    expect(screen.getByText("הפרודקשן לא משתמש ב־Config החדש")).toBeInTheDocument();
+  });
+
+  it("non-admin never sees the Meta debug box / Config ID details", () => {
+    render(
+      <WhatsAppConnectionCard
+        status={makeStatus("not_connected")}
+        appId="1234567890123456"
+        configId={PROD_CFG}
+        graphVersion="v19.0"
+        isAdmin={false}
+      />,
+    );
+    expect(screen.queryByText("דיבאג חיבור Meta")).not.toBeInTheDocument();
+    expect(screen.queryByText(PROD_CFG)).not.toBeInTheDocument();
+    expect(screen.queryByText("הפרודקשן משתמש ב־Config החדש")).not.toBeInTheDocument();
+  });
+
+  it("does not attempt FB.login when window.FB / the SDK is unavailable", async () => {
+    // No installFb() — window.FB is absent.
+    const user = userEvent.setup();
+    render(<WhatsAppConnectionCard status={makeStatus("not_connected")} {...PROPS} />);
+    await openConnect(user);
+    expect(
+      await screen.findByText("חיבור WhatsApp עדיין לא זמין. נסי שוב מאוחר יותר."),
+    ).toBeInTheDocument();
+    expect(m.completeEmbeddedSignupAction).not.toHaveBeenCalled();
+  });
+
+  it("existing_business track sends featureType=whatsapp_business_app_onboarding", async () => {
+    const fb = installCapturingFb();
+    const user = userEvent.setup();
+    render(<WhatsAppConnectionCard status={makeStatus("not_connected")} {...PROPS} />);
+    await openConnect(user, "יש לי WhatsApp Business קיים");
+
+    await waitFor(() => expect(fb.configs.length).toBe(1));
+    const cfg = fb.configs[0] as { extras: { featureType: string } };
+    expect(cfg.extras.featureType).toBe("whatsapp_business_app_onboarding");
+  });
+
+  it("new_number track does NOT include the existing-business featureType, and differs from existing_business", async () => {
+    const fb = installCapturingFb();
+    const user = userEvent.setup();
+    render(<WhatsAppConnectionCard status={makeStatus("not_connected")} {...PROPS} />);
+
+    await openConnect(user, "אין לי מספר עסקי / אני רוצה מספר חדש");
+    await waitFor(() => expect(fb.configs.length).toBe(1));
+    const fresh = fb.configs[0] as { extras: { featureType: string } };
+    expect(fresh.extras.featureType).toBe("");
+    expect(fresh.extras.featureType).not.toBe("whatsapp_business_app_onboarding");
+
+    // Re-launch with existing-business and confirm the payloads differ.
+    await openConnect(user, "יש לי WhatsApp Business קיים");
+    await waitFor(() => expect(fb.configs.length).toBe(2));
+    expect(fb.configs[0]).not.toEqual(fb.configs[1]);
+  });
+
+  it("personal track requires acknowledgement before continuing to Meta", async () => {
+    const user = userEvent.setup();
+    render(<WhatsAppConnectionCard status={makeStatus("not_connected")} {...PROPS} />);
+    await user.click(screen.getByRole("button", { name: /חיבור WhatsApp Business/ }));
+    await user.click(await screen.findByText("יש לי WhatsApp רגיל/אישי"));
+
+    const continueBtn = screen.getByRole("button", { name: /המשך לחיבור ב־Meta/ });
+    expect(continueBtn).toBeDisabled();
+
+    // Ticking the acknowledgement checkbox enables the continue button.
+    await user.click(screen.getByRole("checkbox"));
+    expect(continueBtn).toBeEnabled();
+  });
+
+  it("the launch payload shown to admins contains no secrets", async () => {
+    installCapturingFb();
+    const user = userEvent.setup();
+    render(
+      <WhatsAppConnectionCard
+        status={makeStatus("not_connected")}
+        appId="1234567890123456"
+        configId={PROD_CFG}
+        graphVersion="v19.0"
+        isAdmin
+      />,
+    );
+    await openConnect(user, "יש לי WhatsApp Business קיים");
+
+    // The masked App ID is shown; the full App ID never appears in the DOM.
+    await waitFor(() =>
+      expect(screen.getAllByText("1234…56").length).toBeGreaterThan(0),
+    );
+    expect(screen.queryByText("1234567890123456")).not.toBeInTheDocument();
+    expect(document.body.textContent ?? "").not.toMatch(/token|secret/i);
   });
 });
