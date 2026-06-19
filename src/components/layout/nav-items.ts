@@ -46,13 +46,13 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     label: "הגדלת הכנסות",
     items: [
       { href: "/bring-back", label: NAV.bringBack },
-      { href: "/automations", label: NAV.automations },
       { href: "/finance", label: NAV.finance },
     ],
   },
   {
     label: "מערכת",
     items: [
+      { href: "/automations", label: NAV.automations },
       { href: "/settings", label: NAV.settings },
     ],
   },

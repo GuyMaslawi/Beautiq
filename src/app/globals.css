@@ -44,6 +44,19 @@
   --border: #ece4e8;
   --border-strong: #d8ccd4;
 
+  /* ── shadcn/ui bridge tokens (mapped to the Allura palette) ── */
+  --card: var(--surface);
+  --card-foreground: var(--foreground);
+  --popover: var(--surface);
+  --popover-foreground: var(--foreground);
+  --secondary: var(--background-alt);
+  --secondary-foreground: var(--foreground);
+  --muted-foreground: var(--muted);
+  --destructive: var(--error);
+  --destructive-foreground: #ffffff;
+  --input: var(--border);
+  --ring: var(--primary);
+
   /* ── Shadows ─────────────────────────────────────────── */
   --shadow-xs: 0 1px 2px rgba(43, 37, 48, 0.05);
   --shadow-sm: 0 1px 4px rgba(43, 37, 48, 0.07), 0 1px 2px rgba(43, 37, 48, 0.04);
@@ -101,6 +114,19 @@
   /* Borders */
   --color-border: var(--border);
   --color-border-strong: var(--border-strong);
+
+  /* shadcn/ui bridge */
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
 
   /* Shadows as box-shadow utilities */
   --shadow-xs: var(--shadow-xs);

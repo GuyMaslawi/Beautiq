@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Clock, Banknote, Sparkles } from "lucide-react";
+import { Clock, Banknote, Sparkles, AlertTriangle } from "lucide-react";
 import type { Prisma } from "@prisma/client";
 import { ToggleServiceButton } from "./toggle-service-button";
 import { SERVICES } from "@/lib/constants/he";
@@ -13,6 +13,8 @@ type ServiceCardProps = {
     price: Prisma.Decimal;
     isActive: boolean;
   };
+  /** Optional pricing-health hint shown when this service has a flagged insight. */
+  pricingBadge?: string;
 };
 
 function formatMinutes(minutes: number): string {
@@ -28,7 +30,7 @@ function formatMinutes(minutes: number): string {
   return `${minutes} דק׳`;
 }
 
-export function ServiceCard({ service }: ServiceCardProps) {
+export function ServiceCard({ service, pricingBadge }: ServiceCardProps) {
   return (
     <div
       className="overflow-hidden rounded-2xl border transition-shadow hover:shadow-md"
@@ -116,6 +118,21 @@ export function ServiceCard({ service }: ServiceCardProps) {
           >
             {SERVICES.card.editButton}
           </Link>
+
+          {pricingBadge && (
+            <Link
+              href={`/services/${service.id}`}
+              className="flex h-8 items-center gap-1.5 rounded-xl px-3 text-xs font-medium transition-opacity hover:opacity-80"
+              style={{
+                background: "rgba(220,120,40,0.08)",
+                color: "#b86020",
+                border: "1px solid rgba(220,120,40,0.20)",
+              }}
+            >
+              <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+              {pricingBadge}
+            </Link>
+          )}
         </div>
       </div>
     </div>

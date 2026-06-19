@@ -1,64 +1,14 @@
 import Link from "next/link";
 import { Users2, CalendarCheck, UserX, Clock, Upload } from "lucide-react";
-import type { ReactNode } from "react";
 import { requireCurrentBusiness } from "@/server/auth/session";
 import { getClients, getClientSummary } from "@/server/clients/queries";
 import { ClientRow } from "@/components/clients/client-row";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
+import { PageHeader } from "@/components/ui/page-header";
+import { MetricCard } from "@/components/ui/metric-card";
 import { CLIENTS } from "@/lib/constants/he";
-
-interface SummaryCardProps {
-  label: string;
-  helper: string;
-  count: number;
-  icon: ReactNode;
-  highlight?: boolean;
-  warn?: boolean;
-}
-
-function SummaryCard({ label, helper, count, icon, highlight, warn }: SummaryCardProps) {
-  return (
-    <div
-      className="rounded-2xl px-5 py-4 transition-shadow hover:shadow-md"
-      style={{
-        background: highlight
-          ? "rgba(247,238,243,0.85)"
-          : warn
-          ? "rgba(254,246,228,0.80)"
-          : "rgba(255,255,255,0.90)",
-        border: `1px solid ${highlight ? "rgba(184,107,140,0.22)" : warn ? "rgba(184,150,10,0.22)" : "var(--border)"}`,
-        boxShadow: "0 1px 6px rgba(43,37,48,0.06)",
-      }}
-    >
-      <div
-        className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl"
-        style={{
-          background: highlight
-            ? "rgba(184,107,140,0.13)"
-            : warn
-            ? "rgba(184,150,10,0.12)"
-            : "rgba(184,107,140,0.08)",
-        }}
-      >
-        <span style={{ color: highlight ? "#b86b8c" : warn ? "#b87c1e" : "#b86b8c" }}>{icon}</span>
-      </div>
-      <p
-        className="text-2xl font-bold tabular-nums"
-        style={{ color: highlight ? "#b86b8c" : warn ? "#7a6400" : "#2b2530" }}
-      >
-        {count}
-      </p>
-      <p className="mt-1 text-xs font-medium leading-tight" style={{ color: "#8a8190" }}>
-        {label}
-      </p>
-      <p className="mt-0.5 text-[10px] leading-tight" style={{ color: "#bbb3c2" }}>
-        {helper}
-      </p>
-    </div>
-  );
-}
 
 export default async function ClientsPage({
   searchParams,
@@ -79,51 +29,48 @@ export default async function ClientsPage({
   return (
     <div className="mx-auto w-full max-w-6xl space-y-6">
       {/* Page header */}
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--foreground)" }}>
-            לקוחות
-          </h1>
-          <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
-            כל הלקוחות שלך, במקום אחד. ניהול קשרים, מעקב פגישות — בקלות.
-          </p>
-        </div>
-        <Link href="/clients/import">
-          <Button
-            variant="secondary"
-            size="sm"
-            className="flex items-center gap-1.5 shrink-0"
-          >
-            <Upload className="h-3.5 w-3.5" />
-            ייבוא לקוחות
-          </Button>
-        </Link>
-      </div>
+      <PageHeader
+        icon={Users2}
+        title="לקוחות"
+        subtitle="כל הלקוחות שלך, במקום אחד. ניהול קשרים, מעקב פגישות — בקלות."
+        action={
+          <Link href="/clients/import">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="flex shrink-0 items-center gap-1.5"
+            >
+              <Upload className="h-3.5 w-3.5" />
+              ייבוא לקוחות
+            </Button>
+          </Link>
+        }
+      />
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <SummaryCard
+        <MetricCard
           label="פגישות קרובות"
           helper={CLIENTS.summary.withUpcomingHelper}
           count={summary.withUpcoming}
           icon={<CalendarCheck className="h-4 w-4" />}
           highlight={summary.withUpcoming > 0}
         />
-        <SummaryCard
+        <MetricCard
           label="לא הגיעו"
           helper={CLIENTS.summary.withNoShowHelper}
           count={summary.withNoShow}
           icon={<UserX className="h-4 w-4" />}
           warn={summary.withNoShow > 0}
         />
-        <SummaryCard
+        <MetricCard
           label="זקוקים למעקב"
           helper={CLIENTS.summary.notReturnedHelper}
           count={summary.notReturned}
           icon={<Clock className="h-4 w-4" />}
           warn={summary.notReturned > 0}
         />
-        <SummaryCard
+        <MetricCard
           label={CLIENTS.summary.total}
           helper={CLIENTS.summary.totalHelper}
           count={summary.total}

@@ -1,8 +1,11 @@
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
 /**
  * cn — מאחד שמות מחלקות Tailwind בצורה בטוחה.
- * מסנן ערכים ריקים/שקריים ומאחד למחרוזת אחת.
- * מספיק לצרכי הבסיס; אפשר להחליף ל-tailwind-merge בעתיד אם יידרש.
+ * משתמש ב-clsx לסינון ערכים מותנים וב-tailwind-merge לפתרון התנגשויות מחלקות.
+ * תואם לאחור עם הקריאות הקיימות (מחרוזות / false / null / undefined).
  */
-export function cn(...classes: Array<string | false | null | undefined>): string {
-  return classes.filter(Boolean).join(" ");
+export function cn(...inputs: ClassValue[]): string {
+  return twMerge(clsx(inputs));
 }

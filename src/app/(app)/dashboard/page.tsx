@@ -2,8 +2,10 @@ import { getCurrentBusiness } from "@/server/auth/session";
 import { getDashboardData } from "@/server/dashboard/queries";
 import { getGuidanceData } from "@/server/guidance/queries";
 import { getEmptySlotsData } from "@/server/empty-slots/queries";
-import { getFinanceDashboardSummary } from "@/server/finance/queries";
-import { getRemindersDueCount } from "@/server/automations/queries";
+import { getRevenueForecastData } from "@/server/revenue-forecast/queries";
+import { getReputationSummary } from "@/server/reputation/queries";
+import { getRemindersDueCount, getRecentAutomationRuns } from "@/server/automations/queries";
+import { getOwnerWhatsAppStatus } from "@/server/whatsapp/owner-status";
 import { getLateCancellationsThisWeek } from "@/server/bookings/queries";
 import { generateGuidanceItems } from "@/lib/guidance/rules";
 import { BusinessSetupCard } from "@/components/dashboard/business-setup-card";
@@ -25,21 +27,33 @@ export default async function DashboardPage() {
 
   const tenant = { businessId: business.id };
 
-  const [dashboardData, guidanceQueryData, emptySlotsData, financeSummary, remindersDueCount, lateCancellationsCount] =
-    await Promise.all([
-      getDashboardData(tenant, {
-        phone: business.phone,
-        description: business.description,
-        city: business.city,
-        area: business.area,
-        addressNote: business.addressNote,
-      }),
-      getGuidanceData(tenant),
-      getEmptySlotsData(tenant),
-      getFinanceDashboardSummary(tenant),
-      getRemindersDueCount(tenant),
-      getLateCancellationsThisWeek(tenant),
-    ]);
+  const [
+    dashboardData,
+    guidanceQueryData,
+    emptySlotsData,
+    forecast,
+    reputationSummary,
+    remindersDueCount,
+    recentRuns,
+    whatsappStatus,
+    lateCancellationsCount,
+  ] = await Promise.all([
+    getDashboardData(tenant, {
+      phone: business.phone,
+      description: business.description,
+      city: business.city,
+      area: business.area,
+      addressNote: business.addressNote,
+    }),
+    getGuidanceData(tenant),
+    getEmptySlotsData(tenant),
+    getRevenueForecastData(tenant),
+    getReputationSummary(tenant),
+    getRemindersDueCount(tenant),
+    getRecentAutomationRuns(tenant, 3),
+    getOwnerWhatsAppStatus(business.id),
+    getLateCancellationsThisWeek(tenant),
+  ]);
 
   const guidanceItems = generateGuidanceItems(
     guidanceQueryData,
@@ -58,11 +72,14 @@ export default async function DashboardPage() {
       emptySlots={emptySlotsData.slots}
       suggestedClients={emptySlotsData.suggestedClients}
       atRiskCount={guidanceQueryData.lostClientsCount}
-      financeRevenue={financeSummary.revenue}
-      financeExpenses={financeSummary.expenses}
-      financeProfit={financeSummary.profit}
       remindersDueCount={remindersDueCount}
       lateCancellationsCount={lateCancellationsCount}
+      forecast={forecast}
+      reviewReadyCount={reputationSummary.recentCompletedCount}
+      recentRuns={recentRuns}
+      whatsappLabel={whatsappStatus.ownerSetupLabel}
+      whatsappReady={whatsappStatus.ownerSetupState === "ready"}
+      whatsappConnected={whatsappStatus.readiness.connectionReady}
     />
   );
 }

@@ -9,6 +9,7 @@ import type {
 } from "@/server/dashboard/queries";
 import type { SuggestedClient } from "@/server/empty-slots/queries";
 import type { EmptySlot } from "@/lib/empty-slots/find-empty-slots";
+import type { RevenueForecastData } from "@/server/revenue-forecast/queries";
 
 // next/link → plain anchor so hrefs are inspectable in jsdom.
 vi.mock("next/link", () => ({
@@ -79,7 +80,34 @@ const emptySlots: EmptySlot[] = [
   { date: "2026-06-16", weekday: 2, startMinutes: 600, endMinutes: 660, durationMinutes: 60 },
 ];
 
-/** Render the dashboard with every attention card triggered. */
+const forecast: RevenueForecastData = {
+  completedRevenue: 3200,
+  completedBookingsCount: 8,
+  upcomingRevenue: 800,
+  upcomingBookingsCount: 2,
+  expectedRevenue: 4000,
+  lostRevenue: 0,
+  lostBookingsCount: 0,
+  lastMonthRevenue: 3000,
+  lastMonthCompletedCount: 7,
+  monthlyTarget: 3450,
+  hasEnoughData: true,
+  targetReliable: true,
+  gapToTarget: 0,
+  isOnTrack: true,
+  daysPassed: 15,
+  totalDays: 30,
+  expectedProgressPct: 50,
+  actualProgressPct: 90,
+  avgBookingValue: 400,
+  confidence: "high",
+  topServices: [],
+  atRiskCount: 7,
+  emptySlotsCount: 3,
+  avgServicePrice: 350,
+};
+
+/** Render the dashboard with every attention/opportunity card triggered. */
 function renderWithAllAttention() {
   return render(
     <SetupChecklist
@@ -95,6 +123,12 @@ function renderWithAllAttention() {
       atRiskCount={7}
       remindersDueCount={4}
       lateCancellationsCount={1}
+      forecast={forecast}
+      reviewReadyCount={5}
+      recentRuns={[]}
+      whatsappLabel="WhatsApp מוכן לשליחה"
+      whatsappReady
+      whatsappConnected
     />,
   );
 }
@@ -107,11 +141,11 @@ function attentionLinks(): HTMLAnchorElement[] {
 }
 
 describe("dashboard attention cards", () => {
-  it("retention/win-back card links to /bring-back with the new copy", () => {
+  it("surfaces inactive clients in the opportunities section linking to /bring-back", () => {
     renderWithAllAttention();
-    const link = screen.getByText("לניהול שימור").closest("a")!;
+    const link = screen.getByText("להחזרת לקוחות").closest("a")!;
     expect(link.getAttribute("href")).toBe("/bring-back");
-    expect(screen.getByText(/לקוחות שמחכות למעקב/)).toBeInTheDocument();
+    expect(screen.getByText("לקוחות שלא חזרו")).toBeInTheDocument();
   });
 
   it("does not render a separate 'לקוחות בסיכון' attention card", () => {
@@ -138,9 +172,9 @@ describe("dashboard attention cards", () => {
     expect(new Set(hrefs).size).toBe(hrefs.length);
   });
 
-  it("points the empty-slots card at the dashboard anchor, not /bring-back", () => {
+  it("links the empty-slots opportunity to the bring-back slots tab", () => {
     renderWithAllAttention();
-    const link = screen.getByText("מילוי חלונות").closest("a")!;
-    expect(link.getAttribute("href")).toBe("/dashboard#empty-slots");
+    const link = screen.getByText("למילוי שעות ריקות").closest("a")!;
+    expect(link.getAttribute("href")).toBe("/bring-back?tab=slots");
   });
 });

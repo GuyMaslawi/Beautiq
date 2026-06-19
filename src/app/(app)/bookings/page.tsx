@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { CalendarDays, CalendarRange, Clock, XCircle, Plus, ChevronUp, ChevronDown, ChevronsUpDown, List } from "lucide-react";
-import type { ReactNode } from "react";
 import { requireTenant } from "@/server/auth/session";
 import { getBookings, getBookingSummary, getActiveCancellationPolicy, getCalendarBookings } from "@/server/bookings/queries";
 import { prisma } from "@/server/db/prisma";
 import { EmptyState } from "@/components/ui/empty-state";
+import { MetricCard } from "@/components/ui/metric-card";
 import { BookingRow } from "@/components/bookings/booking-row";
 import { BookingSearchInput } from "@/components/bookings/booking-search-input";
 import { BookingAdvancedFilter } from "@/components/bookings/booking-advanced-filter";
@@ -82,86 +82,6 @@ const TABLE_COLS: ColDef[] = [
   { sortable: true,  field: "status",     label: "סטטוס" },
   { sortable: false, label: "פעולות" },
 ];
-
-// ---------------------------------------------------------------------------
-// Summary card
-// ---------------------------------------------------------------------------
-
-interface SummaryCardProps {
-  label: string;
-  count: number;
-  icon: ReactNode;
-  highlight?: boolean;
-  warn?: boolean;
-  compact?: boolean;
-}
-
-function SummaryCard({ label, count, icon, highlight, warn, compact }: SummaryCardProps) {
-  const accentColor = highlight ? "#b86b8c" : warn ? "#b87c1e" : "#2b2530";
-
-  if (compact) {
-    return (
-      <div
-        className="flex items-center gap-2 rounded-xl px-3 py-2"
-        style={{
-          background: highlight
-            ? "rgba(247,238,243,0.85)"
-            : warn
-            ? "rgba(254,246,228,0.80)"
-            : "rgba(255,255,255,0.80)",
-          border: `1px solid ${highlight ? "rgba(184,107,140,0.20)" : warn ? "rgba(184,150,10,0.20)" : "var(--border)"}`,
-        }}
-      >
-        <span style={{ color: accentColor }}>{icon}</span>
-        <span className="text-base font-bold tabular-nums" style={{ color: accentColor }}>
-          {count}
-        </span>
-        <span className="text-xs font-medium" style={{ color: "#8a8190" }}>{label}</span>
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className="rounded-2xl px-5 py-4 transition-shadow hover:shadow-md"
-      style={{
-        background: highlight
-          ? "rgba(247,238,243,0.85)"
-          : warn
-          ? "rgba(254,246,228,0.80)"
-          : "rgba(255,255,255,0.90)",
-        border: `1px solid ${highlight ? "rgba(184,107,140,0.22)" : warn ? "rgba(184,150,10,0.22)" : "var(--border)"}`,
-        boxShadow: "0 1px 6px rgba(43,37,48,0.06)",
-      }}
-    >
-      <div className="mb-3 flex items-center gap-2">
-        <div
-          className="flex h-8 w-8 items-center justify-center rounded-xl"
-          style={{
-            background: highlight
-              ? "rgba(184,107,140,0.13)"
-              : warn
-              ? "rgba(184,150,10,0.12)"
-              : "rgba(184,107,140,0.08)",
-          }}
-        >
-          <span style={{ color: highlight ? "#b86b8c" : warn ? "#b87c1e" : "#b86b8c" }}>
-            {icon}
-          </span>
-        </div>
-      </div>
-      <p
-        className="text-2xl font-bold tabular-nums"
-        style={{ color: highlight ? "#b86b8c" : warn ? "#7a6400" : "#2b2530" }}
-      >
-        {count}
-      </p>
-      <p className="mt-1 text-xs font-medium leading-tight" style={{ color: "#8a8190" }}>
-        {label}
-      </p>
-    </div>
-  );
-}
 
 // ---------------------------------------------------------------------------
 // Sort icon helper
@@ -376,28 +296,28 @@ export default async function BookingsPage({
       {/* Summary cards — compact chips in calendar mode, full cards in list mode */}
       {isCalendarView ? (
         <div className="flex items-center gap-2 flex-wrap" dir="rtl">
-          <SummaryCard
+          <MetricCard
             label="תורים היום"
             count={summary.todayCount}
             icon={<CalendarDays className="h-3.5 w-3.5" />}
             highlight={summary.todayCount > 0}
             compact
           />
-          <SummaryCard
+          <MetricCard
             label={BOOKINGS.summary.pending}
             count={summary.pendingCount}
             icon={<Clock className="h-3.5 w-3.5" />}
             warn={summary.pendingCount > 0}
             compact
           />
-          <SummaryCard
+          <MetricCard
             label="ביטולים"
             count={summary.cancelledCount}
             icon={<XCircle className="h-3.5 w-3.5" />}
             warn={summary.cancelledCount > 0}
             compact
           />
-          <SummaryCard
+          <MetricCard
             label={BOOKINGS.summary.week}
             count={summary.weekCount}
             icon={<CalendarRange className="h-3.5 w-3.5" />}
@@ -407,25 +327,25 @@ export default async function BookingsPage({
       ) : (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <SummaryCard
+            <MetricCard
               label="היום"
               count={summary.todayCount}
               icon={<CalendarDays className="h-4 w-4" />}
               highlight={summary.todayCount > 0}
             />
-            <SummaryCard
+            <MetricCard
               label={BOOKINGS.summary.pending}
               count={summary.pendingCount}
               icon={<Clock className="h-4 w-4" />}
               warn={summary.pendingCount > 0}
             />
-            <SummaryCard
+            <MetricCard
               label={BOOKINGS.summary.cancelled}
               count={summary.cancelledCount}
               icon={<XCircle className="h-4 w-4" />}
               warn={summary.cancelledCount > 0}
             />
-            <SummaryCard
+            <MetricCard
               label={BOOKINGS.summary.week}
               count={summary.weekCount}
               icon={<CalendarRange className="h-4 w-4" />}

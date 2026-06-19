@@ -2,6 +2,7 @@ import { Wallet } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { requireCurrentBusiness } from "@/server/auth/session";
 import { getFinanceData, type PeriodFilter } from "@/server/finance/queries";
+import { getRevenueForecastData } from "@/server/revenue-forecast/queries";
 import { FinancePageClient } from "@/components/finance/finance-page-client";
 import { FINANCE } from "@/lib/constants/he";
 
@@ -21,7 +22,10 @@ export default async function FinancePage({ searchParams }: PageProps) {
     ? (rawPeriod as PeriodFilter)
     : "month";
 
-  const data = await getFinanceData(tenant, period);
+  const [data, forecast] = await Promise.all([
+    getFinanceData(tenant, period),
+    getRevenueForecastData(tenant),
+  ]);
 
   return (
     <div className="w-full space-y-6">
@@ -31,7 +35,7 @@ export default async function FinancePage({ searchParams }: PageProps) {
         subtitle={FINANCE.pageSubtitle}
       />
 
-      <FinancePageClient data={data} period={period} />
+      <FinancePageClient data={data} period={period} forecast={forecast} />
     </div>
   );
 }

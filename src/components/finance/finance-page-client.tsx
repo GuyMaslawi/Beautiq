@@ -11,11 +11,13 @@ import {
   Trash2,
   BarChart2,
   Sparkles,
+  Target,
 } from "lucide-react";
 import { FINANCE } from "@/lib/constants/he";
 import { deleteExpenseAction } from "@/server/finance/actions";
 import { ExpenseFormModal } from "./expense-form-modal";
 import type { FinanceData, PeriodFilter } from "@/server/finance/queries";
+import type { RevenueForecastData } from "@/server/revenue-forecast/queries";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -333,15 +335,120 @@ function ExpenseList({
 }
 
 // ---------------------------------------------------------------------------
+// Target vs. actual — surfaces the monthly forecast inside Finance (Phase 3
+// recommendation). Always month-scoped, regardless of the period filter.
+// ---------------------------------------------------------------------------
+
+const CONFIDENCE_LABEL: Record<RevenueForecastData["confidence"], string> = {
+  high: "דיוק גבוה",
+  medium: "דיוק בינוני",
+  low: "דיוק ראשוני",
+};
+
+function TargetVsActual({ forecast }: { forecast: RevenueForecastData }) {
+  if (!forecast.hasEnoughData) return null;
+
+  const gapClosed = forecast.gapToTarget <= 0 || forecast.isOnTrack;
+
+  const segments = [
+    { label: FINANCE.summary.revenue, value: forecast.completedRevenue, color: "#3d8b6e" },
+    { label: "תורים קרובים", value: forecast.upcomingRevenue, color: "#c97898" },
+    { label: "פער ליעד", value: forecast.gapToTarget, color: "#d4a81e" },
+    { label: "הכנסה שאבדה", value: forecast.lostRevenue, color: "#e06060" },
+  ].filter((s) => s.value > 0);
+
+  const barTotal = segments.reduce((sum, s) => sum + s.value, 0) || 1;
+
+  return (
+    <div
+      className="rounded-2xl p-5"
+      style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+    >
+      <div className="mb-1 flex items-center gap-2">
+        <Target className="h-4 w-4" style={{ color: "#b86b8c" }} />
+        <h3 className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+          יעד מול ביצוע · החודש
+        </h3>
+        <span
+          className="ms-auto rounded-full px-2 py-0.5 text-[10px] font-bold"
+          style={{ background: "rgba(184,107,140,0.10)", color: "#b86b8c" }}
+        >
+          {CONFIDENCE_LABEL[forecast.confidence]}
+        </span>
+      </div>
+      <p className="mb-4 text-xs" style={{ color: "var(--muted)" }}>
+        צפי לסוף החודש מבוסס על תורים שהושלמו ועל תורים מאושרים שעוד צפויים החודש.
+      </p>
+
+      {/* Key numbers */}
+      <div className="mb-4 grid grid-cols-3 gap-3">
+        <div>
+          <p className="text-xs" style={{ color: "var(--muted)" }}>יעד החודש</p>
+          <p className="text-lg font-bold tabular-nums" style={{ color: "#b8960a" }}>
+            {forecast.monthlyTarget > 0 ? formatILS(forecast.monthlyTarget) : "—"}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs" style={{ color: "var(--muted)" }}>צפי לסוף החודש</p>
+          <p className="text-lg font-bold tabular-nums" style={{ color: "#b86b8c" }}>
+            {formatILS(forecast.expectedRevenue)}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs" style={{ color: "var(--muted)" }}>
+            {gapClosed ? "עמידה ביעד" : "פער ליעד"}
+          </p>
+          <p
+            className="text-lg font-bold tabular-nums"
+            style={{ color: gapClosed ? "#3d8b6e" : "#b8960a" }}
+          >
+            {gapClosed ? "✓ ביעד" : formatILS(forecast.gapToTarget)}
+          </p>
+        </div>
+      </div>
+
+      {/* Composition bar */}
+      {segments.length > 0 && (
+        <>
+          <div className="flex h-2.5 overflow-hidden rounded-full" style={{ background: "rgba(0,0,0,0.06)" }}>
+            {segments.map((s) => (
+              <div
+                key={s.label}
+                style={{ width: `${(s.value / barTotal) * 100}%`, background: s.color }}
+                title={`${s.label}: ${formatILS(s.value)}`}
+              />
+            ))}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5">
+            {segments.map((s) => (
+              <div key={s.label} className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: s.color }} />
+                <span className="text-xs" style={{ color: "var(--foreground-soft)" }}>
+                  {s.label}
+                </span>
+                <span className="text-xs font-semibold" style={{ color: s.color }}>
+                  {formatILS(s.value)}
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Main client component
 // ---------------------------------------------------------------------------
 
 interface FinancePageClientProps {
   data: FinanceData;
   period: PeriodFilter;
+  forecast: RevenueForecastData;
 }
 
-export function FinancePageClient({ data, period }: FinancePageClientProps) {
+export function FinancePageClient({ data, period, forecast }: FinancePageClientProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -410,6 +517,9 @@ export function FinancePageClient({ data, period }: FinancePageClientProps) {
           warn={isOverspend}
         />
       </div>
+
+      {/* Target vs. actual (monthly forecast) */}
+      <TargetVsActual forecast={forecast} />
 
       {/* Overspend warning */}
       {isOverspend && (

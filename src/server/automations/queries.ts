@@ -201,3 +201,42 @@ export async function getRemindersDueCount(
     },
   });
 }
+
+// ---------------------------------------------------------------------------
+// Recent automation activity (read-only) — surfaces the existing AutomationRun
+// audit trail for the dashboard "אוטומציות" section. No new behaviour.
+// ---------------------------------------------------------------------------
+
+export interface RecentAutomationRun {
+  id: string;
+  type: string;
+  status: string;
+  sentCount: number;
+  startedAtISO: string;
+}
+
+export async function getRecentAutomationRuns(
+  tenant: TenantContext,
+  limit = 3,
+): Promise<RecentAutomationRun[]> {
+  const runs = await prisma.automationRun.findMany({
+    where: { businessId: tenant.businessId },
+    orderBy: { startedAt: "desc" },
+    take: limit,
+    select: {
+      id: true,
+      type: true,
+      status: true,
+      sentCount: true,
+      startedAt: true,
+    },
+  });
+
+  return runs.map((r) => ({
+    id: r.id,
+    type: r.type,
+    status: r.status,
+    sentCount: r.sentCount,
+    startedAtISO: r.startedAt.toISOString(),
+  }));
+}

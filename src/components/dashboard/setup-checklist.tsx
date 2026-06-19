@@ -17,16 +17,20 @@ import {
   CheckCircle2,
   Circle,
   RefreshCcw,
-  BellRing,
   XCircle,
 } from "lucide-react";
-import { AUTOMATIONS, BOOKING_STATUS, BOOKINGS, DASHBOARD } from "@/lib/constants/he";
-import { FadeIn, StaggerIn, StaggerItem } from "@/components/ui/animate";
+import { BOOKING_STATUS, BOOKINGS, DASHBOARD } from "@/lib/constants/he";
+import { FadeIn } from "@/components/ui/animate";
+import { DashboardSection } from "@/components/dashboard/dashboard-section";
+import { RevenueSection } from "@/components/dashboard/revenue-section";
+import { AutomationsSection } from "@/components/dashboard/automations-section";
 import type {
   DashboardMetrics,
   SetupState,
   UpcomingBookingItem,
 } from "@/server/dashboard/queries";
+import type { RevenueForecastData } from "@/server/revenue-forecast/queries";
+import type { RecentAutomationRun } from "@/server/automations/queries";
 import type { GuidanceItem } from "@/lib/guidance/rules";
 import type { EmptySlot } from "@/lib/empty-slots/find-empty-slots";
 import type { SuggestedClient } from "@/server/empty-slots/queries";
@@ -279,95 +283,6 @@ function DashboardQuickActions() {
           <span>קביעת פגישה חדשה</span>
         </Link>
       </div>
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// DashboardMetricCard
-// ══════════════════════════════════════════════════════════════════════════════
-
-function DashboardMetricCard({
-  title,
-  value,
-  subtext,
-  icon: Icon,
-  accent = false,
-  href,
-}: {
-  title: string;
-  value: string;
-  subtext?: string;
-  icon: LucideIcon;
-  accent?: boolean;
-  href?: string;
-}) {
-  const inner = (
-    <>
-      <div
-        className="flex h-8 w-8 items-center justify-center rounded-xl"
-        style={
-          accent
-            ? { background: "rgba(184,107,140,0.14)" }
-            : { background: "rgba(43,37,48,0.06)" }
-        }
-      >
-        <Icon
-          className="h-4 w-4"
-          style={{ color: accent ? "#b86b8c" : "#8a8190" }}
-        />
-      </div>
-
-      <div>
-        <p
-          className="text-2xl font-bold tabular-nums tracking-tight"
-          style={{ color: accent ? "#b86b8c" : "var(--foreground)" }}
-        >
-          {value}
-        </p>
-        <p className="mt-0.5 text-xs font-medium" style={{ color: "var(--muted)" }}>
-          {title}
-        </p>
-      </div>
-
-      {subtext && (
-        <p className="text-xs leading-5" style={{ color: "var(--muted-light)" }}>
-          {subtext}
-        </p>
-      )}
-    </>
-  );
-
-  const sharedStyle = accent
-    ? {
-        background: "linear-gradient(135deg, #fdf0f7 0%, #f5e8f2 100%)",
-        border: "1px solid rgba(184,107,140,0.22)",
-        boxShadow: "0 2px 10px rgba(184,107,140,0.10)",
-      }
-    : {
-        background: "var(--surface)",
-        border: "1px solid var(--border)",
-        boxShadow: "var(--shadow-sm)",
-      };
-
-  if (href) {
-    return (
-      <Link
-        href={href}
-        className="relative flex cursor-pointer flex-col gap-3 overflow-hidden rounded-2xl p-4 transition-all hover:shadow-md hover:brightness-[1.03] active:scale-[0.97]"
-        style={sharedStyle}
-      >
-        {inner}
-      </Link>
-    );
-  }
-
-  return (
-    <div
-      className="relative flex flex-col gap-3 overflow-hidden rounded-2xl p-4 transition-shadow hover:shadow-md"
-      style={sharedStyle}
-    >
-      {inner}
     </div>
   );
 }
@@ -889,7 +804,7 @@ function SetupProgressCard({ setup }: { setup: SetupState }) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// GrowthInsightsSection — "תובנות וצמיחה"
+// InsightCard — used by the "הזדמנויות" (Opportunities) section
 // ══════════════════════════════════════════════════════════════════════════════
 
 type InsightCardTheme = "rose" | "green" | "violet";
@@ -1008,75 +923,6 @@ function InsightCard({
   );
 }
 
-function GrowthInsightsSection({
-  atRiskCount,
-  financeRevenue,
-  financeExpenses,
-  financeProfit,
-}: {
-  atRiskCount: number;
-  financeRevenue: number;
-  financeExpenses: number;
-  financeProfit: number;
-}) {
-  const hasFinanceData = financeRevenue > 0 || financeExpenses > 0;
-  const profitLabel = hasFinanceData
-    ? `₪${Math.abs(Math.round(financeProfit)).toLocaleString("he-IL")} רווח`
-    : "—";
-  const financeExplanation = hasFinanceData
-    ? `הכנסות ₪${Math.round(financeRevenue).toLocaleString("he-IL")} · הוצאות ₪${Math.round(financeExpenses).toLocaleString("he-IL")}`
-    : "הכנסות, הוצאות ורווח";
-
-  return (
-    <FadeIn delay={0.14}>
-      <div>
-        <div className="mb-4">
-          <h2 className="text-base font-bold" style={{ color: "var(--foreground)" }}>
-            הגדלת הכנסות
-          </h2>
-        </div>
-
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-          <InsightCard
-            title="החזרת לקוחות"
-            value={atRiskCount > 0 ? `${atRiskCount} לקוחות` : "הכול טוב"}
-            explanation={
-              atRiskCount > 0
-                ? "לקוחות שלא חזרו ומחכות לפנייה"
-                : "כל הלקוחות חזרו לאחרונה"
-            }
-            cta="לפעולה עכשיו"
-            href="/bring-back"
-            isEmpty={false}
-            emptyText=""
-            theme="rose"
-          />
-          <InsightCard
-            title="כספים"
-            value={profitLabel}
-            explanation={financeExplanation}
-            cta="מעבר לכספים"
-            href="/finance"
-            isEmpty={!hasFinanceData}
-            emptyText="אין עדיין נתוני הכנסות"
-            theme="green"
-          />
-          <InsightCard
-            title="עמוד לקוחות"
-            value="עמוד הזמנה ציבורי"
-            explanation="לקוחות יכולים לשלוח בקשות תור"
-            cta="הגדרת העמוד"
-            href="/public-page"
-            isEmpty={false}
-            emptyText=""
-            theme="violet"
-          />
-        </div>
-      </div>
-    </FadeIn>
-  );
-}
-
 // ══════════════════════════════════════════════════════════════════════════════
 // Main export — SetupChecklist
 // ══════════════════════════════════════════════════════════════════════════════
@@ -1092,11 +938,14 @@ export function SetupChecklist({
   emptySlots = [],
   suggestedClients = [],
   atRiskCount = 0,
-  financeRevenue = 0,
-  financeExpenses = 0,
-  financeProfit = 0,
   remindersDueCount = 0,
   lateCancellationsCount = 0,
+  forecast,
+  reviewReadyCount = 0,
+  recentRuns = [],
+  whatsappLabel = "",
+  whatsappReady = false,
+  whatsappConnected = false,
 }: {
   businessName: string;
   metrics: DashboardMetrics;
@@ -1108,11 +957,14 @@ export function SetupChecklist({
   emptySlots?: EmptySlot[];
   suggestedClients?: SuggestedClient[];
   atRiskCount?: number;
-  financeRevenue?: number;
-  financeExpenses?: number;
-  financeProfit?: number;
   remindersDueCount?: number;
   lateCancellationsCount?: number;
+  forecast: RevenueForecastData;
+  reviewReadyCount?: number;
+  recentRuns?: RecentAutomationRun[];
+  whatsappLabel?: string;
+  whatsappReady?: boolean;
+  whatsappConnected?: boolean;
 }) {
 
   // Urgent guidance items not already covered by dedicated attention cards
@@ -1124,16 +976,15 @@ export function SetupChecklist({
       item.id !== "no-upcoming-bookings",
   );
 
-  const hasAnyAttention =
-    suggestedClients.length > 0 ||
+  // "היום" attention column — only today-relevant items (approvals, cancellations,
+  // and any urgent guidance). Opportunities & automations get their own sections.
+  const hasTodayAttention =
     pendingApprovalCount > 0 ||
-    emptySlots.length > 0 ||
-    remindersDueCount > 0 ||
     lateCancellationsCount > 0 ||
     extraUrgent.length > 0;
 
   return (
-    <div className="w-full space-y-6">
+    <div className="w-full space-y-8">
       {/* 1. Hero — full-width command center */}
       <FadeIn>
         <DashboardHero
@@ -1148,180 +999,167 @@ export function SetupChecklist({
         <DashboardQuickActions />
       </FadeIn>
 
-      {/* 3. KPI grid */}
-      <StaggerIn
-        className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5"
-        delay={0.07}
-      >
-        <StaggerItem>
-          <DashboardMetricCard
-            title="הכנסה החודש"
-            value={formatILS(metrics.monthRevenue)}
-            subtext="מחישובי תורים שהושלמו"
-            icon={TrendingUp}
-            accent={metrics.monthRevenue > 0}
-            href="/finance"
-          />
-        </StaggerItem>
-        <StaggerItem>
-          <DashboardMetricCard
-            title="פגישות היום"
-            value={String(metrics.bookingsToday)}
-            subtext={metrics.bookingsToday === 0 ? "אין פגישות להיום" : "פגישות פעילות"}
-            icon={CalendarDays}
-            accent={metrics.bookingsToday > 0}
-            href="/bookings?filter=today"
-          />
-        </StaggerItem>
-        <StaggerItem>
-          <DashboardMetricCard
-            title="לקוחות פעילים"
-            value={String(metrics.totalClients)}
-            subtext="לקוחות שנשמרו במערכת"
-            icon={Users2}
-            href="/clients"
-          />
-        </StaggerItem>
-        <StaggerItem>
-          <DashboardMetricCard
-            title="שירותים פעילים"
-            value={String(metrics.activeServices)}
-            subtext={
-              metrics.activeServices === 0 ? "הוסיפו שירות ראשון" : "שירותים במערכת"
-            }
-            icon={Sparkles}
-            href="/services"
-          />
-        </StaggerItem>
-        <StaggerItem>
-          <DashboardMetricCard
-            title="ממתינות לאישור"
-            value={String(pendingApprovalCount)}
-            subtext={pendingApprovalCount === 0 ? "הכול מאושר" : "יש לאשר"}
-            icon={Clock}
-            accent={pendingApprovalCount > 0}
-            href="/bookings?status=pending"
-          />
-        </StaggerItem>
-      </StaggerIn>
+      {/* ── היום — appointments, approvals, cancellations ── */}
+      <FadeIn delay={0.07}>
+        <DashboardSection
+          title="היום"
+          subtitle="הפגישות והפעולות שדורשות אותך עכשיו"
+        >
+          {hasTodayAttention ? (
+            <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-5">
+              {/* RIGHT column (3/5) — today's appointments + week glance */}
+              <div className="space-y-5 lg:col-span-3">
+                <TodayAppointmentsCard todayBookings={todayBookings} />
+                <WeekCalendarMini allBookings={[...todayBookings, ...upcomingBookings]} />
+              </div>
 
-      {/* 4. Main section: today's appointments + attention */}
-      <FadeIn delay={0.10}>
-        {hasAnyAttention ? (
-          <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-5">
-            {/* RIGHT column (3/5) — today's appointments */}
-            <div className="lg:col-span-3">
-              <TodayAppointmentsCard todayBookings={todayBookings} />
-            </div>
-
-            {/* LEFT column (2/5) — items requiring attention */}
-            <div className="space-y-3 lg:col-span-2">
-              <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
-                דורש את תשומת הלב שלך
-              </p>
-              <div className="space-y-2.5">
-                {suggestedClients.length > 0 && (
-                  <AttentionCard
-                    count={suggestedClients.length}
-                    label="לקוחות שמחכות למעקב"
-                    subLabel="לקוחות שלא חזרו זמן מה ומוכנות לפנייה"
-                    action="לניהול שימור"
-                    href="/bring-back"
-                    icon={RefreshCcw}
-                    color="green"
-                    ariaLabel={`${suggestedClients.length} לקוחות שמחכות למעקב — מעבר לניהול שימור`}
-                  />
-                )}
-                {pendingApprovalCount > 0 && (
-                  <AttentionCard
-                    count={pendingApprovalCount}
-                    label="פגישות"
-                    subLabel="עדיין ללא אישור"
-                    action="לאישור עכשיו"
-                    href="/bookings?status=pending"
-                    icon={CalendarDays}
-                    color="warning"
-                    ariaLabel={`${pendingApprovalCount} פגישות ממתינות לאישור — עבור לפגישות ממתינות`}
-                  />
-                )}
-                {emptySlots.length > 0 && (
-                  <AttentionCard
-                    count={emptySlots.length}
-                    label="חלונות פנויים"
-                    subLabel="זמן פנוי לשבוע הקרוב"
-                    action="מילוי חלונות"
-                    href="/dashboard#empty-slots"
-                    icon={CalendarRange}
-                    color="info"
-                    ariaLabel={`${emptySlots.length} חלונות פנויים — מעבר לחלונות הפנויים`}
-                  />
-                )}
-                {remindersDueCount > 0 && (
-                  <AttentionCard
-                    count={remindersDueCount}
-                    label={remindersDueCount === 1 ? AUTOMATIONS.dashboard.attentionSingle : "תזכורות מוכנות"}
-                    subLabel="ממתינות לשליחה בוואטסאפ"
-                    action={AUTOMATIONS.dashboard.cta}
-                    href="/automations"
-                    icon={BellRing}
-                    color="info"
-                    ariaLabel={`${remindersDueCount} תזכורות ממתינות לשליחה — עבור לאוטומציות`}
-                  />
-                )}
-                {lateCancellationsCount > 0 && (
-                  <AttentionCard
-                    count={lateCancellationsCount}
-                    label={BOOKINGS.lateCancellation.dashboardCard.title}
-                    subLabel={
-                      lateCancellationsCount === 1
-                        ? BOOKINGS.lateCancellation.dashboardCard.bodySingular
-                        : BOOKINGS.lateCancellation.dashboardCard.bodyPlural(lateCancellationsCount)
-                    }
-                    action={BOOKINGS.lateCancellation.dashboardCard.cta}
-                    href="/bookings?status=cancelled"
-                    icon={XCircle}
-                    color="rose"
-                    ariaLabel={`${lateCancellationsCount} ביטולים מאוחרים — עבור לתורים שבוטלו`}
-                  />
-                )}
-                {extraUrgent.map((item) => (
-                  <AttentionCard
-                    key={item.id}
-                    count="!"
-                    label={item.title}
-                    subLabel={item.description}
-                    action={item.actionLabel}
-                    href={item.href}
-                    icon={Clock}
-                    color="warning"
-                    ariaLabel={`${item.title}: ${item.description} — ${item.actionLabel}`}
-                  />
-                ))}
+              {/* LEFT column (2/5) — today's attention items */}
+              <div className="space-y-3 lg:col-span-2">
+                <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
+                  דורש את תשומת הלב שלך
+                </p>
+                <div className="space-y-2.5">
+                  {pendingApprovalCount > 0 && (
+                    <AttentionCard
+                      count={pendingApprovalCount}
+                      label="פגישות"
+                      subLabel="עדיין ללא אישור"
+                      action="לאישור עכשיו"
+                      href="/bookings?status=pending"
+                      icon={CalendarDays}
+                      color="warning"
+                      ariaLabel={`${pendingApprovalCount} פגישות ממתינות לאישור — עבור לפגישות ממתינות`}
+                    />
+                  )}
+                  {lateCancellationsCount > 0 && (
+                    <AttentionCard
+                      count={lateCancellationsCount}
+                      label={BOOKINGS.lateCancellation.dashboardCard.title}
+                      subLabel={
+                        lateCancellationsCount === 1
+                          ? BOOKINGS.lateCancellation.dashboardCard.bodySingular
+                          : BOOKINGS.lateCancellation.dashboardCard.bodyPlural(lateCancellationsCount)
+                      }
+                      action={BOOKINGS.lateCancellation.dashboardCard.cta}
+                      href="/bookings?status=cancelled"
+                      icon={XCircle}
+                      color="rose"
+                      ariaLabel={`${lateCancellationsCount} ביטולים מאוחרים — עבור לתורים שבוטלו`}
+                    />
+                  )}
+                  {extraUrgent.map((item) => (
+                    <AttentionCard
+                      key={item.id}
+                      count="!"
+                      label={item.title}
+                      subLabel={item.description}
+                      action={item.actionLabel}
+                      href={item.href}
+                      icon={Clock}
+                      color="warning"
+                      ariaLabel={`${item.title}: ${item.description} — ${item.actionLabel}`}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
+          ) : (
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+              <TodayAppointmentsCard todayBookings={todayBookings} />
+              <WeekCalendarMini allBookings={[...todayBookings, ...upcomingBookings]} />
+            </div>
+          )}
+        </DashboardSection>
+      </FadeIn>
+
+      {/* ── הכנסות — monthly revenue, forecast, target gap ── */}
+      <FadeIn delay={0.10}>
+        <DashboardSection
+          title="הכנסות"
+          subtitle="ההכנסה החודש, הצפי לסוף החודש והפער ליעד"
+          action={
+            <Link
+              href="/finance"
+              className="flex items-center gap-1 text-xs font-semibold transition-opacity hover:opacity-80"
+              style={{ color: "#b86b8c" }}
+            >
+              פירוט מלא
+              <ArrowLeft className="h-3 w-3" />
+            </Link>
+          }
+        >
+          <RevenueSection forecast={forecast} />
+        </DashboardSection>
+      </FadeIn>
+
+      {/* ── הזדמנויות — inactive clients, review requests, empty slots ── */}
+      <FadeIn delay={0.13}>
+        <DashboardSection
+          title="הזדמנויות"
+          subtitle="פעולות פשוטות שיגדילו את ההכנסה"
+        >
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <InsightCard
+              title="לקוחות שלא חזרו"
+              value={atRiskCount > 0 ? `${atRiskCount} לקוחות` : "הכול מעודכן"}
+              explanation={
+                atRiskCount > 0
+                  ? "לקוחות שלא חזרו זמן מה ומחכות לפנייה אישית"
+                  : "כל הלקוחות חזרו לאחרונה"
+              }
+              cta="להחזרת לקוחות"
+              href="/bring-back"
+              isEmpty={false}
+              emptyText=""
+              theme="rose"
+            />
+            <InsightCard
+              title="בקשות ביקורת"
+              value={reviewReadyCount > 0 ? `${reviewReadyCount} מוכנות` : "—"}
+              explanation="טיפולים שהושלמו ומוכנים לבקשת ביקורת או הודעת תודה"
+              cta="לבקשות ביקורת"
+              href="/bring-back?tab=reviews"
+              isEmpty={reviewReadyCount === 0}
+              emptyText="אין טיפולים שהושלמו לאחרונה"
+              theme="violet"
+            />
+            <InsightCard
+              title="חלונות פנויים"
+              value={emptySlots.length > 0 ? `${emptySlots.length} חלונות` : "—"}
+              explanation="זמן פנוי השבוע שאפשר למלא עם לקוחות מתאימות"
+              cta="למילוי שעות ריקות"
+              href="/bring-back?tab=slots"
+              isEmpty={emptySlots.length === 0}
+              emptyText="אין חלונות פנויים השבוע"
+              theme="green"
+            />
           </div>
-        ) : (
-          <TodayAppointmentsCard todayBookings={todayBookings} />
-        )}
+
+          {suggestedClients.length > 0 && (
+            <div className="mt-4">
+              <FollowUpClientsPreview clients={suggestedClients} />
+            </div>
+          )}
+        </DashboardSection>
       </FadeIn>
 
-      {/* 5. Growth insights */}
-      <GrowthInsightsSection
-        atRiskCount={atRiskCount}
-        financeRevenue={financeRevenue}
-        financeExpenses={financeExpenses}
-        financeProfit={financeProfit}
-      />
-
-      {/* 6. Week overview + follow-up clients side by side */}
-      <FadeIn delay={0.18}>
-        <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-          <WeekCalendarMini allBookings={[...todayBookings, ...upcomingBookings]} />
-          <FollowUpClientsPreview clients={suggestedClients} />
-        </div>
+      {/* ── אוטומציות — WhatsApp status, automation status, recent activity ── */}
+      <FadeIn delay={0.16}>
+        <DashboardSection
+          title="אוטומציות"
+          subtitle="שליחה אוטומטית של הודעות ללקוחות"
+        >
+          <AutomationsSection
+            whatsappLabel={whatsappLabel}
+            whatsappReady={whatsappReady}
+            whatsappConnected={whatsappConnected}
+            remindersDueCount={remindersDueCount}
+            recentRuns={recentRuns}
+          />
+        </DashboardSection>
       </FadeIn>
 
-      {/* 7. Setup checklist if incomplete */}
+      {/* Setup checklist if incomplete */}
       <SetupProgressCard setup={setup} />
     </div>
   );

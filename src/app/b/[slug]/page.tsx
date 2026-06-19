@@ -16,6 +16,7 @@ import {
   BookingSelectionProvider,
   AppointmentSummary,
 } from "./_components/booking-selection";
+import { Reveal } from "@/components/ui/animate";
 
 export default async function PublicBusinessPage({
   params,
@@ -142,45 +143,57 @@ export default async function PublicBusinessPage({
         />
 
         <div className="mt-10 space-y-10 lg:mt-14 lg:space-y-14">
-        {hasBooking && <PublicTrustSection brand={brand} />}
+        {hasBooking && (
+          <Reveal>
+            <PublicTrustSection brand={brand} />
+          </Reveal>
+        )}
 
         {business.showReviews &&
           business.reviews.length > 0 &&
           avgRating !== null && (
-            <PublicReviewsSection
-              reviews={business.reviews}
-              avgRating={avgRating}
-              brand={brand}
-            />
+            <Reveal>
+              <PublicReviewsSection
+                reviews={business.reviews}
+                avgRating={avgRating}
+                brand={brand}
+              />
+            </Reveal>
           )}
 
         {business.showGallery && (
-          <PublicGallerySection images={business.galleryImages} brand={brand} />
+          <Reveal>
+            <PublicGallerySection images={business.galleryImages} brand={brand} />
+          </Reveal>
         )}
 
-        <PublicBusinessInfo
-          business={business}
-          brand={brand}
-          policyText={showPolicy ? (policy?.policyText ?? null) : null}
-        />
+        <Reveal>
+          <PublicBusinessInfo
+            business={business}
+            brand={brand}
+            policyText={showPolicy ? (policy?.policyText ?? null) : null}
+          />
+        </Reveal>
 
         {/* Leave a review */}
         {business.showReviews && (
-          <section className="mx-auto w-full max-w-6xl px-5 sm:px-8">
-            <div className="mx-auto max-w-2xl">
-              <div className="mb-4 text-center">
-                <h2 className="text-lg font-bold text-[var(--foreground)] sm:text-xl">
-                  כתבי לנו ביקורת
-                </h2>
-                <p className="mt-0.5 text-sm text-[var(--muted)]">
-                  נשמח לשמוע על החוויה שלך 💬
-                </p>
+          <Reveal>
+            <section className="mx-auto w-full max-w-6xl px-5 sm:px-8">
+              <div className="mx-auto max-w-2xl">
+                <div className="mb-4 text-center">
+                  <h2 className="text-lg font-bold text-[var(--foreground)] sm:text-xl">
+                    כתבי לנו ביקורת
+                  </h2>
+                  <p className="mt-0.5 text-sm text-[var(--muted)]">
+                    נשמח לשמוע על החוויה שלך 💬
+                  </p>
+                </div>
+                <div className="rounded-3xl border border-[var(--border)] bg-white p-6 shadow-sm sm:p-7">
+                  <PublicReviewForm slug={slug} brandColor={brand} />
+                </div>
               </div>
-              <div className="rounded-3xl border border-[var(--border)] bg-white p-6 shadow-sm sm:p-7">
-                <PublicReviewForm slug={slug} brandColor={brand} />
-              </div>
-            </div>
-          </section>
+            </section>
+          </Reveal>
         )}
       </div>
 

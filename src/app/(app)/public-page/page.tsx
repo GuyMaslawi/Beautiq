@@ -1,5 +1,6 @@
 import { Globe, ImageIcon, Eye, Star, Lock, Link2 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { Section } from "@/components/ui/section";
 import { requireCurrentBusiness } from "@/server/auth/session";
 import {
   getPublicPageSettings,
@@ -23,41 +24,6 @@ import { PublicLinkPreview } from "@/components/public-page/public-link-preview"
 import { PublicPagePreviewPanel } from "@/components/public-page/public-page-preview-panel";
 import { PUBLIC_PAGE } from "@/lib/constants/he";
 
-function SectionCard({
-  title,
-  icon,
-  children,
-}: {
-  title: string;
-  icon?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className="rounded-2xl border bg-white p-6"
-      style={{
-        borderColor: "var(--border)",
-        boxShadow: "0 1px 4px rgba(43,37,48,0.06)",
-      }}
-    >
-      <div className="flex items-center gap-2.5 mb-5">
-        {icon && (
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-lg shrink-0"
-            style={{ background: "rgba(184,107,140,0.10)" }}
-          >
-            {icon}
-          </div>
-        )}
-        <h2 className="text-base font-semibold text-[var(--foreground)]">
-          {title}
-        </h2>
-      </div>
-      {children}
-    </div>
-  );
-}
-
 export default async function PublicPageSettingsPage() {
   const business = await requireCurrentBusiness();
   const tenant = { businessId: business.id };
@@ -79,23 +45,23 @@ export default async function PublicPageSettingsPage() {
       />
 
       {/* 1. Preview / link */}
-      <SectionCard
+      <Section
         title={PUBLIC_PAGE.preview.sectionTitle}
         icon={<Link2 className="h-4 w-4" style={{ color: "#b86b8c" }} />}
       >
         <PublicLinkPreview slug={settings.slug} />
-      </SectionCard>
+      </Section>
 
       {/* 1b. Embedded preview */}
-      <SectionCard
+      <Section
         title="תצוגה מקדימה"
         icon={<Eye className="h-4 w-4" style={{ color: "#b86b8c" }} />}
       >
         <PublicPagePreviewPanel slug={settings.slug} />
-      </SectionCard>
+      </Section>
 
       {/* 2. Business profile */}
-      <SectionCard
+      <Section
         title={PUBLIC_PAGE.profile.sectionTitle}
         icon={<Globe className="h-4 w-4" style={{ color: "#b86b8c" }} />}
       >
@@ -111,10 +77,10 @@ export default async function PublicPageSettingsPage() {
             introMessage: settings.introMessage,
           }}
         />
-      </SectionCard>
+      </Section>
 
       {/* 3. Logo + cover */}
-      <SectionCard
+      <Section
         title={PUBLIC_PAGE.branding.sectionTitle}
         icon={<ImageIcon className="h-4 w-4" style={{ color: "#b86b8c" }} />}
       >
@@ -126,10 +92,10 @@ export default async function PublicPageSettingsPage() {
             brandColor: settings.brandColor,
           }}
         />
-      </SectionCard>
+      </Section>
 
       {/* 4. Visibility toggles */}
-      <SectionCard
+      <Section
         title={PUBLIC_PAGE.visibility.sectionTitle}
         icon={<Eye className="h-4 w-4" style={{ color: "#b86b8c" }} />}
       >
@@ -146,10 +112,10 @@ export default async function PublicPageSettingsPage() {
             showAddress: settings.showAddress,
           }}
         />
-      </SectionCard>
+      </Section>
 
       {/* 5. Gallery */}
-      <SectionCard
+      <Section
         title={PUBLIC_PAGE.gallery.sectionTitle}
         icon={<ImageIcon className="h-4 w-4" style={{ color: "#b86b8c" }} />}
       >
@@ -161,10 +127,10 @@ export default async function PublicPageSettingsPage() {
           addAction={addGalleryImageAction}
           deleteAction={deleteGalleryImageAction}
         />
-      </SectionCard>
+      </Section>
 
       {/* 6. Reviews */}
-      <SectionCard
+      <Section
         title={PUBLIC_PAGE.reviews.sectionTitle}
         icon={<Star className="h-4 w-4" style={{ color: "#b86b8c" }} />}
       >
@@ -172,7 +138,7 @@ export default async function PublicPageSettingsPage() {
           reviews={reviews}
           deleteAction={deleteClientReviewAction}
         />
-      </SectionCard>
+      </Section>
 
       {/* 7. Treatment history — locked / coming soon */}
       <div

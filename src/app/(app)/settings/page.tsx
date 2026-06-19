@@ -1,5 +1,6 @@
 import { Store, Tag, ShieldCheck, Link2, SlidersHorizontal, CreditCard } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
+import { Section } from "@/components/ui/section";
 import { requireCurrentBusiness } from "@/server/auth/session";
 import {
   getBusinessSettings,
@@ -21,39 +22,6 @@ import { getPaymentSettings } from "@/server/payments/settings";
 import { resolvePaymentProviderForBusiness } from "@/server/payments/resolver";
 import { updatePaymentSettingsAction } from "@/server/payments/actions";
 import { SETTINGS, PAYMENTS } from "@/lib/constants/he";
-
-function SectionCard({
-  title,
-  icon,
-  children,
-}: {
-  title: string;
-  icon?: React.ReactNode;
-  children: React.ReactNode;
-}) {
-  return (
-    <div
-      className="bg-surface rounded-2xl border p-6"
-      style={{
-        borderColor: "var(--border)",
-        boxShadow: "0 1px 4px rgba(43,37,48,0.06)",
-      }}
-    >
-      <div className="flex items-center gap-2.5 mb-5">
-        {icon && (
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-lg shrink-0"
-            style={{ background: "rgba(184,107,140,0.10)" }}
-          >
-            {icon}
-          </div>
-        )}
-        <h2 className="text-foreground text-base font-semibold">{title}</h2>
-      </div>
-      {children}
-    </div>
-  );
-}
 
 export default async function SettingsPage() {
   const business = await requireCurrentBusiness();
@@ -87,7 +55,7 @@ export default async function SettingsPage() {
 
       <div className="space-y-6">
         {/* Section 1 — Business details */}
-        <SectionCard title={SETTINGS.businessDetails.sectionTitle} icon={<Store className="h-4 w-4" style={{ color: "#b86b8c" }} />}>
+        <Section title={SETTINGS.businessDetails.sectionTitle} icon={<Store className="h-4 w-4" style={{ color: "#b86b8c" }} />}>
           <BusinessDetailsForm
             action={updateBusinessDetailsAction}
             initialValues={{
@@ -98,38 +66,38 @@ export default async function SettingsPage() {
               addressNote: settings.addressNote,
             }}
           />
-        </SectionCard>
+        </Section>
 
         {/* Section 2 — Business categories */}
-        <SectionCard title={SETTINGS.categories.sectionTitle} icon={<Tag className="h-4 w-4" style={{ color: "#b86b8c" }} />}>
+        <Section title={SETTINGS.categories.sectionTitle} icon={<Tag className="h-4 w-4" style={{ color: "#b86b8c" }} />}>
           <BusinessCategoriesForm
             action={updateBusinessCategoriesAction}
             allCategories={allCategories}
             selectedIds={selectedCategoryIds}
           />
-        </SectionCard>
+        </Section>
 
         {/* Section 3 — Cancellation policy */}
-        <SectionCard title={SETTINGS.cancellationPolicy.sectionTitle} icon={<ShieldCheck className="h-4 w-4" style={{ color: "#b86b8c" }} />}>
+        <Section title={SETTINGS.cancellationPolicy.sectionTitle} icon={<ShieldCheck className="h-4 w-4" style={{ color: "#b86b8c" }} />}>
           <CancellationPolicyForm
             action={updateCancellationPolicyAction}
             initialValues={policy}
           />
-        </SectionCard>
+        </Section>
 
         {/* Section — Payments & clearing */}
-        <SectionCard title={PAYMENTS.settings.sectionTitle} icon={<CreditCard className="h-4 w-4" style={{ color: "#b86b8c" }} />}>
+        <Section title={PAYMENTS.settings.sectionTitle} icon={<CreditCard className="h-4 w-4" style={{ color: "#b86b8c" }} />}>
           <PaymentsSettingsForm
             action={updatePaymentSettingsAction}
             initialValues={paymentSettings}
             connectionStatus={resolvedPayments.status}
           />
-        </SectionCard>
+        </Section>
 
         {/* Section 4 — Public link (informational, coming soon) */}
-        <SectionCard title={SETTINGS.publicLink.sectionTitle} icon={<Link2 className="h-4 w-4" style={{ color: "#b86b8c" }} />}>
+        <Section title={SETTINGS.publicLink.sectionTitle} icon={<Link2 className="h-4 w-4" style={{ color: "#b86b8c" }} />}>
           <PublicLinkCard slug={settings.slug} />
-        </SectionCard>
+        </Section>
       </div>
     </div>
   );

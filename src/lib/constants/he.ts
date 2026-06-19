@@ -31,15 +31,15 @@ export const HOME = {
 /** תוויות ניווט ראשי (סרגל הצד של האפליקציה) */
 export const NAV = {
   dashboard: "לוח הבקרה",
-  bookings: "תורים",
+  bookings: "יומן ותורים",
   clients: "לקוחות",
   services: "שירותים",
-  availability: "שעות פעילות",
+  availability: "שעות עבודה",
   // New primary nav
   bringBack: "החזרת לקוחות",
   automations: "אוטומציות",
-  finance: "כספים",
-  publicPage: "עמוד לקוחות",
+  finance: "פיננסים",
+  publicPage: "עמוד הזמנות",
   settings: "הגדרות",
   // Legacy routes — kept accessible but no longer in sidebar
   messages: "הודעות",
@@ -50,6 +50,25 @@ export const NAV = {
   winBack: "קמפיינים להחזרה",
   revenueForecast: "תחזית הכנסות",
   plans: "חבילות פרימיום",
+} as const;
+
+/**
+ * תוויות מרכז "החזרת לקוחות" (/bring-back) — איחוד המסכים החופפים
+ * לכרטיסיות במקום מסכים נפרדים בסרגל הצד.
+ */
+export const BRING_BACK_HUB = {
+  tabs: {
+    clients: "לקוחות שלא חזרו",
+    slots: "מילוי שעות ריקות",
+    reviews: "ביקורות",
+    messages: "הודעות",
+  },
+  subTabs: {
+    overview: "סקירה",
+    retention: "שימור",
+    atRisk: "בסיכון",
+    campaigns: "קמפיינים",
+  },
 } as const;
 
 /** פעולות נפוצות (כפתורים) */
@@ -1503,7 +1522,7 @@ export const REVENUE_FORECAST = {
     atRiskHref: "/bring-back",
     winBack: "שלחי קמפיין החזרה ללקוחות שלא הגיעו",
     winBackAction: "יצירת קמפיין החזרה",
-    winBackHref: "/win-back-campaigns",
+    winBackHref: "/bring-back?tab=clients&sub=campaigns",
     fillGap: "מלאי חלונות פנויים השבוע",
     fillGapAction: "שעות פעילות",
     fillGapHref: "/availability",
