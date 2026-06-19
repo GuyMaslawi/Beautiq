@@ -8,7 +8,6 @@ import {
   CalendarRange,
   Users2,
   Sparkles,
-  TrendingUp,
   Clock,
   MessageCircle,
   Plus,
@@ -38,10 +37,6 @@ import type { SuggestedClient } from "@/server/empty-slots/queries";
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 const TZ = "Asia/Jerusalem";
-
-function formatILS(amount: number): string {
-  return `₪${Math.round(amount).toLocaleString("he-IL")}`;
-}
 
 function formatTimeOnly(iso: string): string {
   return new Date(iso).toLocaleTimeString("he-IL", {
@@ -86,11 +81,9 @@ function buildChecklist(setup: SetupState): ChecklistItemDef[] {
 function DashboardHero({
   businessName,
   metrics,
-  pendingApprovalCount,
 }: {
   businessName: string;
   metrics: DashboardMetrics;
-  pendingApprovalCount: number;
 }) {
   const todayLabel = new Date().toLocaleDateString("he-IL", {
     timeZone: TZ,
@@ -132,30 +125,20 @@ function DashboardHero({
             </h1>
           </div>
 
-          {/* Date + revenue pill */}
-          <div className="flex flex-col items-end gap-2">
-            <p className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.55)" }}>
-              {todayLabel}
-            </p>
-            <Link
-              href="/bookings"
-              className="flex cursor-pointer items-center gap-2 rounded-xl px-3.5 py-2 text-sm font-bold transition-all hover:brightness-110 active:scale-[0.96]"
-              style={{
-                background: "rgba(61,139,110,0.22)",
-                border: "1px solid rgba(61,139,110,0.32)",
-                color: "#7ee8b8",
-              }}
-            >
-              <TrendingUp className="h-3.5 w-3.5 shrink-0" />
-              <span>{formatILS(metrics.monthRevenue)}</span>
-              <span className="text-xs font-normal" style={{ color: "rgba(126,232,184,0.65)" }}>
-                החודש
-              </span>
-            </Link>
-          </div>
+          {/*
+            Date only — the month-revenue pill moved out to avoid duplicating
+            the dedicated "הכנסות" section below (dashboard dedup sprint).
+          */}
+          <p className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.55)" }}>
+            {todayLabel}
+          </p>
         </div>
 
-        {/* Attention badge row */}
+        {/*
+          Glance badge row — today's appointments + active clients. Pending
+          approvals are intentionally not shown here; they live as an actionable
+          item in the "היום" attention column to avoid showing the count twice.
+        */}
         <div className="mt-5 flex flex-wrap gap-2.5">
           {/* Bookings today — always a link */}
           <Link
@@ -172,40 +155,6 @@ function DashboardHero({
               פגישות היום
             </span>
           </Link>
-
-          {/* Pending approval */}
-          {pendingApprovalCount > 0 ? (
-            <Link
-              href="/bookings?status=pending"
-              className="flex cursor-pointer items-center gap-2.5 rounded-xl px-4 py-2.5 transition-all hover:brightness-110 active:scale-[0.96]"
-              style={{
-                background: "rgba(212,168,30,0.18)",
-                border: "1px solid rgba(212,168,30,0.32)",
-              }}
-            >
-              <Clock className="h-4 w-4 shrink-0" style={{ color: "#f5c842" }} />
-              <span className="text-sm font-bold" style={{ color: "#f5e090" }}>
-                {pendingApprovalCount}
-              </span>
-              <span className="text-sm" style={{ color: "rgba(245,224,144,0.75)" }}>
-                ממתינות לאישור
-              </span>
-            </Link>
-          ) : (
-            <Link
-              href="/bookings"
-              className="flex cursor-pointer items-center gap-2.5 rounded-xl px-4 py-2.5 transition-all hover:brightness-125 active:scale-[0.96]"
-              style={{
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,255,255,0.08)",
-              }}
-            >
-              <Clock className="h-4 w-4 shrink-0" style={{ color: "rgba(255,255,255,0.25)" }} />
-              <span className="text-sm" style={{ color: "rgba(255,255,255,0.30)" }}>
-                אין פגישות ללא אישור
-              </span>
-            </Link>
-          )}
 
           {/* Active clients — always a link */}
           <Link
@@ -316,11 +265,6 @@ function TodayAppointmentsCard({
         <h2 className="text-base font-bold" style={{ color: "var(--foreground)" }}>
           הפגישות שלך להיום
         </h2>
-        {todayBookings.length > 0 && (
-          <p className="mt-0.5 text-xs" style={{ color: "var(--muted)" }}>
-            {todayBookings.length} פגישות היום
-          </p>
-        )}
       </div>
 
       {/* Booking list */}
@@ -940,6 +884,7 @@ export function SetupChecklist({
   atRiskCount = 0,
   remindersDueCount = 0,
   lateCancellationsCount = 0,
+  waitlistCount = 0,
   forecast,
   reviewReadyCount = 0,
   recentRuns = [],
@@ -959,6 +904,7 @@ export function SetupChecklist({
   atRiskCount?: number;
   remindersDueCount?: number;
   lateCancellationsCount?: number;
+  waitlistCount?: number;
   forecast: RevenueForecastData;
   reviewReadyCount?: number;
   recentRuns?: RecentAutomationRun[];
@@ -990,7 +936,6 @@ export function SetupChecklist({
         <DashboardHero
           businessName={businessName}
           metrics={metrics}
-          pendingApprovalCount={pendingApprovalCount}
         />
       </FadeIn>
 
@@ -1133,6 +1078,19 @@ export function SetupChecklist({
               emptyText="אין חלונות פנויים השבוע"
               theme="green"
             />
+            {/* Waitlist — only an opportunity when someone is actually waiting */}
+            {waitlistCount > 0 && (
+              <InsightCard
+                title="ממתינות ברשימת המתנה"
+                value={`${waitlistCount} לקוחות`}
+                explanation="לקוחות שמחכות לתור מוקדם יותר — אפשר להציע להן כשמתפנה תור"
+                cta="לרשימת ההמתנה"
+                href="/waitlist"
+                isEmpty={false}
+                emptyText=""
+                theme="violet"
+              />
+            )}
           </div>
 
           {suggestedClients.length > 0 && (

@@ -478,7 +478,9 @@ describe("WhatsAppConnectionCard — connected number confirmation", () => {
     );
 
     // Connection is shown as connected (not disconnected) AND the test-number warning shows.
-    expect(screen.getByText(/מחובר למספר/)).toBeInTheDocument();
+    // The connected summary shows "WhatsApp מחובר" + the linked number.
+    expect(screen.getAllByText(/WhatsApp מחובר/).length).toBeGreaterThan(0);
+    expect(screen.getByText("+1 555-906-9761")).toBeInTheDocument();
     expect(screen.getByText(/נראה כמו מספר בדיקה של Meta/)).toBeInTheDocument();
     // A test number must never read as "not connected".
     expect(screen.queryByText("WhatsApp לא מחובר")).not.toBeInTheDocument();
@@ -496,7 +498,8 @@ describe("WhatsAppConnectionCard — connected number confirmation", () => {
       />,
     );
 
-    expect(screen.getByText(/מחובר למספר/)).toBeInTheDocument();
+    expect(screen.getAllByText(/WhatsApp מחובר/).length).toBeGreaterThan(0);
+    expect(screen.getByText("+1 555-906-9761")).toBeInTheDocument();
     expect(screen.queryByText(/מספר בדיקה של Meta/)).not.toBeInTheDocument();
     expect(screen.getByText("אם זה לא המספר העסקי שלך, ניתן לנתק ולחבר מחדש.")).toBeInTheDocument();
   });

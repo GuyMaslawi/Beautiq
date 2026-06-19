@@ -90,15 +90,16 @@ export default async function EditServicePage({
         action={boundAction}
         initialValues={initialValues}
         isEdit
+        pricingHealth={
+          pricingData ? (
+            <ServicePricingHealth
+              service={pricingData}
+              insights={pricingInsights}
+              businessAvgPricePerHour={businessAvgPricePerHour}
+            />
+          ) : undefined
+        }
       />
-
-      {pricingData && (
-        <ServicePricingHealth
-          service={pricingData}
-          insights={pricingInsights}
-          businessAvgPricePerHour={businessAvgPricePerHour}
-        />
-      )}
     </div>
   );
 }

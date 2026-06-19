@@ -19,6 +19,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import type { PaymentProviderKind } from "@prisma/client";
 import { mockProvider, type PaymentProvider } from "@/lib/payments/provider";
 import { applyPaymentWebhookEvent } from "@/server/payments/booking-payment";
+import { logger, captureError } from "@/lib/logger";
 
 function providerForKind(kind: string): PaymentProvider | null {
   // Only the mock provider has a wired webhook adapter so far. PayPlus / Grow /
@@ -47,9 +48,7 @@ export async function POST(
   if (!provider) {
     // Real provider webhook not yet implemented — acknowledge so the provider
     // does not enter a retry storm, but log for visibility.
-    console.warn(
-      `[payments webhook] unsupported provider="${kind}" — no adapter wired`,
-    );
+    logger.warn("[payments.webhook] unsupported provider — no adapter wired", { kind });
     return new NextResponse("OK", { status: 200 });
   }
 
@@ -60,14 +59,12 @@ export async function POST(
     (kind as PaymentProviderKind) !== "mock" &&
     (kind as PaymentProviderKind) !== "disabled";
   if (isRealKind && !secret && process.env.NODE_ENV === "production") {
-    console.error(
-      `[payments webhook] PAYMENT_WEBHOOK_SECRET missing for real provider="${kind}" — rejecting`,
-    );
+    logger.error("[payments.webhook] PAYMENT_WEBHOOK_SECRET missing for real provider — rejecting", { kind });
     return new NextResponse("Forbidden", { status: 403 });
   }
 
   if (!provider.verifyWebhook({ rawBody, headers, secret })) {
-    console.warn(`[payments webhook] signature verification failed (provider=${kind})`);
+    logger.warn("[payments.webhook] signature verification failed", { kind });
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
@@ -79,7 +76,7 @@ export async function POST(
   try {
     await applyPaymentWebhookEvent(event);
   } catch (err) {
-    console.error("[payments webhook] apply failed:", err);
+    captureError("payments.webhook", err, { kind });
     // 500 lets the provider retry; idempotency makes that safe.
     return new NextResponse("Error", { status: 500 });
   }

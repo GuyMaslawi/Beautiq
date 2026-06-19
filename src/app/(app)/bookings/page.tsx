@@ -6,6 +6,7 @@ import { prisma } from "@/server/db/prisma";
 import { EmptyState } from "@/components/ui/empty-state";
 import { MetricCard } from "@/components/ui/metric-card";
 import { BookingRow } from "@/components/bookings/booking-row";
+import { BookingCard } from "@/components/bookings/booking-card";
 import { BookingSearchInput } from "@/components/bookings/booking-search-input";
 import { BookingAdvancedFilter } from "@/components/bookings/booking-advanced-filter";
 import { BookingsCalendar } from "@/components/bookings/bookings-calendar";
@@ -423,10 +424,19 @@ export default async function BookingsPage({
             );
           })()}
 
-          {/* Bookings table */}
+          {/* Bookings — mobile card list (no horizontal scroll on phones) */}
+          {bookings.length > 0 && (
+            <div className="space-y-3 md:hidden">
+              {bookings.map((booking) => (
+                <BookingCard key={booking.id} booking={booking} />
+              ))}
+            </div>
+          )}
+
+          {/* Bookings table — desktop only */}
           {bookings.length > 0 && (
             <div
-              className="overflow-hidden rounded-2xl"
+              className="hidden overflow-hidden rounded-2xl md:block"
               style={{
                 background: "var(--surface)",
                 border: "1px solid var(--border)",

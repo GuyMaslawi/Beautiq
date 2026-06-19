@@ -18,6 +18,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/services", label: NAV.services },
   { href: "/availability", label: NAV.availability },
   { href: "/bring-back", label: NAV.bringBack },
+  { href: "/waitlist", label: NAV.waitlist },
   { href: "/automations", label: NAV.automations },
   { href: "/finance", label: NAV.finance },
   { href: "/public-page", label: NAV.publicPage },
@@ -46,6 +47,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     label: "הגדלת הכנסות",
     items: [
       { href: "/bring-back", label: NAV.bringBack },
+      { href: "/waitlist", label: NAV.waitlist },
       { href: "/finance", label: NAV.finance },
     ],
   },

@@ -12,6 +12,8 @@ import {
   markLateCancellationFeePaidAction,
 } from "@/server/bookings/actions";
 import { getBookingPaymentForBooking } from "@/server/payments/settings";
+import { getWaitlistMatchesForBooking } from "@/server/waitlist/queries";
+import { WaitlistMatchPanel } from "@/components/waitlist/waitlist-match-panel";
 import { PaymentStatusBadge } from "@/components/payments/payment-status-badge";
 import { formatMinorILS } from "@/lib/payments/money";
 import { PAYMENTS } from "@/lib/constants/he";
@@ -122,6 +124,15 @@ export default async function BookingDetailPage({
 
   const isCancelled =
     booking.status === "cancelled" || booking.status === "no_show";
+
+  // When a slot frees up, surface waitlist clients who might want it. Owner-driven.
+  const waitlistMatches = isCancelled
+    ? await getWaitlistMatchesForBooking(tenant, {
+        serviceId: booking.serviceId,
+        startTime: booking.startTime,
+      })
+    : [];
+
   const cancelledAt = booking.cancelledAt ?? booking.noShowAt ?? null;
   const lateCancelled = isCancelled
     ? isLateCancellation(
@@ -205,6 +216,43 @@ export default async function BookingDetailPage({
         cancelAction={cancelAction}
         noShowAction={noShowAction}
       />
+
+      {/* Notify-client prompt — a cancelled appointment must never be silent.
+          Surfaces an immediate, obvious path to message the client. */}
+      {isCancelled && (
+        <a
+          href="#notify-client"
+          className="flex items-center gap-3 rounded-2xl px-4 py-3.5 transition-opacity hover:opacity-90"
+          style={{ background: "rgba(234,179,8,0.08)", border: "1px solid rgba(234,179,8,0.30)" }}
+        >
+          <span
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-lg"
+            style={{ background: "rgba(234,179,8,0.14)" }}
+          >
+            💬
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-bold" style={{ color: "#92400e" }}>
+              {BOOKINGS.detail.notifyClientTitle}
+            </p>
+            <p className="text-xs" style={{ color: "var(--foreground-soft)" }}>
+              {BOOKINGS.detail.notifyClientBody}
+            </p>
+          </div>
+          <span className="shrink-0 text-sm font-semibold" style={{ color: "#b45309" }}>
+            {BOOKINGS.detail.notifyClientAction} ←
+          </span>
+        </a>
+      )}
+
+      {/* Waitlist candidates — only when the slot has been freed (cancel/no-show) */}
+      {isCancelled && waitlistMatches.length > 0 && (
+        <WaitlistMatchPanel
+          candidates={waitlistMatches}
+          bookingDate={formatMsgDate(booking.startTime)}
+          bookingTime={formatMsgTime(booking.startTime)}
+        />
+      )}
 
       {/* Online payment card — only when the booking has a hosted payment */}
       {onlinePayment && (
@@ -348,15 +396,18 @@ export default async function BookingDetailPage({
       </Card>
 
       {/* Smart WhatsApp messages card */}
-      <BookingSmartMessagesCard
-        businessName={business.name}
-        clientName={booking.client.fullName}
-        serviceName={booking.service.name}
-        bookingDate={formatMsgDate(booking.startTime)}
-        bookingTime={formatMsgTime(booking.startTime)}
-        price={price > 0 ? `₪${price.toLocaleString("he-IL")}` : undefined}
-        bookingStatus={booking.status}
-      />
+      <div id="notify-client" className="scroll-mt-4">
+        <BookingSmartMessagesCard
+          businessName={business.name}
+          clientName={booking.client.fullName}
+          clientPhone={booking.client.phone}
+          serviceName={booking.service.name}
+          bookingDate={formatMsgDate(booking.startTime)}
+          bookingTime={formatMsgTime(booking.startTime)}
+          price={price > 0 ? `₪${price.toLocaleString("he-IL")}` : undefined}
+          bookingStatus={booking.status}
+        />
+      </div>
 
       {/* Reputation actions — only for completed bookings */}
       {booking.status === "completed" && (

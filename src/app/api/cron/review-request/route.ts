@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/server/db/prisma";
 import { runReviewRequestForBusiness } from "@/server/review-request/runner";
+import { logger, captureError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  console.log("[cron/review-request] starting");
+  logger.info("[cron.review-request] starting");
 
   const now = new Date();
 
@@ -43,14 +44,16 @@ export async function GET(request: Request) {
       totalSkipped += result.skippedCount;
       totalFailed += result.failedCount;
     } catch (err) {
-      console.error(`[cron/review-request] error — businessId=${setting.businessId}`, err);
+      captureError("cron.review-request", err, { businessId: setting.businessId });
       totalFailed++;
     }
   }
 
-  console.log(
-    `[cron/review-request] done — sent=${totalSent} skipped=${totalSkipped} failed=${totalFailed}`,
-  );
+  logger.info("[cron.review-request] done", {
+    sent: totalSent,
+    skipped: totalSkipped,
+    failed: totalFailed,
+  });
   return NextResponse.json({
     businessesChecked: eligibleSettings.length,
     sent: totalSent,

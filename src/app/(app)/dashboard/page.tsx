@@ -7,6 +7,7 @@ import { getReputationSummary } from "@/server/reputation/queries";
 import { getRemindersDueCount, getRecentAutomationRuns } from "@/server/automations/queries";
 import { getOwnerWhatsAppStatus } from "@/server/whatsapp/owner-status";
 import { getLateCancellationsThisWeek } from "@/server/bookings/queries";
+import { getActiveWaitlistCount } from "@/server/waitlist/queries";
 import { generateGuidanceItems } from "@/lib/guidance/rules";
 import { BusinessSetupCard } from "@/components/dashboard/business-setup-card";
 import { SetupChecklist } from "@/components/dashboard/setup-checklist";
@@ -37,6 +38,7 @@ export default async function DashboardPage() {
     recentRuns,
     whatsappStatus,
     lateCancellationsCount,
+    waitlistCount,
   ] = await Promise.all([
     getDashboardData(tenant, {
       phone: business.phone,
@@ -53,6 +55,7 @@ export default async function DashboardPage() {
     getRecentAutomationRuns(tenant, 3),
     getOwnerWhatsAppStatus(business.id),
     getLateCancellationsThisWeek(tenant),
+    getActiveWaitlistCount(tenant),
   ]);
 
   const guidanceItems = generateGuidanceItems(
@@ -74,6 +77,7 @@ export default async function DashboardPage() {
       atRiskCount={guidanceQueryData.lostClientsCount}
       remindersDueCount={remindersDueCount}
       lateCancellationsCount={lateCancellationsCount}
+      waitlistCount={waitlistCount}
       forecast={forecast}
       reviewReadyCount={reputationSummary.recentCompletedCount}
       recentRuns={recentRuns}

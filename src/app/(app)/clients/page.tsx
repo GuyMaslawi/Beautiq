@@ -3,6 +3,7 @@ import { Users2, CalendarCheck, UserX, Clock, Upload } from "lucide-react";
 import { requireCurrentBusiness } from "@/server/auth/session";
 import { getClients, getClientSummary } from "@/server/clients/queries";
 import { ClientRow } from "@/components/clients/client-row";
+import { ClientCard } from "@/components/clients/client-card";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
@@ -124,10 +125,24 @@ export default async function ClientsPage({
         </div>
       )}
 
-      {/* Clients table */}
+      {/* Clients — mobile card list (no horizontal scroll on phones) */}
+      {clients.length > 0 && (
+        <div className="space-y-3 md:hidden">
+          {clients.map((client) => (
+            <ClientCard
+              key={client.id}
+              client={client}
+              businessName={business.name}
+              isTestMode={isTestMode}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* Clients table — desktop only */}
       {clients.length > 0 && (
         <div
-          className="overflow-hidden rounded-2xl"
+          className="hidden overflow-hidden rounded-2xl md:block"
           style={{
             background: "var(--surface)",
             border: "1px solid var(--border)",

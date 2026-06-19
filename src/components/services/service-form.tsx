@@ -129,6 +129,7 @@ export function ServiceForm({
   action,
   initialValues,
   isEdit = false,
+  pricingHealth,
 }: {
   action: (
     prevState: ServiceFormState,
@@ -136,6 +137,12 @@ export function ServiceForm({
   ) => Promise<ServiceFormState>;
   initialValues?: ServiceInitialValues;
   isEdit?: boolean;
+  /**
+   * Pricing-health card slot. Rendered immediately after "מחיר וזמן" so the
+   * most valuable pricing insight sits high in the page hierarchy (side-by-side
+   * on desktop, directly below the price on mobile).
+   */
+  pricingHealth?: React.ReactNode;
 }) {
   const [state, formAction, isPending] = useActionState(action, INITIAL);
 
@@ -167,37 +174,16 @@ export function ServiceForm({
         </div>
       )}
 
-      {/* 2-column card grid */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      {/*
+        Section order (Service Detail UX sprint): price → pricing health →
+        details → advanced. Auto-flow grid keeps price + pricing health
+        side-by-side on desktop; on mobile they stack in the same order.
+        `items-start` keeps the short price card top-aligned next to the
+        taller pricing-health card.
+      */}
+      <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
 
-        {/* Card 1: Service details */}
-        <SectionCard icon={FileText} title={SERVICES.form.sectionBasic} subtitle="שם השירות ותיאור קצר">
-          <Field label={SERVICES.form.nameLabel} htmlFor="name" error={state.errors?.name}>
-            <Input
-              id="name"
-              name="name"
-              placeholder={SERVICES.form.namePlaceholder}
-              value={fields.name}
-              onChange={(e) => set("name")(e.target.value)}
-              autoFocus
-            />
-          </Field>
-          <Field label={SERVICES.form.descriptionLabel} htmlFor="description">
-            <Textarea
-              id="description"
-              name="description"
-              placeholder={SERVICES.form.descriptionPlaceholder}
-              rows={4}
-              value={fields.description}
-              onChange={(e) => set("description")(e.target.value)}
-            />
-            <p className="mt-1 text-right text-xs" style={{ color: "var(--muted)" }}>
-              {fields.description.length}/180
-            </p>
-          </Field>
-        </SectionCard>
-
-        {/* Card 2: Price and duration */}
+        {/* Card 1: Price and duration */}
         <SectionCard icon={Clock} title={SERVICES.form.sectionPriceAndTime} subtitle="כמה זמן השירות נמשך בפועל">
           <Field
             label={SERVICES.form.durationLabel}
@@ -244,6 +230,36 @@ export function ServiceForm({
                 className="pr-10"
               />
             </div>
+          </Field>
+        </SectionCard>
+
+        {/* Pricing health — promoted to sit right after the price section */}
+        {pricingHealth}
+
+        {/* Card 2: Service details */}
+        <SectionCard icon={FileText} title={SERVICES.form.sectionBasic} subtitle="שם השירות ותיאור קצר">
+          <Field label={SERVICES.form.nameLabel} htmlFor="name" error={state.errors?.name}>
+            <Input
+              id="name"
+              name="name"
+              placeholder={SERVICES.form.namePlaceholder}
+              value={fields.name}
+              onChange={(e) => set("name")(e.target.value)}
+              autoFocus
+            />
+          </Field>
+          <Field label={SERVICES.form.descriptionLabel} htmlFor="description">
+            <Textarea
+              id="description"
+              name="description"
+              placeholder={SERVICES.form.descriptionPlaceholder}
+              rows={4}
+              value={fields.description}
+              onChange={(e) => set("description")(e.target.value)}
+            />
+            <p className="mt-1 text-right text-xs" style={{ color: "var(--muted)" }}>
+              {fields.description.length}/180
+            </p>
           </Field>
         </SectionCard>
 

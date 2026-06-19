@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/server/db/prisma";
 import { runMorningReminderForBusiness } from "@/server/morning-reminder/runner";
+import { logger, captureError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -23,7 +24,7 @@ export async function GET(request: Request) {
     10,
   );
 
-  console.log(`[cron/morning-reminder] starting — israelHour=${israelHour}`);
+  logger.info("[cron.morning-reminder] starting", { israelHour });
 
   // Fetch all enabled settings. The runner applies the hour filter per-business.
   const allEnabled = await prisma.automationSetting.findMany({
@@ -58,14 +59,16 @@ export async function GET(request: Request) {
       totalSkipped += result.skippedCount;
       totalFailed += result.failedCount;
     } catch (err) {
-      console.error(`[cron/morning-reminder] error — businessId=${setting.businessId}`, err);
+      captureError("cron.morning-reminder", err, { businessId: setting.businessId });
       totalFailed++;
     }
   }
 
-  console.log(
-    `[cron/morning-reminder] done — sent=${totalSent} skipped=${totalSkipped} failed=${totalFailed}`,
-  );
+  logger.info("[cron.morning-reminder] done", {
+    sent: totalSent,
+    skipped: totalSkipped,
+    failed: totalFailed,
+  });
   return NextResponse.json({
     hour: israelHour,
     businessesChecked: eligibleSettings.length,

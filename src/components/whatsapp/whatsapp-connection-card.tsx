@@ -36,7 +36,7 @@ import { useCallback, useEffect, useRef, useState, useTransition, type ReactNode
 import { useRouter } from "next/navigation";
 import Script from "next/script";
 import { MessageCircle, CheckCircle2, AlertCircle, Loader2, X, ShieldCheck, Clock, LifeBuoy } from "lucide-react";
-import { SUPPORT_EMAIL } from "@/lib/config";
+import { SUPPORT_EMAIL, APP_URL } from "@/lib/config";
 import {
   completeEmbeddedSignupAction,
   disconnectWhatsAppAction,
@@ -53,6 +53,7 @@ import type {
   AutomationTemplateStatus,
   OwnerSetupState,
 } from "@/server/whatsapp/owner-status";
+import type { WhatsAppActivityStats } from "@/server/automations/message-queries";
 import {
   CONNECTION_TRACKS,
   getTrackInfo,
@@ -65,6 +66,7 @@ import {
   buildFbLoginConfig,
   buildSanitizedLaunchPayload,
   configIdMatches,
+  originMatchStatus,
   maskAppId,
   EXPECTED_META_CONFIG_ID,
   type SanitizedLaunchPayload,
@@ -80,11 +82,22 @@ declare global {
 
 interface Props {
   status: OwnerWhatsAppStatus;
+  /** Operational message stats shown once connected (State B). Optional. */
+  activity?: WhatsAppActivityStats;
   appId?: string;
   configId?: string;
   graphVersion: string;
   /** Admin sees technical template names; owners do not. */
   isAdmin?: boolean;
+  /**
+   * Diagnostics only (no secrets): whether the server has real WhatsApp sending
+   * configured (ENABLE_REAL_WHATSAPP_SEND + Meta creds), and whether the system
+   * is currently relying on the shared env-fallback connection rather than a
+   * per-business connection. Surfaced in the admin Meta debug box to explain
+   * Embedded Signup behaviour. Never used for any send/gate decision here.
+   */
+  realSendEnabled?: boolean;
+  usingEnvFallback?: boolean;
 }
 
 /**
@@ -218,15 +231,24 @@ function OwnerSetupBanner({ status }: { status: OwnerWhatsAppStatus }) {
             Icon: AlertCircle,
             showSupport: true,
           }
-        : {
-            // preparing / pending_approval — both read as a calm "waiting" state.
-            title: "ממתין לאישור WhatsApp",
-            text: "ההודעות נשלחו לאישור WhatsApp. בדרך כלל זה מסתיים בזמן קצר.",
-            bg: "rgba(234,179,8,0.08)",
-            border: "rgba(234,179,8,0.28)",
-            color: "#b45309",
-            Icon: Clock,
-          };
+        : state === "preparing"
+          ? {
+              title: "מכינים את הודעות WhatsApp",
+              text: "אנחנו מכינים את תבניות ההודעה. עד שיהיו מוכנות, השליחה האוטומטית מושהית — אין צורך בפעולה מצידך.",
+              bg: "rgba(234,179,8,0.08)",
+              border: "rgba(234,179,8,0.28)",
+              color: "#b45309",
+              Icon: Clock,
+            }
+          : {
+              // pending_approval — submitted to Meta, waiting on their review.
+              title: "ממתין לאישור WhatsApp",
+              text: "ההודעות נשלחו לאישור WhatsApp. עד שיאושרו, השליחה האוטומטית מושהית — אין צורך בפעולה מצידך, נעדכן כשיהיה מוכן.",
+              bg: "rgba(234,179,8,0.08)",
+              border: "rgba(234,179,8,0.28)",
+              color: "#b45309",
+              Icon: Clock,
+            };
 
   return (
     <div
@@ -263,12 +285,121 @@ function ownerLabelColor(label: string): string {
   return "#b45309"; // pending / preparing
 }
 
+/** Hebrew date+time for "last activity". Tolerates a string from RSC serialization. */
+function formatLastActivity(date: Date | string | null | undefined): string | null {
+  if (!date) return null;
+  const d = typeof date === "string" ? new Date(date) : date;
+  if (Number.isNaN(d.getTime())) return null;
+  return d.toLocaleString("he-IL", {
+    timeZone: "Asia/Jerusalem",
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/**
+ * Connected (State B) — a compact operational summary, not a setup wizard.
+ * Shows the connected status + phone, and (when there is data) a small
+ * sent/delivered/failed glance plus the last activity time. Anything that
+ * doesn't exist yet is simply omitted.
+ */
+function ConnectedSummary({
+  displayPhoneNumber,
+  activity,
+  canSend = true,
+}: {
+  displayPhoneNumber: string;
+  activity?: WhatsAppActivityStats;
+  /** When false, the number is linked but sending is still blocked (templates
+   *  not yet approved). We must not imply full readiness in that case. */
+  canSend?: boolean;
+}) {
+  const lastActivity = formatLastActivity(activity?.lastActivityAt);
+  const hasStats =
+    !!activity && (activity.sentThisWeek > 0 || activity.failedThisWeek > 0);
+
+  const stats: { label: string; value: number; color: string }[] = activity
+    ? [
+        { label: "נשלחו השבוע", value: activity.sentThisWeek, color: "#15803d" },
+        { label: "נמסרו", value: activity.deliveredThisWeek, color: "#2563eb" },
+        {
+          label: "נכשלו",
+          value: activity.failedThisWeek,
+          color: activity.failedThisWeek > 0 ? "#dc2626" : "var(--muted)",
+        },
+      ]
+    : [];
+
+  // The phone is linked, but real sending requires approved templates too.
+  // Reflect that honestly so the owner never reads "connected" as "ready to send".
+  const tone = canSend
+    ? { bg: "rgba(22,163,74,0.06)", border: "rgba(22,163,74,0.22)", color: "#15803d" }
+    : { bg: "rgba(234,179,8,0.08)", border: "rgba(234,179,8,0.28)", color: "#b45309" };
+
+  return (
+    <div
+      className="rounded-xl px-4 py-3.5 space-y-3"
+      style={{ background: tone.bg, border: `1px solid ${tone.border}` }}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2" style={{ color: tone.color }}>
+          {canSend ? (
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+          ) : (
+            <Clock className="h-4 w-4 shrink-0" />
+          )}
+          <span className="text-sm font-semibold">
+            {canSend ? "WhatsApp מחובר" : "WhatsApp מחובר — עדיין לא מוכן לשליחה"}
+          </span>
+        </div>
+        <span
+          className="text-xs font-medium tabular-nums"
+          dir="ltr"
+          style={{ color: "var(--foreground)" }}
+        >
+          {displayPhoneNumber}
+        </span>
+      </div>
+
+      {hasStats && (
+        <div className="grid grid-cols-3 gap-2">
+          {stats.map((s) => (
+            <div
+              key={s.label}
+              className="rounded-lg px-2.5 py-2 text-center"
+              style={{ background: "rgba(255,255,255,0.6)", border: "1px solid var(--border)" }}
+            >
+              <p className="text-base font-bold tabular-nums" style={{ color: s.color }}>
+                {s.value}
+              </p>
+              <p className="text-[11px]" style={{ color: "var(--muted)" }}>
+                {s.label}
+              </p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {lastActivity && (
+        <p className="text-xs" style={{ color: "var(--muted)" }}>
+          פעילות אחרונה: {lastActivity}
+        </p>
+      )}
+    </div>
+  );
+}
+
 export function WhatsAppConnectionCard({
   status,
+  activity,
   appId,
   configId,
   graphVersion,
   isAdmin = false,
+  realSendEnabled = false,
+  usingEnvFallback = false,
 }: Props) {
   const router = useRouter();
   const embeddedSignupEnabled = !!appId && !!configId;
@@ -291,6 +422,9 @@ export function WhatsAppConnectionCard({
   );
   const [windowFbExists, setWindowFbExists] = useState(false);
   const [launchDebug, setLaunchDebug] = useState<LaunchDebug | null>(null);
+  // The live browser origin Meta sees — the value that must be in the Meta app's
+  // Allowed Domains / JS SDK domain. Captured client-side only (SSR has no origin).
+  const [origin, setOrigin] = useState<string>("");
 
   // Pre-connection chooser state.
   const [chooserOpen, setChooserOpen] = useState(false);
@@ -319,6 +453,37 @@ export function WhatsAppConnectionCard({
     setDebugStep(step);
     if (extra) console.log(`${LOG} step=${step}`, extra);
     else console.log(`${LOG} step=${step}`);
+  }, []);
+
+  // Capture the live origin on mount and log a one-time diagnostic snapshot of
+  // exactly which public values (origin + masked appId + config_id) Meta will
+  // see. No secrets. This is the first thing to check when the popup errors out
+  // immediately — an origin not in the Meta app's Allowed Domains is the usual
+  // cause. APP_URL is the expected production origin (NEXT_PUBLIC_APP_URL).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const o = window.location.origin;
+    // One-time read of a browser-only value (window.location.origin) into state
+    // after mount — SSR has no origin, so this can't be a render-time initializer.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOrigin(o);
+    console.log(`${LOG} diagnostics`, {
+      origin: o,
+      expectedOrigin: APP_URL,
+      originMatch: originMatchStatus(o, APP_URL),
+      appId: maskAppId(appId),
+      appIdPresent: !!appId,
+      configId: configId || "missing",
+      configIdPresent: !!configId,
+      configIdMatchesExpected: configIdMatches(configId),
+      embeddedSignupEnabled,
+      realSendEnabled,
+      usingEnvFallback,
+      alreadyConnected: status.connection.state === "active",
+      needsNumberConfirmation: !!status.connection.needsNumberConfirmation,
+    });
+    // Intentionally run once on mount — these inputs are stable for the session.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const state = status.connection.state;
@@ -447,7 +612,14 @@ export function WhatsAppConnectionCard({
       sdkReady.current = true;
       setSdkState("loaded");
       setWindowFbExists(true);
-      track("sdk_loaded", { graphVersion, hasConfigId: !!configId });
+      // Log the public values Meta will see when the SDK is ready (no secrets).
+      track("sdk_loaded", {
+        graphVersion,
+        appId: maskAppId(appId),
+        hasConfigId: !!configId,
+        origin: typeof window !== "undefined" ? window.location.origin : "",
+        expectedOrigin: APP_URL,
+      });
     } else {
       setSdkState("failed");
     }
@@ -497,8 +669,15 @@ export function WhatsAppConnectionCard({
     const loginConfig = buildFbLoginConfig(configId, chosen);
     const sanitized = buildSanitizedLaunchPayload({ appId, configId, track: chosen });
     setLaunchDebug({ payload: sanitized, metaUiOutcome: "unknown" });
-    // Sanitized, secret-free payload — exactly what we hand to Meta.
-    console.log(`${LOG} FB.login launch payload (sanitized)`, sanitized);
+    // Sanitized, secret-free payload — exactly what we hand to Meta, plus the
+    // live origin Meta will validate against the app's Allowed Domains.
+    const launchOrigin = typeof window !== "undefined" ? window.location.origin : "";
+    console.log(`${LOG} FB.login launch payload (sanitized)`, {
+      ...sanitized,
+      origin: launchOrigin,
+      expectedOrigin: APP_URL,
+      originMatch: originMatchStatus(launchOrigin, APP_URL),
+    });
 
     window.FB.login(
       (response: any) => {
@@ -776,13 +955,14 @@ export function WhatsAppConnectionCard({
         </div>
       )}
 
-      {/* Connected — show display phone */}
+      {/* Connected — compact operational summary (State B), not onboarding */}
       {!isTransient && state === "active" && displayPhoneNumber && !needsNumberConfirmation && (
         <div className="space-y-2">
-          <div className="flex items-center gap-2 text-xs" style={{ color: "#15803d" }}>
-            <CheckCircle2 className="h-4 w-4" />
-            <span>מחובר למספר {displayPhoneNumber}</span>
-          </div>
+          <ConnectedSummary
+            displayPhoneNumber={displayPhoneNumber}
+            activity={activity}
+            canSend={status.readiness.canSendOperationalMessages}
+          />
           {isTestLookingNumber && (
             <div
               className="rounded-xl px-3.5 py-2.5 text-xs leading-relaxed"
@@ -1127,12 +1307,17 @@ export function WhatsAppConnectionCard({
         <MetaLaunchDebugBox
           appId={appId}
           configId={configId}
+          origin={origin}
           sdkState={sdkState}
           windowFbExists={windowFbExists}
           debugStep={debugStep}
           flowPhase={flowPhase}
           selectedTrack={selectedTrack}
           launchDebug={launchDebug}
+          realSendEnabled={realSendEnabled}
+          usingEnvFallback={usingEnvFallback}
+          alreadyConnected={state === "active"}
+          needsNumberConfirmation={needsNumberConfirmation}
           onRecordMetaUi={(outcome) =>
             setLaunchDebug((prev) => {
               const next = prev
@@ -1428,28 +1613,42 @@ function DebugRow({ label, value, mono = true }: { label: string; value: ReactNo
 function MetaLaunchDebugBox({
   appId,
   configId,
+  origin,
   sdkState,
   windowFbExists,
   debugStep,
   flowPhase,
   selectedTrack,
   launchDebug,
+  realSendEnabled,
+  usingEnvFallback,
+  alreadyConnected,
+  needsNumberConfirmation,
   onRecordMetaUi,
 }: {
   appId?: string;
   configId?: string;
+  origin: string;
   sdkState: SdkState;
   windowFbExists: boolean;
   debugStep: DebugStep;
   flowPhase: FlowPhase;
   selectedTrack: ConnectionTrack | null;
   launchDebug: LaunchDebug | null;
+  realSendEnabled: boolean;
+  usingEnvFallback: boolean;
+  alreadyConnected: boolean;
+  needsNumberConfirmation: boolean;
   onRecordMetaUi: (outcome: MetaUiOutcome) => void;
 }) {
   const matches = configIdMatches(configId);
   // process.env.NEXT_PUBLIC_* / NODE_ENV are inlined at build time on the client.
   const runtimeEnv = process.env.NODE_ENV ?? "unknown";
   const payload = launchDebug?.payload;
+  // Compare the live origin to the expected production origin (NEXT_PUBLIC_APP_URL,
+  // default https://allura.info). A mismatch is the #1 cause of the Meta popup
+  // erroring immediately — the origin must be in the Meta app's Allowed Domains.
+  const originMatch = originMatchStatus(origin, APP_URL);
 
   return (
     <div
@@ -1478,14 +1677,51 @@ function MetaLaunchDebugBox({
         {matches ? "הפרודקשן משתמש ב־Config החדש" : "הפרודקשן לא משתמש ב־Config החדש"}
       </div>
 
+      {/* Origin match banner — the origin Meta validates against Allowed Domains */}
+      <div
+        className="rounded-lg px-2.5 py-1.5 font-semibold"
+        style={{
+          background:
+            originMatch === "match"
+              ? "rgba(22,163,74,0.08)"
+              : originMatch === "mismatch"
+                ? "rgba(239,68,68,0.08)"
+                : "rgba(234,179,8,0.10)",
+          border: `1px solid ${
+            originMatch === "match"
+              ? "rgba(22,163,74,0.25)"
+              : originMatch === "mismatch"
+                ? "rgba(239,68,68,0.25)"
+                : "rgba(234,179,8,0.30)"
+          }`,
+          color:
+            originMatch === "match" ? "#15803d" : originMatch === "mismatch" ? "#dc2626" : "#b45309",
+        }}
+      >
+        {originMatch === "match"
+          ? "ה־origin תואם לדומיין הפרודקשן המצופה"
+          : originMatch === "mismatch"
+            ? "ה־origin שונה מדומיין הפרודקשן — ודאי שהוא ברשימת הדומיינים המורשים ב־Meta"
+            : "טוען origin..."}
+      </div>
+
       <div className="space-y-1">
         <DebugRow label="סביבת ריצה" value={runtimeEnv} />
+        <DebugRow label="origin נוכחי" value={origin || "—"} />
+        <DebugRow label="דומיין פרודקשן מצופה" value={APP_URL} />
+        <DebugRow label="התאמת origin" value={originMatch} />
+        <DebugRow label="App ID קיים" value={appId ? "yes" : "no"} />
         <DebugRow label="NEXT_PUBLIC_META_APP_ID" value={maskAppId(appId)} />
+        <DebugRow label="Config ID קיים" value={configId ? "yes" : "no"} />
         <DebugRow label="NEXT_PUBLIC_META_CONFIG_ID" value={configId || "missing"} />
         <DebugRow label="Config מצופה" value={EXPECTED_META_CONFIG_ID} />
         <DebugRow label="התאמת Config" value={matches ? "yes" : "no"} />
         <DebugRow label="מצב Facebook SDK" value={sdkState} />
         <DebugRow label="window.FB קיים" value={windowFbExists ? "yes" : "no"} />
+        <DebugRow label="שליחת WhatsApp אמיתית פעילה" value={realSendEnabled ? "yes" : "no"} />
+        <DebugRow label="שימוש ב־env fallback" value={usingEnvFallback ? "yes" : "no"} />
+        <DebugRow label="העסק כבר מחובר" value={alreadyConnected ? "yes" : "no"} />
+        <DebugRow label="נדרש אישור מספר" value={needsNumberConfirmation ? "yes" : "no"} />
         <DebugRow label="מסלול נבחר" value={selectedTrack ?? "—"} />
         <DebugRow label="שלב" value={debugStep} />
         <DebugRow label="flow" value={flowPhase} />

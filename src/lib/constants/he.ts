@@ -37,6 +37,7 @@ export const NAV = {
   availability: "שעות עבודה",
   // New primary nav
   bringBack: "החזרת לקוחות",
+  waitlist: "רשימת המתנה",
   automations: "אוטומציות",
   finance: "פיננסים",
   publicPage: "עמוד הזמנות",
@@ -50,6 +51,89 @@ export const NAV = {
   winBack: "קמפיינים להחזרה",
   revenueForecast: "תחזית הכנסות",
   plans: "חבילות פרימיום",
+} as const;
+
+/**
+ * תוויות "רשימת המתנה" (/waitlist) — לקוחות שמחכות לתור מוקדם יותר.
+ * הבעלים שולטת בכל פעולה; אין שליחה אוטומטית.
+ */
+export const WAITLIST = {
+  title: "רשימת המתנה",
+  subtitle: "לקוחות שמחכות לתור מוקדם יותר. כשמתפנה תור — אפשר להציע להן.",
+  // Status labels (mapped from the WaitlistStatus enum)
+  status: {
+    active: "ממתינה",
+    notified: "נוצר קשר",
+    booked: "נקבע תור",
+    cancelled: "הוסרה",
+    expired: "פג תוקף",
+  },
+  list: {
+    columnClient: "לקוחה",
+    columnService: "שירות",
+    columnPreferred: "זמן מועדף",
+    columnAdded: "נוספה בתאריך",
+    columnStatus: "סטטוס",
+    anyService: "כל שירות",
+    anyTime: "גמיש",
+    empty: "אין לקוחות ברשימת ההמתנה",
+    emptyHint: "כשלקוחה רוצה תור מוקדם יותר — אפשר להוסיף אותה לכאן.",
+    // Default WhatsApp text for a waiting client (no freed slot yet) — owner can edit.
+    buildMessage: (clientName: string, serviceName?: string | null) =>
+      serviceName
+        ? `היי ${clientName}, רצינו לעדכן שאת ברשימת ההמתנה שלנו ל${serviceName}. נעדכן אותך מיד כשיתפנה תור מתאים 🙏`
+        : `היי ${clientName}, רצינו לעדכן שאת ברשימת ההמתנה שלנו. נעדכן אותך מיד כשיתפנה תור מתאים 🙏`,
+  },
+  actions: {
+    add: "הוספה לרשימה",
+    markContacted: "סימון: נוצר קשר",
+    markBooked: "סימון: נקבע תור",
+    remove: "הסרה",
+    sendMessage: "שלחי הודעה",
+    closeMessage: "סגירה",
+    copy: "העתקת ההודעה",
+    copied: "הועתק!",
+  },
+  form: {
+    title: "הוספת לקוחה לרשימת ההמתנה",
+    clientName: "שם הלקוחה",
+    clientNamePlaceholder: "לדוגמה: דנה כהן",
+    phone: "טלפון",
+    phonePlaceholder: "050-0000000",
+    service: "שירות (לא חובה)",
+    servicePlaceholder: "כל שירות",
+    preferredDate: "יום מועדף (לא חובה)",
+    preferredFromTime: "משעה",
+    preferredToTime: "עד שעה",
+    notes: "הערה (לא חובה)",
+    notesPlaceholder: "לדוגמה: מעדיפה אחר הצהריים",
+    submit: "הוספה לרשימה",
+    submitting: "מוסיף...",
+    successAdded: "הלקוחה נוספה לרשימת ההמתנה",
+    errorName: "יש להזין שם",
+    errorPhone: "יש להזין מספר טלפון תקין",
+    errorGeneric: "משהו השתבש. נסי שוב.",
+  },
+  match: {
+    // Booking-cancellation candidate panel
+    titleSingular: "לקוחה אחת ממתינה לתור זה",
+    titlePlural: (n: number) => `${n} לקוחות ממתינות לתור זה`,
+    subtitle: "התפנה תור — אפשר להציע אותו ללקוחות שברשימת ההמתנה.",
+    viewCandidates: "צפייה בלקוחות הממתינות",
+    hideCandidates: "הסתרה",
+    strongMatch: "התאמה מלאה",
+    none: "אין לקוחות מתאימות ברשימת ההמתנה",
+    // WhatsApp suggested text — personalized per candidate; owner can edit before sending.
+    buildMessage: (opts: {
+      clientName: string;
+      serviceName?: string | null;
+      date: string;
+      time: string;
+    }) =>
+      `היי ${opts.clientName}, התפנה אצלנו תור${
+        opts.serviceName ? ` ל${opts.serviceName}` : ""
+      } בתאריך ${opts.date} בשעה ${opts.time}. רוצה שאשמור לך אותו? ❤️`,
+  },
 } as const;
 
 /**
@@ -513,6 +597,9 @@ export const BOOKINGS = {
     savingNotes: "שומר…",
     notesSaved: "ההערות נשמרו",
     contactSection: "פרטי קשר",
+    notifyClientTitle: "כדאי לעדכן את הלקוחה",
+    notifyClientBody: "התור בוטל — שלחי הודעה כדי שהלקוחה לא תגיע לחינם.",
+    notifyClientAction: "להודעה",
   },
 
   actions: {
@@ -760,6 +847,7 @@ export const MESSAGES = {
     noClientsAvailable: "אין לקוחות זמינים כרגע.",
     previewTitle: "תצוגת הודעה",
     copyButton: "העתקת הודעה",
+    sendWhatsApp: "שליחה בוואטסאפ",
     resetButton: "איפוס",
     toneLabel: "סגנון",
     tones: {

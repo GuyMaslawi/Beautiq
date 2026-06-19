@@ -10,7 +10,7 @@ import {
 import { getMorningReminderSetting, getMorningReminderStatsThisMonth, getLastMorningReminderRun } from "@/server/morning-reminder/queries";
 import { getReviewRequestSetting, getReviewRequestStatsThisMonth, getLastReviewRequestRun } from "@/server/review-request/queries";
 import { getBookingConfirmationSetting } from "@/server/booking-confirmation/queries";
-import { getAutomationMessageLog } from "@/server/automations/message-queries";
+import { getAutomationMessageLog, getWhatsAppActivityStats } from "@/server/automations/message-queries";
 import { getLastAutomationRun } from "@/server/automations/run-queries";
 import { getOwnerWhatsAppStatus } from "@/server/whatsapp/owner-status";
 import { getReviewDemoStatus } from "@/server/whatsapp/review-demo";
@@ -67,6 +67,9 @@ export default async function AutomationsPage() {
   // Owner-facing WhatsApp connection + per-automation template readiness.
   const ownerWhatsAppStatus = await getOwnerWhatsAppStatus(business.id);
 
+  // Compact operational stats shown once WhatsApp is connected (State B).
+  const whatsappActivity = await getWhatsAppActivityStats(tenant);
+
   // Meta App Review demo status — admin/reviewer-only, business-scoped.
   const reviewDemoStatus = user?.isAdmin
     ? await getReviewDemoStatus(business.id)
@@ -120,10 +123,13 @@ export default async function AutomationsPage() {
       {/* Owner WhatsApp connection (Embedded Signup) + template setup */}
       <WhatsAppConnectionCard
         status={ownerWhatsAppStatus}
+        activity={whatsappActivity}
         appId={process.env.NEXT_PUBLIC_META_APP_ID}
         configId={process.env.NEXT_PUBLIC_META_CONFIG_ID}
         graphVersion={process.env.NEXT_PUBLIC_META_GRAPH_VERSION ?? "v19.0"}
         isAdmin={isAdmin}
+        realSendEnabled={realSendConfigured}
+        usingEnvFallback={isEnvFallback}
       />
 
       {/* Meta App Review demo panel — admin/reviewer-only */}

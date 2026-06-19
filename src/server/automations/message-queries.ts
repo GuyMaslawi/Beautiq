@@ -46,3 +46,51 @@ export async function getAutomationMessageLog(
     lastRetryAt: m.lastRetryAt,
   }));
 }
+
+export type WhatsAppActivityStats = {
+  /** Messages actually sent in the last 7 days. */
+  sentThisWeek: number;
+  /** Of those, how many WhatsApp reported delivered. */
+  deliveredThisWeek: number;
+  /** Failed send attempts in the last 7 days. */
+  failedThisWeek: number;
+  /** Most recent send across all time — powers "last activity". */
+  lastActivityAt: Date | null;
+};
+
+/**
+ * Lightweight WhatsApp activity summary for the connected-state operational
+ * card on the automations page. Reuses the AutomationMessage audit trail; no
+ * new tables. Returns zeros / null when there is nothing yet, so the UI can
+ * show only the information that actually exists.
+ */
+export async function getWhatsAppActivityStats(
+  tenant: TenantContext,
+): Promise<WhatsAppActivityStats> {
+  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const businessId = tenant.businessId;
+
+  const [sentThisWeek, deliveredThisWeek, failedThisWeek, last] = await Promise.all([
+    prisma.automationMessage.count({
+      where: { businessId, sentAt: { gte: weekAgo } },
+    }),
+    prisma.automationMessage.count({
+      where: { businessId, deliveredAt: { gte: weekAgo } },
+    }),
+    prisma.automationMessage.count({
+      where: { businessId, failedAt: { gte: weekAgo } },
+    }),
+    prisma.automationMessage.findFirst({
+      where: { businessId, sentAt: { not: null } },
+      orderBy: { sentAt: "desc" },
+      select: { sentAt: true },
+    }),
+  ]);
+
+  return {
+    sentThisWeek,
+    deliveredThisWeek,
+    failedThisWeek,
+    lastActivityAt: last?.sentAt ?? null,
+  };
+}

@@ -4,6 +4,7 @@ import {
   buildFbLoginConfig,
   buildSanitizedLaunchPayload,
   configIdMatches,
+  originMatchStatus,
   maskAppId,
   EXPECTED_META_CONFIG_ID,
   EXISTING_BUSINESS_FEATURE_TYPE,
@@ -60,6 +61,28 @@ describe("configIdMatches — production Config ID check", () => {
     expect(configIdMatches(undefined)).toBe(false);
     expect(configIdMatches(null)).toBe(false);
     expect(configIdMatches("")).toBe(false);
+  });
+});
+
+describe("originMatchStatus — diagnostics origin vs expected production origin", () => {
+  it("matches identical origins", () => {
+    expect(originMatchStatus("https://allura.info", "https://allura.info")).toBe("match");
+  });
+
+  it("ignores trailing slash and case", () => {
+    expect(originMatchStatus("https://Allura.info/", "https://allura.info")).toBe("match");
+  });
+
+  it("flags a different origin (e.g. www or a preview domain) as mismatch", () => {
+    expect(originMatchStatus("https://www.allura.info", "https://allura.info")).toBe("mismatch");
+    expect(originMatchStatus("https://allura.vercel.app", "https://allura.info")).toBe("mismatch");
+    expect(originMatchStatus("http://localhost:3000", "https://allura.info")).toBe("mismatch");
+  });
+
+  it("returns unknown until the origin is known", () => {
+    expect(originMatchStatus("", "https://allura.info")).toBe("unknown");
+    expect(originMatchStatus(undefined, "https://allura.info")).toBe("unknown");
+    expect(originMatchStatus("https://allura.info", "")).toBe("unknown");
   });
 });
 

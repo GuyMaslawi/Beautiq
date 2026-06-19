@@ -39,9 +39,13 @@ export function BringBackTabs({
 }) {
   return (
     <div className="space-y-2.5" dir="rtl">
-      {/* Main tabs */}
+      {/*
+        Main tabs — on mobile the long Hebrew labels would wrap into an uneven
+        multi-row block, so we use a single horizontally-scrollable row (hidden
+        scrollbar) that stays swipeable. On desktop each tab grows to fill.
+      */}
       <div
-        className="flex flex-wrap gap-1 rounded-2xl p-1"
+        className="flex gap-1 overflow-x-auto rounded-2xl p-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
       >
         {MAIN_TABS.map((tab) => {
@@ -52,7 +56,7 @@ export function BringBackTabs({
               href={`/bring-back?tab=${tab.key}`}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex-1 whitespace-nowrap rounded-xl px-3 py-2 text-center text-sm font-semibold transition-all duration-150",
+                "shrink-0 whitespace-nowrap rounded-xl px-4 py-2.5 text-center text-sm font-semibold transition-all duration-150 sm:flex-1",
                 !active && "text-muted hover:text-foreground hover:bg-background-alt",
               )}
               style={active ? ACTIVE_STYLE : undefined}
@@ -63,9 +67,9 @@ export function BringBackTabs({
         })}
       </div>
 
-      {/* Sub tabs — only for the "clients" tab */}
+      {/* Sub tabs — only for the "clients" tab; also a scrollable single row */}
       {activeTab === "clients" && (
-        <div className="flex flex-wrap gap-1 px-1">
+        <div className="flex gap-1.5 overflow-x-auto px-1 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {SUB_TABS.map((sub) => {
             const active = sub.key === activeSub;
             return (
@@ -74,7 +78,7 @@ export function BringBackTabs({
                 href={`/bring-back?tab=clients&sub=${sub.key}`}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "rounded-full px-3.5 py-1.5 text-xs font-medium transition-all duration-150",
+                  "shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-xs font-medium transition-all duration-150",
                   !active && "text-muted hover:text-foreground hover:bg-background-alt",
                 )}
                 style={

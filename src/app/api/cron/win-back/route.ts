@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/server/db/prisma";
 import { runWinBackForBusiness } from "@/server/win-back-automation/runner";
+import { logger, captureError } from "@/lib/logger";
 
 // Vercel cron invokes this with GET. The route is protected by CRON_SECRET
 // so it must not be publicly callable. Vercel automatically sends
@@ -27,7 +28,7 @@ export async function GET(request: Request) {
     10,
   );
 
-  console.log(`[cron/win-back] starting — israelHour=${israelHour}`);
+  logger.info("[cron.win-back] starting", { israelHour });
 
   // Load all businesses that have automation enabled at this hour and have
   // an active WhatsApp connection.
@@ -41,7 +42,7 @@ export async function GET(request: Request) {
   });
 
   if (eligibleSettings.length === 0) {
-    console.log(`[cron/win-back] no businesses scheduled for hour=${israelHour}`);
+    logger.info("[cron.win-back] no businesses scheduled this hour", { israelHour });
     return NextResponse.json({ processed: 0, hour: israelHour });
   }
 
@@ -63,10 +64,11 @@ export async function GET(request: Request) {
     select: { id: true, name: true, slug: true },
   });
 
-  console.log(
-    `[cron/win-back] hour=${israelHour} scheduled=${eligibleSettings.length} ` +
-      `active=${businesses.length}`,
-  );
+  logger.info("[cron.win-back] eligible businesses resolved", {
+    israelHour,
+    scheduled: eligibleSettings.length,
+    active: businesses.length,
+  });
 
   const results: Array<{
     businessId: string;
@@ -94,9 +96,10 @@ export async function GET(request: Request) {
       });
 
       if (existingRun) {
-        console.log(
-          `[cron/win-back] skipping businessId=${business.id} — run already exists today (runId=${existingRun.id})`,
-        );
+        logger.info("[cron.win-back] skipping — run already exists today", {
+          businessId: business.id,
+          runId: existingRun.id,
+        });
         results.push({
           businessId: business.id,
           success: true,
@@ -111,7 +114,7 @@ export async function GET(request: Request) {
       const result = await runWinBackForBusiness(business);
       results.push({ businessId: business.id, ...result });
     } catch (err) {
-      console.error(`[cron/win-back] error — businessId=${business.id}`, err);
+      captureError("cron.win-back", err, { businessId: business.id });
       results.push({
         businessId: business.id,
         success: false,
@@ -126,9 +129,11 @@ export async function GET(request: Request) {
   const totalSent = results.reduce((s, r) => s + r.sentCount, 0);
   const totalFailed = results.reduce((s, r) => s + r.failedCount, 0);
 
-  console.log(
-    `[cron/win-back] done — processed=${businesses.length} totalSent=${totalSent} totalFailed=${totalFailed}`,
-  );
+  logger.info("[cron.win-back] done", {
+    processed: businesses.length,
+    totalSent,
+    totalFailed,
+  });
 
   return NextResponse.json({
     hour: israelHour,

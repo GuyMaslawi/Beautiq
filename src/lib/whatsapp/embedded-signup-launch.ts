@@ -84,6 +84,31 @@ export function configIdMatches(configId?: string | null): boolean {
 }
 
 /**
+ * Normalize an origin/URL for comparison: trim, lowercase, drop any trailing
+ * slash. Used only for diagnostics (comparing the live browser origin to the
+ * expected production origin) — never for security decisions.
+ */
+function normalizeOrigin(value?: string | null): string {
+  return (value ?? "").trim().toLowerCase().replace(/\/+$/, "");
+}
+
+/**
+ * Diagnostic-only comparison of the live browser origin against the expected
+ * production origin. A mismatch is the single most common cause of the Meta
+ * popup erroring out immediately (the origin isn't in the app's Allowed Domains
+ * / JS SDK domain). Returns "unknown" until the client knows its own origin.
+ */
+export function originMatchStatus(
+  origin?: string | null,
+  expected?: string | null,
+): "match" | "mismatch" | "unknown" {
+  const a = normalizeOrigin(origin);
+  const b = normalizeOrigin(expected);
+  if (!a || !b) return "unknown";
+  return a === b ? "match" : "mismatch";
+}
+
+/**
  * Mask a public App ID for display. The App ID is not a secret, but we mask it in
  * the UI to avoid casual shoulder-surfing copy. Short values are returned as-is.
  */

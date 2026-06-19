@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import { MessageCircle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { MESSAGES } from "@/lib/constants/he";
+import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import {
   generateMessage,
   type MessageScenario,
@@ -21,6 +23,7 @@ type BookingStatus =
 interface BookingSmartMessagesCardProps {
   businessName: string;
   clientName: string;
+  clientPhone?: string;
   serviceName: string;
   bookingDate: string;
   bookingTime: string;
@@ -30,16 +33,31 @@ interface BookingSmartMessagesCardProps {
 
 const TONES: MessageTone[] = ["regular", "warm", "concise"];
 
+/**
+ * The most relevant scenario to pre-select for a given status, so the owner
+ * lands on the right message immediately — critically, the cancellation
+ * message stays available and pre-selected after a booking is cancelled.
+ */
+function defaultScenarioFor(status: BookingStatus): MessageScenario | null {
+  if (status === "cancelled") return "booking_cancelled";
+  if (status === "no_show") return "no_show_followup";
+  if (status === "completed") return "after_treatment";
+  return null;
+}
+
 export function BookingSmartMessagesCard({
   businessName,
   clientName,
+  clientPhone,
   serviceName,
   bookingDate,
   bookingTime,
   price,
   bookingStatus,
 }: BookingSmartMessagesCardProps) {
-  const [activeScenario, setActiveScenario] = useState<MessageScenario | null>(null);
+  const [activeScenario, setActiveScenario] = useState<MessageScenario | null>(
+    defaultScenarioFor(bookingStatus),
+  );
   const [tone, setTone] = useState<MessageTone>("regular");
 
   const context = {
@@ -65,7 +83,13 @@ export function BookingSmartMessagesCard({
     });
   }
 
-  if (bookingStatus === "pending" || bookingStatus === "approved") {
+  // The cancellation message must remain available AFTER the booking is
+  // cancelled — otherwise a cancelled appointment becomes a silent cancellation.
+  if (
+    bookingStatus === "pending" ||
+    bookingStatus === "approved" ||
+    bookingStatus === "cancelled"
+  ) {
     scenarios.push({
       value: "booking_cancelled",
       label: MESSAGES.smartComposer.scenarios.booking_cancelled,
@@ -166,6 +190,21 @@ export function BookingSmartMessagesCard({
                   {result.body}
                 </p>
               </div>
+              {clientPhone && (() => {
+                const waUrl = buildWhatsAppUrl(clientPhone, result.body);
+                return waUrl ? (
+                  <a
+                    href={waUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+                    style={{ background: "linear-gradient(135deg, #25d366 0%, #1ab954 100%)" }}
+                  >
+                    <MessageCircle className="h-4 w-4" />
+                    {MESSAGES.smartComposer.sendWhatsApp}
+                  </a>
+                ) : null;
+              })()}
               <CopyMessageButton
                 message={result.body}
                 label={MESSAGES.smartComposer.copyButton}
