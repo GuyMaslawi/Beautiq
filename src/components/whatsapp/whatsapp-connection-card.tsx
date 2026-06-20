@@ -8,11 +8,11 @@
  * plain-Hebrew statuses.
  *
  * PRE-CONNECTION CHOICE (existing-number / coexistence support): most beauty
- * business owners in Israel already use the WhatsApp Business App. Before we open
- * Meta we ask which kind of number they want to connect:
- *   A. existing WhatsApp Business App number  → try to connect it (coexistence)
- *   B. personal/regular WhatsApp number       → discouraged, with a warning gate
- *   C. a brand-new business number            → the technically simplest path
+ * business owners in Israel already have a number on their phone. Before we open
+ * Meta we ask which kind of number they want to connect (chooser order):
+ *   A. regular/business number on the phone    → recommended for most owners
+ *   B. a brand-new business number             → the technically simplest path
+ *   C. number already managed in Meta Business / Cloud API → rare/advanced case
  * The chosen track is owner guidance + is stored as the connection source. The
  * actual Embedded Signup launch is the same supported FB.login flow; whether
  * coexistence is offered depends on the Meta configuration and the account's
@@ -1442,6 +1442,14 @@ function ChooserModal({
                       {t.recommendedBadge}
                     </span>
                   )}
+                  {t.advancedBadge && (
+                    <span
+                      className="rounded-full px-2 py-0.5 text-[11px] font-semibold"
+                      style={{ background: "rgba(107,114,128,0.14)", color: "#6b7280" }}
+                    >
+                      {t.advancedBadge}
+                    </span>
+                  )}
                 </div>
                 <p className="text-xs mt-1 leading-relaxed" style={{ color: "var(--muted)" }}>
                   {t.description}
@@ -1545,7 +1553,7 @@ function ConnectErrorModal({
             </h3>
             <p className="text-sm mt-1 leading-relaxed" style={{ color: "var(--muted)" }}>
               {alreadyRegistered
-                ? "אם זה מספר WhatsApp Business, נסי לבחור במסלול ‘יש לי WhatsApp Business קיים’. אם זה מספר אישי רגיל, מומלץ להשתמש במספר עסקי ייעודי או להעביר אותו ל־WhatsApp Business."
+                ? "המספר כבר פעיל ב־WhatsApp. אפשר לנסות שוב לחבר אותו כמספר קיים, או להשתמש במספר עסקי חדש ייעודי."
                 : "משהו השתבש בתהליך החיבור מול Meta. אפשר לנסות שוב, ואם הבעיה נמשכת פני לתמיכה."}
             </p>
             {isAdmin && error.raw && (
@@ -1562,7 +1570,7 @@ function ConnectErrorModal({
             className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold"
             style={{ background: "#25d366", color: "#fff" }}
           >
-            לנסות שוב עם WhatsApp Business קיים
+            לנסות שוב לחבר מספר קיים
           </button>
           <button
             onClick={onUseNew}

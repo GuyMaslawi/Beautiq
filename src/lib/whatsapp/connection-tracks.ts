@@ -1,12 +1,16 @@
 /**
  * WhatsApp onboarding "tracks" — the owner's chosen way to connect a number.
  *
- * Most beauty business owners in Israel already use the WhatsApp Business App on
- * their phone and do NOT want a brand-new number. Meta's Embedded Signup can
- * onboard an existing WhatsApp Business App number (coexistence) when the Meta
- * configuration and the account/number are eligible. This module holds the
- * owner-facing Hebrew guidance for each track plus small pure helpers used by the
- * connection card and its tests.
+ * Most beauty business owners in Israel already have a WhatsApp number on their
+ * phone (a regular number or the WhatsApp Business app) and do NOT want a
+ * brand-new number — so that is the recommended track. The "existing_business_app"
+ * track is the rare/advanced case: a number that is ALREADY managed through Meta
+ * Business / WhatsApp Cloud API. Owners kept confusing "I have the WhatsApp
+ * Business mobile app" with "I have a Meta-managed Cloud API number" and picking
+ * that track by mistake (Meta then fails immediately), so the copy below steers
+ * them firmly toward the phone-number track unless they truly have a Cloud API
+ * number. This module holds the owner-facing Hebrew guidance for each track plus
+ * small pure helpers used by the connection card and its tests.
  *
  * IMPORTANT: the track is the owner's *stated intent*. Meta does not reliably
  * report back which path actually happened, so we never claim a connection is
@@ -29,6 +33,8 @@ export interface ConnectionTrackInfo {
   explanation: string;
   /** "מומלץ לרוב העסקים" recommended badge text, when applicable. */
   recommendedBadge?: string;
+  /** "מתקדם בלבד" advanced badge text, for the Cloud-API-managed track only. */
+  advancedBadge?: string;
   /** Warning shown before launching Meta (personal numbers only). */
   warning?: string;
   /** Extra acknowledgement the owner must confirm before launch (personal only). */
@@ -37,25 +43,17 @@ export interface ConnectionTrackInfo {
 
 export const CONNECTION_TRACKS: ConnectionTrackInfo[] = [
   {
-    track: "existing_business_app",
-    title: "יש לי WhatsApp Business קיים",
-    description:
-      "נחבר את מספר ה־WhatsApp Business הקיים שלך. תוכלי להמשיך להשתמש באותו מספר ולחבר אוטומציות דרך Allura.",
-    explanation:
-      "בחלון של Meta בחרי את חשבון ה־WhatsApp Business הקיים שלך והמשיכי לפי ההוראות. בסיום תחזרי ל־Allura ונבדוק שהחיבור הצליח. אם Meta לא תאפשר לחבר את המספר הקיים, נציע לך אפשרויות המשך — זו דרישה של Meta, לא תקלה ב־Allura.",
-    recommendedBadge: "מומלץ לרוב העסקים",
-  },
-  {
     track: "personal",
-    title: "יש לי WhatsApp רגיל/אישי",
+    title: "יש לי WhatsApp רגיל/עסקי בטלפון",
     description:
-      "מומלץ לא לחבר מספר אישי. עדיף לפתוח WhatsApp Business או להשתמש במספר עסקי ייעודי.",
+      "זו האפשרות המתאימה לרוב העסקים — נחבר את המספר שכבר נמצא אצלך בטלפון, בין אם זה WhatsApp רגיל ובין אם זו אפליקציית WhatsApp Business.",
     explanation:
-      "חיבור מספר אישי שכבר רשום ב־WhatsApp עלול להיכשל או לחסום את המספר בתהליך החיבור. אם זה המספר היחיד שלך, עדיף קודם להעביר אותו ל־WhatsApp Business או להשתמש במספר עסקי ייעודי.",
+      "בחלון של Meta המשיכי לפי ההוראות כדי לחבר את המספר שכבר נמצא אצלך בטלפון. אם המספר כבר פעיל ב־WhatsApp, ייתכן שתתבקשי לאמת אותו במהלך החיבור — זה חלק תקין מהתהליך של Meta. בסיום תחזרי ל־Allura ונבדוק שהחיבור הצליח.",
+    recommendedBadge: "מומלץ לרוב העסקים",
     warning:
-      "מספר אישי שכבר רשום ב־WhatsApp עלול להיחסם בתהליך החיבור.",
+      "אם המספר כבר פעיל ב־WhatsApp, ייתכן שתתבקשי לאמת אותו או לאשר העברה במהלך החיבור.",
     ackWarning:
-      "Meta עשויה לבקש לנתק או להעביר את המספר. מומלץ להשתמש במספר עסקי.",
+      "הבנתי — ייתכן ש־Meta תבקש לאמת או להעביר את המספר כדי להשלים את החיבור.",
   },
   {
     track: "new_number",
@@ -65,19 +63,32 @@ export const CONNECTION_TRACKS: ConnectionTrackInfo[] = [
     explanation:
       "בחלון של Meta הזיני את המספר החדש. המספר יקבל קוד אימות מ־WhatsApp. ודאי שהמספר זמין לקבלת SMS או שיחה ושאינו רשום כבר ב־WhatsApp. בסיום תחזרי ל־Allura ונבדוק שהחיבור הצליח.",
   },
+  {
+    track: "existing_business_app",
+    title: "יש לי מספר שמחובר כבר ל־Meta Business",
+    advancedBadge: "מתקדם בלבד",
+    description:
+      "בחרי בזה רק אם המספר כבר מנוהל דרך Meta Business / WhatsApp Cloud API. אם יש לך רק אפליקציית WhatsApp Business בטלפון — אל תבחרי בזה.",
+    explanation:
+      "המשיכי בחלון של Meta עם החשבון שכבר מנוהל אצלך ב־Meta Business / WhatsApp Cloud API. שימי לב: אם המספר אינו מנוהל כבר דרך Meta, החיבור עלול להיכשל מיד — במקרה כזה חזרי ובחרי במסלול ‘יש לי WhatsApp רגיל/עסקי בטלפון’.",
+  },
 ];
 
 export function getTrackInfo(track: ConnectionTrack): ConnectionTrackInfo {
-  return CONNECTION_TRACKS.find((t) => t.track === track) ?? CONNECTION_TRACKS[2];
+  return (
+    CONNECTION_TRACKS.find((t) => t.track === track) ??
+    CONNECTION_TRACKS.find((t) => t.track === "new_number") ??
+    CONNECTION_TRACKS[0]
+  );
 }
 
 /** Owner-facing Hebrew label for a stored connection source (confirmation card). */
 export function connectionSourceLabel(source?: string | null): string {
   switch (source) {
     case "existing_business_app":
-      return "WhatsApp Business קיים / חיבור משותף";
+      return "מספר מנוהל ב־Meta Business / Cloud API";
     case "personal":
-      return "מספר אישי";
+      return "מספר רגיל או עסקי בטלפון";
     case "new_number":
       return "מספר חדש";
     default:
