@@ -1,10 +1,11 @@
 import { Wallet } from "lucide-react";
-import { PageHeader } from "@/components/ui/page-header";
 import { requireCurrentBusiness } from "@/server/auth/session";
 import { getFinanceData, type PeriodFilter } from "@/server/finance/queries";
 import { getRevenueForecastData } from "@/server/revenue-forecast/queries";
 import { FinancePageClient } from "@/components/finance/finance-page-client";
 import { FINANCE } from "@/lib/constants/he";
+import { PremiumPageShell } from "@/components/premium/page-shell";
+import { BeautyPageHero } from "@/components/premium/page-hero";
 
 const VALID_PERIODS: PeriodFilter[] = ["today", "week", "month", "year"];
 
@@ -28,14 +29,16 @@ export default async function FinancePage({ searchParams }: PageProps) {
   ]);
 
   return (
-    <div className="w-full space-y-6">
-      <PageHeader
+    <PremiumPageShell tint="champagne" width="wide">
+      <BeautyPageHero
         icon={Wallet}
+        eyebrow="התמונה הכספית"
         title={FINANCE.pageTitle}
         subtitle={FINANCE.pageSubtitle}
+        tint="champagne"
       />
 
       <FinancePageClient data={data} period={period} forecast={forecast} />
-    </div>
+    </PremiumPageShell>
   );
 }

@@ -18,6 +18,8 @@ import { deleteExpenseAction } from "@/server/finance/actions";
 import { ExpenseFormModal } from "./expense-form-modal";
 import type { FinanceData, PeriodFilter } from "@/server/finance/queries";
 import type { RevenueForecastData } from "@/server/revenue-forecast/queries";
+import { PremiumMetricCard } from "@/components/premium/metric-card";
+import type { ToneKey } from "@/components/premium/tokens";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -55,8 +57,14 @@ function PeriodFilter({
 }) {
   return (
     <div
-      className="flex flex-wrap gap-1.5 rounded-2xl p-1"
-      style={{ background: "var(--surface-muted, rgba(0,0,0,0.04))", border: "1px solid var(--border)" }}
+      className="flex flex-wrap gap-1.5 rounded-[1.25rem] p-1.5"
+      style={{
+        background: "rgba(255,255,255,0.72)",
+        border: "1px solid rgba(255,255,255,0.7)",
+        boxShadow: "0 8px 24px -14px rgba(124,58,97,0.2), inset 0 1px 0 rgba(255,255,255,0.9)",
+        backdropFilter: "blur(10px)",
+        WebkitBackdropFilter: "blur(10px)",
+      }}
     >
       {PERIOD_OPTIONS.map((opt) => (
         <button
@@ -99,42 +107,24 @@ function SummaryCard({
   icon: React.ElementType;
   warn?: boolean;
 }) {
-  const accentColors = {
-    green: { bg: "rgba(61,139,110,0.10)", fg: "#3d8b6e", border: "rgba(61,139,110,0.25)" },
-    rose: { bg: "rgba(201,120,152,0.10)", fg: "#b86b8c", border: "rgba(201,120,152,0.25)" },
-    gold: { bg: "rgba(212,168,30,0.10)", fg: "#b8960a", border: "rgba(212,168,30,0.25)" },
-  };
-
-  const colors = accent ? accentColors[accent] : null;
+  const tone: ToneKey = warn
+    ? "danger"
+    : accent === "green"
+    ? "success"
+    : accent === "gold"
+    ? "gold"
+    : accent === "rose"
+    ? "brand"
+    : "neutral";
 
   return (
-    <div
-      className="flex flex-col gap-3 rounded-2xl p-5"
-      style={{
-        background: colors ? colors.bg : "var(--surface)",
-        border: `1px solid ${colors ? colors.border : "var(--border)"}`,
-        boxShadow: "var(--shadow-sm)",
-      }}
-    >
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium" style={{ color: "var(--foreground-soft)" }}>
-          {title}
-        </span>
-        <Icon
-          className="h-4 w-4"
-          style={{ color: colors ? colors.fg : "var(--muted)" }}
-        />
-      </div>
-      <p
-        className="text-2xl font-bold leading-none"
-        style={{ color: warn ? "#ef4444" : colors ? colors.fg : "var(--foreground)" }}
-      >
-        {value}
-      </p>
-      {sub && (
-        <p className="text-xs" style={{ color: "var(--muted)" }}>{sub}</p>
-      )}
-    </div>
+    <PremiumMetricCard
+      tone={tone}
+      icon={<Icon className="h-4 w-4" />}
+      count={value}
+      label={title}
+      helper={sub}
+    />
   );
 }
 
@@ -157,7 +147,7 @@ function ProfitVisual({ revenue, expenses, profit }: { revenue: number; expenses
   return (
     <div
       className="rounded-2xl p-5"
-      style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+      style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.94), rgba(255,255,255,0.82))", border: "1px solid rgba(255,255,255,0.7)", boxShadow: "0 12px 32px -16px rgba(124,58,97,0.16), inset 0 1px 0 rgba(255,255,255,0.9)" }}
     >
       <div className="mb-4 flex items-center gap-2">
         <BarChart2 className="h-4 w-4" style={{ color: "#b86b8c" }} />
@@ -201,7 +191,7 @@ function TopServices({ services }: { services: FinanceData["topServices"] }) {
   return (
     <div
       className="rounded-2xl p-5"
-      style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+      style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.94), rgba(255,255,255,0.82))", border: "1px solid rgba(255,255,255,0.7)", boxShadow: "0 12px 32px -16px rgba(124,58,97,0.16), inset 0 1px 0 rgba(255,255,255,0.9)" }}
     >
       <div className="mb-4 flex items-center gap-2">
         <Sparkles className="h-4 w-4" style={{ color: "#b86b8c" }} />
@@ -362,7 +352,7 @@ function TargetVsActual({ forecast }: { forecast: RevenueForecastData }) {
   return (
     <div
       className="rounded-2xl p-5"
-      style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+      style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.94), rgba(255,255,255,0.82))", border: "1px solid rgba(255,255,255,0.7)", boxShadow: "0 12px 32px -16px rgba(124,58,97,0.16), inset 0 1px 0 rgba(255,255,255,0.9)" }}
     >
       <div className="mb-1 flex items-center gap-2">
         <Target className="h-4 w-4" style={{ color: "#b86b8c" }} />
@@ -566,7 +556,7 @@ export function FinancePageClient({ data, period, forecast }: FinancePageClientP
       {summary.revenue === 0 && (
         <div
           className="rounded-2xl px-6 py-8 text-center"
-          style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+          style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.94), rgba(255,255,255,0.82))", border: "1px solid rgba(255,255,255,0.7)", boxShadow: "0 12px 32px -16px rgba(124,58,97,0.16), inset 0 1px 0 rgba(255,255,255,0.9)" }}
         >
           <TrendingUp className="mx-auto mb-3 h-8 w-8" style={{ color: "var(--muted)" }} />
           <p className="font-medium" style={{ color: "var(--foreground)" }}>
@@ -591,7 +581,7 @@ export function FinancePageClient({ data, period, forecast }: FinancePageClientP
       {/* Expenses section */}
       <div
         className="rounded-2xl p-5"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+        style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.94), rgba(255,255,255,0.82))", border: "1px solid rgba(255,255,255,0.7)", boxShadow: "0 12px 32px -16px rgba(124,58,97,0.16), inset 0 1px 0 rgba(255,255,255,0.9)" }}
       >
         <div className="mb-4 flex items-center justify-between">
           <h3 className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
