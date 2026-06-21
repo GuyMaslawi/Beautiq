@@ -17,12 +17,18 @@ import {
   Circle,
   RefreshCcw,
   XCircle,
+  Star,
+  TrendingUp,
 } from "lucide-react";
 import { BOOKING_STATUS, BOOKINGS, DASHBOARD } from "@/lib/constants/he";
 import { FadeIn } from "@/components/ui/animate";
-import { DashboardSection } from "@/components/dashboard/dashboard-section";
 import { RevenueSection } from "@/components/dashboard/revenue-section";
 import { AutomationsSection } from "@/components/dashboard/automations-section";
+import { PremiumPageShell } from "@/components/premium/page-shell";
+import { EditorialSectionHeader } from "@/components/premium/section-header";
+import { BeautyInsightCard } from "@/components/premium/insight-card";
+import { AuraBlob } from "@/components/premium/aura-blob";
+import type { ToneKey } from "@/components/premium/tokens";
 import type {
   DashboardMetrics,
   SetupState,
@@ -56,6 +62,12 @@ function daysSince(isoOrNull: string | null): number | null {
   return Math.floor((Date.now() - new Date(isoOrNull).getTime()) / 86400000);
 }
 
+function statusTone(status: UpcomingBookingItem["status"]): ToneKey {
+  if (status === "approved") return "success";
+  if (status === "completed") return "info";
+  return "warning"; // pending
+}
+
 // ── Checklist helpers ─────────────────────────────────────────────────────────
 
 interface ChecklistItemDef {
@@ -75,10 +87,50 @@ function buildChecklist(setup: SetupState): ChecklistItemDef[] {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// DashboardHero — command center
+// CommandCenterHero — full-bleed editorial command center
 // ══════════════════════════════════════════════════════════════════════════════
 
-function DashboardHero({
+function HeroStat({
+  href,
+  icon: Icon,
+  value,
+  label,
+  iconColor,
+}: {
+  href: string;
+  icon: LucideIcon;
+  value: React.ReactNode;
+  label: string;
+  iconColor: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="ring-soft group flex items-center gap-3 rounded-2xl px-4 py-3 transition-transform hover:-translate-y-0.5 active:scale-[0.98]"
+      style={{
+        background: "rgba(255,255,255,0.08)",
+        border: "1px solid rgba(255,255,255,0.14)",
+        backdropFilter: "blur(8px)",
+        WebkitBackdropFilter: "blur(8px)",
+      }}
+    >
+      <span
+        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+        style={{ background: "rgba(255,255,255,0.10)" }}
+      >
+        <Icon className="h-4 w-4" style={{ color: iconColor }} />
+      </span>
+      <span className="flex flex-col leading-tight">
+        <span className="display-num text-xl font-bold text-white">{value}</span>
+        <span className="text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
+          {label}
+        </span>
+      </span>
+    </Link>
+  );
+}
+
+function CommandCenterHero({
   businessName,
   metrics,
 }: {
@@ -94,83 +146,65 @@ function DashboardHero({
 
   return (
     <div
-      className="relative overflow-hidden rounded-2xl"
+      className="spotlight grain relative isolate overflow-hidden rounded-[1.75rem]"
       style={{
-        background: "linear-gradient(145deg, #2b0e1f 0%, #3e1630 55%, #2c1527 100%)",
-        border: "1px solid rgba(184,107,140,0.28)",
-        boxShadow: "0 8px 32px rgba(120,40,80,0.28), 0 2px 8px rgba(0,0,0,0.18)",
+        background: "linear-gradient(150deg, #2b0e1f 0%, #44183a 48%, #2c1527 100%)",
+        border: "1px solid rgba(184,107,140,0.30)",
+        boxShadow: "0 24px 60px -22px rgba(60,20,45,0.6), inset 0 1px 0 rgba(255,255,255,0.06)",
       }}
     >
-      {/* Background glows */}
-      <div
-        className="pointer-events-none absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse at 78% 15%, rgba(201,120,152,0.22) 0%, transparent 52%), radial-gradient(ellipse at 12% 85%, rgba(184,107,140,0.13) 0%, transparent 48%)",
-        }}
-      />
+      <AuraBlob color="rgba(201,120,152,0.34)" size={360} style={{ top: -150, insetInlineEnd: -60 }} />
+      <AuraBlob color="rgba(157,106,168,0.22)" size={300} style={{ bottom: -160, insetInlineStart: -80 }} />
 
-      <div className="relative px-7 py-7">
-        {/* Top row: greeting + date */}
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.50)" }}>
-              שלום,
-            </p>
-            <h1
-              className="text-3xl font-bold leading-tight tracking-tight text-white"
-              style={{ textShadow: "0 2px 12px rgba(0,0,0,0.25)" }}
-            >
-              {businessName}
-            </h1>
-          </div>
-
-          {/*
-            Date only — the month-revenue pill moved out to avoid duplicating
-            the dedicated "הכנסות" section below (dashboard dedup sprint).
-          */}
-          <p className="text-sm font-medium" style={{ color: "rgba(255,255,255,0.55)" }}>
+      <div className="relative flex flex-col gap-7 p-6 md:p-8 lg:flex-row lg:items-end lg:justify-between">
+        <div className="min-w-0">
+          <span className="eyebrow" style={{ color: "rgba(240,168,200,0.9)" }}>
+            לוח הבקרה שלך
+          </span>
+          <p className="mt-2 text-sm font-medium" style={{ color: "rgba(255,255,255,0.55)" }}>
+            שלום,
+          </p>
+          <h1
+            className="display-num text-[2.1rem] font-bold leading-tight text-white md:text-[2.75rem]"
+            style={{ textShadow: "0 2px 16px rgba(0,0,0,0.3)" }}
+          >
+            {businessName}
+          </h1>
+          <p className="mt-2 text-sm font-medium" style={{ color: "rgba(255,255,255,0.6)" }}>
             {todayLabel}
           </p>
+
+          {/* Primary CTA woven into the hero */}
+          <Link
+            href="/bookings/new"
+            className="mt-5 inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5 active:scale-[0.98]"
+            style={{
+              background: "linear-gradient(135deg, #e7a9c4 0%, #c97898 45%, #b86b8c 100%)",
+              boxShadow: "0 12px 28px -8px rgba(201,120,152,0.6)",
+            }}
+          >
+            <CalendarDays className="h-4 w-4" />
+            <Plus className="-ms-1.5 h-3 w-3 opacity-80" />
+            קביעת פגישה חדשה
+          </Link>
         </div>
 
-        {/*
-          Glance badge row — today's appointments + active clients. Pending
-          approvals are intentionally not shown here; they live as an actionable
-          item in the "היום" attention column to avoid showing the count twice.
-        */}
-        <div className="mt-5 flex flex-wrap gap-2.5">
-          {/* Bookings today — always a link */}
-          <Link
+        {/* Live pulse stats */}
+        <div className="flex shrink-0 gap-2.5">
+          <HeroStat
             href="/bookings?filter=today"
-            className="flex cursor-pointer items-center gap-2.5 rounded-xl px-4 py-2.5 transition-all hover:brightness-125 active:scale-[0.96]"
-            style={{
-              background: "rgba(255,255,255,0.09)",
-              border: "1px solid rgba(255,255,255,0.12)",
-            }}
-          >
-            <CalendarDays className="h-4 w-4 shrink-0" style={{ color: "#f0a8c8" }} />
-            <span className="text-sm font-bold text-white">{metrics.bookingsToday}</span>
-            <span className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
-              פגישות היום
-            </span>
-          </Link>
-
-          {/* Active clients — always a link */}
-          <Link
+            icon={CalendarDays}
+            value={metrics.bookingsToday}
+            label="פגישות היום"
+            iconColor="#f0a8c8"
+          />
+          <HeroStat
             href="/clients"
-            className="flex cursor-pointer items-center gap-2.5 rounded-xl px-4 py-2.5 transition-all hover:brightness-125 active:scale-[0.96]"
-            style={{
-              background: "rgba(255,255,255,0.09)",
-              border: "1px solid rgba(255,255,255,0.12)",
-            }}
-          >
-            <Users2 className="h-4 w-4 shrink-0" style={{ color: "#c0a8f0" }} />
-            <span className="text-sm font-bold text-white">{metrics.totalClients}</span>
-            <span className="text-sm" style={{ color: "rgba(255,255,255,0.55)" }}>
-              לקוחות פעילים
-            </span>
-          </Link>
+            icon={Users2}
+            value={metrics.totalClients}
+            label="לקוחות פעילים"
+            iconColor="#c0a8f0"
+          />
         </div>
       </div>
     </div>
@@ -178,7 +212,7 @@ function DashboardHero({
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// DashboardQuickActions
+// QuickActions — refined navigation pills
 // ══════════════════════════════════════════════════════════════════════════════
 
 function ActionPill({
@@ -193,12 +227,11 @@ function ActionPill({
   return (
     <Link
       href={href}
-      className="flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition-all hover:shadow-sm"
+      className="ring-soft flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium transition-transform hover:-translate-y-0.5"
       style={{
-        background: "var(--surface)",
-        border: "1px solid var(--border)",
+        background: "rgba(255,255,255,0.72)",
         color: "var(--foreground-soft)",
-        boxShadow: "var(--shadow-xs)",
+        boxShadow: "0 4px 14px -6px rgba(124,58,97,0.16)",
       }}
     >
       <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: "#b86b8c" }} />
@@ -209,163 +242,152 @@ function ActionPill({
 
 function DashboardQuickActions() {
   return (
-    <div>
-      <p className="mb-3 text-sm font-semibold" style={{ color: "var(--muted)" }}>
-        פעולות מהירות
-      </p>
-      <div className="flex flex-wrap gap-2.5">
-        <ActionPill href="/bring-back" icon={RefreshCcw} label="החזרת לקוחות" />
-        <ActionPill href="/services/new" icon={Sparkles} label="הוספת שירות" />
-        <ActionPill href="/clients" icon={UserPlus} label="הוספת לקוחה" />
-        <ActionPill href="/availability" icon={Clock} label="שעות פעילות" />
-        {/* Primary CTA — last in DOM = leftmost in RTL */}
-        <Link
-          href="/bookings/new"
-          className="flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-          style={{
-            background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
-            boxShadow: "0 2px 10px rgba(184,107,140,0.35)",
-          }}
-        >
-          <CalendarDays className="h-3.5 w-3.5 shrink-0" />
-          <Plus className="h-3 w-3 shrink-0 -ms-1 opacity-75" />
-          <span>קביעת פגישה חדשה</span>
-        </Link>
-      </div>
+    <div className="flex flex-wrap gap-2.5">
+      <ActionPill href="/bring-back" icon={RefreshCcw} label="החזרת לקוחות" />
+      <ActionPill href="/services/new" icon={Sparkles} label="הוספת שירות" />
+      <ActionPill href="/clients" icon={UserPlus} label="הוספת לקוחה" />
+      <ActionPill href="/availability" icon={Clock} label="שעות פעילות" />
     </div>
   );
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// TodayAppointmentsCard
+// TodayAppointments — editorial timeline panel
 // ══════════════════════════════════════════════════════════════════════════════
 
-function bookingStatusStyle(status: UpcomingBookingItem["status"]) {
-  if (status === "approved") return { background: "rgba(61,139,110,0.10)", color: "#3d8b6e" };
-  if (status === "completed") return { background: "rgba(59,122,181,0.10)", color: "#2a5a8a" };
-  return { background: "rgba(184,150,10,0.10)", color: "#7a6400" }; // pending
-}
-
-function TodayAppointmentsCard({
+function TodayAppointmentsPanel({
   todayBookings,
 }: {
   todayBookings: UpcomingBookingItem[];
 }) {
   return (
-    <div
-      className="flex flex-col overflow-hidden rounded-2xl"
-      style={{
-        background: "var(--surface)",
-        border: "1px solid var(--border)",
-        boxShadow: "var(--shadow-sm)",
-      }}
-    >
-      {/* Header */}
-      <div className="shrink-0 px-5 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
-        <h2 className="text-base font-bold" style={{ color: "var(--foreground)" }}>
-          הפגישות שלך להיום
-        </h2>
+    <div className="aura-card overflow-hidden rounded-[1.4rem]">
+      <div className="flex items-center justify-between px-5 py-4">
+        <h3 className="text-foreground text-[15px] font-bold">הפגישות שלך להיום</h3>
+        <Link
+          href="/bookings"
+          className="flex items-center gap-1.5 text-xs font-semibold transition-opacity hover:opacity-80"
+          style={{ color: "#b86b8c" }}
+        >
+          <CalendarDays className="h-3.5 w-3.5" />
+          כל הפגישות
+        </Link>
       </div>
+      <div className="editorial-rule mx-5" />
 
-      {/* Booking list */}
       {todayBookings.length === 0 ? (
-        <div className="flex flex-col items-center justify-center px-5 py-5 text-center">
+        <div className="flex flex-col items-center justify-center px-5 py-9 text-center">
           <div
-            className="mb-3 flex h-10 w-10 items-center justify-center rounded-full"
+            className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl"
             style={{ background: "rgba(184,107,140,0.10)" }}
           >
-            <CalendarDays className="h-5 w-5" style={{ color: "#b86b8c" }} />
+            <CalendarDays className="h-6 w-6" style={{ color: "#b86b8c" }} />
           </div>
-          <p className="text-sm font-medium" style={{ color: "var(--muted)" }}>
+          <p className="text-sm font-semibold" style={{ color: "var(--foreground-soft)" }}>
             אין פגישות להיום
           </p>
-          <p className="mt-1 text-xs" style={{ color: "var(--muted-light)" }}>
+          <p className="mt-1 text-xs" style={{ color: "var(--muted)" }}>
             קבעי פגישה חדשה או בדקי חלונות פנויים.
           </p>
           <Link
             href="/bookings/new"
-            className="mt-3 text-xs font-medium transition-opacity hover:opacity-80"
+            className="mt-3 text-xs font-semibold transition-opacity hover:opacity-80"
             style={{ color: "#b86b8c" }}
           >
             + קביעת פגישה חדשה
           </Link>
         </div>
       ) : (
-        <ul>
+        <div className="px-4 py-4">
           {todayBookings.map((booking, idx) => {
-            const time = formatTimeOnly(booking.startTimeISO);
-            const initial = getInitial(booking.clientName);
+            const tone = statusTone(booking.status);
             const isLast = idx === todayBookings.length - 1;
             return (
-              <li
+              <TimelineRow
                 key={booking.id}
-                style={!isLast ? { borderBottom: "1px solid var(--border)" } : undefined}
-              >
-                <Link
-                  href={`/bookings/${booking.id}`}
-                  className="flex cursor-pointer items-center gap-4 px-5 py-3.5 transition-colors hover:bg-background-alt"
-                >
-                  {/* Time */}
-                  <span
-                    className="w-11 shrink-0 text-sm font-bold tabular-nums"
-                    style={{ color: "#b86b8c" }}
-                  >
-                    {time}
-                  </span>
-
-                  {/* Avatar */}
-                  <div
-                    className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
-                    style={{
-                      background:
-                        "linear-gradient(135deg, rgba(201,120,152,0.85) 0%, rgba(184,107,140,0.75) 100%)",
-                    }}
-                  >
-                    {initial}
-                  </div>
-
-                  {/* Name + service */}
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className="truncate text-sm font-semibold"
-                      style={{ color: "var(--foreground)" }}
-                    >
-                      {booking.clientName}
-                    </p>
-                    <p className="truncate text-xs" style={{ color: "var(--muted)" }}>
-                      {booking.serviceName}
-                    </p>
-                  </div>
-
-                  {/* Status badge */}
-                  <span
-                    className="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium"
-                    style={bookingStatusStyle(booking.status)}
-                  >
-                    {BOOKING_STATUS[booking.status]}
-                  </span>
-                </Link>
-              </li>
+                time={formatTimeOnly(booking.startTimeISO)}
+                initials={getInitial(booking.clientName)}
+                name={booking.clientName}
+                service={booking.serviceName}
+                statusLabel={BOOKING_STATUS[booking.status]}
+                tone={tone}
+                href={`/bookings/${booking.id}`}
+                last={isLast}
+              />
             );
           })}
-        </ul>
+        </div>
       )}
-
-      {/* Footer */}
-      <div
-        className="mt-auto shrink-0 px-5 py-3.5"
-        style={{ borderTop: "1px solid var(--border)" }}
-      >
-        <Link
-          href="/bookings"
-          className="flex items-center gap-1.5 text-sm font-medium transition-opacity hover:opacity-80"
-          style={{ color: "#b86b8c" }}
-        >
-          <CalendarDays className="h-3.5 w-3.5" />
-          <span>צפייה בכל הפגישות</span>
-        </Link>
-      </div>
     </div>
+  );
+}
+
+const TONE_HEX: Record<ToneKey, { fg: string; bg: string; border: string }> = {
+  neutral: { fg: "#3d3545", bg: "rgba(138,129,144,0.10)", border: "rgba(138,129,144,0.22)" },
+  brand: { fg: "#b86b8c", bg: "rgba(184,107,140,0.10)", border: "rgba(184,107,140,0.24)" },
+  success: { fg: "#2f7d61", bg: "rgba(61,139,110,0.10)", border: "rgba(61,139,110,0.24)" },
+  warning: { fg: "#a06a14", bg: "rgba(184,124,30,0.10)", border: "rgba(184,124,30,0.24)" },
+  danger: { fg: "#b13b3b", bg: "rgba(190,74,74,0.10)", border: "rgba(190,74,74,0.24)" },
+  info: { fg: "#2f6aa0", bg: "rgba(59,122,181,0.10)", border: "rgba(59,122,181,0.24)" },
+  gold: { fg: "#a87c2a", bg: "rgba(192,149,96,0.12)", border: "rgba(192,149,96,0.28)" },
+};
+
+function TimelineRow({
+  time,
+  initials,
+  name,
+  service,
+  statusLabel,
+  tone,
+  href,
+  last,
+}: {
+  time: string;
+  initials: string;
+  name: string;
+  service: string;
+  statusLabel: string;
+  tone: ToneKey;
+  href: string;
+  last: boolean;
+}) {
+  const c = TONE_HEX[tone];
+  return (
+    <Link href={href} className="group relative flex gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-background-alt">
+      <div className="relative flex w-12 shrink-0 flex-col items-center pt-0.5">
+        <span className="display-num text-sm font-bold" style={{ color: "#b86b8c" }}>
+          {time}
+        </span>
+        <span className="mt-1.5 h-2 w-2 rounded-full" style={{ background: c.fg, boxShadow: `0 0 0 3px ${c.bg}` }} />
+        {!last && (
+          <span
+            aria-hidden
+            className="mt-1 w-px flex-1"
+            style={{ background: "linear-gradient(to bottom, rgba(184,107,140,0.28), transparent)" }}
+          />
+        )}
+      </div>
+      <div className="flex min-w-0 flex-1 items-center gap-3 pb-3">
+        <span
+          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+          style={{ background: "linear-gradient(135deg,#c97898,#9d6aa8)" }}
+        >
+          {initials}
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-foreground truncate text-sm font-bold">{name}</p>
+          <p className="truncate text-xs" style={{ color: "var(--muted)" }}>
+            {service}
+          </p>
+        </div>
+        <span
+          className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+          style={{ color: c.fg, background: c.bg, border: `1px solid ${c.border}` }}
+        >
+          {statusLabel}
+        </span>
+      </div>
+    </Link>
   );
 }
 
@@ -377,32 +399,12 @@ type AttentionColor = "green" | "warning" | "rose" | "info";
 
 const ATTENTION_PALETTE: Record<
   AttentionColor,
-  { bg: string; iconBg: string; iconColor: string; fg: string }
+  { bg: string; iconBg: string; iconColor: string; fg: string; border: string }
 > = {
-  green: {
-    bg: "rgba(61,139,110,0.07)",
-    iconBg: "rgba(61,139,110,0.14)",
-    iconColor: "#3d8b6e",
-    fg: "#2d6b55",
-  },
-  warning: {
-    bg: "rgba(184,150,10,0.07)",
-    iconBg: "rgba(184,150,10,0.15)",
-    iconColor: "#b87c1e",
-    fg: "#7a6400",
-  },
-  rose: {
-    bg: "rgba(190,74,74,0.07)",
-    iconBg: "rgba(190,74,74,0.14)",
-    iconColor: "#be4a4a",
-    fg: "#8b3333",
-  },
-  info: {
-    bg: "rgba(59,122,181,0.07)",
-    iconBg: "rgba(59,122,181,0.14)",
-    iconColor: "#3b7ab5",
-    fg: "#2a5a8a",
-  },
+  green: { bg: "rgba(61,139,110,0.07)", iconBg: "rgba(61,139,110,0.14)", iconColor: "#3d8b6e", fg: "#2d6b55", border: "rgba(61,139,110,0.2)" },
+  warning: { bg: "rgba(184,150,10,0.07)", iconBg: "rgba(184,150,10,0.15)", iconColor: "#b87c1e", fg: "#7a6400", border: "rgba(184,150,10,0.22)" },
+  rose: { bg: "rgba(190,74,74,0.07)", iconBg: "rgba(190,74,74,0.14)", iconColor: "#be4a4a", fg: "#8b3333", border: "rgba(190,74,74,0.2)" },
+  info: { bg: "rgba(59,122,181,0.07)", iconBg: "rgba(59,122,181,0.14)", iconColor: "#3b7ab5", fg: "#2a5a8a", border: "rgba(59,122,181,0.2)" },
 };
 
 function AttentionCard({
@@ -429,16 +431,12 @@ function AttentionCard({
     <Link
       href={href}
       aria-label={ariaLabel ?? `${count} ${label} — ${action}`}
-      className="flex cursor-pointer items-center gap-3 rounded-xl p-3.5 transition-all hover:opacity-90 hover:shadow-md"
-      style={{ background: p.bg, border: `1px solid transparent` }}
+      className="lift flex cursor-pointer items-center gap-3 rounded-2xl p-3.5"
+      style={{ background: p.bg, border: `1px solid ${p.border}` }}
     >
-      <div
-        className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-        style={{ background: p.iconBg }}
-      >
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: p.iconBg }}>
         <Icon className="h-4 w-4" style={{ color: p.iconColor }} />
       </div>
-
       <div className="min-w-0 flex-1">
         <p className="text-sm font-bold leading-tight" style={{ color: p.fg }}>
           {count} {label}
@@ -447,11 +445,7 @@ function AttentionCard({
           {subLabel}
         </p>
       </div>
-
-      <div
-        className="flex shrink-0 items-center gap-1 text-xs font-semibold"
-        style={{ color: p.iconColor }}
-      >
+      <div className="flex shrink-0 items-center gap-1 text-xs font-semibold" style={{ color: p.iconColor }}>
         <span>{action}</span>
         <ArrowLeft className="h-3 w-3" />
       </div>
@@ -497,18 +491,9 @@ function WeekCalendarMini({
   }, [allBookings]);
 
   return (
-    <div
-      className="rounded-2xl p-4"
-      style={{
-        background: "var(--surface)",
-        border: "1px solid var(--border)",
-        boxShadow: "var(--shadow-sm)",
-      }}
-    >
+    <div className="aura-card rounded-[1.4rem] p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
-          מבט על השבוע
-        </h3>
+        <h3 className="text-foreground text-sm font-bold">מבט על השבוע</h3>
         <Link
           href="/bookings/new"
           className="rounded-full px-2.5 py-1 text-xs font-semibold transition-opacity hover:opacity-80"
@@ -522,37 +507,20 @@ function WeekCalendarMini({
         {slots.map((slot) => (
           <div
             key={slot.dayStr}
-            className="flex flex-col items-center gap-1 rounded-xl py-2.5"
+            className="flex flex-col items-center gap-1 rounded-2xl py-3"
             style={
               slot.isToday
-                ? {
-                    background:
-                      "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
-                    boxShadow: "0 2px 8px rgba(184,107,140,0.28)",
-                  }
-                : { background: "var(--background-alt)" }
+                ? { background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)", boxShadow: "0 8px 18px -6px rgba(184,107,140,0.45)" }
+                : { background: "rgba(247,238,243,0.5)", border: "1px solid rgba(184,107,140,0.08)" }
             }
           >
-            <span
-              className="text-xs font-semibold"
-              style={{
-                color: slot.isToday ? "rgba(255,255,255,0.80)" : "var(--muted)",
-              }}
-            >
+            <span className="text-xs font-semibold" style={{ color: slot.isToday ? "rgba(255,255,255,0.85)" : "var(--muted)" }}>
               {slot.label}
             </span>
-            <span
-              className="text-base font-bold tabular-nums"
-              style={{ color: slot.isToday ? "#fff" : "var(--foreground)" }}
-            >
+            <span className="display-num text-lg font-bold" style={{ color: slot.isToday ? "#fff" : "var(--foreground)" }}>
               {slot.count}
             </span>
-            <span
-              className="text-[10px]"
-              style={{
-                color: slot.isToday ? "rgba(255,255,255,0.60)" : "var(--muted-light)",
-              }}
-            >
+            <span className="text-[10px]" style={{ color: slot.isToday ? "rgba(255,255,255,0.6)" : "var(--muted-light)" }}>
               תורים
             </span>
           </div>
@@ -562,7 +530,7 @@ function WeekCalendarMini({
       <Link
         href="/bookings"
         className="mt-3 flex items-center gap-1.5 pt-3 text-xs font-medium transition-opacity hover:opacity-80"
-        style={{ borderTop: "1px solid var(--border)", color: "#b86b8c" }}
+        style={{ borderTop: "1px solid rgba(184,107,140,0.12)", color: "#b86b8c" }}
       >
         <CalendarRange className="h-3 w-3" />
         <span>צפייה בכל המשבצות</span>
@@ -579,96 +547,60 @@ function FollowUpClientsPreview({ clients }: { clients: SuggestedClient[] }) {
   const displayed = clients.slice(0, 3);
 
   return (
-    <div
-      className="overflow-hidden rounded-2xl"
-      style={{
-        background: "var(--surface)",
-        border: "1px solid var(--border)",
-        boxShadow: "var(--shadow-sm)",
-      }}
-    >
-      <div className="px-4 py-3" style={{ borderBottom: "1px solid var(--border)" }}>
-        <h3 className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
-          לקוחות למעקב ושימור
-        </h3>
+    <div className="aura-card overflow-hidden rounded-[1.4rem]">
+      <div className="flex items-center justify-between px-5 py-4">
+        <h3 className="text-foreground text-sm font-bold">לקוחות למעקב ושימור</h3>
+        {clients.length > 3 && (
+          <Link href="/bring-back" className="flex items-center gap-1 text-xs font-semibold transition-opacity hover:opacity-80" style={{ color: "#b86b8c" }}>
+            <span>הכול</span>
+            <ArrowLeft className="h-3 w-3" />
+          </Link>
+        )}
       </div>
+      <div className="editorial-rule mx-5" />
 
       {clients.length === 0 ? (
-        <div className="px-4 py-5 text-center">
-          <p className="text-sm" style={{ color: "var(--muted)" }}>
-            אין לקוחות למעקב כרגע
-          </p>
-          <Link
-            href="/bring-back"
-            className="mt-2 inline-block text-xs font-medium transition-opacity hover:opacity-80"
-            style={{ color: "#b86b8c" }}
-          >
+        <div className="px-5 py-6 text-center">
+          <p className="text-sm" style={{ color: "var(--muted)" }}>אין לקוחות למעקב כרגע</p>
+          <Link href="/bring-back" className="mt-2 inline-block text-xs font-semibold transition-opacity hover:opacity-80" style={{ color: "#b86b8c" }}>
             מעבר להחזרת לקוחות
           </Link>
         </div>
       ) : (
-        <ul>
-          {displayed.map((client, idx) => {
+        <div className="grid gap-3 p-4 sm:grid-cols-3">
+          {displayed.map((client) => {
             const days = daysSince(client.lastVisitAtISO);
-            const isLast = idx === displayed.length - 1;
             return (
-              <li
+              <div
                 key={client.id}
-                className="flex items-center gap-3 px-4 py-3"
-                style={!isLast ? { borderBottom: "1px solid var(--border)" } : undefined}
+                className="flex flex-col items-center gap-2 rounded-2xl p-3 text-center"
+                style={{ background: "rgba(247,238,243,0.45)", border: "1px solid rgba(184,107,140,0.1)" }}
               >
-                <div
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
-                  style={{
-                    background:
-                      "linear-gradient(135deg, rgba(201,120,152,0.85) 0%, rgba(184,107,140,0.75) 100%)",
-                  }}
+                <span
+                  className="flex h-11 w-11 items-center justify-center rounded-full text-base font-bold text-white"
+                  style={{ background: "linear-gradient(135deg,#c97898,#9d6aa8)" }}
                 >
                   {getInitial(client.fullName)}
-                </div>
-
-                <div className="min-w-0 flex-1">
-                  <p
-                    className="truncate text-sm font-semibold"
-                    style={{ color: "var(--foreground)" }}
-                  >
-                    {client.fullName}
-                  </p>
+                </span>
+                <div className="min-w-0">
+                  <p className="text-foreground truncate text-sm font-bold">{client.fullName}</p>
                   {days !== null && (
-                    <p className="text-xs" style={{ color: "var(--muted)" }}>
-                      לא חזרה כבר {days} ימים
+                    <p className="text-[11px]" style={{ color: "var(--muted)" }}>
+                      לא חזרה {days} ימים
                     </p>
                   )}
                 </div>
-
                 <Link
                   href="/bring-back"
-                  className="flex shrink-0 items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium transition-opacity hover:opacity-80"
-                  style={{
-                    background: "rgba(37,211,102,0.09)",
-                    color: "#1a9e4e",
-                    border: "1px solid rgba(37,211,102,0.18)",
-                  }}
+                  className="flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold transition-opacity hover:opacity-80"
+                  style={{ background: "rgba(37,211,102,0.1)", color: "#1a9e4e", border: "1px solid rgba(37,211,102,0.18)" }}
                 >
                   <MessageCircle className="h-3 w-3" />
-                  <span>שליחת הודעה</span>
+                  <span>הודעה</span>
                 </Link>
-              </li>
+              </div>
             );
           })}
-        </ul>
-      )}
-
-      {clients.length > 3 && (
-        <div className="px-4 py-3" style={{ borderTop: "1px solid var(--border)" }}>
-          <Link
-            href="/bring-back"
-            className="flex items-center gap-1 text-xs font-medium transition-opacity hover:opacity-80"
-            style={{ color: "#b86b8c" }}
-          >
-            <ArrowLeft className="h-3 w-3" />
-            <span>צפייה בכל הלקוחות למעקב</span>
-          </Link>
         </div>
       )}
     </div>
@@ -676,10 +608,10 @@ function FollowUpClientsPreview({ clients }: { clients: SuggestedClient[] }) {
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// SetupProgressCard
+// SetupProgressRibbon — slim progress strip
 // ══════════════════════════════════════════════════════════════════════════════
 
-function SetupProgressCard({ setup }: { setup: SetupState }) {
+function SetupProgressRibbon({ setup }: { setup: SetupState }) {
   const items = buildChecklist(setup);
   const completedCount = items.filter((i) => i.done).length;
   const totalCount = items.length;
@@ -687,188 +619,72 @@ function SetupProgressCard({ setup }: { setup: SetupState }) {
   if (progressPct === 100) return null;
 
   return (
-    <div
-      className="rounded-2xl p-4"
-      style={{
-        background: "var(--surface)",
-        border: "1px solid rgba(184,107,140,0.18)",
-        boxShadow: "var(--shadow-sm)",
-      }}
-    >
-      <div className="mb-2.5 flex items-center justify-between">
-        <h3 className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
-          {DASHBOARD.progress.title}
-        </h3>
-        <span
-          className="rounded-full px-2.5 py-0.5 text-xs font-semibold tabular-nums"
-          style={{ background: "rgba(184,107,140,0.10)", color: "#b86b8c" }}
-        >
-          {progressPct}%
-        </span>
+    <div className="aura-card rounded-[1.4rem] p-5">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex items-center gap-3">
+          <span
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white"
+            style={{ background: "linear-gradient(135deg,#c97898,#9d6aa8)" }}
+          >
+            <Sparkles className="h-5 w-5" />
+          </span>
+          <div>
+            <h3 className="text-foreground text-sm font-bold">{DASHBOARD.progress.title}</h3>
+            <p className="text-xs" style={{ color: "var(--muted)" }}>
+              {completedCount}/{totalCount} הושלמו · {progressPct}%
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          {items.map((item) => (
+            <Link
+              key={item.label}
+              href={item.href}
+              className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-transform hover:-translate-y-0.5"
+              style={{
+                background: item.done ? "rgba(61,139,110,0.08)" : "rgba(255,255,255,0.7)",
+                border: `1px solid ${item.done ? "rgba(61,139,110,0.2)" : "rgba(184,107,140,0.16)"}`,
+                color: item.done ? "#2f7d61" : "var(--foreground-soft)",
+              }}
+            >
+              {item.done ? <CheckCircle2 className="h-3.5 w-3.5" /> : <Circle className="h-3.5 w-3.5 opacity-60" />}
+              <span className={item.done ? "line-through opacity-70" : ""}>{item.label}</span>
+            </Link>
+          ))}
+        </div>
       </div>
 
-      <div
-        className="mb-3.5 h-1.5 overflow-hidden rounded-full"
-        style={{ background: "rgba(184,107,140,0.10)" }}
-      >
+      <div className="mt-4 h-1.5 overflow-hidden rounded-full" style={{ background: "rgba(184,107,140,0.1)" }}>
         <div
           className="h-full rounded-full transition-all duration-700"
-          style={{
-            width: `${progressPct}%`,
-            background: "linear-gradient(90deg, #c97898 0%, #b86b8c 100%)",
-          }}
+          style={{ width: `${progressPct}%`, background: "linear-gradient(90deg, #c97898 0%, #b86b8c 100%)" }}
         />
       </div>
-
-      <ul className="space-y-0.5">
-        {items.map((item) => (
-          <li key={item.label}>
-            <Link
-              href={item.href}
-              className="flex items-center gap-2.5 rounded-lg px-2 py-2 transition-colors hover:bg-background-alt"
-            >
-              {item.done ? (
-                <CheckCircle2 className="h-4 w-4 shrink-0" style={{ color: "#3d8b6e" }} />
-              ) : (
-                <Circle className="h-4 w-4 shrink-0" style={{ color: "var(--muted-light)" }} />
-              )}
-              <span
-                className={`truncate text-xs font-medium ${
-                  item.done ? "text-muted line-through" : "text-foreground"
-                }`}
-              >
-                {item.label}
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// InsightCard — used by the "הזדמנויות" (Opportunities) section
+// Opportunity action link (button-styled CTA inside BeautyInsightCard)
 // ══════════════════════════════════════════════════════════════════════════════
 
-type InsightCardTheme = "rose" | "green" | "violet";
-
-const INSIGHT_PALETTE: Record<
-  InsightCardTheme,
-  {
-    bg: string;
-    border: string;
-    shadow: string;
-    valueFg: string;
-    mutedFg: string;
-    ctaFg: string;
-    progBg: string;
-    progFill: string;
-  }
-> = {
-  rose: {
-    bg: "var(--surface)",
-    border: "1px solid rgba(190,74,74,0.20)",
-    shadow: "var(--shadow-sm)",
-    valueFg: "#8b3333",
-    mutedFg: "var(--muted)",
-    ctaFg: "#be4a4a",
-    progBg: "rgba(190,74,74,0.10)",
-    progFill: "linear-gradient(90deg, #e06060 0%, #be4a4a 100%)",
-  },
-  green: {
-    bg: "linear-gradient(135deg, #f0fdf8 0%, #e6f9f0 100%)",
-    border: "1px solid rgba(61,139,110,0.22)",
-    shadow: "0 2px 10px rgba(61,139,110,0.08)",
-    valueFg: "#2d6b55",
-    mutedFg: "rgba(45,107,85,0.65)",
-    ctaFg: "#3d8b6e",
-    progBg: "rgba(61,139,110,0.12)",
-    progFill: "linear-gradient(90deg, #3d8b6e 0%, #2d7060 100%)",
-  },
-  violet: {
-    bg: "var(--surface)",
-    border: "1px solid var(--border)",
-    shadow: "var(--shadow-sm)",
-    valueFg: "var(--foreground)",
-    mutedFg: "var(--muted)",
-    ctaFg: "#b86b8c",
-    progBg: "rgba(184,107,140,0.10)",
-    progFill: "linear-gradient(90deg, #c97898 0%, #b86b8c 100%)",
-  },
-};
-
-function InsightCard({
-  title,
-  value,
-  explanation,
-  cta,
-  href,
-  isEmpty,
-  emptyText,
-  progressPct,
-  theme,
-}: {
-  title: string;
-  value: string;
-  explanation: string;
-  cta: string;
-  href: string;
-  isEmpty: boolean;
-  emptyText: string;
-  progressPct?: number | null;
-  theme: InsightCardTheme;
-}) {
-  const p = INSIGHT_PALETTE[theme];
+function OpportunityCta({ href, label, tone }: { href: string; label: string; tone: ToneKey }) {
+  const c = TONE_HEX[tone];
   return (
     <Link
       href={href}
-      className="flex cursor-pointer flex-col gap-3 rounded-2xl p-5 transition-all hover:shadow-md hover:brightness-[1.02] active:scale-[0.97]"
-      style={{ background: p.bg, border: p.border, boxShadow: p.shadow }}
+      className="inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-transform hover:-translate-y-0.5"
+      style={{ background: c.bg, color: c.fg, border: `1px solid ${c.border}` }}
     >
-      <h4 className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
-        {title}
-      </h4>
-
-      {isEmpty ? (
-        <p className="flex-1 text-sm" style={{ color: "var(--muted)" }}>
-          {emptyText}
-        </p>
-      ) : (
-        <div className="flex flex-1 flex-col gap-1.5">
-          <p className="text-2xl font-bold tabular-nums leading-tight" style={{ color: p.valueFg }}>
-            {value}
-          </p>
-          {progressPct !== null && progressPct !== undefined && (
-            <div className="h-1.5 overflow-hidden rounded-full" style={{ background: p.progBg }}>
-              <div
-                className="h-full rounded-full"
-                style={{
-                  width: `${Math.min(progressPct, 100)}%`,
-                  background: p.progFill,
-                }}
-              />
-            </div>
-          )}
-          <p className="text-xs" style={{ color: p.mutedFg }}>
-            {explanation}
-          </p>
-        </div>
-      )}
-
-      <div
-        className="mt-auto flex items-center gap-1 text-xs font-semibold"
-        style={{ color: p.ctaFg }}
-      >
-        <span>{cta}</span>
-        <ArrowLeft className="h-3 w-3" />
-      </div>
+      <span>{label}</span>
+      <ArrowLeft className="h-3 w-3" />
     </Link>
   );
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Main export — SetupChecklist
+// Main export — SetupChecklist (dashboard)
 // ══════════════════════════════════════════════════════════════════════════════
 
 export function SetupChecklist({
@@ -912,7 +728,6 @@ export function SetupChecklist({
   whatsappReady?: boolean;
   whatsappConnected?: boolean;
 }) {
-
   // Urgent guidance items not already covered by dedicated attention cards
   const extraUrgent = guidanceItems.filter(
     (item) =>
@@ -922,21 +737,14 @@ export function SetupChecklist({
       item.id !== "no-upcoming-bookings",
   );
 
-  // "היום" attention column — only today-relevant items (approvals, cancellations,
-  // and any urgent guidance). Opportunities & automations get their own sections.
   const hasTodayAttention =
-    pendingApprovalCount > 0 ||
-    lateCancellationsCount > 0 ||
-    extraUrgent.length > 0;
+    pendingApprovalCount > 0 || lateCancellationsCount > 0 || extraUrgent.length > 0;
 
   return (
-    <div className="w-full space-y-8">
-      {/* 1. Hero — full-width command center */}
+    <PremiumPageShell tint="blush" width="wide" gap="loose">
+      {/* 1. Command center hero */}
       <FadeIn>
-        <DashboardHero
-          businessName={businessName}
-          metrics={metrics}
-        />
+        <CommandCenterHero businessName={businessName} metrics={metrics} />
       </FadeIn>
 
       {/* 2. Quick actions */}
@@ -944,23 +752,24 @@ export function SetupChecklist({
         <DashboardQuickActions />
       </FadeIn>
 
-      {/* ── היום — appointments, approvals, cancellations ── */}
+      {/* ── היום ── */}
       <FadeIn delay={0.07}>
-        <DashboardSection
-          title="היום"
-          subtitle="הפגישות והפעולות שדורשות אותך עכשיו"
-        >
+        <section className="space-y-5">
+          <EditorialSectionHeader
+            eyebrow="המוקד היומי"
+            title="היום"
+            description="הפגישות והפעולות שדורשות אותך עכשיו"
+            icon={<CalendarDays className="h-3.5 w-3.5" />}
+            tint="blush"
+          />
           {hasTodayAttention ? (
             <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-5">
-              {/* RIGHT column (3/5) — today's appointments + week glance */}
               <div className="space-y-5 lg:col-span-3">
-                <TodayAppointmentsCard todayBookings={todayBookings} />
+                <TodayAppointmentsPanel todayBookings={todayBookings} />
                 <WeekCalendarMini allBookings={[...todayBookings, ...upcomingBookings]} />
               </div>
-
-              {/* LEFT column (2/5) — today's attention items */}
               <div className="space-y-3 lg:col-span-2">
-                <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
+                <p className="eyebrow" style={{ color: "var(--muted)" }}>
                   דורש את תשומת הלב שלך
                 </p>
                 <div className="space-y-2.5">
@@ -1010,103 +819,119 @@ export function SetupChecklist({
             </div>
           ) : (
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-              <TodayAppointmentsCard todayBookings={todayBookings} />
+              <TodayAppointmentsPanel todayBookings={todayBookings} />
               <WeekCalendarMini allBookings={[...todayBookings, ...upcomingBookings]} />
             </div>
           )}
-        </DashboardSection>
+        </section>
       </FadeIn>
 
-      {/* ── הכנסות — monthly revenue, forecast, target gap ── */}
-      <FadeIn delay={0.10}>
-        <DashboardSection
-          title="הכנסות"
-          subtitle="ההכנסה החודש, הצפי לסוף החודש והפער ליעד"
-          action={
-            <Link
-              href="/finance"
-              className="flex items-center gap-1 text-xs font-semibold transition-opacity hover:opacity-80"
-              style={{ color: "#b86b8c" }}
-            >
-              פירוט מלא
-              <ArrowLeft className="h-3 w-3" />
-            </Link>
-          }
-        >
+      {/* ── הכנסות ── */}
+      <FadeIn delay={0.1}>
+        <section className="space-y-5">
+          <EditorialSectionHeader
+            eyebrow="הכסף שלך"
+            title="הכנסות"
+            description="ההכנסה החודש, הצפי לסוף החודש והפער ליעד"
+            icon={<TrendingUp className="h-3.5 w-3.5" />}
+            tint="champagne"
+            action={
+              <Link
+                href="/finance"
+                className="flex items-center gap-1 text-xs font-semibold transition-opacity hover:opacity-80"
+                style={{ color: "#b86b8c" }}
+              >
+                פירוט מלא
+                <ArrowLeft className="h-3 w-3" />
+              </Link>
+            }
+          />
           <RevenueSection forecast={forecast} />
-        </DashboardSection>
+        </section>
       </FadeIn>
 
-      {/* ── הזדמנויות — inactive clients, review requests, empty slots ── */}
+      {/* ── הזדמנויות ── */}
       <FadeIn delay={0.13}>
-        <DashboardSection
-          title="הזדמנויות"
-          subtitle="פעולות פשוטות שיגדילו את ההכנסה"
-        >
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-            <InsightCard
+        <section className="space-y-5">
+          <EditorialSectionHeader
+            eyebrow="צמיחה"
+            title="הזדמנויות"
+            description="פעולות פשוטות שיגדילו את ההכנסה"
+            icon={<Sparkles className="h-3.5 w-3.5" />}
+            tint="rose"
+          />
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <BeautyInsightCard
+              tone="danger"
+              featured
+              icon={<RefreshCcw className="h-6 w-6" />}
+              eyebrow="שימור לקוחות"
               title="לקוחות שלא חזרו"
-              value={atRiskCount > 0 ? `${atRiskCount} לקוחות` : "הכול מעודכן"}
-              explanation={
-                atRiskCount > 0
-                  ? "לקוחות שלא חזרו זמן מה ומחכות לפנייה אישית"
-                  : "כל הלקוחות חזרו לאחרונה"
-              }
-              cta="להחזרת לקוחות"
-              href="/bring-back"
-              isEmpty={false}
-              emptyText=""
-              theme="rose"
+              value={atRiskCount > 0 ? atRiskCount : "0"}
+              valueLabel={atRiskCount > 0 ? "לקוחות" : "הכול מעודכן"}
+              body={atRiskCount > 0 ? "לקוחות שלא חזרו זמן מה ומחכות לפנייה אישית" : "כל הלקוחות חזרו לאחרונה"}
+              action={<OpportunityCta href="/bring-back" label="להחזרת לקוחות" tone="danger" />}
             />
-            <InsightCard
-              title="בקשות ביקורת"
-              value={reviewReadyCount > 0 ? `${reviewReadyCount} מוכנות` : "—"}
-              explanation="טיפולים שהושלמו ומוכנים לבקשת ביקורת או הודעת תודה"
-              cta="לבקשות ביקורת"
-              href="/bring-back?tab=reviews"
-              isEmpty={reviewReadyCount === 0}
-              emptyText="אין טיפולים שהושלמו לאחרונה"
-              theme="violet"
-            />
-            <InsightCard
+            <BeautyInsightCard
+              tone="success"
+              featured
+              icon={<CalendarRange className="h-6 w-6" />}
+              eyebrow="זמן פנוי"
               title="חלונות פנויים"
-              value={emptySlots.length > 0 ? `${emptySlots.length} חלונות` : "—"}
-              explanation="זמן פנוי השבוע שאפשר למלא עם לקוחות מתאימות"
-              cta="למילוי שעות ריקות"
-              href="/bring-back?tab=slots"
-              isEmpty={emptySlots.length === 0}
-              emptyText="אין חלונות פנויים השבוע"
-              theme="green"
+              value={emptySlots.length > 0 ? emptySlots.length : "—"}
+              valueLabel="חלונות"
+              body={emptySlots.length > 0 ? "זמן פנוי השבוע שאפשר למלא עם לקוחות מתאימות" : "אין חלונות פנויים השבוע"}
+              action={<OpportunityCta href="/bring-back?tab=slots" label="למילוי שעות ריקות" tone="success" />}
             />
-            {/* Waitlist — only an opportunity when someone is actually waiting */}
-            {waitlistCount > 0 && (
-              <InsightCard
+            <BeautyInsightCard
+              tone="brand"
+              icon={<Star className="h-5 w-5" />}
+              eyebrow="מוניטין"
+              title="בקשות ביקורת"
+              value={reviewReadyCount > 0 ? reviewReadyCount : "—"}
+              valueLabel="מוכנות"
+              body="טיפולים שהושלמו ומוכנים לבקשת ביקורת או הודעת תודה"
+              action={<OpportunityCta href="/bring-back?tab=reviews" label="לבקשות ביקורת" tone="brand" />}
+            />
+            {waitlistCount > 0 ? (
+              <BeautyInsightCard
+                tone="brand"
+                icon={<Clock className="h-5 w-5" />}
+                eyebrow="רשימת המתנה"
                 title="ממתינות ברשימת המתנה"
-                value={`${waitlistCount} לקוחות`}
-                explanation="לקוחות שמחכות לתור מוקדם יותר — אפשר להציע להן כשמתפנה תור"
-                cta="לרשימת ההמתנה"
-                href="/waitlist"
-                isEmpty={false}
-                emptyText=""
-                theme="violet"
+                value={waitlistCount}
+                valueLabel="לקוחות"
+                body="לקוחות שמחכות לתור מוקדם יותר — אפשר להציע להן כשמתפנה תור"
+                action={<OpportunityCta href="/waitlist" label="לרשימת ההמתנה" tone="brand" />}
+              />
+            ) : (
+              <BeautyInsightCard
+                tone="info"
+                icon={<UserPlus className="h-5 w-5" />}
+                eyebrow="לקוחות"
+                title="הוספת לקוחה חדשה"
+                value="+"
+                valueLabel="לקוחה"
+                body="כל לקוחה חדשה היא הזדמנות לתור חוזר — הוסיפי אותן למערכת"
+                action={<OpportunityCta href="/clients" label="לניהול לקוחות" tone="info" />}
               />
             )}
           </div>
 
-          {suggestedClients.length > 0 && (
-            <div className="mt-4">
-              <FollowUpClientsPreview clients={suggestedClients} />
-            </div>
-          )}
-        </DashboardSection>
+          {suggestedClients.length > 0 && <FollowUpClientsPreview clients={suggestedClients} />}
+        </section>
       </FadeIn>
 
-      {/* ── אוטומציות — WhatsApp status, automation status, recent activity ── */}
+      {/* ── אוטומציות ── */}
       <FadeIn delay={0.16}>
-        <DashboardSection
-          title="אוטומציות"
-          subtitle="שליחה אוטומטית של הודעות ללקוחות"
-        >
+        <section className="space-y-5">
+          <EditorialSectionHeader
+            eyebrow="על טייס אוטומטי"
+            title="אוטומציות"
+            description="שליחה אוטומטית של הודעות ללקוחות"
+            icon={<MessageCircle className="h-3.5 w-3.5" />}
+            tint="sage"
+          />
           <AutomationsSection
             whatsappLabel={whatsappLabel}
             whatsappReady={whatsappReady}
@@ -1114,11 +939,10 @@ export function SetupChecklist({
             remindersDueCount={remindersDueCount}
             recentRuns={recentRuns}
           />
-        </DashboardSection>
+        </section>
       </FadeIn>
 
-      {/* Setup checklist if incomplete */}
-      <SetupProgressCard setup={setup} />
-    </div>
+      <SetupProgressRibbon setup={setup} />
+    </PremiumPageShell>
   );
 }

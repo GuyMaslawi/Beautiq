@@ -130,7 +130,7 @@ export default async function PublicBusinessPage({
   return (
     <BookingSelectionProvider>
       <main
-        className="min-h-screen overflow-x-hidden bg-[var(--background)] pb-28 lg:pb-0"
+        className="app-ambient min-h-screen overflow-x-hidden pb-28 lg:pb-0"
         dir="rtl"
       >
         <PublicBusinessHero

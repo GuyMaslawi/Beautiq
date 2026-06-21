@@ -78,8 +78,8 @@ function FormPanel({ children }: { children: React.ReactNode }) {
           <span
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white text-sm font-bold"
             style={{
-              background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
-              boxShadow: "0 4px 14px rgba(184,107,140,0.38)",
+              background: "linear-gradient(135deg, #c97898 0%, #b86b8c 52%, #9d6aa8 100%)",
+              boxShadow: "0 4px 14px rgba(157,106,168,0.36)",
             }}
           >
             B

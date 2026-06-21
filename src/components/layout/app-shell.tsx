@@ -15,10 +15,7 @@ export function AppShell({
   children: React.ReactNode;
 }) {
   return (
-    <div
-      className="flex h-screen overflow-hidden"
-      style={{ background: "var(--background)" }}
-    >
+    <div className="app-ambient flex h-screen overflow-hidden">
       <Sidebar userName={userName} businessName={businessName} isAdmin={isAdmin} />
 
       <div id="main-scroll" className="flex min-w-0 flex-1 flex-col overflow-y-auto">

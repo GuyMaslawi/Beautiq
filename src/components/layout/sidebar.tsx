@@ -23,12 +23,22 @@ export function Sidebar({
 
   return (
     <aside
-      className="hidden w-64 shrink-0 flex-col overflow-hidden md:flex"
+      className="relative hidden w-64 shrink-0 flex-col overflow-hidden md:flex"
       style={{
         background:
-          "linear-gradient(180deg, var(--sidebar-bg-from) 0%, var(--sidebar-bg-to) 100%)",
+          "linear-gradient(170deg, var(--sidebar-bg-from) 0%, var(--sidebar-bg-mid) 48%, var(--sidebar-bg-to) 100%)",
       }}
     >
+      {/* Soft orchid glow at the top for a premium, feminine depth */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -top-16 right-0 left-0 h-48"
+        style={{
+          background:
+            "radial-gradient(60% 80% at 70% 0%, rgba(201,120,152,0.28) 0%, transparent 70%)",
+        }}
+      />
+
       {/* Brand */}
       <div
         className="flex h-16 items-center gap-3 px-5"
@@ -37,7 +47,7 @@ export function Sidebar({
         <span
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white text-sm font-bold"
           style={{
-            background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
+            background: "linear-gradient(135deg, #c97898 0%, #b86b8c 52%, #9d6aa8 100%)",
             boxShadow: "0 2px 10px rgba(184,107,140,0.50)",
           }}
         >

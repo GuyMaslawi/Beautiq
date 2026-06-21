@@ -20,14 +20,17 @@ export function Section({ title, icon, action, children, className }: SectionPro
       className={cn("bg-surface rounded-2xl border p-6", className)}
       style={{
         borderColor: "var(--border)",
-        boxShadow: "0 1px 4px rgba(43,37,48,0.06)",
+        boxShadow: "0 2px 12px rgba(124,58,97,0.07)",
       }}
     >
       <div className="mb-5 flex items-center gap-2.5">
         {icon && (
           <div
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-            style={{ background: "rgba(184,107,140,0.10)" }}
+            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
+            style={{
+              background: "var(--brand-gradient-soft)",
+              border: "1px solid rgba(184,107,140,0.16)",
+            }}
           >
             {icon}
           </div>

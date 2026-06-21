@@ -41,10 +41,10 @@ export function MetricCard({
     ? "rgba(184,150,10,0.22)"
     : "var(--border)";
   const iconBubbleBg = highlight
-    ? "rgba(184,107,140,0.13)"
+    ? "linear-gradient(135deg, rgba(201,120,152,0.18) 0%, rgba(157,106,168,0.13) 100%)"
     : warn
-    ? "rgba(184,150,10,0.12)"
-    : "rgba(184,107,140,0.08)";
+    ? "linear-gradient(135deg, rgba(192,149,96,0.18) 0%, rgba(184,124,30,0.12) 100%)"
+    : "linear-gradient(135deg, rgba(201,120,152,0.13) 0%, rgba(157,106,168,0.09) 100%)";
 
   if (compact) {
     return (
@@ -82,12 +82,15 @@ export function MetricCard({
       style={{
         background: surface,
         border: `1px solid ${borderColor}`,
-        boxShadow: "0 1px 6px rgba(43,37,48,0.06)",
+        boxShadow: "0 2px 12px rgba(124,58,97,0.07)",
       }}
     >
       <div
         className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl"
-        style={{ background: iconBubbleBg }}
+        style={{
+          background: iconBubbleBg,
+          border: "1px solid rgba(184,107,140,0.14)",
+        }}
       >
         <span style={{ color: highlight ? "#b86b8c" : warn ? "#b87c1e" : "#b86b8c" }}>
           {icon}

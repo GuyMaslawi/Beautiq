@@ -30,7 +30,7 @@ export function Header({ businessName, isAdmin = false }: { businessName: string
         className="sticky top-0 z-30 md:hidden"
         style={{
           background:
-            "linear-gradient(135deg, var(--sidebar-bg-from) 0%, var(--sidebar-bg-to) 100%)",
+            "linear-gradient(120deg, var(--sidebar-bg-from) 0%, var(--sidebar-bg-mid) 55%, var(--sidebar-bg-to) 100%)",
           borderBottom: "1px solid var(--sidebar-border)",
           boxShadow: "0 2px 12px rgba(58,14,39,0.28)",
         }}
@@ -41,7 +41,7 @@ export function Header({ businessName, isAdmin = false }: { businessName: string
             <span
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white text-xs font-bold"
               style={{
-                background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
+                background: "linear-gradient(135deg, #c97898 0%, #b86b8c 52%, #9d6aa8 100%)",
                 boxShadow: "0 2px 6px rgba(184,107,140,0.45)",
               }}
             >
@@ -93,7 +93,7 @@ export function Header({ businessName, isAdmin = false }: { businessName: string
               className="fixed inset-y-0 right-0 z-50 flex w-72 flex-col md:hidden"
               style={{
                 background:
-                  "linear-gradient(180deg, var(--sidebar-bg-from) 0%, var(--sidebar-bg-to) 100%)",
+                  "linear-gradient(170deg, var(--sidebar-bg-from) 0%, var(--sidebar-bg-mid) 48%, var(--sidebar-bg-to) 100%)",
                 boxShadow: "var(--shadow-xl)",
               }}
             >
@@ -106,7 +106,7 @@ export function Header({ businessName, isAdmin = false }: { businessName: string
                   <span
                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white text-xs font-bold"
                     style={{
-                      background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
+                      background: "linear-gradient(135deg, #c97898 0%, #b86b8c 52%, #9d6aa8 100%)",
                       boxShadow: "0 2px 6px rgba(184,107,140,0.45)",
                     }}
                   >

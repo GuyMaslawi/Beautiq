@@ -10,16 +10,22 @@ interface PageHeaderProps {
 
 export function PageHeader({ icon: Icon, title, subtitle, action }: PageHeaderProps) {
   return (
-    <div className="flex items-start justify-between gap-4">
-      <div className="min-w-0 flex-1">
+    <div className="relative flex items-start justify-between gap-4">
+      {/* soft brand glow behind the title */}
+      <div
+        aria-hidden
+        className="brand-glow"
+        style={{ top: -28, right: -20, width: 150, height: 150 }}
+      />
+      <div className="relative min-w-0 flex-1">
         <div className="mb-2 flex items-center gap-3">
           <div
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
             style={{
               background:
-                "linear-gradient(135deg, rgba(201,120,152,0.18) 0%, rgba(184,107,140,0.11) 100%)",
+                "linear-gradient(135deg, rgba(201,120,152,0.20) 0%, rgba(157,106,168,0.13) 100%)",
               border: "1px solid rgba(184,107,140,0.20)",
-              boxShadow: "0 1px 6px rgba(184,107,140,0.10)",
+              boxShadow: "0 2px 10px rgba(157,106,168,0.14)",
             }}
           >
             <Icon className="h-5 w-5" style={{ color: "#b86b8c" }} />

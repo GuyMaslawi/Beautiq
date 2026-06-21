@@ -16,9 +16,9 @@ export function EmptyState({ title, body, cta, ctaHref, icon }: EmptyStateProps)
       className="relative overflow-hidden py-16 text-center rounded-2xl"
       style={{
         background:
-          "linear-gradient(135deg, rgba(253,240,247,0.6) 0%, rgba(255,255,255,1) 60%)",
+          "linear-gradient(135deg, rgba(253,240,247,0.7) 0%, rgba(243,238,246,0.5) 35%, rgba(255,255,255,1) 75%)",
         border: "1px solid rgba(184,107,140,0.14)",
-        boxShadow: "0 1px 6px rgba(43,37,48,0.05)",
+        boxShadow: "0 4px 18px rgba(124,58,97,0.07)",
       }}
     >
       {/* Subtle glow */}
