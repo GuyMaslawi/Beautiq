@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
-import { CheckCircle2, Sparkles } from "lucide-react";
+import { CheckCircle2, Sparkles, Star } from "lucide-react";
 import { BRAND } from "@/lib/constants/he";
 import { APP_DOMAIN } from "@/lib/config";
 
@@ -69,17 +69,20 @@ function FormPanel({ children }: { children: React.ReactNode }) {
       initial={{ opacity: 0, x: 24 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      className="flex w-full shrink-0 flex-col justify-center px-6 py-12 md:w-[480px] md:px-12"
-      style={{ background: "#fdfbfc" }}
+      className="relative flex w-full shrink-0 flex-col justify-center overflow-hidden px-6 py-12 md:w-[480px] md:px-12"
+      style={{
+        background:
+          "radial-gradient(40rem 30rem at 100% -10%, rgba(201,120,152,0.08), transparent 60%), radial-gradient(36rem 28rem at -10% 110%, rgba(157,106,168,0.06), transparent 60%), #fdfbfc",
+      }}
     >
-      <div className="mx-auto w-full max-w-[360px]">
+      <div className="relative mx-auto w-full max-w-[360px]">
         {/* Brand mark */}
         <Link href="/login" className="mb-10 flex items-center gap-3 no-underline">
           <span
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-white text-sm font-bold"
+            className="ring-soft flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white text-base font-bold"
             style={{
               background: "linear-gradient(135deg, #c97898 0%, #b86b8c 52%, #9d6aa8 100%)",
-              boxShadow: "0 4px 14px rgba(157,106,168,0.36)",
+              boxShadow: "0 8px 20px -6px rgba(157,106,168,0.55)",
             }}
           >
             B
@@ -175,6 +178,17 @@ function PreviewPanel() {
           <p className="mt-3 text-sm leading-relaxed" style={{ color: "rgba(255,255,255,.52)" }}>
             הסטודיו שלך מסודר, מקצועי ורווחי יותר — במקום אחד.
           </p>
+          {/* social proof */}
+          <div className="mt-4 flex items-center gap-2.5">
+            <div className="flex items-center gap-0.5">
+              {[0, 1, 2, 3, 4].map((i) => (
+                <Star key={i} className="h-3.5 w-3.5" style={{ color: "#e7a9c4", fill: "#e7a9c4" }} />
+              ))}
+            </div>
+            <span className="text-xs" style={{ color: "rgba(255,255,255,.5)" }}>
+              אהוב על בעלות עסקי יופי בישראל
+            </span>
+          </div>
         </motion.div>
 
         {/* Browser mockup */}
