@@ -52,19 +52,18 @@ export function BookingCard({ booking }: { booking: BookingListItem }) {
 
   return (
     <div
-      className="group overflow-hidden rounded-2xl border transition-shadow hover:shadow-md"
+      className="lift group overflow-hidden rounded-[1.35rem]"
       style={
         isActive
           ? {
-              background:
-                "linear-gradient(160deg, rgba(247,238,243,0.55) 0%, #fff 55%)",
-              borderColor: "rgba(184,107,140,0.20)",
-              boxShadow: "0 1px 4px rgba(184,107,140,0.07), 0 1px 2px rgba(43,37,48,0.04)",
+              background: "linear-gradient(165deg, rgba(243,238,246,0.7) 0%, rgba(255,255,255,0.92) 55%)",
+              border: "1px solid rgba(157,106,168,0.22)",
+              boxShadow: "0 8px 24px -12px rgba(124,58,97,0.18), inset 0 1px 0 rgba(255,255,255,0.9)",
             }
           : {
-              background: "#fff",
-              borderColor: "var(--border)",
-              boxShadow: "var(--shadow-sm)",
+              background: "linear-gradient(170deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.84) 100%)",
+              border: "1px solid rgba(184,107,140,0.12)",
+              boxShadow: "0 6px 20px -12px rgba(124,58,97,0.14), inset 0 1px 0 rgba(255,255,255,0.9)",
             }
       }
     >
@@ -76,10 +75,10 @@ export function BookingCard({ booking }: { booking: BookingListItem }) {
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
           style={{
             background: isActive
-              ? "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)"
+              ? "linear-gradient(135deg, #c97898 0%, #9d6aa8 100%)"
               : "linear-gradient(135deg, #c8b8c0 0%, #b0a0a8 100%)",
             boxShadow: isActive
-              ? "0 2px 6px rgba(184,107,140,0.28)"
+              ? "0 6px 16px -6px rgba(157,106,168,0.5)"
               : "0 1px 4px rgba(43,37,48,0.10)",
           }}
         >

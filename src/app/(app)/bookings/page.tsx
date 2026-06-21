@@ -3,8 +3,10 @@ import { CalendarDays, CalendarRange, Clock, XCircle, Plus, ChevronUp, ChevronDo
 import { requireTenant } from "@/server/auth/session";
 import { getBookings, getBookingSummary, getActiveCancellationPolicy, getCalendarBookings } from "@/server/bookings/queries";
 import { prisma } from "@/server/db/prisma";
-import { EmptyState } from "@/components/ui/empty-state";
-import { MetricCard } from "@/components/ui/metric-card";
+import { PremiumPageShell } from "@/components/premium/page-shell";
+import { BeautyPageHero } from "@/components/premium/page-hero";
+import { PremiumMetricCard } from "@/components/premium/metric-card";
+import { PremiumEmptyState } from "@/components/premium/empty-state";
 import { BookingRow } from "@/components/bookings/booking-row";
 import { BookingCard } from "@/components/bookings/booking-card";
 import { BookingSearchInput } from "@/components/bookings/booking-search-input";
@@ -223,63 +225,66 @@ export default async function BookingsPage({
   // Params for advanced filter component — everything except status/serviceId
   const advancedFilterBaseParams = buildParams({ status: undefined, serviceId: undefined });
 
+  // View toggle + CTA — shared by both layouts
+  const viewToggle = (
+    <div className="hidden sm:flex rounded-xl border overflow-hidden" style={{ borderColor: "var(--border)", background: "rgba(255,255,255,0.7)" }}>
+      <Link
+        href="/bookings"
+        className="flex h-9 items-center gap-1.5 px-3 text-xs font-medium transition-colors"
+        style={{
+          background: !isCalendarView ? "rgba(157,106,168,0.12)" : "transparent",
+          color: !isCalendarView ? "#9d6aa8" : "var(--foreground-soft)",
+        }}
+      >
+        <List className="h-3.5 w-3.5" />
+        רשימה
+      </Link>
+      <Link
+        href={`/bookings?view=calendar&calDate=${todayStr}&calView=day`}
+        className="flex h-9 items-center gap-1.5 border-r px-3 text-xs font-medium transition-colors"
+        style={{
+          borderColor: "var(--border)",
+          background: isCalendarView ? "rgba(157,106,168,0.12)" : "transparent",
+          color: isCalendarView ? "#9d6aa8" : "var(--foreground-soft)",
+        }}
+      >
+        <CalendarRange className="h-3.5 w-3.5" />
+        יומן
+      </Link>
+    </div>
+  );
+
+  const newBookingBtn = !isCalendarView ? (
+    <Link
+      href="/bookings/new"
+      className="flex shrink-0 cursor-pointer items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90"
+      style={{ background: "linear-gradient(135deg, #c97898 0%, #9d6aa8 100%)", color: "#fff", boxShadow: "0 8px 18px -6px rgba(157,106,168,0.5)" }}
+    >
+      <Plus className="h-4 w-4" />
+      תור חדש
+    </Link>
+  ) : null;
+
   return (
-    <div className={isCalendarView ? "w-full space-y-3" : "mx-auto w-full max-w-6xl space-y-6"}>
+    <PremiumPageShell tint="mauve" width={isCalendarView ? "full" : "wide"}>
       {/* Page header */}
-      <div className="flex items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--foreground)" }}>
+      {isCalendarView ? (
+        <div className="flex items-center justify-between gap-4">
+          <h1 className="display-num text-2xl font-bold tracking-tight" style={{ color: "var(--foreground)" }}>
             תורים
           </h1>
-          {!isCalendarView && (
-            <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
-              נהלי תורים, צפי לפגישות ויומן עסקי.
-            </p>
-          )}
+          {viewToggle}
         </div>
-        <div className="flex items-center gap-2">
-          {/* View mode toggle */}
-          <div className="hidden sm:flex rounded-xl border overflow-hidden" style={{ borderColor: "var(--border)" }}>
-            <Link
-              href="/bookings"
-              className="flex h-9 items-center gap-1.5 px-3 text-xs font-medium transition-colors"
-              style={{
-                background: !isCalendarView ? "rgba(184,107,140,0.10)" : "transparent",
-                color: !isCalendarView ? "#b86b8c" : "var(--foreground-soft)",
-              }}
-            >
-              <List className="h-3.5 w-3.5" />
-              רשימה
-            </Link>
-            <Link
-              href={`/bookings?view=calendar&calDate=${todayStr}&calView=day`}
-              className="flex h-9 items-center gap-1.5 border-r px-3 text-xs font-medium transition-colors"
-              style={{
-                borderColor: "var(--border)",
-                background: isCalendarView ? "rgba(184,107,140,0.10)" : "transparent",
-                color: isCalendarView ? "#b86b8c" : "var(--foreground-soft)",
-              }}
-            >
-              <CalendarRange className="h-3.5 w-3.5" />
-              יומן
-            </Link>
-          </div>
-          {!isCalendarView && (
-            <Link
-              href="/bookings/new"
-              className="flex shrink-0 cursor-pointer items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90"
-              style={{
-                background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
-                color: "#fff",
-                boxShadow: "0 2px 8px rgba(184,107,140,0.30)",
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              תור חדש
-            </Link>
-          )}
-        </div>
-      </div>
+      ) : (
+        <BeautyPageHero
+          icon={CalendarDays}
+          eyebrow="היומן שלך"
+          title="תורים"
+          subtitle="נהלי תורים, צפי לפגישות ויומן עסקי."
+          tint="mauve"
+          action={<div className="flex items-center gap-2">{viewToggle}{newBookingBtn}</div>}
+        />
+      )}
 
       {/* Success banner */}
       {created === "true" && (
@@ -297,28 +302,28 @@ export default async function BookingsPage({
       {/* Summary cards — compact chips in calendar mode, full cards in list mode */}
       {isCalendarView ? (
         <div className="flex items-center gap-2 flex-wrap" dir="rtl">
-          <MetricCard
+          <PremiumMetricCard
             label="תורים היום"
             count={summary.todayCount}
             icon={<CalendarDays className="h-3.5 w-3.5" />}
-            highlight={summary.todayCount > 0}
+            tone={summary.todayCount > 0 ? "brand" : "neutral"}
             compact
           />
-          <MetricCard
+          <PremiumMetricCard
             label={BOOKINGS.summary.pending}
             count={summary.pendingCount}
             icon={<Clock className="h-3.5 w-3.5" />}
-            warn={summary.pendingCount > 0}
+            tone={summary.pendingCount > 0 ? "warning" : "neutral"}
             compact
           />
-          <MetricCard
+          <PremiumMetricCard
             label="ביטולים"
             count={summary.cancelledCount}
             icon={<XCircle className="h-3.5 w-3.5" />}
-            warn={summary.cancelledCount > 0}
+            tone={summary.cancelledCount > 0 ? "warning" : "neutral"}
             compact
           />
-          <MetricCard
+          <PremiumMetricCard
             label={BOOKINGS.summary.week}
             count={summary.weekCount}
             icon={<CalendarRange className="h-3.5 w-3.5" />}
@@ -326,33 +331,31 @@ export default async function BookingsPage({
           />
         </div>
       ) : (
-        <>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <MetricCard
-              label="היום"
-              count={summary.todayCount}
-              icon={<CalendarDays className="h-4 w-4" />}
-              highlight={summary.todayCount > 0}
-            />
-            <MetricCard
-              label={BOOKINGS.summary.pending}
-              count={summary.pendingCount}
-              icon={<Clock className="h-4 w-4" />}
-              warn={summary.pendingCount > 0}
-            />
-            <MetricCard
-              label={BOOKINGS.summary.cancelled}
-              count={summary.cancelledCount}
-              icon={<XCircle className="h-4 w-4" />}
-              warn={summary.cancelledCount > 0}
-            />
-            <MetricCard
-              label={BOOKINGS.summary.week}
-              count={summary.weekCount}
-              icon={<CalendarRange className="h-4 w-4" />}
-            />
-          </div>
-        </>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <PremiumMetricCard
+            label="היום"
+            count={summary.todayCount}
+            icon={<CalendarDays className="h-4 w-4" />}
+            tone={summary.todayCount > 0 ? "brand" : "neutral"}
+          />
+          <PremiumMetricCard
+            label={BOOKINGS.summary.pending}
+            count={summary.pendingCount}
+            icon={<Clock className="h-4 w-4" />}
+            tone={summary.pendingCount > 0 ? "warning" : "neutral"}
+          />
+          <PremiumMetricCard
+            label={BOOKINGS.summary.cancelled}
+            count={summary.cancelledCount}
+            icon={<XCircle className="h-4 w-4" />}
+            tone={summary.cancelledCount > 0 ? "warning" : "neutral"}
+          />
+          <PremiumMetricCard
+            label={BOOKINGS.summary.week}
+            count={summary.weekCount}
+            icon={<CalendarRange className="h-4 w-4" />}
+          />
+        </div>
       )}
 
       {/* ── Calendar view ───────────────────────────────────────────────── */}
@@ -414,12 +417,14 @@ export default async function BookingsPage({
               body = "פגישות שבוטלו יופיעו כאן.";
             }
             return (
-              <EmptyState
+              <PremiumEmptyState
+                tint="mauve"
                 title={title}
                 body={body}
                 cta={BOOKINGS.emptyState.cta}
                 ctaHref="/bookings/new"
-                icon={<CalendarDays className="h-7 w-7" style={{ color: "#b86b8c" }} />}
+                icon={<CalendarDays className="h-7 w-7" />}
+                orbit={[<Clock key="a" className="h-4 w-4" />, <CalendarRange key="b" className="h-4 w-4" />, <Plus key="c" className="h-4 w-4" />]}
               />
             );
           })()}
@@ -435,14 +440,7 @@ export default async function BookingsPage({
 
           {/* Bookings table — desktop only */}
           {bookings.length > 0 && (
-            <div
-              className="hidden overflow-hidden rounded-2xl md:block"
-              style={{
-                background: "var(--surface)",
-                border: "1px solid var(--border)",
-                boxShadow: "var(--shadow-md)",
-              }}
-            >
+            <div className="aura-card hidden overflow-hidden rounded-[1.4rem] md:block">
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
@@ -514,6 +512,6 @@ export default async function BookingsPage({
           )}
         </>
       )}
-    </div>
+    </PremiumPageShell>
   );
 }
