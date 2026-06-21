@@ -158,9 +158,9 @@ describe("updateClientOptInAction", () => {
 // updateClientAction (full edit)
 // ---------------------------------------------------------------------------
 const validEdit = {
-  fullName: "דנה כהן",
+  fullName: "עדי כהן",
   phone: "0501234567",
-  email: "dana@example.com",
+  email: "adi@example.com",
   notes: "VIP",
 };
 
@@ -181,7 +181,7 @@ describe("updateClientAction", () => {
       expect.objectContaining({
         where: { id: "cli_1" },
         data: expect.objectContaining({
-          fullName: "דנה כהן",
+          fullName: "עדי כהן",
           phone: "0501234567",
           normalizedPhone: "+972501234567",
           whatsappOptIn: true,

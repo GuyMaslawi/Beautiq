@@ -51,7 +51,7 @@ describe("findOrCreateClient — dedup & tenant scoping", () => {
   });
 
   it("does NOT overwrite an existing non-empty name with a different incoming name", async () => {
-    const existing = makeClient({ id: "cli_existing", fullName: "דנה כהן" });
+    const existing = makeClient({ id: "cli_existing", fullName: "עדי כהן" });
     prisma.client.findUnique.mockResolvedValue(existing);
 
     const res = await findOrCreateClient(tenant, {

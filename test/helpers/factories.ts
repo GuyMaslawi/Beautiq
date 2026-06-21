@@ -71,7 +71,7 @@ export function makeClient(overrides: Record<string, unknown> = {}) {
   return {
     id: id("cli"),
     businessId: BUSINESS_A,
-    fullName: "דנה כהן",
+    fullName: "עדי לוי",
     phone: "050-123-4567",
     normalizedPhone: "+972501234567",
     notes: null,

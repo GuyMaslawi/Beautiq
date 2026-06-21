@@ -97,7 +97,7 @@ export const WAITLIST = {
   form: {
     title: "הוספת לקוחה לרשימת ההמתנה",
     clientName: "שם הלקוחה",
-    clientNamePlaceholder: "לדוגמה: דנה כהן",
+    clientNamePlaceholder: "לדוגמה: עדי כהן",
     phone: "טלפון",
     phonePlaceholder: "050-0000000",
     service: "שירות (לא חובה)",
@@ -130,8 +130,7 @@ export const WAITLIST = {
       date: string;
       time: string;
     }) =>
-      `היי ${opts.clientName}, התפנה אצלנו תור${
-        opts.serviceName ? ` ל${opts.serviceName}` : ""
+      `היי ${opts.clientName}, התפנה אצלנו תור${opts.serviceName ? ` ל${opts.serviceName}` : ""
       } בתאריך ${opts.date} בשעה ${opts.time}. רוצה שאשמור לך אותו? ❤️`,
   },
 } as const;
