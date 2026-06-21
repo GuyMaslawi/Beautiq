@@ -18,8 +18,10 @@ interface PublicBookingHeroProps {
   rating?: React.ReactNode;
   /** contact pills row (address / phone / whatsapp / social) */
   contact?: React.ReactNode;
-  /** booking card / form column */
+  /** booking card / form column (sticky on desktop) */
   bookingSlot?: React.ReactNode;
+  /** desktop-only secondary cards rendered below the identity column */
+  belowIdentity?: React.ReactNode;
   className?: string;
 }
 
@@ -33,6 +35,7 @@ export function PublicBookingHero({
   rating,
   contact,
   bookingSlot,
+  belowIdentity,
   className,
 }: PublicBookingHeroProps) {
   return (
@@ -40,34 +43,57 @@ export function PublicBookingHero({
       {/* ambient brand wash */}
       <div
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 top-0 h-[28rem]"
-        style={{ background: `radial-gradient(60rem 30rem at 80% -10%, ${brand}22, transparent 60%)` }}
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[30rem]"
+        style={{
+          background: `linear-gradient(180deg, ${brand}26 0%, ${brand}0d 46%, transparent 100%)`,
+        }}
+      />
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -z-10"
+        style={{
+          top: -40,
+          insetInlineEnd: "8%",
+          width: 360,
+          height: 360,
+          background: `radial-gradient(circle, ${brand}33 0%, transparent 65%)`,
+          filter: "blur(50px)",
+        }}
       />
 
-      <div className="relative mx-auto grid max-w-6xl gap-6 px-5 pt-5 sm:px-8 lg:grid-cols-[1fr_minmax(400px,460px)] lg:gap-8">
-        {/* ── editorial cover + identity ── */}
-        <div>
+      <div
+        className={cn(
+          "mx-auto w-full max-w-6xl px-5 pt-6 sm:px-8 lg:pt-12",
+          bookingSlot && "lg:grid lg:grid-cols-[1fr_minmax(400px,460px)] lg:items-start lg:gap-8",
+        )}
+      >
+        {/* ── identity column ── */}
+        <div className={bookingSlot ? "" : "lg:mx-auto lg:max-w-3xl"}>
           <div
             className="grain relative isolate overflow-hidden rounded-[1.75rem]"
-            style={{ aspectRatio: "16 / 10", boxShadow: "0 24px 60px -24px rgba(60,20,45,0.45)" }}
+            style={{ aspectRatio: "16 / 10", boxShadow: "0 28px 64px -26px rgba(60,20,45,0.5)" }}
           >
             {coverUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={coverUrl} alt={name} className="absolute inset-0 h-full w-full object-cover" />
             ) : (
-              <div className="absolute inset-0" style={{ background: `linear-gradient(150deg, ${brand} 0%, ${brand}cc 55%, #50163a 100%)` }} />
+              <div className="absolute inset-0" style={{ background: `linear-gradient(150deg, ${brand} 0%, ${brand}cc 52%, #50163a 100%)` }}>
+                <span className="absolute -bottom-6 left-4 select-none text-[11rem] font-black leading-none text-white/10" aria-hidden>
+                  {initials}
+                </span>
+              </div>
             )}
             {/* legibility scrim */}
             <div
               aria-hidden
               className="absolute inset-0"
-              style={{ background: "linear-gradient(to top, rgba(25,8,18,0.82) 0%, rgba(25,8,18,0.18) 42%, transparent 70%)" }}
+              style={{ background: "linear-gradient(to top, rgba(22,7,16,0.84) 0%, rgba(22,7,16,0.2) 44%, transparent 72%)" }}
             />
 
             <div className="absolute inset-x-0 bottom-0 flex items-end gap-4 p-5 sm:p-7">
               <span
-                className="ring-soft flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl text-xl font-bold text-white sm:h-20 sm:w-20"
-                style={{ background: `linear-gradient(135deg, ${brand}, #50163a)`, boxShadow: "0 12px 30px -8px rgba(0,0,0,0.5)" }}
+                className="ring-soft flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl text-2xl font-bold text-white sm:h-[76px] sm:w-[76px]"
+                style={{ background: `linear-gradient(135deg, ${brand}, #50163a)`, boxShadow: "0 14px 32px -8px rgba(0,0,0,0.55)" }}
               >
                 {logoUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element
@@ -77,20 +103,24 @@ export function PublicBookingHero({
                 )}
               </span>
               <div className="min-w-0 flex-1 pb-1 text-white">
-                <h1 className="display-num truncate text-2xl font-bold drop-shadow sm:text-[1.85rem]">{name}</h1>
-                {tagline && <p className="mt-1 line-clamp-2 text-sm text-white/85">{tagline}</p>}
+                <h1 className="display-num truncate text-2xl font-bold drop-shadow sm:text-[2rem]">{name}</h1>
+                {tagline && <p className="mt-1.5 line-clamp-2 max-w-lg text-sm text-white/85 sm:text-[15px]">{tagline}</p>}
+                {rating && <div className="mt-3">{rating}</div>}
               </div>
-              {rating && <div className="shrink-0 pb-1">{rating}</div>}
             </div>
           </div>
 
-          {contact && <div className="mt-4 flex flex-wrap gap-2">{contact}</div>}
+          {contact && <div className="mt-4 flex flex-wrap items-center gap-2">{contact}</div>}
 
-          {/* desktop secondary slot lives below in page; mobile booking card follows */}
+          {belowIdentity && <div className="mt-5 hidden space-y-4 lg:block">{belowIdentity}</div>}
         </div>
 
         {/* ── booking column ── */}
-        {bookingSlot && <div className="lg:sticky lg:top-6 lg:self-start">{bookingSlot}</div>}
+        {bookingSlot && (
+          <div id="book" tabIndex={-1} className="mt-8 scroll-mt-6 outline-none lg:mt-0 lg:sticky lg:top-6">
+            {bookingSlot}
+          </div>
+        )}
       </div>
     </section>
   );

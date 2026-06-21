@@ -26,26 +26,44 @@ const BENEFITS = [
 export function PublicTrustSection({ brand }: { brand: string }) {
   return (
     <section className="mx-auto w-full max-w-6xl px-5 sm:px-8">
-      <div className="rounded-3xl border border-[var(--border)] bg-white p-6 shadow-sm sm:p-8">
-        <h2 className="text-lg font-bold text-[var(--foreground)] sm:text-xl">
+      <div className="mb-6 text-center">
+        <span
+          className="eyebrow"
+          style={{ color: brand }}
+        >
+          החוויה אצלנו
+        </span>
+        <h2 className="text-foreground mt-1.5 text-xl font-bold tracking-tight sm:text-2xl">
           למה לבחור בנו?
         </h2>
-        <div className="mt-5 grid grid-cols-2 gap-4 lg:grid-cols-4 lg:gap-6">
-          {BENEFITS.map(({ icon: Icon, title, text }) => (
-            <div key={title} className="flex flex-col gap-2.5">
-              <div
-                className="flex h-11 w-11 items-center justify-center rounded-2xl"
-                style={{ background: `${brand}14`, color: brand }}
-              >
-                <Icon className="h-5 w-5" />
-              </div>
-              <h3 className="text-sm font-bold text-[var(--foreground)]">
-                {title}
-              </h3>
-              <p className="text-xs leading-relaxed text-[var(--muted)]">{text}</p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
+        {BENEFITS.map(({ icon: Icon, title, text }) => (
+          <div
+            key={title}
+            className="lift group relative overflow-hidden rounded-[1.4rem] p-5 text-center sm:text-right"
+            style={{
+              background: "linear-gradient(168deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.82) 100%)",
+              border: "1px solid rgba(255,255,255,0.7)",
+              boxShadow: "0 10px 30px -16px rgba(124,58,97,0.18), inset 0 1px 0 rgba(255,255,255,0.9)",
+            }}
+          >
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -top-8 h-24 w-24 rounded-full opacity-60"
+              style={{ insetInlineEnd: "-1rem", background: `radial-gradient(circle, ${brand}26 0%, transparent 70%)`, filter: "blur(10px)" }}
+            />
+            <div
+              className="relative mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl text-white sm:mx-0"
+              style={{ background: `linear-gradient(135deg, ${brand}, ${brand}aa)`, boxShadow: `0 10px 22px -8px ${brand}88` }}
+            >
+              <Icon className="h-5 w-5" />
             </div>
-          ))}
-        </div>
+            <h3 className="text-foreground relative text-sm font-bold">{title}</h3>
+            <p className="relative mt-1 text-xs leading-relaxed text-[var(--muted)]">{text}</p>
+          </div>
+        ))}
       </div>
     </section>
   );

@@ -181,14 +181,24 @@ export default async function PublicBusinessPage({
             <section className="mx-auto w-full max-w-6xl px-5 sm:px-8">
               <div className="mx-auto max-w-2xl">
                 <div className="mb-4 text-center">
-                  <h2 className="text-lg font-bold text-[var(--foreground)] sm:text-xl">
+                  <span className="eyebrow" style={{ color: brand }}>
+                    שיתוף חוויה
+                  </span>
+                  <h2 className="text-foreground mt-1.5 text-xl font-bold tracking-tight sm:text-2xl">
                     כתבי לנו ביקורת
                   </h2>
                   <p className="mt-0.5 text-sm text-[var(--muted)]">
                     נשמח לשמוע על החוויה שלך 💬
                   </p>
                 </div>
-                <div className="rounded-3xl border border-[var(--border)] bg-white p-6 shadow-sm sm:p-7">
+                <div
+                  className="rounded-[1.6rem] p-6 sm:p-7"
+                  style={{
+                    background: "linear-gradient(165deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.84) 100%)",
+                    border: "1px solid rgba(255,255,255,0.7)",
+                    boxShadow: "0 16px 40px -20px rgba(124,58,97,0.2), inset 0 1px 0 rgba(255,255,255,0.9)",
+                  }}
+                >
                   <PublicReviewForm slug={slug} brandColor={brand} />
                 </div>
               </div>

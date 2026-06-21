@@ -81,41 +81,39 @@ function StepIndicator({
   const brandGrd = `linear-gradient(135deg, ${brandColor}cc 0%, ${brandColor} 100%)`;
 
   return (
-    <div className="flex items-center justify-center mb-8" dir="ltr">
+    <div className="mb-8 flex items-center justify-center" dir="ltr">
       {steps.map((s, i) => {
         const done = i < currentIdx;
         const active = i === currentIdx;
         return (
           <Fragment key={s.id}>
-            <div className="flex flex-col items-center gap-1.5 w-16">
+            <div className="flex w-16 flex-col items-center gap-1.5">
               <div
-                className="h-9 w-9 rounded-full flex items-center justify-center text-sm font-bold transition-all"
+                className="flex h-10 w-10 items-center justify-center rounded-2xl text-sm font-bold transition-all"
                 style={
                   active
-                    ? { background: brandGrd, color: "white", boxShadow: `0 2px 8px ${brandColor}66` }
+                    ? { background: brandGrd, color: "white", boxShadow: `0 8px 18px -6px ${brandColor}99`, transform: "scale(1.05)" }
                     : done
-                    ? { background: brandColor, color: "white" }
-                    : { background: "#f3f4f6", color: "#9ca3af" }
+                    ? { background: `${brandColor}1f`, color: brandColor, border: `1px solid ${brandColor}55` }
+                    : { background: "#f5f1f3", color: "#b3a8b0", border: "1px solid var(--border)" }
                 }
               >
                 {done ? <Check className="h-4 w-4" /> : i + 1}
               </div>
               <span
-                className="text-xs text-center"
-                style={
-                  active
-                    ? { fontWeight: 700, color: "var(--foreground)" }
-                    : { color: "var(--muted)" }
-                }
+                className="text-center text-xs"
+                style={active ? { fontWeight: 700, color: "var(--foreground)" } : { color: "var(--muted)" }}
               >
                 {s.label}
               </span>
             </div>
             {i < steps.length - 1 && (
-              <div
-                className="h-0.5 w-10 mb-5 flex-shrink-0 transition-colors rounded-full"
-                style={{ background: i < currentIdx ? brandColor : "#e5e7eb" }}
-              />
+              <div className="mb-5 h-1 w-10 flex-shrink-0 overflow-hidden rounded-full" style={{ background: "#ece4e8" }}>
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ width: i < currentIdx ? "100%" : "0%", background: brandGrd }}
+                />
+              </div>
             )}
           </Fragment>
         );
@@ -141,37 +139,44 @@ function ServiceCard({
   showPrices: boolean;
   brandColor: string;
 }) {
+  const brandGrd = `linear-gradient(135deg, ${brandColor}cc 0%, ${brandColor} 100%)`;
   return (
     <button
       type="button"
       onClick={onSelect}
-      className="w-full rounded-2xl border-2 p-4 text-right transition-all hover:shadow-md"
+      className="group w-full overflow-hidden rounded-[1.3rem] p-4 text-right transition-all hover:-translate-y-0.5"
       style={{
-        borderColor: selected ? brandColor : "var(--border)",
-        background: selected ? `${brandColor}08` : "white",
-        boxShadow: selected ? `0 0 0 4px ${brandColor}18` : undefined,
+        border: `1.5px solid ${selected ? brandColor : "var(--border)"}`,
+        background: selected ? `${brandColor}0a` : "white",
+        boxShadow: selected ? `0 12px 28px -12px ${brandColor}77` : "0 4px 14px -8px rgba(124,58,97,0.12)",
       }}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex-1 min-w-0">
-          <p className="font-bold text-[var(--foreground)] text-base">{service.name}</p>
+      <div className="flex items-start gap-3">
+        <span
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-lg transition-all"
+          style={
+            selected
+              ? { background: brandGrd, color: "white", boxShadow: `0 8px 16px -6px ${brandColor}88` }
+              : { background: `${brandColor}14`, color: brandColor }
+          }
+        >
+          ✦
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-base font-bold text-[var(--foreground)]">{service.name}</p>
           {service.description && (
-            <p className="mt-0.5 text-xs text-[var(--muted)] line-clamp-2">
-              {service.description}
-            </p>
+            <p className="mt-0.5 line-clamp-2 text-xs text-[var(--muted)]">{service.description}</p>
           )}
-          <div className="mt-2.5 flex flex-wrap gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full bg-gray-50 px-2.5 py-0.5 text-xs text-[var(--muted)] border border-gray-100">
+          <div className="mt-2.5 flex flex-wrap items-center gap-2">
+            <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--background-alt)] px-2.5 py-0.5 text-xs text-[var(--muted)]">
               <Clock className="h-3 w-3" />
               {service.durationMinutes} דקות
             </span>
             {showPrices && (
               <span
-                className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-bold transition-colors"
-                style={{
-                  background: selected ? brandColor : `${brandColor}18`,
-                  color: selected ? "white" : brandColor,
-                }}
+                className="display-num inline-flex items-center rounded-full px-2.5 py-0.5 text-sm font-bold transition-colors"
+                style={{ background: selected ? brandColor : `${brandColor}18`, color: selected ? "white" : brandColor }}
+                dir="ltr"
               >
                 ₪{Number(service.price).toLocaleString("he-IL")}
               </span>
@@ -180,10 +185,7 @@ function ServiceCard({
         </div>
         <div
           className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all"
-          style={{
-            borderColor: selected ? brandColor : "#d1d5db",
-            background: selected ? brandColor : "transparent",
-          }}
+          style={{ borderColor: selected ? brandColor : "#d1d5db", background: selected ? brandColor : "transparent" }}
         >
           {selected && <Check className="h-3.5 w-3.5 text-white" />}
         </div>
