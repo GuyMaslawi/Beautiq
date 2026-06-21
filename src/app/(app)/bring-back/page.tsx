@@ -1,3 +1,4 @@
+import { PremiumPageShell } from "@/components/premium/page-shell";
 import {
   BringBackTabs,
   type HubTab,
@@ -39,7 +40,7 @@ export default async function BringBackPage({
     : "overview";
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6" dir="rtl">
+    <PremiumPageShell tint="plum" width="default">
       <BringBackTabs activeTab={tab} activeSub={sub} />
 
       {tab === "clients" && sub === "overview" && (
@@ -53,6 +54,6 @@ export default async function BringBackPage({
       {tab === "slots" && <EmptySlotsSection />}
       {tab === "reviews" && <ReputationSection />}
       {tab === "messages" && <MessagesSection />}
-    </div>
+    </PremiumPageShell>
   );
 }

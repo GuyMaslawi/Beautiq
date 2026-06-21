@@ -20,10 +20,9 @@ const SUB_TABS: { key: HubSubTab; label: string }[] = [
 ];
 
 const ACTIVE_STYLE: React.CSSProperties = {
-  background:
-    "linear-gradient(135deg, rgba(201,120,152,0.16) 0%, rgba(184,107,140,0.10) 100%)",
-  color: "#b86b8c",
-  boxShadow: "inset 0 0 0 1px rgba(184,107,140,0.22)",
+  background: "linear-gradient(135deg, #c97898 0%, #b86b8c 55%, #9d6aa8 100%)",
+  color: "#fff",
+  boxShadow: "0 8px 20px -8px rgba(184,107,140,0.6)",
 };
 
 /**
@@ -45,8 +44,14 @@ export function BringBackTabs({
         scrollbar) that stays swipeable. On desktop each tab grows to fill.
       */}
       <div
-        className="flex gap-1 overflow-x-auto rounded-2xl p-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
+        className="flex gap-1 overflow-x-auto rounded-[1.25rem] p-1.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        style={{
+          background: "rgba(255,255,255,0.72)",
+          border: "1px solid rgba(255,255,255,0.7)",
+          boxShadow: "0 8px 24px -14px rgba(124,58,97,0.2), inset 0 1px 0 rgba(255,255,255,0.9)",
+          backdropFilter: "blur(12px)",
+          WebkitBackdropFilter: "blur(12px)",
+        }}
       >
         {MAIN_TABS.map((tab) => {
           const active = tab.key === activeTab;
