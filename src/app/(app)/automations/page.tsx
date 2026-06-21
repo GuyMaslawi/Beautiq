@@ -21,7 +21,9 @@ import { isMinuteTestingAllowed } from "@/lib/automation/minute-testing";
 import { WhatsAppConnectionCard } from "@/components/whatsapp/whatsapp-connection-card";
 import { WhatsAppStatusBanners } from "@/components/whatsapp/whatsapp-status-banners";
 import { ReviewDemoCard } from "@/components/whatsapp/review-demo-card";
-import { PageHeader } from "@/components/ui/page-header";
+import { PremiumPageShell } from "@/components/premium/page-shell";
+import { BeautyPageHero } from "@/components/premium/page-hero";
+import { EditorialSectionHeader } from "@/components/premium/section-header";
 import { WinBackAutomationCard } from "@/components/automations/win-back-automation-card";
 import { MorningReminderCard } from "@/components/automations/morning-reminder-card";
 import { ReviewRequestCard } from "@/components/automations/review-request-card";
@@ -113,11 +115,13 @@ export default async function AutomationsPage() {
   const allowMinuteTesting = isMinuteTestingAllowed({ isAdmin });
 
   return (
-    <div className="w-full space-y-6">
-      <PageHeader
+    <PremiumPageShell tint="sage" width="wide">
+      <BeautyPageHero
         icon={Zap}
+        eyebrow="על טייס אוטומטי"
         title="אוטומציות"
         subtitle="הודעות שנשלחות אוטומטית כדי לחסוך זמן ולשמור על קשר עם הלקוחות."
+        tint="sage"
       />
 
       {/* Owner WhatsApp connection (Embedded Signup) + template setup */}
@@ -149,7 +153,14 @@ export default async function AutomationsPage() {
       />
 
       {/* Automation cards — each shows status, settings, and last run summary */}
-      <div className="grid grid-cols-2 gap-3">
+      <EditorialSectionHeader
+        eyebrow="הזרימות שלך"
+        title="האוטומציות שלך"
+        description="כל זרימה שולחת הודעה בזמן הנכון — הפעילי, כבי או התאימי לכל אחת."
+        icon={<Zap className="h-3.5 w-3.5" />}
+        tint="sage"
+      />
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         <WinBackAutomationCard
           setting={setting}
           lastRun={winBackLastRunSummary}
@@ -199,23 +210,14 @@ export default async function AutomationsPage() {
       </div>
 
       {/* Message log */}
-      <div className="space-y-3">
-        <div className="flex items-center gap-2.5" dir="rtl">
-          <div
-            className="flex h-8 w-8 items-center justify-center rounded-xl shrink-0"
-            style={{ background: "rgba(184,107,140,0.10)" }}
-          >
-            <MessageSquare className="h-4 w-4" style={{ color: "#b86b8c" }} />
-          </div>
-          <div>
-            <h2 className="text-base font-semibold" style={{ color: "var(--foreground)" }}>
-              יומן הודעות
-            </h2>
-            <p className="text-xs" style={{ color: "var(--muted)" }}>
-              הודעות אוטומטיות שנשלחו — ניתן לנסות שוב הודעות שנכשלו.
-            </p>
-          </div>
-        </div>
+      <div className="space-y-4">
+        <EditorialSectionHeader
+          eyebrow="פעילות"
+          title="יומן הודעות"
+          description="הודעות אוטומטיות שנשלחו — ניתן לנסות שוב הודעות שנכשלו."
+          icon={<MessageSquare className="h-3.5 w-3.5" />}
+          tint="sage"
+        />
         <AutomationMessageLog messages={messageLog} />
       </div>
 
@@ -265,6 +267,6 @@ export default async function AutomationsPage() {
           </div>
         </details>
       )}
-    </div>
+    </PremiumPageShell>
   );
 }
