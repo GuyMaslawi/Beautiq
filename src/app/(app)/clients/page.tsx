@@ -5,11 +5,12 @@ import { getClients, getClientSummary } from "@/server/clients/queries";
 import { ClientRow } from "@/components/clients/client-row";
 import { ClientCard } from "@/components/clients/client-card";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
-import { PageHeader } from "@/components/ui/page-header";
-import { MetricCard } from "@/components/ui/metric-card";
 import { CLIENTS } from "@/lib/constants/he";
+import { PremiumPageShell } from "@/components/premium/page-shell";
+import { BeautyPageHero } from "@/components/premium/page-hero";
+import { PremiumMetricCard } from "@/components/premium/metric-card";
+import { PremiumEmptyState } from "@/components/premium/empty-state";
 
 export default async function ClientsPage({
   searchParams,
@@ -28,19 +29,17 @@ export default async function ClientsPage({
   ]);
 
   return (
-    <div className="mx-auto w-full max-w-6xl space-y-6">
+    <PremiumPageShell tint="rose" width="wide">
       {/* Page header */}
-      <PageHeader
+      <BeautyPageHero
         icon={Users2}
+        eyebrow="הקשר עם הלקוחות"
         title="לקוחות"
         subtitle="כל הלקוחות שלך, במקום אחד. ניהול קשרים, מעקב פגישות — בקלות."
+        tint="rose"
         action={
           <Link href="/clients/import">
-            <Button
-              variant="secondary"
-              size="sm"
-              className="flex shrink-0 items-center gap-1.5"
-            >
+            <Button variant="secondary" size="sm" className="flex shrink-0 items-center gap-1.5">
               <Upload className="h-3.5 w-3.5" />
               ייבוא לקוחות
             </Button>
@@ -50,28 +49,28 @@ export default async function ClientsPage({
 
       {/* Summary cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <MetricCard
+        <PremiumMetricCard
           label="פגישות קרובות"
           helper={CLIENTS.summary.withUpcomingHelper}
           count={summary.withUpcoming}
           icon={<CalendarCheck className="h-4 w-4" />}
-          highlight={summary.withUpcoming > 0}
+          tone={summary.withUpcoming > 0 ? "brand" : "neutral"}
         />
-        <MetricCard
+        <PremiumMetricCard
           label="לא הגיעו"
           helper={CLIENTS.summary.withNoShowHelper}
           count={summary.withNoShow}
           icon={<UserX className="h-4 w-4" />}
-          warn={summary.withNoShow > 0}
+          tone={summary.withNoShow > 0 ? "warning" : "neutral"}
         />
-        <MetricCard
+        <PremiumMetricCard
           label="זקוקים למעקב"
           helper={CLIENTS.summary.notReturnedHelper}
           count={summary.notReturned}
           icon={<Clock className="h-4 w-4" />}
-          warn={summary.notReturned > 0}
+          tone={summary.notReturned > 0 ? "warning" : "neutral"}
         />
-        <MetricCard
+        <PremiumMetricCard
           label={CLIENTS.summary.total}
           helper={CLIENTS.summary.totalHelper}
           count={summary.total}
@@ -100,12 +99,14 @@ export default async function ClientsPage({
 
       {/* Empty state — no clients at all */}
       {summary.total === 0 && (
-        <EmptyState
+        <PremiumEmptyState
+          tint="rose"
           title={CLIENTS.emptyState.title}
           body={CLIENTS.emptyState.body}
           cta={CLIENTS.emptyState.cta}
           ctaHref="/bookings/new"
-          icon={<Users2 className="h-7 w-7" style={{ color: "#b86b8c" }} />}
+          icon={<Users2 className="h-7 w-7" />}
+          orbit={[<CalendarCheck key="a" className="h-4 w-4" />, <Clock key="b" className="h-4 w-4" />, <UserX key="c" className="h-4 w-4" />]}
         />
       )}
 
@@ -142,12 +143,7 @@ export default async function ClientsPage({
       {/* Clients table — desktop only */}
       {clients.length > 0 && (
         <div
-          className="hidden overflow-hidden rounded-2xl md:block"
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            boxShadow: "var(--shadow-md)",
-          }}
+          className="aura-card hidden overflow-hidden rounded-[1.4rem] md:block"
         >
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -190,6 +186,6 @@ export default async function ClientsPage({
           </div>
         </div>
       )}
-    </div>
+    </PremiumPageShell>
   );
 }
