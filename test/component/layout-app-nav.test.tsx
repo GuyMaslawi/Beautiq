@@ -1,0 +1,55 @@
+// @vitest-environment jsdom
+import { describe, it, expect, vi } from "vitest";
+import { render, screen } from "@testing-library/react";
+import { AppNav } from "@/components/layout/app-nav";
+
+const pathRef = { value: "/dashboard" };
+vi.mock("next/navigation", () => ({
+  usePathname: () => pathRef.value,
+}));
+
+describe("AppNav", () => {
+  it("renders all nav group labels and links", () => {
+    pathRef.value = "/dashboard";
+    render(<AppNav />);
+    expect(screen.getByText("ניהול יומי")).toBeInTheDocument();
+    expect(screen.getAllByRole("link").length).toBeGreaterThan(5);
+  });
+
+  it("marks the current route as active via aria-current (sidebar variant)", () => {
+    pathRef.value = "/bookings";
+    render(<AppNav />);
+    const active = screen
+      .getAllByRole("link")
+      .find((l) => l.getAttribute("aria-current") === "page");
+    expect(active).toBeTruthy();
+    expect(active).toHaveClass("active");
+  });
+
+  it("treats nested routes as active (startsWith)", () => {
+    pathRef.value = "/clients/123";
+    render(<AppNav />);
+    const active = screen
+      .getAllByRole("link")
+      .find((l) => l.getAttribute("aria-current") === "page");
+    expect(active?.getAttribute("href")).toBe("/clients");
+  });
+
+  it("renders the light variant with active inline styling", () => {
+    pathRef.value = "/clients";
+    render(<AppNav light />);
+    const active = screen
+      .getAllByRole("link")
+      .find((l) => l.getAttribute("aria-current") === "page") as HTMLElement;
+    expect(active.getAttribute("style")).toContain("linear-gradient");
+  });
+
+  it("renders the admin group only when isAdmin", () => {
+    pathRef.value = "/dashboard";
+    const { rerender } = render(<AppNav />);
+    expect(screen.queryByText("ניהול מערכת")).not.toBeInTheDocument();
+    rerender(<AppNav isAdmin />);
+    expect(screen.getByText("ניהול מערכת")).toBeInTheDocument();
+    expect(screen.getByText("אדמין")).toBeInTheDocument();
+  });
+});

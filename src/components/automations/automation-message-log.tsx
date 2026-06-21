@@ -246,7 +246,8 @@ export function AutomationMessageLog({ messages }: AutomationMessageLogProps) {
                         className="mt-0.5 block text-[10px]"
                         style={{ color: "var(--muted)" }}
                       >
-                        {msg.retryCount} ניסיון{msg.retryCount === 1 ? "" : "ות"} חוזר
+                        {msg.retryCount}{" "}
+                        {msg.retryCount === 1 ? "ניסיון חוזר" : "ניסיונות חוזרים"}
                       </span>
                     )}
                   </td>

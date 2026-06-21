@@ -10,20 +10,22 @@ import {
 describe("connection tracks metadata", () => {
   it("exposes exactly the three onboarding tracks with Hebrew copy", () => {
     expect(CONNECTION_TRACKS.map((t) => t.track)).toEqual([
-      "existing_business_app",
       "personal",
       "new_number",
+      "existing_business_app",
     ]);
-    // The existing-business track is recommended; personal carries a warning + ack.
-    expect(getTrackInfo("existing_business_app").recommendedBadge).toBe("מומלץ לרוב העסקים");
+    // The personal/phone track is recommended for most owners and carries a
+    // warning + acknowledgement; existing_business_app is advanced-only.
+    expect(getTrackInfo("personal").recommendedBadge).toBe("מומלץ לרוב העסקים");
     expect(getTrackInfo("personal").warning).toBeTruthy();
     expect(getTrackInfo("personal").ackWarning).toBeTruthy();
+    expect(getTrackInfo("existing_business_app").advancedBadge).toBe("מתקדם בלבד");
     expect(getTrackInfo("new_number").warning).toBeUndefined();
   });
 
   it("labels stored connection sources in Hebrew", () => {
-    expect(connectionSourceLabel("existing_business_app")).toContain("WhatsApp Business");
-    expect(connectionSourceLabel("personal")).toBe("מספר אישי");
+    expect(connectionSourceLabel("existing_business_app")).toContain("Meta Business");
+    expect(connectionSourceLabel("personal")).toBe("מספר רגיל או עסקי בטלפון");
     expect(connectionSourceLabel("new_number")).toBe("מספר חדש");
     expect(connectionSourceLabel(undefined)).toBe("לא ידוע");
     expect(connectionSourceLabel("unknown")).toBe("לא ידוע");

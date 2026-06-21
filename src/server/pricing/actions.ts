@@ -12,11 +12,16 @@ export interface MarketRangeFormState {
   fieldErrors?: Partial<Record<"min" | "avg" | "max", string>>;
 }
 
-function parseOptionalDecimal(raw: string): number | null {
+/**
+ * Parses an optional price field. Returns `null` for an empty field, the parsed
+ * number for a valid one, or `"invalid"` for non-numeric / negative input so the
+ * caller can surface a field-level error (rather than silently failing later).
+ */
+function parseOptionalDecimal(raw: string): number | null | "invalid" {
   const trimmed = raw.trim();
   if (!trimmed) return null;
   const n = parseFloat(trimmed);
-  return isNaN(n) || n < 0 ? undefined as unknown as null : n;
+  return isNaN(n) || n < 0 ? "invalid" : n;
 }
 
 export async function saveMarketRangeAction(
@@ -30,17 +35,22 @@ export async function saveMarketRangeAction(
   const rawAvg = String(formData.get("marketAveragePrice") ?? "");
   const rawMax = String(formData.get("marketMaxPrice") ?? "");
 
-  const minVal = parseOptionalDecimal(rawMin);
-  const avgVal = parseOptionalDecimal(rawAvg);
-  const maxVal = parseOptionalDecimal(rawMax);
+  const parsedMin = parseOptionalDecimal(rawMin);
+  const parsedAvg = parseOptionalDecimal(rawAvg);
+  const parsedMax = parseOptionalDecimal(rawMax);
 
   // Validate individual fields
   const fieldErrors: MarketRangeFormState["fieldErrors"] = {};
-  if (rawMin.trim() && minVal === null) fieldErrors.min = PRICING.errors.minInvalid;
-  if (rawAvg.trim() && avgVal === null) fieldErrors.avg = PRICING.errors.avgInvalid;
-  if (rawMax.trim() && maxVal === null) fieldErrors.max = PRICING.errors.maxInvalid;
+  if (parsedMin === "invalid") fieldErrors.min = PRICING.errors.minInvalid;
+  if (parsedAvg === "invalid") fieldErrors.avg = PRICING.errors.avgInvalid;
+  if (parsedMax === "invalid") fieldErrors.max = PRICING.errors.maxInvalid;
 
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
+
+  // Past the guard, each value is a valid number or null (empty field).
+  const minVal = parsedMin as number | null;
+  const avgVal = parsedAvg as number | null;
+  const maxVal = parsedMax as number | null;
 
   // Cross-field validation
   if (minVal !== null && maxVal !== null && minVal > maxVal) {

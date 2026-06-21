@@ -325,8 +325,8 @@ describe("WhatsAppConnectionCard — pre-connection chooser", () => {
     await user.click(screen.getByRole("button", { name: /חיבור WhatsApp Business/ }));
 
     expect(await screen.findByText("איזה מספר WhatsApp תרצי לחבר?")).toBeInTheDocument();
-    expect(screen.getByText("יש לי WhatsApp Business קיים")).toBeInTheDocument();
-    expect(screen.getByText("יש לי WhatsApp רגיל/אישי")).toBeInTheDocument();
+    expect(screen.getByText("יש לי מספר שמחובר כבר ל־Meta Business")).toBeInTheDocument();
+    expect(screen.getByText("יש לי WhatsApp רגיל/עסקי בטלפון")).toBeInTheDocument();
     expect(screen.getByText("אין לי מספר עסקי / אני רוצה מספר חדש")).toBeInTheDocument();
     expect(screen.getByText("מומלץ לרוב העסקים")).toBeInTheDocument();
     // Picking a track must NOT launch Meta until "המשך" is pressed.
@@ -342,8 +342,8 @@ describe("WhatsAppConnectionCard — pre-connection chooser", () => {
     render(<WhatsAppConnectionCard status={makeStatus("not_connected")} {...PROPS} />);
 
     await user.click(screen.getByRole("button", { name: /חיבור WhatsApp Business/ }));
-    await user.click(await screen.findByText("יש לי WhatsApp Business קיים"));
-    expect(screen.getByText(/בחלון של Meta בחרי את חשבון ה־WhatsApp Business הקיים/)).toBeInTheDocument();
+    await user.click(await screen.findByText("יש לי מספר שמחובר כבר ל־Meta Business"));
+    expect(screen.getByText(/החשבון שכבר מנוהל אצלך ב־Meta Business/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /המשך לחיבור ב־Meta/ }));
     await waitFor(() =>
@@ -358,9 +358,13 @@ describe("WhatsAppConnectionCard — pre-connection chooser", () => {
     render(<WhatsAppConnectionCard status={makeStatus("not_connected")} {...PROPS} />);
 
     await user.click(screen.getByRole("button", { name: /חיבור WhatsApp Business/ }));
-    await user.click(await screen.findByText("יש לי WhatsApp רגיל/אישי"));
+    await user.click(await screen.findByText("יש לי WhatsApp רגיל/עסקי בטלפון"));
 
-    expect(screen.getByText("מספר אישי שכבר רשום ב־WhatsApp עלול להיחסם בתהליך החיבור.")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "אם המספר כבר פעיל ב־WhatsApp, ייתכן שתתבקשי לאמת אותו או לאשר העברה במהלך החיבור.",
+      ),
+    ).toBeInTheDocument();
     const continueBtn = screen.getByRole("button", { name: /המשך לחיבור ב־Meta/ });
     expect(continueBtn).toBeDisabled();
 
@@ -395,7 +399,7 @@ describe("WhatsAppConnectionCard — already-registered error", () => {
     await openConnect(user);
 
     expect(await screen.findByText("המספר כבר רשום ב־WhatsApp")).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /לנסות שוב עם WhatsApp Business קיים/ })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /לנסות שוב לחבר מספר קיים/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /להשתמש במספר חדש/ })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /קראתי והבנתי/ })).toBeInTheDocument();
     // Raw Meta error must NOT be shown to a non-admin owner.
@@ -767,7 +771,7 @@ describe("WhatsAppConnectionCard — admin Meta launch diagnostics", () => {
     const fb = installCapturingFb();
     const user = userEvent.setup();
     render(<WhatsAppConnectionCard status={makeStatus("not_connected")} {...PROPS} />);
-    await openConnect(user, "יש לי WhatsApp Business קיים");
+    await openConnect(user, "יש לי מספר שמחובר כבר ל־Meta Business");
 
     await waitFor(() => expect(fb.configs.length).toBe(1));
     const cfg = fb.configs[0] as { extras: { featureType: string } };
@@ -786,7 +790,7 @@ describe("WhatsAppConnectionCard — admin Meta launch diagnostics", () => {
     expect(fresh.extras.featureType).not.toBe("whatsapp_business_app_onboarding");
 
     // Re-launch with existing-business and confirm the payloads differ.
-    await openConnect(user, "יש לי WhatsApp Business קיים");
+    await openConnect(user, "יש לי מספר שמחובר כבר ל־Meta Business");
     await waitFor(() => expect(fb.configs.length).toBe(2));
     expect(fb.configs[0]).not.toEqual(fb.configs[1]);
   });
@@ -795,7 +799,7 @@ describe("WhatsAppConnectionCard — admin Meta launch diagnostics", () => {
     const user = userEvent.setup();
     render(<WhatsAppConnectionCard status={makeStatus("not_connected")} {...PROPS} />);
     await user.click(screen.getByRole("button", { name: /חיבור WhatsApp Business/ }));
-    await user.click(await screen.findByText("יש לי WhatsApp רגיל/אישי"));
+    await user.click(await screen.findByText("יש לי WhatsApp רגיל/עסקי בטלפון"));
 
     const continueBtn = screen.getByRole("button", { name: /המשך לחיבור ב־Meta/ });
     expect(continueBtn).toBeDisabled();
@@ -817,7 +821,7 @@ describe("WhatsAppConnectionCard — admin Meta launch diagnostics", () => {
         isAdmin
       />,
     );
-    await openConnect(user, "יש לי WhatsApp Business קיים");
+    await openConnect(user, "יש לי מספר שמחובר כבר ל־Meta Business");
 
     // The masked App ID is shown; the full App ID never appears in the DOM.
     await waitFor(() =>
