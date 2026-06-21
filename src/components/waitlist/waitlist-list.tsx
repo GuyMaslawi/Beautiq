@@ -7,18 +7,18 @@ import { setWaitlistStatusAction } from "@/server/waitlist/actions";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
 import { WAITLIST } from "@/lib/constants/he";
 import type { WaitlistEntryItem } from "@/server/waitlist/queries";
+import { LuxuryStatusPill } from "@/components/premium/status-pill";
+import { PremiumEmptyState } from "@/components/premium/empty-state";
+import type { ToneKey } from "@/components/premium/tokens";
 
 const TZ = "Asia/Jerusalem";
 
-const STATUS_STYLE: Record<
-  WaitlistEntryItem["status"],
-  { bg: string; color: string }
-> = {
-  active: { bg: "rgba(184,150,10,0.10)", color: "#7a6400" },
-  notified: { bg: "rgba(59,122,181,0.10)", color: "#2a5a8a" },
-  booked: { bg: "rgba(61,139,110,0.10)", color: "#2a6e57" },
-  cancelled: { bg: "rgba(107,114,128,0.10)", color: "#4b5563" },
-  expired: { bg: "rgba(107,114,128,0.10)", color: "#4b5563" },
+const STATUS_TONE: Record<WaitlistEntryItem["status"], ToneKey> = {
+  active: "warning",
+  notified: "info",
+  booked: "success",
+  cancelled: "neutral",
+  expired: "neutral",
 };
 
 function timeOfDay(d: Date): string {
@@ -58,7 +58,6 @@ function getInitial(name: string): string {
 
 function Row({ entry }: { entry: WaitlistEntryItem }) {
   const [pending, startTransition] = useTransition();
-  const style = STATUS_STYLE[entry.status];
   const isTerminal =
     entry.status === "booked" ||
     entry.status === "cancelled" ||
@@ -76,29 +75,25 @@ function Row({ entry }: { entry: WaitlistEntryItem }) {
 
   return (
     <div
-      className="rounded-2xl p-4 space-y-3"
+      className="lift space-y-3 rounded-[1.35rem] p-4"
       style={{
-        background: "var(--surface)",
-        border: "1px solid var(--border)",
-        boxShadow: "var(--shadow-sm)",
-        opacity: isTerminal ? 0.7 : 1,
+        background: "linear-gradient(170deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.82) 100%)",
+        border: "1px solid rgba(184,107,140,0.14)",
+        boxShadow: "0 6px 20px -10px rgba(124,58,97,0.16), inset 0 1px 0 rgba(255,255,255,0.9)",
+        opacity: isTerminal ? 0.65 : 1,
       }}
     >
       <div className="flex items-center gap-3.5">
         <div
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-          style={{
-            background:
-              "linear-gradient(135deg, rgba(201,120,152,0.85) 0%, rgba(184,107,140,0.75) 100%)",
-          }}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
+          style={{ background: "linear-gradient(135deg,#c97898,#9d6aa8)", boxShadow: "0 6px 16px -6px rgba(184,107,140,0.55)" }}
         >
           {getInitial(entry.clientName)}
         </div>
         <div className="min-w-0 flex-1">
           <Link
             href={`/clients/${entry.clientId}`}
-            className="text-sm font-bold transition-opacity hover:opacity-70"
-            style={{ color: "var(--foreground)" }}
+            className="text-foreground text-sm font-bold transition-opacity hover:opacity-70"
           >
             {entry.clientName}
           </Link>
@@ -106,12 +101,9 @@ function Row({ entry }: { entry: WaitlistEntryItem }) {
             {entry.serviceName ?? WAITLIST.list.anyService}
           </p>
         </div>
-        <span
-          className="shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold"
-          style={{ background: style.bg, color: style.color }}
-        >
+        <LuxuryStatusPill tone={STATUS_TONE[entry.status]} dot={entry.status === "active"}>
           {WAITLIST.status[entry.status]}
-        </span>
+        </LuxuryStatusPill>
       </div>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs" style={{ color: "var(--muted)" }}>
@@ -180,23 +172,17 @@ function Row({ entry }: { entry: WaitlistEntryItem }) {
 export function WaitlistList({ entries }: { entries: WaitlistEntryItem[] }) {
   if (entries.length === 0) {
     return (
-      <div
-        className="rounded-2xl px-5 py-12 text-center"
-        style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-      >
-        <div
-          className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-2xl"
-          style={{ background: "rgba(184,107,140,0.10)" }}
-        >
-          <Clock className="h-6 w-6" style={{ color: "#b86b8c" }} />
-        </div>
-        <p className="text-base font-bold" style={{ color: "var(--foreground)" }}>
-          {WAITLIST.list.empty}
-        </p>
-        <p className="mx-auto mt-1.5 max-w-sm text-sm" style={{ color: "var(--muted)" }}>
-          {WAITLIST.list.emptyHint}
-        </p>
-      </div>
+      <PremiumEmptyState
+        tint="blush"
+        title={WAITLIST.list.empty}
+        body={WAITLIST.list.emptyHint}
+        icon={<Clock className="h-7 w-7" />}
+        orbit={[
+          <CalendarCheck key="a" className="h-4 w-4" />,
+          <UserCheck key="b" className="h-4 w-4" />,
+          <MessageCircle key="c" className="h-4 w-4" />,
+        ]}
+      />
     );
   }
 
