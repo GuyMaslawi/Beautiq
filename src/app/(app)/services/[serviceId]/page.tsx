@@ -13,6 +13,7 @@ import {
   calcBusinessAvgCompletedBookings,
 } from "@/lib/pricing/insights";
 import { SERVICES } from "@/lib/constants/he";
+import { PremiumPageShell } from "@/components/premium/page-shell";
 
 export default async function EditServicePage({
   params,
@@ -64,26 +65,29 @@ export default async function EditServicePage({
   };
 
   return (
-    <div className="mx-auto w-full max-w-4xl space-y-6">
-      {/* Breadcrumb header */}
-      <div>
-        <div className="mb-3 flex items-center gap-1.5 text-sm" style={{ color: "var(--muted)" }}>
-          <Link
-            href="/services"
-            className="transition-colors hover:underline"
-            style={{ color: "var(--muted)" }}
-          >
-            שירותים
-          </Link>
-          <ChevronLeft className="h-3.5 w-3.5 shrink-0" />
-          <span style={{ color: "var(--foreground-soft)" }}>עריכת שירות</span>
+    <PremiumPageShell tint="champagne" width="default">
+      {/* Breadcrumb + editorial header band */}
+      <div className="aura-card relative overflow-hidden rounded-[1.5rem] p-6">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute -top-14 h-40 w-40 rounded-full"
+          style={{ insetInlineEnd: "-2rem", background: "radial-gradient(circle, rgba(192,149,96,0.18) 0%, transparent 70%)", filter: "blur(14px)" }}
+        />
+        <div className="relative">
+          <div className="mb-2 flex items-center gap-1.5 text-sm" style={{ color: "var(--muted)" }}>
+            <Link href="/services" className="transition-colors hover:underline" style={{ color: "var(--muted)" }}>
+              שירותים
+            </Link>
+            <ChevronLeft className="h-3.5 w-3.5 shrink-0" />
+            <span className="eyebrow" style={{ color: "#b88a3e" }}>עריכת שירות</span>
+          </div>
+          <h1 className="display-num text-foreground text-2xl font-bold tracking-tight md:text-3xl">
+            {SERVICES.form.editTitle}
+          </h1>
+          <p className="mt-1.5 text-sm" style={{ color: "var(--muted)" }}>
+            {service.name} — עדכוני פרטים, מחיר וזמינות השירות
+          </p>
         </div>
-        <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--foreground)" }}>
-          {SERVICES.form.editTitle}
-        </h1>
-        <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
-          {service.name} — עדכוני פרטים, מחיר וזמינות השירות
-        </p>
       </div>
 
       <ServiceForm
@@ -100,6 +104,6 @@ export default async function EditServicePage({
           ) : undefined
         }
       />
-    </div>
+    </PremiumPageShell>
   );
 }

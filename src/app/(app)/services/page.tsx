@@ -9,10 +9,12 @@ import {
   calcBusinessAvgCompletedBookings,
 } from "@/lib/pricing/insights";
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/ui/empty-state";
 import { ServiceCard } from "@/components/services/service-card";
-import { PageHeader } from "@/components/ui/page-header";
 import { PRICING, SERVICES } from "@/lib/constants/he";
+import { PremiumPageShell } from "@/components/premium/page-shell";
+import { BeautyPageHero } from "@/components/premium/page-hero";
+import { PremiumMetricCard } from "@/components/premium/metric-card";
+import { PremiumEmptyState } from "@/components/premium/empty-state";
 
 function formatILS(amount: number): string {
   return `₪${Math.round(amount).toLocaleString("en-US")}`;
@@ -57,12 +59,14 @@ export default async function ServicesPage() {
   );
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6">
+    <PremiumPageShell tint="champagne" width="wide">
       {/* Page header */}
-      <PageHeader
+      <BeautyPageHero
         icon={Sparkles}
+        eyebrow="התפריט של העסק"
         title={SERVICES.pageTitle}
         subtitle="כאן מגדירים את השירותים שהעסק מציע, משך הטיפול והמחיר."
+        tint="champagne"
         action={
           <Link href="/services/new">
             <Button size="sm">{SERVICES.addButton}</Button>
@@ -72,54 +76,37 @@ export default async function ServicesPage() {
 
       {/* Empty state */}
       {services.length === 0 && (
-        <EmptyState
+        <PremiumEmptyState
+          tint="champagne"
           title={SERVICES.emptyState.title}
           body={SERVICES.emptyState.body}
           cta={SERVICES.emptyState.cta}
           ctaHref="/services/new"
-          icon={<Sparkles className="h-7 w-7" style={{ color: "#b86b8c" }} />}
+          icon={<Sparkles className="h-7 w-7" />}
         />
       )}
 
-      {/* Pricing summary strip */}
+      {/* Pricing summary metric trio (desktop emphasis below the hero ribbon) */}
       {services.length > 0 && (
-        <div
-          className="grid grid-cols-3 gap-3 rounded-2xl p-4"
-          style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
-        >
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ background: "rgba(184,107,140,0.10)" }}>
-              <Sparkles className="h-4 w-4" style={{ color: "#b86b8c" }} />
-            </div>
-            <div>
-              <p className="text-lg font-bold tabular-nums" style={{ color: "var(--foreground)" }}>
-                {summary.activeServicesCount}
-              </p>
-              <p className="text-xs" style={{ color: "var(--muted)" }}>{PRICING.summary.servicesCount}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ background: "rgba(184,107,140,0.10)" }}>
-              <TrendingUp className="h-4 w-4" style={{ color: "#b86b8c" }} />
-            </div>
-            <div>
-              <p className="text-lg font-bold tabular-nums" style={{ color: "var(--foreground)" }}>
-                {summary.avgPricePerHour > 0 ? formatILS(summary.avgPricePerHour) : "—"}
-              </p>
-              <p className="text-xs" style={{ color: "var(--muted)" }}>{PRICING.summary.avgPricePerHour}</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl" style={{ background: "rgba(184,107,140,0.10)" }}>
-              <Banknote className="h-4 w-4" style={{ color: "#b86b8c" }} />
-            </div>
-            <div>
-              <p className="text-lg font-bold tabular-nums" style={{ color: "var(--foreground)" }}>
-                {summary.servicesWithRangeCount}
-              </p>
-              <p className="text-xs" style={{ color: "var(--muted)" }}>{PRICING.summary.servicesWithRange}</p>
-            </div>
-          </div>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+          <PremiumMetricCard
+            tone="brand"
+            icon={<Sparkles className="h-4 w-4" />}
+            count={summary.activeServicesCount}
+            label={PRICING.summary.servicesCount}
+          />
+          <PremiumMetricCard
+            tone="gold"
+            icon={<TrendingUp className="h-4 w-4" />}
+            count={summary.avgPricePerHour > 0 ? formatILS(summary.avgPricePerHour) : "—"}
+            label={PRICING.summary.avgPricePerHour}
+          />
+          <PremiumMetricCard
+            tone="success"
+            icon={<Banknote className="h-4 w-4" />}
+            count={summary.servicesWithRangeCount}
+            label={PRICING.summary.servicesWithRange}
+          />
         </div>
       )}
 
@@ -135,6 +122,6 @@ export default async function ServicesPage() {
           ))}
         </div>
       )}
-    </div>
+    </PremiumPageShell>
   );
 }
