@@ -31,7 +31,6 @@ const ALL_ON = {
   showHours: true,
   showReviews: true,
   showGallery: true,
-  showCancellationPolicy: true,
   showPhone: true,
   showAddress: true,
 };
@@ -45,16 +44,13 @@ function renderForm(initialValues = ALL_ON) {
 }
 
 describe("VisibilityForm", () => {
-  it("renders all eight toggle labels", () => {
+  it("renders all seven toggle labels", () => {
     renderForm();
     expect(screen.getByText(PUBLIC_PAGE.visibility.showServices)).toBeInTheDocument();
     expect(screen.getByText(PUBLIC_PAGE.visibility.showPrices)).toBeInTheDocument();
     expect(screen.getByText(PUBLIC_PAGE.visibility.showHours)).toBeInTheDocument();
     expect(screen.getByText(PUBLIC_PAGE.visibility.showPhone)).toBeInTheDocument();
     expect(screen.getByText(PUBLIC_PAGE.visibility.showAddress)).toBeInTheDocument();
-    expect(
-      screen.getByText(PUBLIC_PAGE.visibility.showCancellationPolicy),
-    ).toBeInTheDocument();
     expect(screen.getByText(PUBLIC_PAGE.visibility.showGallery)).toBeInTheDocument();
     expect(screen.getByText(PUBLIC_PAGE.visibility.showReviews)).toBeInTheDocument();
   });

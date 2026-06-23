@@ -36,7 +36,6 @@ const VISIBILITY_FIELDS = [
   "showHours",
   "showReviews",
   "showGallery",
-  "showCancellationPolicy",
   "showPhone",
   "showAddress",
 ] as const;

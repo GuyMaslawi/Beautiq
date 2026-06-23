@@ -215,7 +215,6 @@ export default async function AdminBusinessDetailPage({
           showHours: biz.showHours,
           showReviews: biz.showReviews,
           showGallery: biz.showGallery,
-          showCancellationPolicy: biz.showCancellationPolicy,
           showPhone: biz.showPhone,
           showAddress: biz.showAddress,
         }}

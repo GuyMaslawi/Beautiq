@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/server/db/prisma";
 import { requireTenant } from "@/server/auth/session";
-import { validateBusinessDetails, validateCancellationPolicy } from "@/lib/validation/settings";
+import { validateBusinessDetails } from "@/lib/validation/settings";
 import { SETTINGS } from "@/lib/constants/he";
 
 // ---------------------------------------------------------------------------
@@ -101,79 +101,4 @@ export async function updateBusinessCategoriesAction(
   revalidatePath("/settings");
   revalidatePath("/dashboard");
   return { success: SETTINGS.categories.success };
-}
-
-// ---------------------------------------------------------------------------
-// Cancellation policy
-// ---------------------------------------------------------------------------
-
-export interface CancellationPolicyFormState {
-  errors?: Partial<Record<string, string>>;
-  formError?: string;
-  success?: string;
-  values?: Record<string, string>;
-}
-
-export async function updateCancellationPolicyAction(
-  _prevState: CancellationPolicyFormState,
-  formData: FormData,
-): Promise<CancellationPolicyFormState> {
-  const tenant = await requireTenant();
-
-  const raw: Record<string, string> = {
-    enabled: String(formData.get("enabled") ?? ""),
-    policyText: String(formData.get("policyText") ?? ""),
-    minNoticeHours: String(formData.get("minNoticeHours") ?? ""),
-    lateCancellationHours: String(formData.get("lateCancellationHours") ?? ""),
-    lateCancellationFeeType: String(formData.get("lateCancellationFeeType") ?? "none"),
-    lateCancellationFeeAmount: String(formData.get("lateCancellationFeeAmount") ?? ""),
-    lateCancellationFeePercentage: String(formData.get("lateCancellationFeePercentage") ?? ""),
-  };
-
-  const result = validateCancellationPolicy(raw);
-  if (!result.ok) return { errors: result.errors, values: raw };
-
-  const { value } = result;
-
-  try {
-    await prisma.cancellationPolicy.upsert({
-      where: { businessId: tenant.businessId },
-      create: {
-        businessId: tenant.businessId,
-        enabled: value.enabled,
-        policyText: value.policyText ?? null,
-        minNoticeHours: value.minNoticeHours ?? null,
-        lateCancellationHours: value.lateCancellationHours ?? null,
-        lateCancellationFeeType: value.lateCancellationFeeType,
-        lateCancellationFeeAmount:
-          value.lateCancellationFeeAmount != null
-            ? value.lateCancellationFeeAmount
-            : null,
-        lateCancellationFeePercentage:
-          value.lateCancellationFeePercentage != null
-            ? value.lateCancellationFeePercentage
-            : null,
-      },
-      update: {
-        enabled: value.enabled,
-        policyText: value.policyText ?? null,
-        minNoticeHours: value.minNoticeHours ?? null,
-        lateCancellationHours: value.lateCancellationHours ?? null,
-        lateCancellationFeeType: value.lateCancellationFeeType,
-        lateCancellationFeeAmount:
-          value.lateCancellationFeeAmount != null
-            ? value.lateCancellationFeeAmount
-            : null,
-        lateCancellationFeePercentage:
-          value.lateCancellationFeePercentage != null
-            ? value.lateCancellationFeePercentage
-            : null,
-      },
-    });
-  } catch {
-    return { formError: SETTINGS.errors.generic, values: raw };
-  }
-
-  revalidatePath("/settings");
-  return { success: SETTINGS.cancellationPolicy.success };
 }

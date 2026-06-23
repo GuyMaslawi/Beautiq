@@ -18,7 +18,6 @@ type VisibilityKeys =
   | "showHours"
   | "showReviews"
   | "showGallery"
-  | "showCancellationPolicy"
   | "showPhone"
   | "showAddress";
 
@@ -28,7 +27,6 @@ const TOGGLES: { key: VisibilityKeys; label: string }[] = [
   { key: "showHours", label: PUBLIC_PAGE.visibility.showHours },
   { key: "showPhone", label: PUBLIC_PAGE.visibility.showPhone },
   { key: "showAddress", label: PUBLIC_PAGE.visibility.showAddress },
-  { key: "showCancellationPolicy", label: PUBLIC_PAGE.visibility.showCancellationPolicy },
   { key: "showGallery", label: PUBLIC_PAGE.visibility.showGallery },
   { key: "showReviews", label: PUBLIC_PAGE.visibility.showReviews },
 ];

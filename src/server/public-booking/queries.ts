@@ -8,15 +8,6 @@ export interface PublicService {
   price: string;
 }
 
-export interface PublicCancellationPolicy {
-  enabled: boolean;
-  policyText: string | null;
-  lateCancellationHours: number | null;
-  lateCancellationFeeType: string;
-  lateCancellationFeeAmount: string | null;
-  lateCancellationFeePercentage: string | null;
-}
-
 export interface PublicGalleryImage {
   id: string;
   imageUrl: string;
@@ -55,11 +46,9 @@ export interface PublicBusiness {
   showHours: boolean;
   showReviews: boolean;
   showGallery: boolean;
-  showCancellationPolicy: boolean;
   showPhone: boolean;
   showAddress: boolean;
   services: PublicService[];
-  cancellationPolicy: PublicCancellationPolicy | null;
   galleryImages: PublicGalleryImage[];
   reviews: PublicReview[];
   availabilityDays: PublicAvailabilityDay[];
@@ -90,7 +79,6 @@ export async function getPublicBusiness(
       showHours: true,
       showReviews: true,
       showGallery: true,
-      showCancellationPolicy: true,
       showPhone: true,
       showAddress: true,
       services: {
@@ -103,16 +91,6 @@ export async function getPublicBusiness(
           price: true,
         },
         orderBy: { name: "asc" },
-      },
-      cancellationPolicy: {
-        select: {
-          enabled: true,
-          policyText: true,
-          lateCancellationHours: true,
-          lateCancellationFeeType: true,
-          lateCancellationFeeAmount: true,
-          lateCancellationFeePercentage: true,
-        },
       },
       galleryImages: {
         select: { id: true, imageUrl: true, caption: true },
@@ -132,19 +110,6 @@ export async function getPublicBusiness(
   });
 
   if (!business) return null;
-
-  const cp = business.cancellationPolicy;
-  const cancellationPolicy: PublicCancellationPolicy | null =
-    cp && cp.enabled
-      ? {
-          enabled: cp.enabled,
-          policyText: cp.policyText,
-          lateCancellationHours: cp.lateCancellationHours,
-          lateCancellationFeeType: cp.lateCancellationFeeType,
-          lateCancellationFeeAmount: cp.lateCancellationFeeAmount?.toString() ?? null,
-          lateCancellationFeePercentage: cp.lateCancellationFeePercentage?.toString() ?? null,
-        }
-      : null;
 
   return {
     id: business.id,
@@ -166,7 +131,6 @@ export async function getPublicBusiness(
     showHours: business.showHours,
     showReviews: business.showReviews,
     showGallery: business.showGallery,
-    showCancellationPolicy: business.showCancellationPolicy,
     showPhone: business.showPhone,
     showAddress: business.showAddress,
     services: business.services.map((s) => ({
@@ -176,7 +140,6 @@ export async function getPublicBusiness(
       durationMinutes: s.durationMinutes,
       price: s.price.toString(),
     })),
-    cancellationPolicy,
     galleryImages: business.galleryImages.map((g) => ({
       id: g.id,
       imageUrl: g.imageUrl,

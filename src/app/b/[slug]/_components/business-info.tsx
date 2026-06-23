@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Clock, MapPin, Phone, Info } from "lucide-react";
+import { Clock, MapPin, Phone } from "lucide-react";
 import type { PublicBusiness } from "@/server/public-booking/queries";
 import {
   WEEKDAY_NAMES,
@@ -36,11 +36,9 @@ function CardTitle({
 export function PublicBusinessInfo({
   business,
   brand,
-  policyText,
 }: {
   business: PublicBusiness;
   brand: string;
-  policyText: string | null;
 }) {
   const location = [business.city, business.area].filter(Boolean).join(", ");
   const addressLabel = business.addressNote || location;
@@ -53,9 +51,8 @@ export function PublicBusinessInfo({
   const showContact =
     (business.showAddress && !!addressLabel) ||
     (business.showPhone && !!business.phone);
-  const showPolicy = !!policyText;
 
-  if (!showHours && !showContact && !showPolicy) return null;
+  if (!showHours && !showContact) return null;
 
   return (
     <section className="mx-auto w-full max-w-6xl px-5 sm:px-8">
@@ -89,8 +86,8 @@ export function PublicBusinessInfo({
           </Card>
         )}
 
-        {/* Contact + policy */}
-        {(showContact || showPolicy) && (
+        {/* Contact */}
+        {showContact && (
           <div className="space-y-5">
             {showContact && (
               <Card>
@@ -136,17 +133,6 @@ export function PublicBusinessInfo({
                     </div>
                   )}
                 </div>
-              </Card>
-            )}
-
-            {showPolicy && (
-              <Card>
-                <CardTitle icon={Info} brand={brand}>
-                  מדיניות ביטולים
-                </CardTitle>
-                <p className="text-sm leading-relaxed text-[var(--muted)]">
-                  {policyText}
-                </p>
               </Card>
             )}
           </div>

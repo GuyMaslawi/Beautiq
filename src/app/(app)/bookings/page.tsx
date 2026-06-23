@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CalendarDays, CalendarRange, Clock, XCircle, Plus, ChevronUp, ChevronDown, ChevronsUpDown, List } from "lucide-react";
 import { requireTenant } from "@/server/auth/session";
-import { getBookings, getBookingSummary, getActiveCancellationPolicy, getCalendarBookings } from "@/server/bookings/queries";
+import { getBookings, getBookingSummary, getCalendarBookings } from "@/server/bookings/queries";
 import { prisma } from "@/server/db/prisma";
 import { PremiumPageShell } from "@/components/premium/page-shell";
 import { BeautyPageHero } from "@/components/premium/page-hero";
@@ -162,7 +162,7 @@ export default async function BookingsPage({
   const hasExplicitSort = !!rawSort;
 
   // Fetch data
-  const [bookings, summary, services, cancellationPolicy, calBookings] = await Promise.all([
+  const [bookings, summary, services, calBookings] = await Promise.all([
     isCalendarView
       ? Promise.resolve([])
       : getBookings(tenant, { filter, statusFilter, search, serviceId, sortField, sortDir, smartSort: !hasExplicitSort }),
@@ -174,7 +174,6 @@ export default async function BookingsPage({
           select: { id: true, name: true },
           orderBy: { name: "asc" },
         }),
-    isCalendarView ? Promise.resolve(null) : getActiveCancellationPolicy(tenant),
     isCalendarView
       ? (() => {
           if (calView === "day") {
@@ -480,11 +479,7 @@ export default async function BookingsPage({
                   </thead>
                   <tbody>
                     {bookings.map((booking) => (
-                      <BookingRow
-                        key={booking.id}
-                        booking={booking}
-                        lateCancellationHours={cancellationPolicy?.lateCancellationHours ?? null}
-                      />
+                      <BookingRow key={booking.id} booking={booking} />
                     ))}
                   </tbody>
                 </table>

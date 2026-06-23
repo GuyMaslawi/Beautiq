@@ -39,11 +39,9 @@ function makePublicBusiness(
     showHours: true,
     showReviews: true,
     showGallery: true,
-    showCancellationPolicy: true,
     showPhone: true,
     showAddress: true,
     services: [],
-    cancellationPolicy: null,
     galleryImages: [],
     reviews: [],
     availabilityDays: [],
@@ -161,7 +159,6 @@ describe("PublicBusinessInfo", () => {
           availabilityDays: [],
         })}
         brand={BRAND}
-        policyText={null}
       />,
     );
     expect(container.firstChild).toBeNull();
@@ -176,28 +173,11 @@ describe("PublicBusinessInfo", () => {
           ],
         })}
         brand={BRAND}
-        policyText={null}
       />,
     );
     expect(screen.getByText("שעות פעילות")).toBeInTheDocument();
     expect(screen.getByText("יום ראשון")).toBeInTheDocument();
     expect(screen.getByText("09:00–17:00")).toBeInTheDocument();
-  });
-
-  it("renders the cancellation policy text when provided", () => {
-    render(
-      <PublicBusinessInfo
-        business={makePublicBusiness({
-          showHours: false,
-          showAddress: false,
-          showPhone: false,
-        })}
-        brand={BRAND}
-        policyText="ביטול עד 24 שעות מראש"
-      />,
-    );
-    expect(screen.getByText("מדיניות ביטולים")).toBeInTheDocument();
-    expect(screen.getByText("ביטול עד 24 שעות מראש")).toBeInTheDocument();
   });
 });
 

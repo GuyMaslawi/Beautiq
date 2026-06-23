@@ -21,9 +21,7 @@ import { resetPrismaMock } from "../helpers/prisma-mock";
 import {
   getBookings,
   getCalendarBookings,
-  getLateCancellationsThisWeek,
   getBookingSummary,
-  getActiveCancellationPolicy,
 } from "@/server/bookings/queries";
 
 const tenant = { businessId: BUSINESS_A };
@@ -113,64 +111,6 @@ describe("getCalendarBookings", () => {
   it("returns [] safely when there are no bookings in range", async () => {
     prisma.booking.findMany.mockResolvedValue([]);
     expect(await getCalendarBookings(tenant, new Date(), new Date())).toEqual([]);
-  });
-});
-
-describe("getActiveCancellationPolicy", () => {
-  it("scopes the lookup by businessId and returns null when disabled", async () => {
-    prisma.cancellationPolicy.findUnique.mockResolvedValue({
-      enabled: false,
-      lateCancellationHours: 24,
-      lateCancellationFeeType: "fixed",
-      lateCancellationFeeAmount: null,
-      lateCancellationFeePercentage: null,
-    });
-    const res = await getActiveCancellationPolicy(tenant);
-    expect(res).toBeNull();
-    expect(prisma.cancellationPolicy.findUnique.mock.calls[0][0].where).toEqual({
-      businessId: BUSINESS_A,
-    });
-  });
-
-  it("returns the policy with serialized decimal amounts when enabled", async () => {
-    prisma.cancellationPolicy.findUnique.mockResolvedValue({
-      enabled: true,
-      lateCancellationHours: 24,
-      lateCancellationFeeType: "fixed",
-      lateCancellationFeeAmount: new Prisma.Decimal(30),
-      lateCancellationFeePercentage: null,
-    });
-    const res = await getActiveCancellationPolicy(tenant);
-    expect(res).toMatchObject({ enabled: true, lateCancellationFeeAmount: "30" });
-  });
-});
-
-describe("getLateCancellationsThisWeek", () => {
-  it("returns 0 safely when no policy is enabled (no booking scan)", async () => {
-    prisma.cancellationPolicy.findUnique.mockResolvedValue(null);
-    expect(await getLateCancellationsThisWeek(tenant)).toBe(0);
-    expect(prisma.booking.findMany).not.toHaveBeenCalled();
-  });
-
-  it("counts only cancellations inside the late window, scoped by businessId", async () => {
-    prisma.cancellationPolicy.findUnique.mockResolvedValue({
-      enabled: true,
-      lateCancellationHours: 24,
-    });
-    const start = new Date("2026-06-20T10:00:00Z");
-    prisma.booking.findMany.mockResolvedValue([
-      // cancelled 1h before start → inside the 24h window → counts
-      { cancelledAt: new Date("2026-06-20T09:00:00Z"), noShowAt: null, startTime: start },
-      // cancelled 3 days before → outside the window → does not count
-      {
-        cancelledAt: new Date("2026-06-17T10:00:00Z"),
-        noShowAt: null,
-        startTime: start,
-      },
-    ]);
-    const res = await getLateCancellationsThisWeek(tenant);
-    expect(res).toBe(1);
-    expect(prisma.booking.findMany.mock.calls[0][0].where.businessId).toBe(BUSINESS_A);
   });
 });
 

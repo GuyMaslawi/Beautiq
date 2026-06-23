@@ -109,7 +109,6 @@ export default async function PublicPageSettingsPage() {
             showHours: settings.showHours,
             showReviews: settings.showReviews,
             showGallery: settings.showGallery,
-            showCancellationPolicy: settings.showCancellationPolicy,
             showPhone: settings.showPhone,
             showAddress: settings.showAddress,
           }}

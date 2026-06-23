@@ -23,7 +23,6 @@ export interface PublicPageSettings {
   showHours: boolean;
   showReviews: boolean;
   showGallery: boolean;
-  showCancellationPolicy: boolean;
   showPhone: boolean;
   showAddress: boolean;
 }
@@ -67,7 +66,6 @@ export async function getPublicPageSettings(
       showHours: true,
       showReviews: true,
       showGallery: true,
-      showCancellationPolicy: true,
       showPhone: true,
       showAddress: true,
     },

@@ -16,11 +16,10 @@ import {
   CheckCircle2,
   Circle,
   RefreshCcw,
-  XCircle,
   Star,
   TrendingUp,
 } from "lucide-react";
-import { BOOKING_STATUS, BOOKINGS, DASHBOARD } from "@/lib/constants/he";
+import { BOOKING_STATUS, DASHBOARD } from "@/lib/constants/he";
 import { FadeIn } from "@/components/ui/animate";
 import { RevenueSection } from "@/components/dashboard/revenue-section";
 import { AutomationsSection } from "@/components/dashboard/automations-section";
@@ -106,7 +105,7 @@ function HeroStat({
   return (
     <Link
       href={href}
-      className="ring-soft group flex items-center gap-3 rounded-2xl px-4 py-3 transition-transform hover:-translate-y-0.5 active:scale-[0.98]"
+      className="ring-soft group flex items-center gap-3 rounded-2xl px-4 py-3 transition-transform hover:-translate-y-0.5 active:scale-[0.98] md:min-w-[11.5rem]"
       style={{
         background: "rgba(255,255,255,0.08)",
         border: "1px solid rgba(255,255,255,0.14)",
@@ -156,7 +155,7 @@ function CommandCenterHero({
       <AuraBlob color="rgba(201,120,152,0.34)" size={360} style={{ top: -150, insetInlineEnd: -60 }} />
       <AuraBlob color="rgba(157,106,168,0.22)" size={300} style={{ bottom: -160, insetInlineStart: -80 }} />
 
-      <div className="relative flex flex-col gap-5 p-5 md:flex-row md:items-end md:justify-between md:p-6">
+      <div className="relative flex flex-col gap-6 p-5 md:flex-row md:items-center md:justify-between md:gap-10 md:p-7">
         <div className="min-w-0">
           <span className="eyebrow" style={{ color: "rgba(240,168,200,0.9)" }}>
             לוח הבקרה שלך
@@ -190,7 +189,7 @@ function CommandCenterHero({
         </div>
 
         {/* Live pulse stats */}
-        <div className="flex shrink-0 gap-2.5">
+        <div className="flex shrink-0 gap-2.5 md:flex-col md:gap-3">
           <HeroStat
             href="/bookings?filter=today"
             icon={CalendarDays}
@@ -721,7 +720,6 @@ export function SetupChecklist({
   suggestedClients = [],
   atRiskCount = 0,
   remindersDueCount = 0,
-  lateCancellationsCount = 0,
   waitlistCount = 0,
   forecast,
   reviewReadyCount = 0,
@@ -738,7 +736,6 @@ export function SetupChecklist({
   suggestedClients?: SuggestedClient[];
   atRiskCount?: number;
   remindersDueCount?: number;
-  lateCancellationsCount?: number;
   waitlistCount?: number;
   forecast: RevenueForecastData;
   reviewReadyCount?: number;
@@ -754,7 +751,7 @@ export function SetupChecklist({
   );
 
   const hasTodayAttention =
-    pendingApprovalCount > 0 || lateCancellationsCount > 0 || extraUrgent.length > 0;
+    pendingApprovalCount > 0 || extraUrgent.length > 0;
 
   return (
     <PremiumPageShell
@@ -801,22 +798,6 @@ export function SetupChecklist({
                     icon={CalendarDays}
                     color="warning"
                     ariaLabel={`${pendingApprovalCount} פגישות ממתינות לאישור — עבור לפגישות ממתינות`}
-                  />
-                )}
-                {lateCancellationsCount > 0 && (
-                  <AttentionCard
-                    count={lateCancellationsCount}
-                    label={BOOKINGS.lateCancellation.dashboardCard.title}
-                    subLabel={
-                      lateCancellationsCount === 1
-                        ? BOOKINGS.lateCancellation.dashboardCard.bodySingular
-                        : BOOKINGS.lateCancellation.dashboardCard.bodyPlural(lateCancellationsCount)
-                    }
-                    action={BOOKINGS.lateCancellation.dashboardCard.cta}
-                    href="/bookings?status=cancelled"
-                    icon={XCircle}
-                    color="rose"
-                    ariaLabel={`${lateCancellationsCount} ביטולים מאוחרים — עבור לתורים שבוטלו`}
                   />
                 )}
                 {extraUrgent.map((item) => (

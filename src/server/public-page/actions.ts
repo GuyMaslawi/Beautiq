@@ -129,7 +129,6 @@ export async function updateVisibilityAction(
         showHours: bool("showHours"),
         showReviews: bool("showReviews"),
         showGallery: bool("showGallery"),
-        showCancellationPolicy: bool("showCancellationPolicy"),
         showPhone: bool("showPhone"),
         showAddress: bool("showAddress"),
       },

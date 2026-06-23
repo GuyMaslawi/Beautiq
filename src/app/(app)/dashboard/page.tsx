@@ -6,7 +6,6 @@ import { getRevenueForecastData } from "@/server/revenue-forecast/queries";
 import { getReputationSummary } from "@/server/reputation/queries";
 import { getRemindersDueCount, getRecentAutomationRuns } from "@/server/automations/queries";
 import { ensureDefaultAutomationSettings } from "@/server/automations/defaults";
-import { getLateCancellationsThisWeek } from "@/server/bookings/queries";
 import { getActiveWaitlistCount } from "@/server/waitlist/queries";
 import { generateGuidanceItems } from "@/lib/guidance/rules";
 import { BusinessSetupCard } from "@/components/dashboard/business-setup-card";
@@ -40,7 +39,6 @@ export default async function DashboardPage() {
     reputationSummary,
     remindersDueCount,
     recentRuns,
-    lateCancellationsCount,
     waitlistCount,
   ] = await Promise.all([
     getDashboardData(tenant, {
@@ -56,7 +54,6 @@ export default async function DashboardPage() {
     getReputationSummary(tenant),
     getRemindersDueCount(tenant),
     getRecentAutomationRuns(tenant, 3),
-    getLateCancellationsThisWeek(tenant),
     getActiveWaitlistCount(tenant),
   ]);
 
@@ -78,7 +75,6 @@ export default async function DashboardPage() {
       suggestedClients={emptySlotsData.suggestedClients}
       atRiskCount={guidanceQueryData.lostClientsCount}
       remindersDueCount={remindersDueCount}
-      lateCancellationsCount={lateCancellationsCount}
       waitlistCount={waitlistCount}
       forecast={forecast}
       reviewReadyCount={reputationSummary.recentCompletedCount}

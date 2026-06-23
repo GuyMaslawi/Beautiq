@@ -12,17 +12,6 @@ export interface BusinessSettingsData {
   addressNote: string | null;
 }
 
-export interface CancellationPolicyData {
-  id: string;
-  enabled: boolean;
-  policyText: string | null;
-  minNoticeHours: number | null;
-  lateCancellationHours: number | null;
-  lateCancellationFeeType: string;
-  lateCancellationFeeAmount: string | null;
-  lateCancellationFeePercentage: string | null;
-}
-
 export interface BusinessCategoryData {
   id: string;
   key: string;
@@ -45,30 +34,6 @@ export async function getBusinessSettings(
       addressNote: true,
     },
   });
-}
-
-export async function getCancellationPolicy(
-  tenant: TenantContext,
-): Promise<CancellationPolicyData | null> {
-  const policy = await prisma.cancellationPolicy.findUnique({
-    where: { businessId: tenant.businessId },
-    select: {
-      id: true,
-      enabled: true,
-      policyText: true,
-      minNoticeHours: true,
-      lateCancellationHours: true,
-      lateCancellationFeeType: true,
-      lateCancellationFeeAmount: true,
-      lateCancellationFeePercentage: true,
-    },
-  });
-  if (!policy) return null;
-  return {
-    ...policy,
-    lateCancellationFeeAmount: policy.lateCancellationFeeAmount?.toString() ?? null,
-    lateCancellationFeePercentage: policy.lateCancellationFeePercentage?.toString() ?? null,
-  };
 }
 
 export async function getAllBusinessCategories(): Promise<BusinessCategoryData[]> {

@@ -28,7 +28,6 @@ export interface BusinessEditValues {
   showHours: boolean;
   showReviews: boolean;
   showGallery: boolean;
-  showCancellationPolicy: boolean;
   showPhone: boolean;
   showAddress: boolean;
 }
@@ -331,11 +330,6 @@ export function AdminBusinessEditPanel({ businessId, business, owner }: Props) {
                 <Toggle name="showHours" label="שעות פעילות" defaultChecked={business.showHours} />
                 <Toggle name="showReviews" label="ביקורות" defaultChecked={business.showReviews} />
                 <Toggle name="showGallery" label="גלריה" defaultChecked={business.showGallery} />
-                <Toggle
-                  name="showCancellationPolicy"
-                  label="מדיניות ביטול"
-                  defaultChecked={business.showCancellationPolicy}
-                />
                 <Toggle name="showPhone" label="טלפון" defaultChecked={business.showPhone} />
                 <Toggle name="showAddress" label="כתובת" defaultChecked={business.showAddress} />
               </div>

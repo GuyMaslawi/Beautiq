@@ -643,26 +643,6 @@ export const BOOKINGS = {
     },
   },
 
-  lateCancellation: {
-    badgeLate: "ביטול מאוחר",
-    badgeOnTime: "בוטל בזמן",
-    feeLabel: "דמי ביטול",
-    feeStatusPending: "ממתין לגבייה",
-    feeStatusPaid: "שולמו",
-    markFeeRequired: "סימון דמי ביטול כנדרשים",
-    markFeePaid: "סימון כשולמו",
-    markingFee: "מסמן…",
-    feeMarkedRequired: "דמי הביטול סומנו כנדרשים",
-    feeMarkedPaid: "דמי הביטול סומנו כשולמו",
-    manualNote: "גבייה אוטומטית של דמי ביטול תתווסף בהמשך. ניתן לעקוב ולסמן ידנית.",
-    dashboardCard: {
-      title: "ביטולים מאוחרים",
-      bodySingular: "ביטול מאוחר אחד השבוע",
-      bodyPlural: (count: number) => `${count} ביטולים מאוחרים השבוע`,
-      cta: "צפייה בתורים",
-    },
-  },
-
   errors: {
     clientNameRequired: "יש למלא שם לקוחה",
     phoneRequired: "יש למלא מספר טלפון",
@@ -985,46 +965,6 @@ export const SETTINGS = {
     success: "תחומי הפעילות נשמרו",
   },
 
-  cancellationPolicy: {
-    sectionTitle: "מדיניות ביטולים",
-    hint: "הגדירו מדיניות ביטולים לעסק. המדיניות תוצג לפני קביעת תור ותסייע לצמצם ביטולים מאוחרים.",
-
-    enabledLabel: "הפעלת מדיניות ביטולים",
-    enabledHint: "כשמדיניות מופעלת, היא תוצג ללקוחות לפני שישלחו בקשת תור.",
-
-    lateWindowLabel: "מתי ביטול נחשב מאוחר?",
-    lateWindowHint: "ביטול שנעשה בפחות מהזמן הזה לפני התור ייחשב כביטול מאוחר.",
-    lateWindowOptions: {
-      "6": "6 שעות לפני התור",
-      "12": "12 שעות לפני התור",
-      "24": "24 שעות לפני התור",
-      "48": "48 שעות לפני התור",
-      custom: "מותאם אישית",
-    },
-    customHoursLabel: "מספר שעות מותאם",
-    customHoursPlaceholder: "לדוגמה: 36",
-
-    feeTypeLabel: "דמי ביטול מאוחר",
-    feeTypeNone: "ללא דמי ביטול",
-    feeTypeFixed: "סכום קבוע",
-    feeTypePercentage: "אחוז ממחיר השירות",
-    feeAmountLabel: "סכום דמי ביטול (₪)",
-    feeAmountPlaceholder: "לדוגמה: 50",
-    feePercentageLabel: "אחוז דמי ביטול",
-    feePercentagePlaceholder: "לדוגמה: 30",
-
-    policyTextLabel: "טקסט מדיניות (מוצג ללקוח)",
-    policyTextPlaceholder: "לדוגמה: ביטול עד 24 שעות לפני התור — ללא חיוב. ביטול מאוחר יותר עשוי לחייב דמי ביטול.",
-    policyTextHint: "הטקסט יוצג ללקוחות בעמוד ההזמנה. ניתן להשתמש במשתנים: {שעות}, {דמי_ביטול}, {שם_העסק}.",
-    generateTextButton: "הפקת טקסט אוטומטי",
-
-    manualFeeNote: "גבייה אוטומטית של דמי ביטול תתווסף בהמשך. כרגע ניתן לעקוב ולסמן ידנית.",
-
-    saveButton: "שמירת מדיניות",
-    saving: "שומר…",
-    success: "מדיניות הביטולים נשמרה",
-  },
-
   publicLink: {
     sectionTitle: "קישור הזמנה פשוט",
     active: "קישור פעיל",
@@ -1072,9 +1012,6 @@ export const PUBLIC_BOOKING = {
 
     dateLabel: "תאריך מבוקש",
     timeLabel: "שעה מבוקשת",
-
-    policyTitle: "מדיניות ביטולים",
-    policyAcknowledge: "קראתי את מדיניות הביטולים ואני מסכימה לתנאיה",
 
     approvalNote:
       "הבקשה תישלח לעסק לאישור. התור יאושר רק אחרי שהעסק יאשר אותו.",
@@ -1964,7 +1901,6 @@ export const PUBLIC_PAGE = {
     showHours: "הצגת שעות פעילות",
     showReviews: "הצגת ביקורות",
     showGallery: "הצגת גלריית עבודות",
-    showCancellationPolicy: "הצגת מדיניות ביטולים",
     showPhone: "הצגת טלפון העסק",
     showAddress: "הצגת כתובת",
     saveButton: "שמירת הגדרות",

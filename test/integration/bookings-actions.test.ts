@@ -56,8 +56,6 @@ import {
   completeBookingAction,
   cancelBookingAction,
   noShowBookingAction,
-  markLateCancellationFeePendingAction,
-  markLateCancellationFeePaidAction,
 } from "@/server/bookings/actions";
 
 function formData(fields: Record<string, string>): FormData {
@@ -337,37 +335,5 @@ describe("status transition actions", () => {
       }),
     );
     expect(syncClientStats).not.toHaveBeenCalled();
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Late cancellation fee — only allowed from cancelled / no_show.
-// ---------------------------------------------------------------------------
-
-describe("late cancellation fee actions", () => {
-  beforeEach(() => prisma.booking.updateMany.mockResolvedValue({ count: 1 }));
-
-  it("markLateCancellationFeePendingAction scopes + guards on cancelled/no_show", async () => {
-    await markLateCancellationFeePendingAction("bkg_1");
-    expect(prisma.booking.updateMany).toHaveBeenCalledWith({
-      where: {
-        id: "bkg_1",
-        businessId: BUSINESS_A,
-        status: { in: ["cancelled", "no_show"] },
-      },
-      data: { lateCancellationFeeStatus: "pending" },
-    });
-  });
-
-  it("markLateCancellationFeePaidAction scopes + guards on cancelled/no_show", async () => {
-    await markLateCancellationFeePaidAction("bkg_1");
-    expect(prisma.booking.updateMany).toHaveBeenCalledWith({
-      where: {
-        id: "bkg_1",
-        businessId: BUSINESS_A,
-        status: { in: ["cancelled", "no_show"] },
-      },
-      data: { lateCancellationFeeStatus: "paid" },
-    });
   });
 });

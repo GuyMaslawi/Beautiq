@@ -122,7 +122,6 @@ function renderWithAllAttention() {
       suggestedClients={suggestedClients}
       atRiskCount={7}
       remindersDueCount={4}
-      lateCancellationsCount={1}
       forecast={forecast}
       reviewReadyCount={5}
       recentRuns={[]}    />,

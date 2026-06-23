@@ -39,35 +39,6 @@ const bookingInclude = {
   service: { select: { id: true, name: true, durationMinutes: true } },
 } as const;
 
-export interface ActiveCancellationPolicy {
-  enabled: boolean;
-  lateCancellationHours: number | null;
-  lateCancellationFeeType: string;
-  lateCancellationFeeAmount: string | null;
-  lateCancellationFeePercentage: string | null;
-}
-
-export async function getActiveCancellationPolicy(
-  tenant: TenantContext,
-): Promise<ActiveCancellationPolicy | null> {
-  const policy = await prisma.cancellationPolicy.findUnique({
-    where: { businessId: tenant.businessId },
-    select: {
-      enabled: true,
-      lateCancellationHours: true,
-      lateCancellationFeeType: true,
-      lateCancellationFeeAmount: true,
-      lateCancellationFeePercentage: true,
-    },
-  });
-  if (!policy || !policy.enabled) return null;
-  return {
-    ...policy,
-    lateCancellationFeeAmount: policy.lateCancellationFeeAmount?.toString() ?? null,
-    lateCancellationFeePercentage: policy.lateCancellationFeePercentage?.toString() ?? null,
-  };
-}
-
 export type BookingWithRelations = Awaited<
   ReturnType<typeof getBooking>
 > extends infer T
@@ -304,46 +275,6 @@ export async function getCalendarBookings(
     durationMinutesSnapshot: b.durationMinutesSnapshot,
     notes: b.notes ?? null,
   }));
-}
-
-export async function getLateCancellationsThisWeek(
-  tenant: TenantContext,
-): Promise<number> {
-  const policy = await prisma.cancellationPolicy.findUnique({
-    where: { businessId: tenant.businessId },
-    select: { enabled: true, lateCancellationHours: true },
-  });
-
-  if (!policy?.enabled || !policy.lateCancellationHours) return 0;
-
-  const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-
-  const recentCancelled = await prisma.booking.findMany({
-    where: {
-      businessId: tenant.businessId,
-      status: { in: ["cancelled", "no_show"] },
-      OR: [
-        { cancelledAt: { gte: weekAgo } },
-        { noShowAt: { gte: weekAgo } },
-      ],
-    },
-    select: {
-      cancelledAt: true,
-      noShowAt: true,
-      startTime: true,
-    },
-  });
-
-  const hours = policy.lateCancellationHours;
-  let count = 0;
-  for (const b of recentCancelled) {
-    const cancelTime = b.cancelledAt ?? b.noShowAt;
-    if (!cancelTime) continue;
-    const deadline = new Date(b.startTime.getTime() - hours * 60 * 60 * 1000);
-    if (cancelTime >= deadline) count++;
-  }
-
-  return count;
 }
 
 export async function getBookingSummary(

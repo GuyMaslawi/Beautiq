@@ -2,7 +2,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { BookingRow } from "@/components/bookings/booking-row";
-import { BOOKINGS } from "@/lib/constants/he";
 import type { BookingListItem } from "@/server/bookings/queries";
 import React from "react";
 
@@ -51,14 +50,11 @@ function makeBooking(overrides: Partial<BookingListItem> = {}): BookingListItem 
   return { ...base, ...overrides } as unknown as BookingListItem;
 }
 
-function renderRow(
-  booking: BookingListItem,
-  lateCancellationHours: number | null = null,
-) {
+function renderRow(booking: BookingListItem) {
   return render(
     <table>
       <tbody>
-        <BookingRow booking={booking} lateCancellationHours={lateCancellationHours} />
+        <BookingRow booking={booking} />
       </tbody>
     </table>,
   );
@@ -103,94 +99,6 @@ describe("BookingRow — reminder badge", () => {
       makeBooking({ status: "completed", reminderSentAt: new Date() } as never),
     );
     expect(screen.queryByText("תזכורת נשלחה")).not.toBeInTheDocument();
-  });
-});
-
-describe("BookingRow — late cancellation badges", () => {
-  it("shows the late-cancellation badge when cancelled past the deadline", () => {
-    renderRow(
-      makeBooking({
-        status: "cancelled",
-        startTime: new Date("2099-12-25T10:00:00Z"),
-        // cancelled 1h before start, deadline = 24h before → late
-        cancelledAt: new Date("2099-12-25T09:00:00Z"),
-      } as never),
-      24,
-    );
-    expect(
-      screen.getByText(BOOKINGS.lateCancellation.badgeLate),
-    ).toBeInTheDocument();
-  });
-
-  it("shows the on-time badge when cancelled before the deadline", () => {
-    renderRow(
-      makeBooking({
-        status: "cancelled",
-        startTime: new Date("2099-12-25T10:00:00Z"),
-        cancelledAt: new Date("2099-12-20T09:00:00Z"),
-      } as never),
-      24,
-    );
-    expect(
-      screen.getByText(BOOKINGS.lateCancellation.badgeOnTime),
-    ).toBeInTheDocument();
-  });
-
-  it("renders no late-cancellation badge when the policy hours are null", () => {
-    renderRow(
-      makeBooking({ status: "cancelled", cancelledAt: new Date() } as never),
-      null,
-    );
-    expect(
-      screen.queryByText(BOOKINGS.lateCancellation.badgeLate),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByText(BOOKINGS.lateCancellation.badgeOnTime),
-    ).not.toBeInTheDocument();
-  });
-
-  it("uses noShowAt for late detection on no-show bookings", () => {
-    renderRow(
-      makeBooking({
-        status: "no_show",
-        startTime: new Date("2099-12-25T10:00:00Z"),
-        noShowAt: new Date("2099-12-25T09:30:00Z"),
-      } as never),
-      24,
-    );
-    expect(
-      screen.getByText(BOOKINGS.lateCancellation.badgeLate),
-    ).toBeInTheDocument();
-  });
-});
-
-describe("BookingRow — cancellation fee badge", () => {
-  it("shows the fee badge as paid", () => {
-    renderRow(
-      makeBooking({
-        status: "cancelled",
-        lateCancellationFeeStatus: "paid",
-      } as never),
-    );
-    expect(
-      screen.getByText(
-        new RegExp(BOOKINGS.lateCancellation.feeStatusPaid),
-      ),
-    ).toBeInTheDocument();
-  });
-
-  it("shows the fee badge as pending", () => {
-    renderRow(
-      makeBooking({
-        status: "cancelled",
-        lateCancellationFeeStatus: "pending",
-      } as never),
-    );
-    expect(
-      screen.getByText(
-        new RegExp(BOOKINGS.lateCancellation.feeStatusPending),
-      ),
-    ).toBeInTheDocument();
   });
 });
 

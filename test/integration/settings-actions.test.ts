@@ -28,7 +28,6 @@ vi.mock("@/server/auth/session", () => ({
 import {
   updateBusinessDetailsAction,
   updateBusinessCategoriesAction,
-  updateCancellationPolicyAction,
 } from "@/server/settings/actions";
 
 beforeEach(() => {
@@ -134,39 +133,6 @@ describe("updateBusinessCategoriesAction", () => {
       {},
       fd({ categoryIds: ["cat_1"] }),
     );
-    expect(res.formError).toBe(SETTINGS.errors.generic);
-    expect(res.formError).not.toContain("secret");
-  });
-});
-
-describe("updateCancellationPolicyAction", () => {
-  it("upserts the policy scoped by businessId", async () => {
-    prisma.cancellationPolicy.upsert.mockResolvedValue({});
-    const res = await updateCancellationPolicyAction(
-      {},
-      fd({ enabled: "true", minNoticeHours: "24", lateCancellationFeeType: "none" }),
-    );
-    expect(res.success).toBe(SETTINGS.cancellationPolicy.success);
-    const arg = prisma.cancellationPolicy.upsert.mock.calls[0][0] as {
-      where: { businessId: string };
-      create: { businessId: string };
-    };
-    expect(arg.where.businessId).toBe(BUSINESS_A);
-    expect(arg.create.businessId).toBe(BUSINESS_A);
-  });
-
-  it("rejects an invalid minimum notice before writing", async () => {
-    const res = await updateCancellationPolicyAction(
-      {},
-      fd({ minNoticeHours: "-5" }),
-    );
-    expect(res.errors?.minNoticeHours).toBeTruthy();
-    expect(prisma.cancellationPolicy.upsert).not.toHaveBeenCalled();
-  });
-
-  it("returns a safe generic error when the upsert throws", async () => {
-    prisma.cancellationPolicy.upsert.mockRejectedValue(new Error("secret db"));
-    const res = await updateCancellationPolicyAction({}, fd({}));
     expect(res.formError).toBe(SETTINGS.errors.generic);
     expect(res.formError).not.toContain("secret");
   });

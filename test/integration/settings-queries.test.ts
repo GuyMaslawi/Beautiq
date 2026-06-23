@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { Prisma } from "@prisma/client";
 import { createPrismaMock, resetPrismaMock } from "../helpers/prisma-mock";
 import { BUSINESS_A } from "../helpers/factories";
 
@@ -14,7 +13,6 @@ const prisma = (globalThis as Record<string, unknown>)
 
 import {
   getBusinessSettings,
-  getCancellationPolicy,
   getSelectedCategoryIds,
   getAllBusinessCategories,
 } from "@/server/settings/queries";
@@ -30,32 +28,6 @@ describe("getBusinessSettings", () => {
     expect(prisma.business.findUnique).toHaveBeenCalledWith(
       expect.objectContaining({ where: { id: BUSINESS_A } }),
     );
-  });
-});
-
-describe("getCancellationPolicy", () => {
-  it("fetches the policy scoped by businessId and stringifies decimals", async () => {
-    prisma.cancellationPolicy.findUnique.mockResolvedValue({
-      id: "pol_1",
-      enabled: true,
-      policyText: null,
-      minNoticeHours: 24,
-      lateCancellationHours: 12,
-      lateCancellationFeeType: "fixed",
-      lateCancellationFeeAmount: new Prisma.Decimal(50),
-      lateCancellationFeePercentage: null,
-    });
-    const res = await getCancellationPolicy(tenant);
-    expect(prisma.cancellationPolicy.findUnique).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { businessId: BUSINESS_A } }),
-    );
-    expect(res?.lateCancellationFeeAmount).toBe("50");
-    expect(res?.lateCancellationFeePercentage).toBeNull();
-  });
-
-  it("returns null when no policy exists", async () => {
-    prisma.cancellationPolicy.findUnique.mockResolvedValue(null);
-    await expect(getCancellationPolicy(tenant)).resolves.toBeNull();
   });
 });
 

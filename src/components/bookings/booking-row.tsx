@@ -2,8 +2,6 @@ import Link from "next/link";
 import { Clock, Banknote } from "lucide-react";
 import { BookingStatusBadge } from "@/components/bookings/booking-status-badge";
 import { BookingActionsMenu } from "@/components/bookings/booking-actions-menu";
-import { isLateCancellation } from "@/lib/cancellation";
-import { BOOKINGS } from "@/lib/constants/he";
 import type { BookingListItem } from "@/server/bookings/queries";
 
 const TZ = "Asia/Jerusalem";
@@ -46,13 +44,7 @@ function getInitials(name: string): string {
     .join("");
 }
 
-export function BookingRow({
-  booking,
-  lateCancellationHours,
-}: {
-  booking: BookingListItem;
-  lateCancellationHours: number | null;
-}) {
+export function BookingRow({ booking }: { booking: BookingListItem }) {
   const price = Number(booking.priceSnapshot);
   const duration = booking.durationMinutesSnapshot;
   const { label: dateLabel, isToday } = formatBookingDate(booking.startTime);
@@ -63,16 +55,6 @@ export function BookingRow({
     booking.status === "pending" || booking.status === "approved";
 
   const isPendingApproval = booking.status === "pending";
-
-  const isCancelled =
-    booking.status === "cancelled" || booking.status === "no_show";
-  const lateCancelled = isCancelled
-    ? isLateCancellation(
-        booking.cancelledAt ?? booking.noShowAt ?? null,
-        booking.startTime,
-        lateCancellationHours,
-      )
-    : null;
 
   return (
     <tr
@@ -170,35 +152,6 @@ export function BookingRow({
                 תזכורת נשלחה
               </span>
             )}
-          {lateCancelled !== null && (
-            <span
-              className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-              style={
-                lateCancelled
-                  ? { background: "rgba(200,60,60,0.10)", color: "#b83232", border: "1px solid rgba(200,60,60,0.22)" }
-                  : { background: "rgba(61,139,110,0.09)", color: "#2a6e57", border: "1px solid rgba(61,139,110,0.22)" }
-              }
-            >
-              {lateCancelled
-                ? BOOKINGS.lateCancellation.badgeLate
-                : BOOKINGS.lateCancellation.badgeOnTime}
-            </span>
-          )}
-          {isCancelled && booking.lateCancellationFeeStatus && (
-            <span
-              className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-              style={
-                booking.lateCancellationFeeStatus === "paid"
-                  ? { background: "rgba(61,139,110,0.09)", color: "#2a6e57", border: "1px solid rgba(61,139,110,0.22)" }
-                  : { background: "rgba(184,150,10,0.10)", color: "#7a6400", border: "1px solid rgba(184,150,10,0.22)" }
-              }
-            >
-              {BOOKINGS.lateCancellation.feeLabel}:{" "}
-              {booking.lateCancellationFeeStatus === "paid"
-                ? BOOKINGS.lateCancellation.feeStatusPaid
-                : BOOKINGS.lateCancellation.feeStatusPending}
-            </span>
-          )}
         </div>
       </td>
 

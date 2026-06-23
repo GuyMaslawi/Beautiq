@@ -48,7 +48,6 @@ function makePublicRow(overrides: Record<string, unknown> = {}) {
         price: new Prisma.Decimal(150),
       },
     ],
-    cancellationPolicy: null,
     galleryImages: [{ id: "g1", imageUrl: "https://x/i.jpg", caption: null }],
     clientReviews: [
       { id: "r1", clientName: "לקוחה", reviewText: "מעולה", rating: 5 },
@@ -120,43 +119,6 @@ describe("getPublicBusiness", () => {
       },
       { weekday: 2, windows: [{ startMinutes: 600, endMinutes: 900 }] },
     ]);
-  });
-
-  it("returns null cancellation policy when it is disabled", async () => {
-    prisma.business.findUnique.mockResolvedValue(
-      makePublicRow({
-        cancellationPolicy: {
-          enabled: false,
-          policyText: "x",
-          lateCancellationHours: 24,
-          lateCancellationFeeType: "fixed",
-          lateCancellationFeeAmount: new Prisma.Decimal(30),
-          lateCancellationFeePercentage: null,
-        },
-      }),
-    );
-    const res = await getPublicBusiness("studio-yofi");
-    expect(res!.cancellationPolicy).toBeNull();
-  });
-
-  it("exposes an enabled cancellation policy with serialized amounts", async () => {
-    prisma.business.findUnique.mockResolvedValue(
-      makePublicRow({
-        cancellationPolicy: {
-          enabled: true,
-          policyText: "מדיניות",
-          lateCancellationHours: 24,
-          lateCancellationFeeType: "fixed",
-          lateCancellationFeeAmount: new Prisma.Decimal(30),
-          lateCancellationFeePercentage: null,
-        },
-      }),
-    );
-    const res = await getPublicBusiness("studio-yofi");
-    expect(res!.cancellationPolicy).toMatchObject({
-      enabled: true,
-      lateCancellationFeeAmount: "30",
-    });
   });
 
   it("returns safe empty arrays when there are no services/reviews/rules", async () => {
