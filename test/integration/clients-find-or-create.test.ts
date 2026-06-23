@@ -107,3 +107,80 @@ describe("findOrCreateClient — dedup & tenant scoping", () => {
     );
   });
 });
+
+describe("findOrCreateClient — WhatsApp / marketing consent", () => {
+  it("persists both opt-ins on a new client when the customer consents", async () => {
+    prisma.client.findUnique.mockResolvedValue(null);
+    prisma.client.create.mockResolvedValue(makeClient({ id: "cli_new" }));
+
+    await findOrCreateClient(tenant, {
+      fullName: "דנה",
+      phone: "0501234567",
+      whatsappOptIn: true,
+      marketingOptIn: true,
+    });
+
+    expect(prisma.client.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ whatsappOptIn: true, marketingOptIn: true }),
+      }),
+    );
+  });
+
+  it("defaults a new client to no consent when none is given", async () => {
+    prisma.client.findUnique.mockResolvedValue(null);
+    prisma.client.create.mockResolvedValue(makeClient({ id: "cli_new" }));
+
+    await findOrCreateClient(tenant, { fullName: "דנה", phone: "0501234567" });
+
+    expect(prisma.client.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ whatsappOptIn: false, marketingOptIn: false }),
+      }),
+    );
+  });
+
+  it("escalates an existing client's consent (false → true) without revoking", async () => {
+    const existing = makeClient({
+      id: "cli_existing",
+      fullName: "דנה",
+      whatsappOptIn: false,
+      marketingOptIn: false,
+    });
+    prisma.client.findUnique.mockResolvedValue(existing);
+    prisma.client.update.mockResolvedValue(existing);
+
+    await findOrCreateClient(tenant, {
+      fullName: "דנה",
+      phone: "0501234567",
+      whatsappOptIn: true,
+    });
+
+    expect(prisma.client.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "cli_existing" },
+        data: { whatsappOptIn: true },
+      }),
+    );
+  });
+
+  it("never revokes an existing opt-in when the box is left unchecked", async () => {
+    const existing = makeClient({
+      id: "cli_existing",
+      fullName: "דנה",
+      whatsappOptIn: true,
+      marketingOptIn: true,
+    });
+    prisma.client.findUnique.mockResolvedValue(existing);
+
+    const res = await findOrCreateClient(tenant, {
+      fullName: "דנה",
+      phone: "0501234567",
+      whatsappOptIn: false,
+      marketingOptIn: false,
+    });
+
+    expect(res).toBe(existing);
+    expect(prisma.client.update).not.toHaveBeenCalled();
+  });
+});

@@ -7,7 +7,7 @@ import {
   brandGradient,
   normalizeInstagramUrl,
   normalizeSocialUrl,
-  toWhatsAppPhone,
+  getBusinessWhatsAppHref,
   mapsSearchUrl,
 } from "./helpers";
 
@@ -33,7 +33,9 @@ export function PublicBusinessHero({
   const addressLabel = business.addressNote || location;
   const mapQuery = [business.name, location].filter(Boolean).join(", ");
 
-  const waPhone = business.phone ? toWhatsAppPhone(business.phone) : null;
+  const waHref = business.showPhone
+    ? getBusinessWhatsAppHref(business.phone, business.name)
+    : null;
   const instagramHref = normalizeInstagramUrl(business.instagramUrl);
   const facebookHref = normalizeSocialUrl(business.facebookUrl);
   const tagline = business.introMessage ?? business.description;
@@ -41,7 +43,7 @@ export function PublicBusinessHero({
   const hasContactRow =
     (business.showAddress && !!addressLabel) ||
     (business.showPhone && !!business.phone) ||
-    (business.showPhone && !!waPhone) ||
+    !!waHref ||
     !!instagramHref ||
     !!facebookHref;
 
@@ -74,9 +76,9 @@ export function PublicBusinessHero({
         </a>
       )}
       <div className="flex items-center gap-2">
-        {business.showPhone && waPhone && (
+        {waHref && (
           <a
-            href={`https://wa.me/${waPhone}`}
+            href={waHref}
             target="_blank"
             rel="noopener noreferrer"
             aria-label="WhatsApp"

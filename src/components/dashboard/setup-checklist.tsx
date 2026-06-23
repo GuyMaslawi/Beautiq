@@ -726,9 +726,6 @@ export function SetupChecklist({
   forecast,
   reviewReadyCount = 0,
   recentRuns = [],
-  whatsappLabel = "",
-  whatsappReady = false,
-  whatsappConnected = false,
 }: {
   businessName: string;
   metrics: DashboardMetrics;
@@ -746,9 +743,6 @@ export function SetupChecklist({
   forecast: RevenueForecastData;
   reviewReadyCount?: number;
   recentRuns?: RecentAutomationRun[];
-  whatsappLabel?: string;
-  whatsappReady?: boolean;
-  whatsappConnected?: boolean;
 }) {
   // Urgent guidance items not already covered by dedicated attention cards
   const extraUrgent = guidanceItems.filter(
@@ -954,20 +948,17 @@ export function SetupChecklist({
         </section>
       </FadeIn>
 
-      {/* ── אוטומציות ── */}
+      {/* ── התראות WhatsApp ── */}
       <FadeIn delay={0.16}>
         <section className="space-y-4">
           <EditorialSectionHeader
             eyebrow="על טייס אוטומטי"
-            title="אוטומציות"
-            description="שליחה אוטומטית של הודעות ללקוחות"
+            title="התראות WhatsApp"
+            description="Allura שולחת ללקוחות שלך הודעות חשובות באופן אוטומטי"
             icon={<MessageCircle className="h-3.5 w-3.5" />}
             tint="sage"
           />
           <AutomationsSection
-            whatsappLabel={whatsappLabel}
-            whatsappReady={whatsappReady}
-            whatsappConnected={whatsappConnected}
             remindersDueCount={remindersDueCount}
             recentRuns={recentRuns}
           />

@@ -36,6 +36,12 @@ export default async function AutomationsPage() {
   const [business, user] = await Promise.all([getCurrentBusiness(), getCurrentUser()]);
   if (!business) redirect("/dashboard");
 
+  // Automations are now handled automatically by Allura's managed WhatsApp
+  // sender — business owners no longer set up or connect WhatsApp themselves.
+  // The page is kept only as an internal admin/debug surface; regular owners
+  // are redirected away so it is never part of the owner experience.
+  if (!user?.isAdmin) redirect("/dashboard");
+
   const tenant = { businessId: business.id };
 
   const [

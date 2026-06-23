@@ -2,18 +2,26 @@
  * Central WhatsApp connection resolver.
  *
  * Every send flow must use getWhatsAppProviderForBusiness() instead of calling
- * getWhatsAppProvider() directly. This ensures per-business credentials are used
- * when available and fallback behaviour is consistent.
+ * getWhatsAppProvider() directly. This ensures the correct sender is used for
+ * each business and fallback behaviour is consistent.
+ *
+ * Product model (MVP): customer notifications are sent from Allura's own managed
+ * WhatsApp sender by default. Business owners do NOT connect their own WhatsApp
+ * Business account — the message body itself states that it is sent by Allura on
+ * behalf of the specific business.
  *
  * Priority:
- *   1. Per-business WhatsAppConnection with status=active
+ *   1. Per-business WhatsAppConnection with status=active (legacy / optional /
+ *      admin only — most businesses never have one):
  *      - useEnvFallback=true  → phoneNumberId from DB, token from env (Mode A / testing)
- *      - useEnvFallback=false → token from accessTokenEncrypted (Mode B / Embedded Signup, future)
- *   2. Env fallback — only when WHATSAPP_USE_ENV_FALLBACK=true and no active DB connection
- *   3. Disconnected — disabled provider, no send attempted
+ *      - useEnvFallback=false → token from accessTokenEncrypted (Mode B / Embedded Signup)
+ *   2. Allura-managed sender — the default for every business. Uses Allura's
+ *      global provider credentials from server env. No per-business connection
+ *      is required. Active whenever real sending is enabled and the managed
+ *      credentials are configured.
+ *   3. Disconnected — disabled provider, no send attempted.
  *
  * Safety: access tokens are never logged or returned to the client.
- * Future: Mode B (Embedded Signup) will set useEnvFallback=false and store an encrypted token.
  */
 
 import { prisma } from "@/server/db/prisma";
@@ -26,12 +34,22 @@ import {
   type WhatsAppProvider,
 } from "@/lib/whatsapp/provider";
 
-export type WhatsAppConnectionMode = "per_business" | "env_fallback" | "disconnected";
+export type WhatsAppConnectionMode =
+  | "per_business"
+  | "allura_managed"
+  | "disconnected";
 
 export interface ResolvedWhatsAppConfig {
   mode: WhatsAppConnectionMode;
   provider: WhatsAppProvider;
+  /**
+   * @deprecated Owner-level "env fallback" is no longer a product concept. Kept
+   * for back-compat with existing readers; true whenever the Allura-managed
+   * sender (or a Mode A connection) is in use. Prefer {@link isAlluraManaged}.
+   */
   isEnvFallback: boolean;
+  /** True when the business is sending through Allura's managed WhatsApp sender. */
+  isAlluraManaged: boolean;
   isTestMode: boolean;
   phoneNumberId?: string;
   wabaId?: string;
@@ -61,6 +79,7 @@ export async function resolveWhatsAppConnectionForBusiness(
       mode: "disconnected",
       provider: devMockProvider,
       isEnvFallback: false,
+      isAlluraManaged: false,
       isTestMode,
       uiStatus: "מצב פיתוח — הודעות לא נשלחות בפועל",
     };
@@ -106,6 +125,7 @@ export async function resolveWhatsAppConnectionForBusiness(
         mode: "per_business",
         provider: createDisabledProvider(`חסר ${missingWhat} — חיבור WhatsApp לא תקין`),
         isEnvFallback: connection.useEnvFallback,
+        isAlluraManaged: false,
         isTestMode,
         connectionId: connection.id,
         uiStatus: "חיבור WhatsApp חסר נתונים",
@@ -124,6 +144,7 @@ export async function resolveWhatsAppConnectionForBusiness(
           "יש לאשר את מספר ה-WhatsApp המחובר לפני שליחת הודעות",
         ),
         isEnvFallback: connection.useEnvFallback,
+        isAlluraManaged: false,
         isTestMode,
         phoneNumberId,
         wabaId: connection.wabaId ?? undefined,
@@ -146,6 +167,7 @@ export async function resolveWhatsAppConnectionForBusiness(
       mode: "per_business",
       provider,
       isEnvFallback: envFallbackAllowed && connection.useEnvFallback,
+      isAlluraManaged: false,
       isTestMode,
       phoneNumberId,
       wabaId: connection.wabaId ?? undefined,
@@ -156,40 +178,41 @@ export async function resolveWhatsAppConnectionForBusiness(
     };
   }
 
-  // --- Priority 2: env fallback ---
-  const useEnvFallback = process.env.WHATSAPP_USE_ENV_FALLBACK === "true";
-  if (useEnvFallback) {
-    const accessToken = process.env.META_WHATSAPP_ACCESS_TOKEN;
-    const phoneNumberId = process.env.META_WHATSAPP_PHONE_NUMBER_ID;
-    const apiVersion = process.env.META_WHATSAPP_API_VERSION ?? "v19.0";
-    const wabaId = process.env.META_WHATSAPP_WABA_ID;
+  // --- Priority 2: Allura-managed sender (default for every business) ---
+  // No per-business connection exists, so send through Allura's global managed
+  // WhatsApp credentials. This is the normal MVP path — the message body itself
+  // identifies Allura as the sender on behalf of the business.
+  const accessToken = process.env.META_WHATSAPP_ACCESS_TOKEN;
+  const phoneNumberId = process.env.META_WHATSAPP_PHONE_NUMBER_ID;
+  const apiVersion = process.env.META_WHATSAPP_API_VERSION ?? "v19.0";
+  const wabaId = process.env.META_WHATSAPP_WABA_ID;
 
-    if (accessToken && phoneNumberId) {
-      const baseProvider = createMetaCloudApiProvider({ accessToken, phoneNumberId, apiVersion });
-      const provider = isTestMode ? createTestModeProvider(baseProvider) : baseProvider;
+  if (accessToken && phoneNumberId) {
+    const baseProvider = createMetaCloudApiProvider({ accessToken, phoneNumberId, apiVersion });
+    const provider = isTestMode ? createTestModeProvider(baseProvider) : baseProvider;
 
-      return {
-        mode: "env_fallback",
-        provider,
-        isEnvFallback: true,
-        isTestMode,
-        phoneNumberId,
-        wabaId: wabaId ?? undefined,
-        uiStatus: "מצב בדיקה — החיבור מוגדר ברמת המערכת ולא ברמת העסק",
-      };
-    }
+    return {
+      mode: "allura_managed",
+      provider,
+      isEnvFallback: true,
+      isAlluraManaged: true,
+      isTestMode,
+      phoneNumberId,
+      wabaId: wabaId ?? undefined,
+      uiStatus: "הודעות נשלחות דרך WhatsApp של Allura",
+    };
   }
 
-  // --- Priority 3: disconnected ---
+  // --- Priority 3: disconnected (managed credentials not configured) ---
   return {
     mode: "disconnected",
     provider: createDisabledProvider(),
     isEnvFallback: false,
+    isAlluraManaged: false,
     isTestMode,
-    uiStatus:
-      connection
-        ? `WhatsApp לא מחובר (סטטוס: ${connection.status})`
-        : "WhatsApp לא מחובר",
+    uiStatus: connection
+      ? `WhatsApp לא מחובר (סטטוס: ${connection.status})`
+      : "שירות ה-WhatsApp של Allura אינו זמין כרגע",
   };
 }
 
@@ -341,12 +364,24 @@ export async function getDecryptedCredentialsForBusiness(
   wabaId?: string;
   apiVersion: string;
 } | null> {
+  const apiVersion = process.env.META_WHATSAPP_API_VERSION ?? "v19.0";
+
   const connection = await prisma.whatsAppConnection.findUnique({
     where: { businessId },
   });
-  if (!connection || connection.status !== "active") return null;
 
-  const apiVersion = process.env.META_WHATSAPP_API_VERSION ?? "v19.0";
+  // Allura-managed default: no active per-business connection → use the global
+  // managed credentials so admin template create/sync targets Allura's WABA.
+  if (!connection || connection.status !== "active") {
+    const accessToken = process.env.META_WHATSAPP_ACCESS_TOKEN;
+    if (!accessToken) return null;
+    return {
+      accessToken,
+      phoneNumberId: process.env.META_WHATSAPP_PHONE_NUMBER_ID ?? undefined,
+      wabaId: process.env.META_WHATSAPP_WABA_ID ?? undefined,
+      apiVersion,
+    };
+  }
 
   let accessToken: string | undefined;
   if (connection.useEnvFallback) {

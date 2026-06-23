@@ -39,6 +39,10 @@ const sendBookingConfirmation = vi.fn(async () => {});
 vi.mock("@/server/public-booking/send-confirmation", () => ({
   sendBookingConfirmation: (...args: unknown[]) => (sendBookingConfirmation as (...a: unknown[]) => unknown)(...args),
 }));
+const notifyOwnerOfNewBooking = vi.fn(async () => {});
+vi.mock("@/server/public-booking/notify-owner", () => ({
+  notifyOwnerOfNewBooking: (...args: unknown[]) => (notifyOwnerOfNewBooking as (...a: unknown[]) => unknown)(...args),
+}));
 
 import { submitPublicBookingAction } from "@/server/public-booking/actions";
 
@@ -67,6 +71,7 @@ beforeEach(() => {
   syncClientStats.mockReset();
   hasOverlap.mockReset().mockResolvedValue(false);
   sendBookingConfirmation.mockReset();
+  notifyOwnerOfNewBooking.mockReset();
   checkRateLimit.mockReset().mockReturnValue(true);
 });
 
@@ -166,6 +171,13 @@ describe("submitPublicBookingAction — validation & tenant safety", () => {
     expect("depositStatus" in arg.data).toBe(false);
     expect("depositAmountSnapshot" in arg.data).toBe(false);
     expect(syncClientStats).toHaveBeenCalled();
+
+    // The business owner is notified automatically for the new pending booking,
+    // scoped to the slug-derived business.
+    expect(notifyOwnerOfNewBooking).toHaveBeenCalledWith({
+      bookingId: "bkg_1",
+      businessId: BUSINESS_A,
+    });
   });
 
   it("returns a generic error (not a stack trace) when booking creation throws", async () => {

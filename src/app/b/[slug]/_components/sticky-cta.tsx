@@ -1,14 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { brandGradient } from "./helpers";
+import { brandGradient, getBusinessWhatsAppHref } from "./helpers";
+import { WhatsAppIcon } from "./icons";
 
 /**
  * Mobile-only sticky "book now" bar.
  * Hides itself while the booking card (#book) is on screen, and smoothly
- * scrolls + focuses the booking card when tapped.
+ * scrolls + focuses the booking card when tapped. When the business has a
+ * valid phone, a thumb-friendly WhatsApp action sits alongside.
  */
-export function StickyBookingCta({ brand }: { brand: string }) {
+export function StickyBookingCta({
+  brand,
+  businessPhone,
+  businessName,
+}: {
+  brand: string;
+  businessPhone?: string | null;
+  businessName?: string | null;
+}) {
+  const waHref = getBusinessWhatsAppHref(businessPhone, businessName);
   // Start hidden to avoid a flash before we know where the booking card is.
   const [visible, setVisible] = useState(false);
 
@@ -44,14 +55,27 @@ export function StickyBookingCta({ brand }: { brand: string }) {
           "linear-gradient(to top, var(--background) 55%, transparent 100%)",
       }}
     >
-      <button
-        type="button"
-        onClick={goToBooking}
-        className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-bold text-white shadow-xl transition-all hover:opacity-90 active:scale-[.98]"
-        style={{ background: brandGradient(brand) }}
-      >
-        קביעת תור עכשיו ✨
-      </button>
+      <div className="flex items-center gap-2.5">
+        <button
+          type="button"
+          onClick={goToBooking}
+          className="flex flex-1 items-center justify-center gap-2 rounded-2xl py-4 text-sm font-bold text-white shadow-xl transition-all hover:opacity-90 active:scale-[.98]"
+          style={{ background: brandGradient(brand) }}
+        >
+          קביעת תור עכשיו ✨
+        </button>
+        {waHref && (
+          <a
+            href={waHref}
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="WhatsApp"
+            className="flex h-[52px] w-[52px] shrink-0 items-center justify-center rounded-2xl bg-[#25D366] text-white shadow-xl transition-opacity hover:opacity-90 active:scale-[.97]"
+          >
+            <WhatsAppIcon className="h-6 w-6" />
+          </a>
+        )}
+      </div>
     </div>
   );
 }

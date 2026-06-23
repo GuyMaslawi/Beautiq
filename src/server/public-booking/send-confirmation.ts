@@ -21,7 +21,7 @@ import { getWhatsAppProviderForBusiness } from "@/server/whatsapp/resolver";
 import { isValidIsraeliPhone, toWaPhone } from "@/lib/phone";
 
 const DEFAULT_BODY =
-  "היי {שם הלקוח} 💖\n\nהבקשה לתור שלך התקבלה!\n\n📅 {תאריך}\n🕒 {שעה}\n✨ {שירות}\n\nנאשר את התור בהקדם ❤️\n{שם העסק}";
+  "היי {שם הלקוח} ✨\nהתור שלך אצל {שם העסק} נקבע בהצלחה:\n{שירות}\n{תאריך} בשעה {שעה}\n\nנשלח באמצעות Allura";
 
 function formatDate(d: Date): string {
   return new Intl.DateTimeFormat("he-IL", {
@@ -283,12 +283,15 @@ async function _send(params: {
 
   try {
     const provider = await getWhatsAppProviderForBusiness(businessId);
+    // booking_confirmation_he is a 5-variable BODY-only template:
+    // {{1}} client, {{2}} business, {{3}} service, {{4}} date, {{5}} time.
     const templateVariables = templateName
       ? {
           "1": clientName,
-          "2": serviceName,
-          "3": formatDate(startTime),
-          "4": formatTime(startTime),
+          "2": businessName,
+          "3": serviceName,
+          "4": formatDate(startTime),
+          "5": formatTime(startTime),
         }
       : undefined;
 

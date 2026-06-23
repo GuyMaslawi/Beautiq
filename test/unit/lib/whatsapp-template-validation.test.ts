@@ -38,7 +38,7 @@ describe("validateTemplate", () => {
     }
   });
 
-  it("accepts the simplified booking_confirmation_he (4-variable BODY-only utility)", () => {
+  it("accepts the Allura-branded booking_confirmation_he (5-variable BODY-only utility)", () => {
     const tpl = DEFAULT_TEMPLATES.find((t) => t.name === "booking_confirmation_he")!;
     expect(validateTemplate(tpl).ok).toBe(true);
     expect(tpl.category).toBe("UTILITY");
@@ -46,19 +46,32 @@ describe("validateTemplate", () => {
     // BODY-only: the template carries no header/footer/button fields at all.
     expect(Object.keys(tpl)).not.toContain("header");
     expect(Object.keys(tpl)).not.toContain("buttons");
-    expect(extractBodyVariables(tpl.body)).toEqual([1, 2, 3, 4]);
-    expect(tpl.example).toHaveLength(4);
+    // {{2}} = businessName so the body can state it is sent by Allura on behalf
+    // of the specific business.
+    expect(extractBodyVariables(tpl.body)).toEqual([1, 2, 3, 4, 5]);
+    expect(tpl.variables).toContain("businessName");
+    expect(tpl.example).toHaveLength(5);
+    expect(tpl.body).toContain("Allura");
   });
 
-  it("accepts the simplified appointment_reminder_he (3-variable BODY-only utility)", () => {
+  it("accepts the Allura-branded appointment_reminder_he (5-variable BODY-only utility)", () => {
     const tpl = DEFAULT_TEMPLATES.find((t) => t.name === "appointment_reminder_he")!;
     expect(validateTemplate(tpl).ok).toBe(true);
     expect(tpl.category).toBe("UTILITY");
     expect(tpl.language).toBe("he");
-    // Reduced to 3 sequential variables — examples match exactly.
+    expect(extractBodyVariables(tpl.body)).toEqual([1, 2, 3, 4, 5]);
+    expect(tpl.variables).toHaveLength(5);
+    expect(tpl.example).toHaveLength(5);
+    expect(tpl.body).toContain("Allura");
+  });
+
+  it("accepts the Allura-branded review_request_he (3-variable BODY-only utility)", () => {
+    const tpl = DEFAULT_TEMPLATES.find((t) => t.name === "review_request_he")!;
+    expect(validateTemplate(tpl).ok).toBe(true);
     expect(extractBodyVariables(tpl.body)).toEqual([1, 2, 3]);
     expect(tpl.variables).toHaveLength(3);
     expect(tpl.example).toHaveLength(3);
+    expect(tpl.body).toContain("Allura");
   });
 
   it("blocks an example value containing a newline (Meta 'Invalid format' class)", () => {

@@ -47,7 +47,7 @@ describe("PublicBookingSuccessView — paid", () => {
     expect(screen.getByText("שולם")).toBeInTheDocument();
   });
 
-  it("includes a calendar link and a prefilled WhatsApp link to the business", () => {
+  it("includes a calendar link and NO customer→owner WhatsApp CTA", () => {
     const { container } = renderView(makeState({ payment: "paid" }));
     const links = Array.from(container.querySelectorAll("a")).map(
       (a) => a.getAttribute("href") ?? "",
@@ -57,13 +57,10 @@ describe("PublicBookingSuccessView — paid", () => {
     expect(cal).toBeTruthy();
     expect(cal).toContain("20260615T1030");
 
+    // The customer is never asked to notify the business manually over WhatsApp.
     const wa = links.find((h) => h.startsWith("https://wa.me/"));
-    expect(wa).toBeTruthy();
-    // Israeli phone normalized to wa.me digits.
-    expect(wa).toContain("wa.me/972501234567");
-    // Prefilled Hebrew message includes the service + business name.
-    expect(decodeURIComponent(wa!)).toContain("מניקור ג'ל");
-    expect(decodeURIComponent(wa!)).toContain("סטודיו יופי");
+    expect(wa).toBeUndefined();
+    expect(screen.queryByText(/וואטסאפ/)).not.toBeInTheDocument();
   });
 
   it("shows the friendly save note and a back-to-business link", () => {

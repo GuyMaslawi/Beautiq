@@ -19,8 +19,6 @@ function renderCard(
       business={business}
       brand="#b86b8c"
       addressLabel="תל אביב, רחוב הרצל 1"
-      policyText={null}
-      requiresPayment={false}
       {...props}
     />,
   );
@@ -35,14 +33,9 @@ describe("PublicBookingSecondary", () => {
     expect(screen.getByText("אישור התור ישירות מול העסק")).toBeInTheDocument();
   });
 
-  it("hides the secure-payment card unless payment is required", () => {
-    renderCard({ requiresPayment: false });
-    expect(screen.queryByText("תשלום מאובטח")).not.toBeInTheDocument();
-  });
-
-  it("shows the secure-payment card when payment is required", () => {
-    renderCard({ requiresPayment: true });
-    expect(screen.getByText("תשלום מאובטח")).toBeInTheDocument();
+  it("never renders a secure-payment row (payment removed from booking flow)", () => {
+    renderCard();
+    expect(screen.queryByText(/תשלום מאובטח/)).not.toBeInTheDocument();
   });
 
   it("renders the contact card with a tel: link and address when both shown", () => {
@@ -70,20 +63,8 @@ describe("PublicBookingSecondary", () => {
     expect(screen.queryByText("כתובת חסויה")).not.toBeInTheDocument();
   });
 
-  it("renders the cancellation policy card only when policy text is given", () => {
-    const { rerender } = renderCard({ policyText: null });
+  it("never renders a cancellation policy card (policy removed from booking flow)", () => {
+    renderCard();
     expect(screen.queryByText("מדיניות ביטולים")).not.toBeInTheDocument();
-
-    rerender(
-      <PublicBookingSecondary
-        business={{ phone: null, showPhone: false, showAddress: false }}
-        brand="#b86b8c"
-        addressLabel={null}
-        policyText="ביטול עד 24 שעות מראש"
-        requiresPayment={false}
-      />,
-    );
-    expect(screen.getByText("מדיניות ביטולים")).toBeInTheDocument();
-    expect(screen.getByText("ביטול עד 24 שעות מראש")).toBeInTheDocument();
   });
 });

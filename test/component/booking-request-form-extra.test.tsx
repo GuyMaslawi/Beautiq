@@ -5,10 +5,10 @@ import userEvent from "@testing-library/user-event";
 
 /**
  * Complementary coverage for BookingRequestForm — calendar step, details step,
- * cancellation-policy gating, payment preview, error states and the success view.
- * The existing booking-request-form.test.tsx covers the service + quick-pick
- * steps; this file raises the rest. The bound server action is controllable so
- * we can drive success/error states out of useActionState.
+ * error states and the success view. The existing booking-request-form.test.tsx
+ * covers the service + quick-pick steps; this file raises the rest. The bound
+ * server action is controllable so we can drive success/error states out of
+ * useActionState.
  */
 const { boundAction } = vi.hoisted(() => ({ boundAction: vi.fn(async () => ({})) }));
 vi.mock("@/server/public-booking/actions", () => ({
@@ -16,25 +16,17 @@ vi.mock("@/server/public-booking/actions", () => ({
 }));
 
 import { BookingRequestForm } from "@/app/b/[slug]/booking-request-form";
-import type {
-  PublicService,
-  PublicCancellationPolicy,
-} from "@/server/public-booking/queries";
+import type { PublicService } from "@/server/public-booking/queries";
 
 const SERVICES: PublicService[] = [
   { id: "svc-1", name: "מניקור ג'ל", description: "תיאור", durationMinutes: 60, price: "150" },
 ];
-
-const POLICY: PublicCancellationPolicy = {
-  policyText: "ביטול עד 24 שעות מראש",
-} as unknown as PublicCancellationPolicy;
 
 function renderForm(props: Partial<Parameters<typeof BookingRequestForm>[0]> = {}) {
   return render(
     <BookingRequestForm
       slug="studio-yofi"
       services={SERVICES}
-      cancellationPolicy={null}
       businessName="סטודיו יופי"
       {...props}
     />,
@@ -95,7 +87,7 @@ describe("BookingRequestForm — full calendar step", () => {
 describe("BookingRequestForm — details step", () => {
   async function advanceToDetails() {
     stubSlots(["09:00"]);
-    renderForm({ initialServiceId: "svc-1", cancellationPolicy: POLICY });
+    renderForm({ initialServiceId: "svc-1" });
     await act(async () => { await Promise.resolve(); });
     await userEvent.click(screen.getByText("בחרי תאריך מהלוח"));
     const dateInput = document.querySelector('input[type="date"]') as HTMLInputElement;
@@ -105,16 +97,19 @@ describe("BookingRequestForm — details step", () => {
     await userEvent.click(screen.getByRole("button", { name: /המשך למילוי פרטים/ }));
   }
 
-  it("renders name/phone/note fields and gates submit on the policy checkbox", async () => {
+  it("renders name/phone/note fields with no policy, consent or payment cards", async () => {
     await advanceToDetails();
     expect(screen.getByLabelText("שם מלא")).toBeInTheDocument();
     expect(screen.getByLabelText("טלפון")).toBeInTheDocument();
-    expect(screen.getByText("מדיניות ביטולים")).toBeInTheDocument();
 
+    // Cancellation policy, WhatsApp/marketing consent and payment are all gone.
+    expect(screen.queryByText("מדיניות ביטולים")).not.toBeInTheDocument();
+    expect(screen.queryByText(/WhatsApp/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/שיווקיים/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/תשלום/)).not.toBeInTheDocument();
+
+    // The submit button is enabled immediately — no consent gates it.
     const submit = screen.getByRole("button", { name: /שליחת בקשה לתור/ });
-    expect(submit).toBeDisabled();
-
-    await userEvent.click(screen.getByRole("checkbox"));
     expect(submit).toBeEnabled();
   });
 });
@@ -151,7 +146,7 @@ describe("BookingRequestForm — error state", () => {
 });
 
 describe("BookingRequestForm — success view", () => {
-  it("renders the success screen with the chosen service and calendar/whatsapp links", async () => {
+  it("renders a clean success screen with the service + calendar link and NO WhatsApp CTA", async () => {
     boundAction.mockResolvedValue({ success: true });
     vi.stubGlobal(
       "fetch",
@@ -161,7 +156,7 @@ describe("BookingRequestForm — success view", () => {
           : Promise.resolve({ json: () => Promise.resolve({ groups: [] }) }),
       ),
     );
-    renderForm({ initialServiceId: "svc-1", businessPhone: "0501234567" });
+    renderForm({ initialServiceId: "svc-1" });
     await act(async () => { await Promise.resolve(); });
     await userEvent.click(screen.getByText("בחרי תאריך מהלוח"));
     const dateInput = document.querySelector('input[type="date"]') as HTMLInputElement;
@@ -175,39 +170,24 @@ describe("BookingRequestForm — success view", () => {
 
     expect(await screen.findByText("הבקשה נשלחה!")).toBeInTheDocument();
     expect(screen.getByText("מניקור ג'ל")).toBeInTheDocument();
+
+    // Subtitle names the business and sets the right expectation (no manual step).
+    expect(
+      screen.getByText(/העברנו את הפרטים לסטודיו יופי/),
+    ).toBeInTheDocument();
+
+    // "הוספה ליומן" stays.
     const calLink = screen.getByText(/הוספה ליומן/).closest("a");
     expect(calLink?.getAttribute("href")).toContain("calendar.google.com");
-    const waLink = screen.getByText(/שלחי בוואטסאפ/).closest("a");
-    expect(waLink?.getAttribute("href")).toContain("wa.me/972501234567");
-  });
-});
 
-describe("BookingRequestForm — payment preview", () => {
-  it("shows the secure-payment card and pay CTA when full payment is required", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn((url: string) =>
-        String(url).includes("/slots?")
-          ? Promise.resolve({ json: () => Promise.resolve({ slots: ["09:00"] }) })
-          : Promise.resolve({ json: () => Promise.resolve({ groups: [] }) }),
-      ),
-    );
-    renderForm({
-      initialServiceId: "svc-1",
-      paymentPolicy: {
-        requirement: "full_payment",
-        allowPayAtBusiness: false,
-        instructions: "התשלום מראש מבטיח את התור",
-      },
-    });
-    await act(async () => { await Promise.resolve(); });
-    await userEvent.click(screen.getByText("בחרי תאריך מהלוח"));
-    const dateInput = document.querySelector('input[type="date"]') as HTMLInputElement;
-    await userEvent.type(dateInput, "2026-07-01");
-    await act(async () => { await Promise.resolve(); });
-    await userEvent.click(await screen.findByText("09:00"));
-    await userEvent.click(screen.getByRole("button", { name: /המשך למילוי פרטים/ }));
+    // The customer is never asked to notify the owner over WhatsApp.
+    expect(screen.queryByText(/שלחי בוואטסאפ/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/בוואטסאפ/)).not.toBeInTheDocument();
+    expect(
+      document.querySelector('a[href*="wa.me"]'),
+    ).not.toBeInTheDocument();
 
-    expect(screen.getByText("התשלום מראש מבטיח את התור")).toBeInTheDocument();
+    // "שליחת בקשה נוספת" remains as a secondary action.
+    expect(screen.getByText("שליחת בקשה נוספת")).toBeInTheDocument();
   });
 });

@@ -5,7 +5,7 @@ import {
   WEEKDAY_NAMES,
   minutesToTime,
   mapsSearchUrl,
-  toWhatsAppPhone,
+  getBusinessWhatsAppHref,
 } from "./helpers";
 
 function Card({ children }: { children: ReactNode }) {
@@ -45,7 +45,9 @@ export function PublicBusinessInfo({
   const location = [business.city, business.area].filter(Boolean).join(", ");
   const addressLabel = business.addressNote || location;
   const mapQuery = [business.name, location].filter(Boolean).join(", ");
-  const waPhone = business.phone ? toWhatsAppPhone(business.phone) : null;
+  const waHref = business.showPhone
+    ? getBusinessWhatsAppHref(business.phone, business.name)
+    : null;
 
   const showHours = business.showHours && business.availabilityDays.length > 0;
   const showContact =
@@ -121,9 +123,9 @@ export function PublicBusinessInfo({
                       <a href={`tel:${business.phone}`} dir="ltr">
                         {business.phone}
                       </a>
-                      {waPhone && (
+                      {waHref && (
                         <a
-                          href={`https://wa.me/${waPhone}`}
+                          href={waHref}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-xs font-semibold text-[#1da851] hover:underline"

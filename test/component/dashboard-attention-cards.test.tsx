@@ -125,11 +125,7 @@ function renderWithAllAttention() {
       lateCancellationsCount={1}
       forecast={forecast}
       reviewReadyCount={5}
-      recentRuns={[]}
-      whatsappLabel="WhatsApp מוכן לשליחה"
-      whatsappReady
-      whatsappConnected
-    />,
+      recentRuns={[]}    />,
   );
 }
 

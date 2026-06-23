@@ -64,7 +64,7 @@ export function PublicBookingHero({
       <div
         className={cn(
           "mx-auto w-full max-w-6xl px-5 pt-6 sm:px-8 lg:pt-12",
-          bookingSlot && "lg:grid lg:grid-cols-[1fr_minmax(400px,460px)] lg:items-start lg:gap-8",
+          bookingSlot && "lg:grid lg:grid-cols-[1fr_minmax(420px,480px)] lg:items-start lg:gap-8",
         )}
       >
         {/* ── identity column ── */}

@@ -10,10 +10,24 @@ import { normalizePhone } from "@/lib/phone";
  * Name update rule: if the existing client has a name and the caller provides
  * a different name, we leave the existing name intact to avoid overwriting
  * intentional CRM data. Only update if the existing name is empty.
+ *
+ * Consent rule: opt-in flags are only ever escalated (false → true), never
+ * revoked here. A customer who consents while booking grants consent; an
+ * unchecked box never clears a previously-granted opt-in.
  */
 export async function findOrCreateClient(
   tenant: TenantContext,
-  { fullName, phone }: { fullName: string; phone: string },
+  {
+    fullName,
+    phone,
+    whatsappOptIn,
+    marketingOptIn,
+  }: {
+    fullName: string;
+    phone: string;
+    whatsappOptIn?: boolean;
+    marketingOptIn?: boolean;
+  },
 ) {
   const normalized = normalizePhone(phone);
 
@@ -27,11 +41,14 @@ export async function findOrCreateClient(
   });
 
   if (existing) {
-    if (!existing.fullName && fullName) {
-      return prisma.client.update({
-        where: { id: existing.id },
-        data: { fullName },
-      });
+    const data: { fullName?: string; whatsappOptIn?: boolean; marketingOptIn?: boolean } = {};
+    if (!existing.fullName && fullName) data.fullName = fullName;
+    // Escalate consent only — never revoke an existing opt-in.
+    if (whatsappOptIn && !existing.whatsappOptIn) data.whatsappOptIn = true;
+    if (marketingOptIn && !existing.marketingOptIn) data.marketingOptIn = true;
+
+    if (Object.keys(data).length > 0) {
+      return prisma.client.update({ where: { id: existing.id }, data });
     }
     return existing;
   }
@@ -42,6 +59,8 @@ export async function findOrCreateClient(
       fullName,
       phone,
       normalizedPhone: normalized,
+      whatsappOptIn: whatsappOptIn ?? false,
+      marketingOptIn: marketingOptIn ?? false,
     },
   });
 }

@@ -168,15 +168,19 @@ describe("runMorningReminderForBusiness — provider result branches", () => {
     );
   });
 
-  it("passes 3 positional template variables when a templateName is configured", async () => {
+  it("passes 5 positional template variables (incl. business name) when a templateName is configured", async () => {
     prisma.booking.findMany.mockResolvedValue([bookingRow()]);
     send.mockResolvedValue({ success: true, providerMessageId: "x" });
     await runMorningReminderForBusiness({ ...BASE, templateName: "appointment_reminder_he" });
     const arg = send.mock.calls[0][0] as { templateId: string; templateVariables: Record<string, string> };
     expect(arg.templateId).toBe("appointment_reminder_he");
+    // {{1}} client, {{2}} business (so the customer sees it is sent on behalf of
+    // the business), {{3}} service, {{4}} date, {{5}} time.
     expect(arg.templateVariables["1"]).toBe("דנה");
-    expect(arg.templateVariables["2"]).toBe("מניקור");
-    expect(typeof arg.templateVariables["3"]).toBe("string");
+    expect(arg.templateVariables["2"]).toBe("סטודיו יופי");
+    expect(arg.templateVariables["3"]).toBe("מניקור");
+    expect(typeof arg.templateVariables["4"]).toBe("string");
+    expect(typeof arg.templateVariables["5"]).toBe("string");
   });
 
   it("prefers an explicit messageTemplate over the system default and custom template", async () => {

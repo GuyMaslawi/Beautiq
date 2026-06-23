@@ -3,15 +3,16 @@ import { InstagramIcon, FacebookIcon, WhatsAppIcon } from "./icons";
 import {
   normalizeInstagramUrl,
   normalizeSocialUrl,
-  toWhatsAppPhone,
+  getBusinessWhatsAppHref,
 } from "./helpers";
 
 export function PublicSiteFooter({ business }: { business: PublicBusiness }) {
-  const waPhone = business.phone ? toWhatsAppPhone(business.phone) : null;
+  const waHref = business.showPhone
+    ? getBusinessWhatsAppHref(business.phone, business.name)
+    : null;
   const instagramHref = normalizeInstagramUrl(business.instagramUrl);
   const facebookHref = normalizeSocialUrl(business.facebookUrl);
-  const hasSocial =
-    (business.showPhone && !!waPhone) || !!instagramHref || !!facebookHref;
+  const hasSocial = !!waHref || !!instagramHref || !!facebookHref;
 
   return (
     <footer className="mt-14 border-t border-[var(--border)] bg-white">
@@ -40,9 +41,9 @@ export function PublicSiteFooter({ business }: { business: PublicBusiness }) {
                 <FacebookIcon className="h-4 w-4" />
               </a>
             )}
-            {business.showPhone && waPhone && (
+            {waHref && (
               <a
-                href={`https://wa.me/${waPhone}`}
+                href={waHref}
                 target="_blank"
                 rel="noopener noreferrer"
                 aria-label="WhatsApp"

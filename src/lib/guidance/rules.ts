@@ -139,7 +139,7 @@ export function generateGuidanceItems(
       description: REPUTATION.guidance.body,
       priority: "recommended",
       actionLabel: REPUTATION.guidance.action,
-      href: "/automations",
+      href: "/reputation",
     });
   }
 

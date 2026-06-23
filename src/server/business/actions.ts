@@ -6,6 +6,7 @@ import { prisma } from "@/server/db/prisma";
 import { getCurrentBusiness, requireCurrentUser } from "@/server/auth/session";
 import { slugify, SLUG_MAX_LENGTH } from "@/lib/slug";
 import { ONBOARDING } from "@/lib/constants/he";
+import { ensureDefaultAutomationSettings } from "@/server/automations/defaults";
 
 /**
  * Business creation (see CLAUDE.md §9–10).
@@ -68,8 +69,9 @@ export async function createBusinessAction(
 
   const slug = await generateUniqueSlug(name);
 
+  let business: { id: string };
   try {
-    await prisma.business.create({
+    business = await prisma.business.create({
       data: {
         name,
         slug,
@@ -88,6 +90,15 @@ export async function createBusinessAction(
       return { formError: ONBOARDING.errors.generic };
     }
     return { formError: ONBOARDING.errors.generic };
+  }
+
+  // Allura's managed WhatsApp notifications are on by default — seed the core
+  // operational automations (booking confirmation, reminder, review). Best-effort:
+  // a seeding failure must never block business creation; the dashboard backfills.
+  try {
+    await ensureDefaultAutomationSettings(business.id);
+  } catch (err) {
+    console.error("[createBusinessAction] failed to seed default automations:", err);
   }
 
   revalidatePath("/dashboard");

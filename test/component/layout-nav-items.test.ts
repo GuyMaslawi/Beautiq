@@ -39,4 +39,11 @@ describe("nav-items data", () => {
       }
     }
   });
+
+  it("does NOT expose the Automations page to owners (managed by Allura)", () => {
+    const flatHrefs = NAV_ITEMS.map((i) => i.href);
+    expect(flatHrefs).not.toContain("/automations");
+    const groupedHrefs = NAV_GROUPS.flatMap((g) => g.items.map((i) => i.href));
+    expect(groupedHrefs).not.toContain("/automations");
+  });
 });

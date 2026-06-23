@@ -1,18 +1,13 @@
 "use client";
 
 import { Fragment, useActionState, useState, useEffect } from "react";
-import { Clock, Check, ChevronRight, Calendar, Zap, ShieldCheck, Lock } from "lucide-react";
+import { Clock, Check, ChevronRight, Calendar, Zap } from "lucide-react";
 import {
   submitPublicBookingAction,
   type PublicBookingFormState,
 } from "@/server/public-booking/actions";
-import type {
-  PublicService,
-  PublicCancellationPolicy,
-} from "@/server/public-booking/queries";
+import type { PublicService } from "@/server/public-booking/queries";
 import type { UpcomingSlotGroup } from "@/app/api/public/[slug]/upcoming-slots/route";
-import { PAYMENTS } from "@/lib/constants/he";
-import { computePaymentAmount, formatMinorILS } from "@/lib/payments/money";
 import { useBookingSelection } from "./_components/booking-selection";
 
 // ---------------------------------------------------------------------------
@@ -22,13 +17,6 @@ import { useBookingSelection } from "./_components/booking-selection";
 type Step = "service" | "quickpick" | "calendar" | "details";
 
 const DEFAULT_BRAND = "#b86b8c";
-
-/** Public-safe payment policy passed to the form (never includes credentials). */
-export interface PaymentPolicyClient {
-  requirement: "none" | "full_payment";
-  allowPayAtBusiness: boolean;
-  instructions: string | null;
-}
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -51,13 +39,6 @@ function formatDateHebrew(dateStr: string): string {
   } catch {
     return dateStr;
   }
-}
-
-function toWhatsAppPhone(phone: string): string {
-  const digits = phone.replace(/\D/g, "");
-  if (digits.startsWith("972")) return digits;
-  if (digits.startsWith("0")) return "972" + digits.slice(1);
-  return digits;
 }
 
 // ---------------------------------------------------------------------------
@@ -139,56 +120,52 @@ function ServiceCard({
   showPrices: boolean;
   brandColor: string;
 }) {
-  const brandGrd = `linear-gradient(135deg, ${brandColor}cc 0%, ${brandColor} 100%)`;
   return (
     <button
       type="button"
       onClick={onSelect}
-      className="group w-full overflow-hidden rounded-[1.3rem] p-4 text-right transition-all hover:-translate-y-0.5"
+      className="group flex h-full w-full flex-col gap-3 overflow-hidden rounded-[1.3rem] p-4 text-right transition-all hover:-translate-y-0.5"
       style={{
         border: `1.5px solid ${selected ? brandColor : "var(--border)"}`,
         background: selected ? `${brandColor}0a` : "white",
         boxShadow: selected ? `0 12px 28px -12px ${brandColor}77` : "0 4px 14px -8px rgba(124,58,97,0.12)",
       }}
     >
-      <div className="flex items-start gap-3">
-        <span
-          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-lg transition-all"
-          style={
-            selected
-              ? { background: brandGrd, color: "white", boxShadow: `0 8px 16px -6px ${brandColor}88` }
-              : { background: `${brandColor}14`, color: brandColor }
-          }
-        >
-          ✦
-        </span>
-        <div className="min-w-0 flex-1">
-          <p className="text-base font-bold text-[var(--foreground)]">{service.name}</p>
+      {/* Top: title + description (text gets priority) · selected indicator */}
+      <div className="flex w-full items-start gap-2.5">
+        <div className="flex min-w-0 flex-1 flex-col">
+          <p className="line-clamp-2 break-words text-[0.95rem] font-bold leading-snug text-[var(--foreground)]">
+            {service.name}
+          </p>
           {service.description && (
-            <p className="mt-0.5 line-clamp-2 text-xs text-[var(--muted)]">{service.description}</p>
+            <p className="mt-1 line-clamp-2 break-words text-xs leading-relaxed text-[var(--muted)]">
+              {service.description}
+            </p>
           )}
-          <div className="mt-2.5 flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--background-alt)] px-2.5 py-0.5 text-xs text-[var(--muted)]">
-              <Clock className="h-3 w-3" />
-              {service.durationMinutes} דקות
-            </span>
-            {showPrices && (
-              <span
-                className="display-num inline-flex items-center rounded-full px-2.5 py-0.5 text-sm font-bold transition-colors"
-                style={{ background: selected ? brandColor : `${brandColor}18`, color: selected ? "white" : brandColor }}
-                dir="ltr"
-              >
-                ₪{Number(service.price).toLocaleString("he-IL")}
-              </span>
-            )}
-          </div>
         </div>
-        <div
+        <span
           className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full border-2 transition-all"
           style={{ borderColor: selected ? brandColor : "#d1d5db", background: selected ? brandColor : "transparent" }}
         >
           {selected && <Check className="h-3.5 w-3.5 text-white" />}
-        </div>
+        </span>
+      </div>
+
+      {/* Bottom: duration + price badges, pinned to the card base */}
+      <div className="mt-auto flex flex-wrap items-center gap-2">
+        <span className="inline-flex items-center gap-1 rounded-full border border-[var(--border)] bg-[var(--background-alt)] px-2.5 py-0.5 text-xs text-[var(--muted)] whitespace-nowrap">
+          <Clock className="h-3 w-3 shrink-0" />
+          {service.durationMinutes} דקות
+        </span>
+        {showPrices && (
+          <span
+            className="display-num inline-flex items-center rounded-full px-2.5 py-0.5 text-sm font-bold transition-colors whitespace-nowrap"
+            style={{ background: selected ? brandColor : `${brandColor}18`, color: selected ? "white" : brandColor }}
+            dir="ltr"
+          >
+            ₪{Number(service.price).toLocaleString("he-IL")}
+          </span>
+        )}
       </div>
     </button>
   );
@@ -387,105 +364,25 @@ function PrimaryBtn({
 // Success view
 // ---------------------------------------------------------------------------
 
-// ---------------------------------------------------------------------------
-// Secure payment card — trust microcopy + amount (premium, RTL)
-// ---------------------------------------------------------------------------
-
-function SecurePaymentCard({
-  title,
-  amountLabel,
-  amountMinor,
-  brandColor,
-  instructions,
-  children,
-}: {
-  title: string;
-  amountLabel?: string;
-  amountMinor?: number;
-  brandColor: string;
-  instructions?: string | null;
-  children?: React.ReactNode;
-}) {
-  return (
-    <div
-      className="rounded-2xl border bg-white p-5 space-y-4"
-      style={{ borderColor: `${brandColor}33`, boxShadow: `0 0 0 4px ${brandColor}0d` }}
-    >
-      <div className="flex items-center gap-2">
-        <div
-          className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
-          style={{ background: `${brandColor}14`, color: brandColor }}
-        >
-          <Lock className="h-4 w-4" />
-        </div>
-        <p className="font-bold text-sm text-[var(--foreground)]">{title}</p>
-      </div>
-
-      {amountLabel && typeof amountMinor === "number" && (
-        <div
-          className="flex items-baseline justify-between rounded-xl px-4 py-3"
-          style={{ background: `${brandColor}0d` }}
-        >
-          <span className="text-sm text-[var(--muted)]">{amountLabel}</span>
-          <span className="text-lg font-bold" style={{ color: brandColor }}>
-            {formatMinorILS(amountMinor)}
-          </span>
-        </div>
-      )}
-
-      {instructions && (
-        <p className="text-xs leading-relaxed text-[var(--muted)]">{instructions}</p>
-      )}
-
-      {children}
-
-      <div className="space-y-1 pt-1">
-        <p className="flex items-center justify-center gap-1.5 text-center text-[11px] text-[var(--muted)]">
-          <ShieldCheck className="h-3.5 w-3.5" />
-          {PAYMENTS.publicStep.trustHostedPage}
-        </p>
-        <p className="text-center text-[11px] text-[var(--muted)]">
-          {PAYMENTS.publicStep.trustNoCardStored}
-        </p>
-      </div>
-    </div>
-  );
-}
-
 function SuccessView({
   serviceName,
   date,
   time,
   businessName,
-  businessPhone,
   serviceDuration,
   onReset,
   brandColor,
-  payment,
 }: {
   serviceName?: string;
   date: string;
   time: string;
   businessName: string;
-  businessPhone?: string | null;
   serviceDuration?: number;
   onReset: () => void;
   brandColor: string;
-  payment?: {
-    paymentUrl?: string;
-    paymentKind?: "full";
-    paymentAmountMinor?: number;
-    payAtBusinessAllowed?: boolean;
-    paymentLinkFailed?: boolean;
-  };
 }) {
   const formattedDate = formatDateHebrew(date);
   const brandGrd = `linear-gradient(135deg, ${brandColor}cc 0%, ${brandColor} 100%)`;
-
-  const msgText = `היי! קבעתי תור ל${serviceName ?? "טיפול"} אצל ${businessName}. ${formattedDate} בשעה ${time} 🎉`;
-  const waTarget = businessPhone
-    ? `https://wa.me/${toWhatsAppPhone(businessPhone)}?text=${encodeURIComponent(msgText)}`
-    : `https://wa.me/?text=${encodeURIComponent(msgText)}`;
 
   const [y, m, d] = date.split("-");
   const [hh, mm] = time.split(":");
@@ -510,42 +407,9 @@ function SuccessView({
           הבקשה נשלחה!
         </h2>
         <p className="text-sm text-[var(--muted)]">
-          העסק יחזור אליך לאישור התור
+          העברנו את הפרטים ל{businessName}. תקבלי עדכון לאחר אישור התור.
         </p>
       </div>
-
-      {/* Online payment (full) — booking is already saved as pending */}
-      {payment?.paymentKind && (
-        <div className="mx-auto max-w-sm text-right">
-          {payment.paymentUrl ? (
-            <SecurePaymentCard
-              title={PAYMENTS.publicStep.fullTitle}
-              amountLabel={PAYMENTS.publicStep.fullAmountLabel}
-              amountMinor={payment.paymentAmountMinor}
-              brandColor={brandColor}
-            >
-              <a
-                href={payment.paymentUrl}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold text-white transition-all hover:opacity-90 active:scale-[.98]"
-                style={{ background: `linear-gradient(135deg, ${brandColor}cc 0%, ${brandColor} 100%)` }}
-              >
-                {PAYMENTS.publicStep.paySecure}
-              </a>
-              {payment.payAtBusinessAllowed && (
-                <p className="mt-2 text-center text-[11px] text-[var(--muted)]">
-                  {PAYMENTS.returnStatus.failureBody}
-                </p>
-              )}
-            </SecurePaymentCard>
-          ) : (
-            <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-              {payment.payAtBusinessAllowed
-                ? PAYMENTS.publicStep.optionalTitle
-                : PAYMENTS.errors.providerError}
-            </div>
-          )}
-        </div>
-      )}
 
       <div
         className="mx-auto max-w-xs rounded-2xl px-6 py-5 space-y-3"
@@ -581,15 +445,6 @@ function SuccessView({
         >
           📅 הוספה ליומן
         </a>
-        <a
-          href={waTarget}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 rounded-2xl border-2 py-3.5 text-sm font-bold transition-all"
-          style={{ borderColor: brandColor, color: brandColor }}
-        >
-          💬 שלחי בוואטסאפ
-        </a>
       </div>
 
       <button
@@ -611,23 +466,17 @@ function SuccessView({
 export function BookingRequestForm({
   slug,
   services,
-  cancellationPolicy,
   showPrices = true,
   initialServiceId = "",
   businessName,
-  businessPhone,
   brandColor = DEFAULT_BRAND,
-  paymentPolicy = null,
 }: {
   slug: string;
   services: PublicService[];
-  cancellationPolicy: PublicCancellationPolicy | null;
   showPrices?: boolean;
   initialServiceId?: string;
   businessName: string;
-  businessPhone?: string | null;
   brandColor?: string;
-  paymentPolicy?: PaymentPolicyClient | null;
 }) {
   const boundAction = submitPublicBookingAction.bind(null, slug);
   const [state, formAction, pending] = useActionState<
@@ -642,7 +491,6 @@ export function BookingRequestForm({
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [slots, setSlots] = useState<string[] | null>(null);
-  const [policyAcknowledged, setPolicyAcknowledged] = useState(false);
 
   const slotsLoading =
     step === "calendar" && !!selectedDate && !!selectedServiceId && slots === null;
@@ -658,19 +506,11 @@ export function BookingRequestForm({
       setSelection(null);
       return;
     }
-    const preview = paymentPolicy
-      ? computePaymentAmount(
-          paymentPolicy,
-          Math.round(Number(svc.price) * 100),
-        )
-      : null;
     setSelection({
       serviceName: svc.name,
       date: selectedDate,
       time: selectedTime,
       active: true,
-      amountMinor: preview?.amountMinor,
-      paymentKind: preview?.kind,
     });
   }, [
     step,
@@ -678,7 +518,6 @@ export function BookingRequestForm({
     selectedDate,
     selectedTime,
     services,
-    paymentPolicy,
     setSelection,
   ]);
 
@@ -719,36 +558,12 @@ export function BookingRequestForm({
         date={selectedDate}
         time={selectedTime}
         businessName={businessName}
-        businessPhone={businessPhone}
         serviceDuration={selectedService?.durationMinutes}
         onReset={() => window.location.reload()}
         brandColor={brandColor}
-        payment={{
-          paymentUrl: state.paymentUrl,
-          paymentKind: state.paymentKind,
-          paymentAmountMinor: state.paymentAmountMinor,
-          payAtBusinessAllowed: state.payAtBusinessAllowed,
-          paymentLinkFailed: state.paymentLinkFailed,
-        }}
       />
     );
   }
-
-  const needsPolicy = !!cancellationPolicy?.policyText;
-
-  // Preview the required payment for the selected service (computed client-side
-  // for display only; the server recomputes authoritatively on submit).
-  const paymentPreview =
-    paymentPolicy && selectedService
-      ? computePaymentAmount(
-          paymentPolicy,
-          Math.round(Number(selectedService.price) * 100),
-        )
-      : null;
-  const requiresPayment =
-    !!paymentPreview &&
-    paymentPreview.amountMinor > 0 &&
-    paymentPreview.kind === "full";
 
   return (
     <form action={formAction} noValidate>
@@ -1028,56 +843,17 @@ export function BookingRequestForm({
             />
           </div>
 
-          {needsPolicy && (
-            <div className="rounded-2xl border border-[var(--border)] bg-white p-4 space-y-3">
-              <h3 className="font-bold text-sm text-[var(--foreground)]">
-                מדיניות ביטולים
-              </h3>
-              <p className="text-sm leading-relaxed text-[var(--muted)]">
-                {cancellationPolicy!.policyText}
-              </p>
-              <label className="flex cursor-pointer items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={policyAcknowledged}
-                  onChange={(e) => setPolicyAcknowledged(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 rounded accent-[var(--primary)]"
-                />
-                <span className="text-sm text-[var(--muted)]">
-                  קראתי את מדיניות הביטולים ואני מסכימה לתנאיה
-                </span>
-              </label>
-            </div>
-          )}
-
-          {/* Secure-payment preview — shown only when a payment is required */}
-          {requiresPayment && paymentPreview && (
-            <SecurePaymentCard
-              title={PAYMENTS.publicStep.fullTitle}
-              amountLabel={PAYMENTS.publicStep.fullAmountLabel}
-              amountMinor={paymentPreview.amountMinor}
-              brandColor={brandColor}
-              instructions={paymentPolicy?.instructions}
-            />
-          )}
-
           <p className="text-center text-xs text-[var(--muted)] leading-5">
-            {requiresPayment
-              ? PAYMENTS.publicStep.submitNote
-              : "הבקשה תישלח לעסק לאישור. התור יאושר רק אחרי שהעסק יאשר אותו."}
+            הבקשה תישלח לעסק לאישור. התור יאושר רק אחרי שהעסק יאשר אותו.
           </p>
 
           <button
             type="submit"
-            disabled={pending || (needsPolicy && !policyAcknowledged)}
+            disabled={pending}
             className="w-full rounded-2xl py-4 text-sm font-bold text-white transition-all hover:opacity-90 active:scale-[.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
             style={{ background: `linear-gradient(135deg, ${brandColor}cc 0%, ${brandColor} 100%)` }}
           >
-            {pending
-              ? "שולח…"
-              : requiresPayment
-                ? PAYMENTS.publicStep.paySecure
-                : "שליחת בקשה לתור ✓"}
+            {pending ? "שולח…" : "שליחת בקשה לתור ✓"}
           </button>
 
           <div className="flex justify-end">

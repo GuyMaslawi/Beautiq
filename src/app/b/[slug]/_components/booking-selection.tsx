@@ -17,10 +17,8 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Calendar, Clock, MapPin, Phone, ShieldCheck } from "lucide-react";
+import { Calendar, Clock, MapPin, Phone } from "lucide-react";
 import { formatDateHebrew } from "@/lib/booking/success-links";
-import { formatMinorILS } from "@/lib/payments/money";
-import { PAYMENTS } from "@/lib/constants/he";
 
 export interface BookingSelection {
   serviceName: string | null;
@@ -28,9 +26,6 @@ export interface BookingSelection {
   time: string;
   /** true once the customer is past service selection (step 2/3). */
   active: boolean;
-  /** Amount required online, in agorot (0 / undefined when none). */
-  amountMinor?: number;
-  paymentKind?: "full" | "none";
 }
 
 interface Ctx {
@@ -76,10 +71,6 @@ export function AppointmentSummary({
   if (!selection?.active || !selection.serviceName) return null;
 
   const formattedDate = formatDateHebrew(selection.date);
-  const amountLabel =
-    selection.amountMinor && selection.amountMinor > 0
-      ? formatMinorILS(selection.amountMinor)
-      : null;
 
   return (
     <div
@@ -110,20 +101,6 @@ export function AppointmentSummary({
         )}
       </div>
 
-      {amountLabel && (
-        <div
-          className="mt-4 flex items-baseline justify-between rounded-xl px-3.5 py-2.5"
-          style={{ background: `${brand}0d` }}
-        >
-          <span className="text-xs text-[var(--muted)]">
-            {PAYMENTS.publicStep.fullAmountLabel}
-          </span>
-          <span className="text-base font-bold" style={{ color: brand }}>
-            {amountLabel}
-          </span>
-        </div>
-      )}
-
       {(businessPhone || addressLabel) && (
         <div className="mt-4 space-y-1.5 border-t border-[var(--border)] pt-3 text-xs text-[var(--muted)]">
           {businessPhone && (
@@ -139,13 +116,6 @@ export function AppointmentSummary({
             </div>
           )}
         </div>
-      )}
-
-      {amountLabel && (
-        <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-[11px] text-[var(--muted)]">
-          <ShieldCheck className="h-3.5 w-3.5" />
-          {PAYMENTS.publicStep.trustHostedPage}
-        </p>
       )}
     </div>
   );

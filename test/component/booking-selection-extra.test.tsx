@@ -59,19 +59,6 @@ describe("AppointmentSummary", () => {
     expect(screen.getByText("בשעה 09:00")).toBeInTheDocument();
   });
 
-  it("shows the payment amount block when amountMinor > 0", () => {
-    renderWithSelection({
-      serviceName: "מניקור",
-      date: "2026-07-01",
-      time: "09:00",
-      active: true,
-      amountMinor: 15000,
-      paymentKind: "full",
-    });
-    // 15000 agorot → ₪150
-    expect(screen.getByText(/150/)).toBeInTheDocument();
-  });
-
   it("renders the contact block with phone and address when provided", () => {
     renderWithSelection(
       {

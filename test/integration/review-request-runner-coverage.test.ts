@@ -176,15 +176,16 @@ describe("runReviewRequestForBusiness — provider result branches", () => {
     expect(created.messageText).toBe("ביקורת? דנה");
   });
 
-  it("passes positional template variables when a templateName is configured", async () => {
+  it("passes positional template variables (client, business, review link) when a templateName is configured", async () => {
     prisma.booking.findMany.mockResolvedValue([completedBookingRow()]);
     send.mockResolvedValue({ success: true, providerMessageId: "x" });
     await runReviewRequestForBusiness({ ...BASE, templateName: "review_he", templateLanguage: "he" });
     const arg = send.mock.calls[0][0] as { templateId: string; templateVariables: Record<string, string> };
     expect(arg.templateId).toBe("review_he");
+    // {{1}} client, {{2}} business (sent on behalf of the business), {{3}} review link.
     expect(arg.templateVariables["1"]).toBe("דנה");
-    expect(arg.templateVariables["2"]).toBe("מניקור");
-    expect(arg.templateVariables["3"]).toBe("סטודיו יופי");
+    expect(arg.templateVariables["2"]).toBe("סטודיו יופי");
+    expect(typeof arg.templateVariables["3"]).toBe("string");
   });
 });
 

@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { headers } from "next/headers";
-import { redirect } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
 import { findOrCreateClient } from "@/server/clients/find-or-create";
@@ -12,10 +11,8 @@ import { validatePublicBooking } from "@/lib/validation/public-booking";
 import { parseIsraelDateTime } from "@/lib/time";
 import { PUBLIC_BOOKING } from "@/lib/constants/he";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
-import { getPublicPaymentPolicy } from "@/server/payments/settings";
-import { createBookingPayment } from "@/server/payments/booking-payment";
-import { computePaymentAmount } from "@/lib/payments/money";
 import { sendBookingConfirmation } from "./send-confirmation";
+import { notifyOwnerOfNewBooking } from "./notify-owner";
 
 const BOOKING_RATE_WINDOW_MS = 10 * 60_000; // 10 minutes
 const BOOKING_RATE_MAX = 5; // max 5 booking attempts per IP per business per 10 min
@@ -28,16 +25,6 @@ export interface PublicBookingFormState {
   errors?: Partial<Record<string, string>>;
   formError?: string;
   values?: Record<string, string>;
-  /** Hosted payment page URL — present only when an online payment is required. */
-  paymentUrl?: string;
-  /** "full" — what the requested payment represents. */
-  paymentKind?: "full";
-  /** Amount to collect, in agorot. */
-  paymentAmountMinor?: number;
-  /** Whether the customer may choose to pay at the business instead. */
-  payAtBusinessAllowed?: boolean;
-  /** True when payment is required but the link could not be created. */
-  paymentLinkFailed?: boolean;
 }
 
 /**
@@ -121,9 +108,14 @@ export async function submitPublicBookingAction(
     };
   }
 
+  // Booking notifications are handled automatically by Allura as part of the
+  // managed booking experience — no customer-facing consent checkbox. Service
+  // (transactional) notifications are opted in; marketing stays off by default.
   const client = await findOrCreateClient(tenant, {
     fullName: value.clientName,
     phone: value.phone,
+    whatsappOptIn: true,
+    marketingOptIn: false,
   });
 
   let newBookingId: string;
@@ -149,43 +141,17 @@ export async function submitPublicBookingAction(
 
   await syncClientStats({ businessId: tenant.businessId, clientId: client.id });
 
-  // ── Online payment (full) ─────────────────────────────────────────────────
-  // The booking is already created as `pending` (never auto-confirmed). If the
-  // business requires full online payment, create a hosted payment link now and
-  // return it so the customer can pay on the provider's secure page. Payment is
-  // only ever confirmed via a verified provider webhook — never a client redirect.
-  let paymentState: Partial<PublicBookingFormState> = {};
-  try {
-    const policy = await getPublicPaymentPolicy(tenant.businessId);
-    if (policy) {
-      const { amountMinor, kind } = computePaymentAmount(
-        policy,
-        Math.round(Number(service.price) * 100),
-      );
-      if (amountMinor > 0 && kind === "full") {
-        const payment = await createBookingPayment({
-          businessId: tenant.businessId,
-          bookingId: newBookingId,
-          clientId: client.id,
-          amountMinor,
-          customerName: value.clientName,
-          customerPhone: value.phone,
-          description: `${service.name} · ${business.name}`,
-        });
-        paymentState = {
-          paymentKind: kind,
-          paymentAmountMinor: amountMinor,
-          payAtBusinessAllowed: policy.allowPayAtBusiness,
-          paymentUrl: payment.ok ? (payment.paymentUrl ?? undefined) : undefined,
-          paymentLinkFailed: !payment.ok,
-        };
-      }
-    }
-  } catch (err) {
-    console.error("[submitPublicBookingAction] payment setup failed:", err);
-  }
+  // Notify the business owner automatically — primary channel is email so the
+  // owner learns about the request even without opening the system. Best-effort:
+  // never blocks the response and never fails booking creation.
+  notifyOwnerOfNewBooking({
+    bookingId: newBookingId,
+    businessId: tenant.businessId,
+  }).catch((err) =>
+    console.error("[submitPublicBookingAction] owner notification failed:", err),
+  );
 
-  // Best-effort WhatsApp confirmation — never blocks the response
+  // Best-effort WhatsApp confirmation to the customer — never blocks the response
   sendBookingConfirmation({
     bookingId: newBookingId,
     businessId: tenant.businessId,
@@ -199,18 +165,9 @@ export async function submitPublicBookingAction(
     console.error("[submitPublicBookingAction] WA confirmation failed:", err),
   );
 
-  // Pay-first flow: when an online payment is required and a hosted link was
-  // created, send the customer straight to the secure payment page. The
-  // booking-success screen ("התור נקבע בהצלחה") is shown only AFTER payment
-  // completes, on the return status page (/pay/status). `redirect` throws, so
-  // it must stay outside any try/catch.
-  if (paymentState.paymentUrl) {
-    redirect(paymentState.paymentUrl);
-  }
-
-  // Otherwise (no payment required, or the link could not be created) show the
-  // in-form confirmation — including a graceful fallback when the link failed.
-  return { success: true, ...paymentState };
+  // The booking is created as `pending` and the customer sees the in-form
+  // confirmation. No prepayment/deposit is required in this flow.
+  return { success: true };
 }
 
 // ---------------------------------------------------------------------------

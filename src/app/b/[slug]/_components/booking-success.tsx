@@ -10,11 +10,10 @@
  */
 
 import Link from "next/link";
-import { CalendarPlus, MessageCircle, RefreshCw, ShieldCheck } from "lucide-react";
+import { CalendarPlus, RefreshCw, ShieldCheck } from "lucide-react";
 import { PAYMENTS } from "@/lib/constants/he";
 import {
   buildGoogleCalendarUrl,
-  buildWhatsAppUrl,
   formatDateHebrew,
 } from "@/lib/booking/success-links";
 import type { PublicBookingSuccess } from "@/server/payments/booking-success";
@@ -99,12 +98,6 @@ export function PublicBookingSuccessView({
     businessPhone: state.businessPhone,
   };
   const calUrl = buildGoogleCalendarUrl(linkParams);
-  const waMessage = S.whatsappMessage
-    .replace("{service}", state.serviceName ?? "טיפול")
-    .replace("{business}", state.businessName)
-    .replace("{date}", formattedDate)
-    .replace("{time}", state.time);
-  const waUrl = buildWhatsAppUrl(linkParams, waMessage);
 
   return (
     <div className="space-y-6 py-2 text-center">
@@ -161,16 +154,6 @@ export function PublicBookingSuccessView({
         >
           <CalendarPlus className="h-4 w-4" />
           {S.addToCalendar}
-        </a>
-        <a
-          href={waUrl}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 rounded-2xl border-2 py-3.5 text-sm font-bold transition-all hover:opacity-90"
-          style={{ borderColor: brand, color: brand }}
-        >
-          <MessageCircle className="h-4 w-4" />
-          {S.openWhatsApp}
         </a>
       </div>
 

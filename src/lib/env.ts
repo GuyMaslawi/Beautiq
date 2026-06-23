@@ -53,6 +53,13 @@ export function checkEnv(): EnvCheckResult {
         "NEXT_PUBLIC_APP_URL לא מוגדר — נעשה שימוש בברירת המחדל https://allura.info לקישורים חיצוניים.",
       );
     }
+    // התראת אימייל לבעלת העסק על בקשת תור חדשה היא best-effort. אם אינה מוגדרת
+    // בייצור — לא יישלח אימייל (ההזמנה עדיין נוצרת ומופיעה בלוח הבקרה).
+    if (!isSet("RESEND_API_KEY") || !isSet("EMAIL_FROM")) {
+      warnings.push(
+        "RESEND_API_KEY / EMAIL_FROM לא מוגדרים — התראות אימייל לבעלת העסק על בקשות תור חדשות לא יישלחו.",
+      );
+    }
   }
 
   // ── WhatsApp — נבדק רק כששליחה אמיתית מופעלת ──────────────────

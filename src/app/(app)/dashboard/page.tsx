@@ -5,7 +5,7 @@ import { getEmptySlotsData } from "@/server/empty-slots/queries";
 import { getRevenueForecastData } from "@/server/revenue-forecast/queries";
 import { getReputationSummary } from "@/server/reputation/queries";
 import { getRemindersDueCount, getRecentAutomationRuns } from "@/server/automations/queries";
-import { getOwnerWhatsAppStatus } from "@/server/whatsapp/owner-status";
+import { ensureDefaultAutomationSettings } from "@/server/automations/defaults";
 import { getLateCancellationsThisWeek } from "@/server/bookings/queries";
 import { getActiveWaitlistCount } from "@/server/waitlist/queries";
 import { generateGuidanceItems } from "@/lib/guidance/rules";
@@ -28,6 +28,10 @@ export default async function DashboardPage() {
 
   const tenant = { businessId: business.id };
 
+  // Allura-managed WhatsApp notifications are on by default — make sure the core
+  // operational automations are seeded for businesses created before this change.
+  await ensureDefaultAutomationSettings(business.id);
+
   const [
     dashboardData,
     guidanceQueryData,
@@ -36,7 +40,6 @@ export default async function DashboardPage() {
     reputationSummary,
     remindersDueCount,
     recentRuns,
-    whatsappStatus,
     lateCancellationsCount,
     waitlistCount,
   ] = await Promise.all([
@@ -53,7 +56,6 @@ export default async function DashboardPage() {
     getReputationSummary(tenant),
     getRemindersDueCount(tenant),
     getRecentAutomationRuns(tenant, 3),
-    getOwnerWhatsAppStatus(business.id),
     getLateCancellationsThisWeek(tenant),
     getActiveWaitlistCount(tenant),
   ]);
@@ -81,9 +83,6 @@ export default async function DashboardPage() {
       forecast={forecast}
       reviewReadyCount={reputationSummary.recentCompletedCount}
       recentRuns={recentRuns}
-      whatsappLabel={whatsappStatus.ownerSetupLabel}
-      whatsappReady={whatsappStatus.ownerSetupState === "ready"}
-      whatsappConnected={whatsappStatus.readiness.connectionReady}
     />
   );
 }

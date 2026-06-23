@@ -60,12 +60,15 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     language: "he",
     category: "UTILITY",
     group: "operational",
-    // Minimal BODY-only utility template. No header / footer / buttons. Kept
-    // deliberately simple and clearly transactional so Meta accepts it as UTILITY
-    // (the previous, busier wording was rejected with code 100 / subcode 2388024).
-    body: "היי {{1}}, התור שלך ל{{2}} נקבע ליום {{3}} בשעה {{4}}. נשמח לראותך 🙂",
-    example: ["נועה", "לק ג'ל", "שלישי 18.6", "10:30"],
-    variables: ["clientName", "serviceName", "bookingDate", "bookingTime"],
+    // Allura-managed (pre-approved) template. Sent from Allura's managed WhatsApp
+    // sender; the body itself states it is sent by Allura on behalf of the
+    // business ({{2}} = businessName). BODY-only, clearly transactional. The body
+    // must not end with a variable (Meta rejects trailing variables), so it ends
+    // with the "נשלח באמצעות Allura" line.
+    body:
+      "היי {{1}} ✨\nהתור שלך אצל {{2}} נקבע בהצלחה:\n{{3}}\n{{4}} בשעה {{5}}\n\nנשלח באמצעות Allura",
+    example: ["נועה", "סטודיו ביוטי", "לק ג'ל", "שלישי 18.6", "10:30"],
+    variables: ["clientName", "businessName", "serviceName", "bookingDate", "bookingTime"],
     automationType: "booking_confirmation",
   },
   {
@@ -74,12 +77,13 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     language: "he",
     category: "UTILITY",
     group: "operational",
-    // Minimal BODY-only utility template with 3 sequential variables. Dropped the
-    // trailing business-name variable (the old {{4}} sat near the end of the body)
-    // to keep the reminder short and unambiguous after the 2388024 rejection.
-    body: "היי {{1}}, תזכורת לתור שלך ל{{2}} מחר בשעה {{3}}. נתראה בקרוב 🙂",
-    example: ["נועה", "לק ג'ל", "10:30"],
-    variables: ["clientName", "serviceName", "bookingTime"],
+    // Allura-managed reminder. {{2}} = businessName so the customer sees the
+    // reminder is from Allura on behalf of their business. Ends with a closing
+    // line (not a variable).
+    body:
+      "היי {{1}},\nתזכורת מ־Allura בשם {{2}} ✨\nיש לך תור ל{{3}} ב־{{4}} בשעה {{5}}.\nנתראה בקרוב 🙂",
+    example: ["נועה", "סטודיו ביוטי", "לק ג'ל", "שלישי 18.6", "10:30"],
+    variables: ["clientName", "businessName", "serviceName", "bookingDate", "bookingTime"],
     automationType: "morning_reminder",
   },
   {
@@ -88,26 +92,27 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
     language: "he",
     category: "UTILITY",
     group: "operational",
-    // Variables must appear in order {{1}}..{{4}} and the body must not end with a
-    // variable — Meta rejects out-of-order or trailing variables as "Invalid parameter".
-    body: "שלום {{1}}, תודה שבחרת ל{{2}} ב{{3}}! נשמח אם תדרגי את החוויה כאן: {{4}} 🙏",
-    example: ["דנה", "מניקור ג'ל", "סטודיו ביוטי", REVIEW_EXAMPLE_LINK],
-    variables: ["clientName", "serviceName", "businessName", "reviewLink"],
+    // Variables must appear in order {{1}}..{{3}}; the body must not end with a
+    // variable, so it ends with the "נשלח באמצעות Allura" line.
+    body:
+      "היי {{1}},\nמקווים שנהנית מהתור אצל {{2}} ✨\nנשמח אם תשאירי ביקורת קצרה:\n{{3}}\n\nנשלח באמצעות Allura",
+    example: ["דנה", "סטודיו ביוטי", REVIEW_EXAMPLE_LINK],
+    variables: ["clientName", "businessName", "reviewLink"],
     automationType: "review_request",
   },
   {
     // Optional MARKETING template — kept deliberately NEUTRAL. Meta reviews
-    // marketing templates more strictly and previously rejected the busier
+    // marketing templates more strictly and previously rejected busier
     // discount/offer wording (code 100 / subcode 2388024). This default carries
     // NO offer, discount, percentage, urgency, header, footer, buttons or URL —
-    // just a warm check-in. The owner-configured offer still lives in the in-app
-    // free-text message builder, not in this approved template.
+    // just a warm check-in. NOT enabled by default; requires marketing opt-in.
     name: "win_back_offer_he",
     label: "החזרת לקוחות",
     language: "he",
     category: "MARKETING",
-    // Trailing emoji keeps the body from ending with the {{2}} variable.
-    body: "היי {{1}}, מזמן לא ראינו אותך ב{{2}}. נשמח לקבוע לך תור חדש בזמן שנוח לך 🙂",
+    // Ends with the Allura line so the body does not end on the {{2}} variable.
+    body:
+      "היי {{1}}, מזמן לא ראינו אותך ב{{2}}. נשמח לקבוע לך תור חדש בזמן שנוח לך 🙂\nנשלח באמצעות Allura",
     example: ["נועה", "הסטודיו של יעל"],
     variables: ["clientName", "businessName"],
     group: "marketing",

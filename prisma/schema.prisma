@@ -474,6 +474,9 @@ model Booking {
   confirmationSentAt       DateTime?
   reminderSentAt           DateTime?
   reviewRequestSentAt      DateTime?
+  /// Owner notification tracking — set once the business owner has been alerted
+  /// about this (public) booking request, to prevent duplicate notifications.
+  ownerNotifiedAt          DateTime?
   createdAt                DateTime      @default(now())
   updatedAt                DateTime      @updatedAt
 

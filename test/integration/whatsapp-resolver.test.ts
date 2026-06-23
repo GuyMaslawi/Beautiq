@@ -280,38 +280,38 @@ describe("resolveWhatsAppConnectionForBusiness — number confirmation gate", ()
   });
 });
 
-describe("resolveWhatsAppConnectionForBusiness — Priority 2 env fallback (no connection)", () => {
+describe("resolveWhatsAppConnectionForBusiness — Priority 2 Allura-managed sender (no connection)", () => {
   beforeEach(() => {
     process.env.ENABLE_REAL_WHATSAPP_SEND = "true";
   });
 
-  it("uses env credentials only when WHATSAPP_USE_ENV_FALLBACK=true and no active connection", async () => {
-    process.env.WHATSAPP_USE_ENV_FALLBACK = "true";
+  it("uses Allura's managed credentials by default when no per-business connection exists", async () => {
     process.env.META_WHATSAPP_ACCESS_TOKEN = REAL_TOKEN;
     process.env.META_WHATSAPP_PHONE_NUMBER_ID = "env_phone";
     prisma.whatsAppConnection.findUnique.mockResolvedValue(null);
 
     const resolved = await resolveWhatsAppConnectionForBusiness(BUSINESS_A);
 
-    expect(resolved.mode).toBe("env_fallback");
+    expect(resolved.mode).toBe("allura_managed");
+    expect(resolved.isAlluraManaged).toBe(true);
     expect(resolved.provider.name).toBe("meta_cloud_api");
     expect(resolved.phoneNumberId).toBe("env_phone");
     assertNoTokenLeak();
   });
 
-  it("does NOT use env fallback when WHATSAPP_USE_ENV_FALLBACK is unset", async () => {
+  it("managed sender does NOT require WHATSAPP_USE_ENV_FALLBACK (it is the default)", async () => {
+    // No WHATSAPP_USE_ENV_FALLBACK set — managed sending still works.
     process.env.META_WHATSAPP_ACCESS_TOKEN = REAL_TOKEN;
     process.env.META_WHATSAPP_PHONE_NUMBER_ID = "env_phone";
     prisma.whatsAppConnection.findUnique.mockResolvedValue(null);
 
     const resolved = await resolveWhatsAppConnectionForBusiness(BUSINESS_A);
 
-    expect(resolved.mode).toBe("disconnected");
-    expect(resolved.provider.name).toBe("disabled");
+    expect(resolved.mode).toBe("allura_managed");
+    expect(resolved.provider.name).toBe("meta_cloud_api");
   });
 
-  it("disconnected when env fallback enabled but credentials are missing", async () => {
-    process.env.WHATSAPP_USE_ENV_FALLBACK = "true";
+  it("disconnected when the managed credentials are not configured", async () => {
     prisma.whatsAppConnection.findUnique.mockResolvedValue(null);
 
     const resolved = await resolveWhatsAppConnectionForBusiness(BUSINESS_A);
@@ -319,7 +319,7 @@ describe("resolveWhatsAppConnectionForBusiness — Priority 2 env fallback (no c
     expect(resolved.provider.name).toBe("disabled");
   });
 
-  it("non-active connection (status=pending) -> disconnected, mentions status in uiStatus", async () => {
+  it("non-active per-business connection (status=pending) without managed creds -> disconnected", async () => {
     prisma.whatsAppConnection.findUnique.mockResolvedValue(
       makeWhatsAppConnection({ status: "pending" }),
     );
@@ -328,6 +328,18 @@ describe("resolveWhatsAppConnectionForBusiness — Priority 2 env fallback (no c
     expect(resolved.mode).toBe("disconnected");
     expect(resolved.provider.name).toBe("disabled");
     expect(resolved.uiStatus).toContain("pending");
+  });
+
+  it("non-active per-business connection falls through to the managed sender when creds exist", async () => {
+    process.env.META_WHATSAPP_ACCESS_TOKEN = REAL_TOKEN;
+    process.env.META_WHATSAPP_PHONE_NUMBER_ID = "env_phone";
+    prisma.whatsAppConnection.findUnique.mockResolvedValue(
+      makeWhatsAppConnection({ status: "pending" }),
+    );
+
+    const resolved = await resolveWhatsAppConnectionForBusiness(BUSINESS_A);
+    expect(resolved.mode).toBe("allura_managed");
+    expect(resolved.provider.name).toBe("meta_cloud_api");
   });
 });
 

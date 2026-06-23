@@ -40,7 +40,6 @@ function renderExperience() {
       <BookingRequestForm
         slug="studio-yofi"
         services={SERVICES}
-        cancellationPolicy={null}
         businessName="סטודיו יופי"
       />
     </BookingSelectionProvider>,

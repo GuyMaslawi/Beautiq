@@ -36,7 +36,6 @@ function renderForm(props: Partial<Parameters<typeof BookingRequestForm>[0]> = {
     <BookingRequestForm
       slug="studio-yofi"
       services={SERVICES}
-      cancellationPolicy={null}
       businessName="סטודיו יופי"
       {...props}
     />,

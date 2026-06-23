@@ -1,10 +1,9 @@
-import Link from "next/link";
-import { MessageCircle, Zap, Activity, ArrowLeft } from "lucide-react";
+import { MessageCircle, Check, Activity } from "lucide-react";
 import type { RecentAutomationRun } from "@/server/automations/queries";
 
 const RUN_TYPE_LABEL: Record<string, string> = {
   win_back: "החזרת לקוחות",
-  morning_reminder: "תזכורת בוקר",
+  morning_reminder: "תזכורת לתור",
   review_request: "בקשת ביקורת",
   manual: "שליחה ידנית",
   booking_confirmation: "אישור תור",
@@ -25,112 +24,107 @@ function relativeDay(iso: string): string {
   return `לפני ${diff} ימים`;
 }
 
-function StatusCard({
-  href,
-  icon: Icon,
-  title,
-  value,
-  sub,
-  dotColor,
-}: {
-  href: string;
-  icon: typeof Zap;
-  title: string;
-  value: string;
-  sub?: string;
-  dotColor?: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex flex-col gap-2.5 rounded-2xl p-5 transition-all hover:shadow-md active:scale-[0.98]"
-      style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
-    >
-      <div className="flex items-center justify-between">
-        <span className="text-sm font-medium" style={{ color: "var(--foreground-soft)" }}>
-          {title}
-        </span>
-        <Icon className="h-4 w-4" style={{ color: "#b86b8c" }} />
-      </div>
-      <div className="flex items-center gap-2">
-        {dotColor && (
-          <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: dotColor }} />
-        )}
-        <p className="text-sm font-bold leading-snug" style={{ color: "var(--foreground)" }}>
-          {value}
-        </p>
-      </div>
-      {sub && (
-        <p className="text-xs" style={{ color: "var(--muted)" }}>
-          {sub}
-        </p>
-      )}
-      <span
-        className="mt-auto flex items-center gap-1 pt-1 text-xs font-semibold"
-        style={{ color: "#b86b8c" }}
-      >
-        מעבר לאוטומציות
-        <ArrowLeft className="h-3 w-3" />
-      </span>
-    </Link>
-  );
-}
+/** The notifications Allura sends automatically — shown as a reassuring list. */
+const ACTIVE_NOTIFICATIONS = [
+  "אישור תור אחרי קביעה",
+  "תזכורת לפני התור",
+  "עדכון על ביטול או שינוי",
+  "בקשת ביקורת אחרי הטיפול",
+];
 
 /**
- * Dashboard Automations section — surfaces the existing WhatsApp connection
- * status, automation activity and recent run history for discoverability.
- * Read-only: every card links into /automations.
+ * Dashboard WhatsApp notifications section.
+ *
+ * Allura sends customer notifications automatically from its managed WhatsApp
+ * sender — there is no setup or connection for the owner to do. This section is
+ * purely reassuring: it confirms notifications are active and surfaces recent
+ * sending activity. It is NOT a setup task and links to nothing.
  */
 export function AutomationsSection({
-  whatsappLabel,
-  whatsappReady,
-  whatsappConnected,
   remindersDueCount,
   recentRuns,
 }: {
-  whatsappLabel: string;
-  whatsappReady: boolean;
-  whatsappConnected: boolean;
   remindersDueCount: number;
   recentRuns: RecentAutomationRun[];
 }) {
-  const waDot = whatsappReady ? "#3d8b6e" : whatsappConnected ? "#b8960a" : "#bbb3c2";
-
   const lastRun = recentRuns[0] ?? null;
   const activityValue = lastRun
     ? `${RUN_TYPE_LABEL[lastRun.type] ?? lastRun.type} · ${lastRun.sentCount} נשלחו`
     : "אין פעילות אחרונה";
-  const activitySub = lastRun ? relativeDay(lastRun.startedAtISO) : "כאן תופיע פעילות השליחה";
+  const activitySub = lastRun
+    ? relativeDay(lastRun.startedAtISO)
+    : "כאן תופיע פעילות השליחה ללקוחות";
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-      <StatusCard
-        href="/automations"
-        icon={MessageCircle}
-        title="חיבור WhatsApp"
-        value={whatsappLabel}
-        dotColor={waDot}
-      />
-      <StatusCard
-        href="/automations"
-        icon={Zap}
-        title="אוטומציות"
-        value={
-          remindersDueCount > 0
-            ? `${remindersDueCount} תזכורות מוכנות`
-            : whatsappReady
-              ? "פעילות ומוכנות"
-              : "ממתינות להגדרה"
-        }
-        sub={remindersDueCount > 0 ? "ממתינות לשליחה ללקוחות" : undefined}
-      />
-      <StatusCard
-        href="/automations"
-        icon={Activity}
-        title="פעילות אחרונה"
-        value={activityValue}
-        sub={activitySub}
-      />
+      {/* Reassuring "active" card — spans two columns on desktop */}
+      <div
+        className="flex flex-col gap-3 rounded-2xl p-5 sm:col-span-2"
+        style={{
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
+          boxShadow: "var(--shadow-sm)",
+        }}
+      >
+        <div className="flex items-center gap-2.5">
+          <span
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+            style={{ background: "rgba(61,139,110,0.12)", color: "#3d8b6e" }}
+          >
+            <MessageCircle className="h-4 w-4" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
+              התראות WhatsApp פעילות
+            </p>
+            <p className="text-xs" style={{ color: "var(--muted)" }}>
+              Allura שולחת ללקוחות שלך אישורי תור, תזכורות ועדכונים חשובים באופן אוטומטי.
+            </p>
+          </div>
+        </div>
+
+        <ul className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+          {ACTIVE_NOTIFICATIONS.map((item) => (
+            <li
+              key={item}
+              className="flex items-center gap-2 text-xs"
+              style={{ color: "var(--foreground-soft)" }}
+            >
+              <Check className="h-3.5 w-3.5 shrink-0" style={{ color: "#3d8b6e" }} />
+              {item}
+            </li>
+          ))}
+        </ul>
+
+        {remindersDueCount > 0 && (
+          <p className="text-xs" style={{ color: "var(--muted)" }}>
+            {remindersDueCount} תזכורות יישלחו ללקוחות הקרובות.
+          </p>
+        )}
+      </div>
+
+      {/* Recent activity — read-only */}
+      <div
+        className="flex flex-col gap-2.5 rounded-2xl p-5"
+        style={{
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
+          boxShadow: "var(--shadow-sm)",
+        }}
+      >
+        <div className="flex items-center justify-between">
+          <span className="text-sm font-medium" style={{ color: "var(--foreground-soft)" }}>
+            פעילות אחרונה
+          </span>
+          <Activity className="h-4 w-4" style={{ color: "#b86b8c" }} />
+        </div>
+        <p className="text-sm font-bold leading-snug" style={{ color: "var(--foreground)" }}>
+          {activityValue}
+        </p>
+        <p className="text-xs" style={{ color: "var(--muted)" }}>
+          {activitySub}
+        </p>
+      </div>
     </div>
   );
 }

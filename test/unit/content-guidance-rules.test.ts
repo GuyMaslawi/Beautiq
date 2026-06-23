@@ -75,10 +75,10 @@ describe("generateGuidanceItems — individual rules", () => {
     );
   });
 
-  it("flags recent completed → automations (J)", () => {
+  it("flags recent completed → reputation (J)", () => {
     const items = generateGuidanceItems(data({ recentCompletedBookingsCount: 2 }), 0);
     expect(ids(items)).toContain("reputation");
-    expect(items.find((i) => i.id === "reputation")!.href).toBe("/automations");
+    expect(items.find((i) => i.id === "reputation")!.href).toBe("/reputation");
   });
 
   it("flags pricing concerns (K)", () => {

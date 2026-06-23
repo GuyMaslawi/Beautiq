@@ -14,13 +14,22 @@ import { getWhatsAppProviderForBusiness } from "@/server/whatsapp/resolver";
 import { isValidIsraeliPhone, toWaPhone } from "@/lib/phone";
 
 const DEFAULT_REMINDER_BODY =
-  "בוקר טוב {שם הלקוח} ☀️\n\nרק תזכורת קטנה שיש לך היום תור ב:\n\n🕒 {שעה}\n✨ {שירות}\n\nמחכות לראותך ❤️\n{שם העסק}";
+  "היי {שם הלקוח},\nתזכורת מ־Allura בשם {שם העסק} ✨\nיש לך תור ל{שירות} ב־{תאריך} בשעה {שעה}.\nנתראה בקרוב 🙂";
 
 function formatTime(d: Date, tz: string): string {
   return new Intl.DateTimeFormat("he-IL", {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
+    timeZone: tz,
+  }).format(d);
+}
+
+function formatDate(d: Date, tz: string): string {
+  return new Intl.DateTimeFormat("he-IL", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
     timeZone: tz,
   }).format(d);
 }
@@ -281,10 +290,12 @@ export async function runMorningReminderForBusiness(params: {
       "{שם הלקוחה}": booking.client.fullName,
       "{שם העסק}": business.name,
       "{שירות}": booking.service.name,
+      "{תאריך}": formatDate(booking.startTime, tz),
       "{שעה}": formatTime(booking.startTime, tz),
       "{clientName}": booking.client.fullName,
       "{businessName}": business.name,
       "{serviceName}": booking.service.name,
+      "{bookingDate}": formatDate(booking.startTime, tz),
       "{bookingTime}": formatTime(booking.startTime, tz),
     };
     const messageText = applyVariables(body, vars);
@@ -304,14 +315,15 @@ export async function runMorningReminderForBusiness(params: {
     });
 
     try {
-      // appointment_reminder_he is a 3-variable BODY-only template:
-      // {{1}} client name, {{2}} service name, {{3}} time. (Business name was
-      // removed from the template — do NOT add a 4th param or Meta rejects the send.)
+      // appointment_reminder_he is a 5-variable BODY-only template:
+      // {{1}} client, {{2}} business, {{3}} service, {{4}} date, {{5}} time.
       const templateVariables = templateName
         ? {
             "1": booking.client.fullName,
-            "2": booking.service.name,
-            "3": formatTime(booking.startTime, tz),
+            "2": business.name,
+            "3": booking.service.name,
+            "4": formatDate(booking.startTime, tz),
+            "5": formatTime(booking.startTime, tz),
           }
         : undefined;
 

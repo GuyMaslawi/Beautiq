@@ -15,7 +15,7 @@ import { isValidIsraeliPhone, toWaPhone } from "@/lib/phone";
 import { publicBusinessUrl } from "@/lib/config";
 
 const DEFAULT_REVIEW_BODY =
-  "היי {שם הלקוח} ❤️\n\nנהנינו לארח אותך!\n\nנשמח אם תוכלי להשאיר ביקורת קצרה 🙏\n{קישור לביקורת}\n\n{שם העסק}";
+  "היי {שם הלקוח},\nמקווים שנהנית מהתור אצל {שם העסק} ✨\nנשמח אם תשאירי ביקורת קצרה:\n{קישור לביקורת}\n\nנשלח באמצעות Allura";
 
 function applyVariables(body: string, vars: Record<string, string>): string {
   return body.replace(/\{[^}]+\}/g, (m) => vars[m] ?? m);
@@ -267,12 +267,13 @@ export async function runReviewRequestForBusiness(params: {
     });
 
     try {
+      // review_request_he is a 3-variable BODY-only template:
+      // {{1}} client, {{2}} business, {{3}} review link.
       const templateVariables = templateName
         ? {
             "1": booking.client.fullName,
-            "2": booking.service.name,
-            "3": business.name,
-            "4": defaultReviewLink,
+            "2": business.name,
+            "3": defaultReviewLink,
           }
         : undefined;
 

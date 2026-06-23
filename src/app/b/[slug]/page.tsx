@@ -1,5 +1,4 @@
 import { getPublicBusiness } from "@/server/public-booking/queries";
-import { getPublicPaymentPolicy } from "@/server/payments/settings";
 import { getPublicBookingSuccess } from "@/server/payments/booking-success";
 import { BookingRequestForm } from "./booking-request-form";
 import { PublicReviewForm } from "./review-form";
@@ -61,11 +60,6 @@ export default async function PublicBusinessPage({
 
   const hasBooking = business.showServices && business.services.length > 0;
 
-  // Public-safe payment policy (never includes credentials). Drives the
-  // optional secure-payment step in the booking form.
-  const paymentPolicy = await getPublicPaymentPolicy(business.id);
-  const requiresPayment = !!paymentPolicy && paymentPolicy.requirement !== "none";
-
   const location = [business.city, business.area].filter(Boolean).join(", ");
   const addressLabel = business.addressNote || location || null;
 
@@ -89,21 +83,10 @@ export default async function PublicBusinessPage({
       <BookingRequestForm
         slug={slug}
         services={business.services}
-        cancellationPolicy={showPolicy ? policy : null}
         showPrices={business.showPrices}
         initialServiceId={initialServiceId}
         businessName={business.name}
-        businessPhone={business.phone}
         brandColor={brand}
-        paymentPolicy={
-          paymentPolicy
-            ? {
-                requirement: paymentPolicy.requirement,
-                allowPayAtBusiness: paymentPolicy.allowPayAtBusiness,
-                instructions: paymentPolicy.instructions,
-              }
-            : null
-        }
       />
     ) : null;
 
@@ -121,8 +104,6 @@ export default async function PublicBusinessPage({
           business={business}
           brand={brand}
           addressLabel={business.showAddress ? addressLabel : null}
-          policyText={showPolicy ? (policy?.policyText ?? null) : null}
-          requiresPayment={requiresPayment}
         />
       </>
     ) : undefined;
@@ -142,7 +123,7 @@ export default async function PublicBusinessPage({
           hideBookingHeader={!!successState}
         />
 
-        <div className="mt-10 space-y-10 lg:mt-14 lg:space-y-14">
+        <div className="mt-9 space-y-9 lg:mt-12 lg:space-y-12">
         {hasBooking && (
           <Reveal>
             <PublicTrustSection brand={brand} />
@@ -210,7 +191,13 @@ export default async function PublicBusinessPage({
       <PublicSiteFooter business={business} />
 
         {/* Mobile sticky booking CTA */}
-        {hasBooking && !successState && <StickyBookingCta brand={brand} />}
+        {hasBooking && !successState && (
+          <StickyBookingCta
+            brand={brand}
+            businessPhone={business.showPhone ? business.phone : null}
+            businessName={business.name}
+          />
+        )}
       </main>
     </BookingSelectionProvider>
   );

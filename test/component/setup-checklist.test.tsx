@@ -99,14 +99,11 @@ describe("SetupChecklist — calm / no-attention branches", () => {
         lateCancellationsCount={0}
         forecast={forecast}
         reviewReadyCount={0}
-        recentRuns={[]}
-        whatsappLabel="לא מחובר"
-        whatsappReady={false}
-        whatsappConnected={false}
-      />,
+        recentRuns={[]}      />,
     );
-    // No "needs attention" column header in the calm layout
-    expect(screen.queryByText("דורש את תשומת הלב שלך")).not.toBeInTheDocument();
+    // Calm state: nothing urgent → the side rail shows the "all under control"
+    // card instead of any attention cards.
+    expect(screen.getByText("הכול תחת שליטה")).toBeInTheDocument();
     // Today's bookings render in the timeline
     expect(screen.getByText("דנה")).toBeInTheDocument();
     expect(screen.getByText("רוני")).toBeInTheDocument();
@@ -132,11 +129,7 @@ describe("SetupChecklist — calm / no-attention branches", () => {
         waitlistCount={3}
         forecast={forecast}
         reviewReadyCount={0}
-        recentRuns={[]}
-        whatsappLabel=""
-        whatsappReady={false}
-        whatsappConnected={false}
-      />,
+        recentRuns={[]}      />,
     );
     expect(screen.getByText("ממתינות ברשימת המתנה")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /לרשימת ההמתנה/ }).getAttribute("href")).toBe(
@@ -167,11 +160,7 @@ describe("SetupChecklist — calm / no-attention branches", () => {
         lateCancellationsCount={0}
         forecast={forecast}
         reviewReadyCount={4}
-        recentRuns={[]}
-        whatsappLabel="WhatsApp מוכן"
-        whatsappReady
-        whatsappConnected
-      />,
+        recentRuns={[]}      />,
     );
     expect(screen.getByText("לקוחות למעקב ושימור")).toBeInTheDocument();
     expect(screen.getByText("מיכל")).toBeInTheDocument();
@@ -205,11 +194,7 @@ describe("SetupChecklist — calm / no-attention branches", () => {
         lateCancellationsCount={0}
         forecast={forecast}
         reviewReadyCount={0}
-        recentRuns={[]}
-        whatsappLabel=""
-        whatsappReady={false}
-        whatsappConnected={false}
-      />,
+        recentRuns={[]}      />,
     );
     expect(screen.getByText("דורש את תשומת הלב שלך")).toBeInTheDocument();
     // The attention card renders "{count} {label}" across text nodes — match on content.
