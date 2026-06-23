@@ -23,7 +23,11 @@ beforeEach(() => {
   resetPrismaMock(prisma);
 });
 
-import { getAdminClients, getAdminClientById } from "@/server/admin/client-queries";
+import {
+  getAdminClients,
+  getAdminClientById,
+  getAdminBusinessClients,
+} from "@/server/admin/client-queries";
 
 function rowFor(overrides: Record<string, unknown> = {}) {
   return {
@@ -75,6 +79,59 @@ describe("getAdminClients", () => {
     ]);
     const res = await getAdminClients();
     expect(res[0].lastBookingAt).toBeNull();
+  });
+});
+
+describe("getAdminBusinessClients", () => {
+  it("always scopes the query to the given businessId (no cross-tenant leak)", async () => {
+    prisma.client.findMany.mockResolvedValue([]);
+    await getAdminBusinessClients(BUSINESS_A);
+    const arg = prisma.client.findMany.mock.calls[0][0] as {
+      where: { businessId: string };
+      take: number;
+    };
+    expect(arg.where.businessId).toBe(BUSINESS_A);
+    expect(arg.take).toBe(500);
+  });
+
+  it("adds a search OR over name/phone/email while keeping the businessId scope", async () => {
+    prisma.client.findMany.mockResolvedValue([]);
+    await getAdminBusinessClients(BUSINESS_A, "דנה");
+    const arg = prisma.client.findMany.mock.calls[0][0] as {
+      where: { businessId: string; OR: unknown[] };
+    };
+    expect(arg.where.businessId).toBe(BUSINESS_A);
+    expect(arg.where.OR).toHaveLength(4);
+  });
+
+  it("ignores a blank search term", async () => {
+    prisma.client.findMany.mockResolvedValue([]);
+    await getAdminBusinessClients(BUSINESS_A, "   ");
+    const arg = prisma.client.findMany.mock.calls[0][0] as {
+      where: Record<string, unknown>;
+    };
+    expect(arg.where.OR).toBeUndefined();
+  });
+
+  it("maps rows including totals, lastBookingAt, and numeric totalSpent", async () => {
+    prisma.client.findMany.mockResolvedValue([
+      {
+        ...makeClient({ id: "cli_1", fullName: "דנה" }),
+        email: "d@x.com",
+        totalBookings: 4,
+        totalSpent: "350.5",
+        unsubscribedAt: null,
+        bookings: [{ startTime: new Date("2026-05-01T10:00:00Z") }],
+      },
+    ]);
+    const res = await getAdminBusinessClients(BUSINESS_A);
+    expect(res[0]).toMatchObject({
+      id: "cli_1",
+      fullName: "דנה",
+      totalBookings: 4,
+      totalSpent: 350.5,
+      lastBookingAt: new Date("2026-05-01T10:00:00Z"),
+    });
   });
 });
 

@@ -38,7 +38,6 @@ export const NAV = {
   // New primary nav
   bringBack: "החזרת לקוחות",
   waitlist: "רשימת המתנה",
-  automations: "אוטומציות",
   finance: "פיננסים",
   publicPage: "עמוד הזמנות",
   settings: "הגדרות",
@@ -1245,7 +1244,7 @@ export const REPUTATION = {
   guidance: {
     title: "יש טיפולים שהושלמו לאחרונה",
     body: "אפשר לשלוח הודעת תודה או בקשת ביקורת כדי לחזק את הקשר עם הלקוחות.",
-    action: "מעבר לאוטומציות",
+    action: "מעבר למוניטין",
   },
 } as const;
 

@@ -12,6 +12,7 @@ import { SubscriptionForm } from "./_components/subscription-form";
 import { RunWinBackButton } from "./_components/run-win-back-button";
 import { WhatsAppAdminPanel } from "./_components/whatsapp-admin-panel";
 import { BusinessDangerZone } from "./_components/business-danger-zone";
+import { AdminBusinessEditPanel } from "./_components/business-edit-panel";
 import type { SubscriptionStatus, SubscriptionPlan } from "@prisma/client";
 
 const STATUS_LABELS: Record<SubscriptionStatus, string> = {
@@ -140,7 +141,7 @@ export default async function AdminBusinessDetailPage({
   return (
     <div className="space-y-6">
       {/* Back + header */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Link
           href="/admin/businesses"
           className="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
@@ -148,6 +149,22 @@ export default async function AdminBusinessDetailPage({
         >
           ← חזרה לרשימה
         </Link>
+        <Link
+          href={`/admin/businesses/${biz.id}/clients`}
+          className="rounded-lg px-3 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-80"
+          style={{ background: "#1a1a2e" }}
+        >
+          לקוחות העסק ({biz._count.clients})
+        </Link>
+        <a
+          href={`/b/${biz.slug}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
+          style={{ background: "#f3f4f6", color: "#555" }}
+        >
+          עמוד ההזמנות ↗
+        </a>
       </div>
 
       <div className="flex items-start justify-between gap-4">
@@ -175,50 +192,37 @@ export default async function AdminBusinessDetailPage({
         </div>
       </div>
 
+      {/* Editable business / public page / owner details */}
+      <AdminBusinessEditPanel
+        businessId={biz.id}
+        business={{
+          name: biz.name,
+          slug: biz.slug,
+          phone: biz.phone,
+          description: biz.description,
+          timezone: biz.timezone,
+          city: biz.city,
+          area: biz.area,
+          addressNote: biz.addressNote,
+          logoUrl: biz.logoUrl,
+          coverImageUrl: biz.coverImageUrl,
+          instagramUrl: biz.instagramUrl,
+          facebookUrl: biz.facebookUrl,
+          brandColor: biz.brandColor,
+          introMessage: biz.introMessage,
+          showServices: biz.showServices,
+          showPrices: biz.showPrices,
+          showHours: biz.showHours,
+          showReviews: biz.showReviews,
+          showGallery: biz.showGallery,
+          showCancellationPolicy: biz.showCancellationPolicy,
+          showPhone: biz.showPhone,
+          showAddress: biz.showAddress,
+        }}
+        owner={owner ? { name: owner.name, email: owner.email } : null}
+      />
+
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Business info */}
-        <div
-          className="rounded-2xl border p-5"
-          style={{
-            background: "#fff",
-            borderColor: "rgba(0,0,0,0.07)",
-            boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-          }}
-        >
-          <h2 className="mb-3 text-sm font-bold" style={{ color: "#1a1a2e" }}>
-            פרטי העסק
-          </h2>
-          <InfoRow label="שם העסק" value={biz.name} />
-          <InfoRow label="Slug" value={biz.slug} />
-          <InfoRow label="טלפון" value={biz.phone} />
-          <InfoRow label="עיר" value={biz.city} />
-          <InfoRow label="אזור" value={biz.area} />
-          <InfoRow
-            label="תאריך הצטרפות"
-            value={biz.createdAt.toLocaleDateString("he-IL", {
-              day: "numeric",
-              month: "long",
-              year: "numeric",
-            })}
-          />
-        </div>
-
-        {/* Owner info */}
-        <div
-          className="rounded-2xl border p-5"
-          style={{
-            background: "#fff",
-            borderColor: "rgba(0,0,0,0.07)",
-            boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-          }}
-        >
-          <h2 className="mb-3 text-sm font-bold" style={{ color: "#1a1a2e" }}>
-            פרטי הבעלים
-          </h2>
-          <InfoRow label="שם" value={owner?.name} />
-          <InfoRow label="אימייל" value={owner?.email} />
-        </div>
-
         {/* Usage metrics */}
         <div
           className="rounded-2xl border p-5"

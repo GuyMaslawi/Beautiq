@@ -85,6 +85,7 @@ export async function adminUpdateClientAction(
   }
 
   revalidatePath("/admin/clients");
+  revalidatePath(`/admin/businesses/${existing.businessId}/clients`);
   return { success: true };
 }
 

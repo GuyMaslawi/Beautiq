@@ -14,6 +14,11 @@ export const PASSWORD_MIN_LENGTH = 8;
 // out of scope for V1.
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** True when the string is a plausibly-valid email address. */
+export function isValidEmail(email: string): boolean {
+  return EMAIL_PATTERN.test(email.trim());
+}
+
 export type FieldErrors<TField extends string> = Partial<
   Record<TField, string>
 >;

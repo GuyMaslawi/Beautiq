@@ -29,7 +29,7 @@ const NAV_GROUPS_PREVIEW = [
     label: "הגדלת הכנסות",
     items: [
       { label: "החזרת לקוחות", active: false },
-      { label: "אוטומציות", active: false },
+      { label: "רשימת המתנה", active: false },
       { label: "כספים", active: false },
     ],
   },

@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { requireCurrentBusiness } from "@/server/auth/session";
 import {
   getBringBackClients,
@@ -9,7 +8,7 @@ import {
 } from "@/server/bring-back/queries";
 import { BringBackHub } from "@/components/bring-back/bring-back-hub";
 import { BeautyPageHero } from "@/components/premium/page-hero";
-import { RefreshCcw, Settings, Users2, Banknote } from "lucide-react";
+import { RefreshCcw, Users2, Banknote } from "lucide-react";
 
 /**
  * סקירת "לקוחות שלא חזרו" — תוכן הליבה של /bring-back.
@@ -55,21 +54,6 @@ export async function BringBackOverviewSection({ days }: { days?: string }) {
             tone: "success",
           },
         ]}
-        action={
-          <Link
-            href="/automations"
-            className="flex items-center gap-1.5 rounded-full px-4 py-2.5 text-xs font-semibold transition-transform hover:-translate-y-0.5"
-            style={{
-              background: "rgba(255,255,255,0.7)",
-              border: "1px solid rgba(184,107,140,0.18)",
-              color: "var(--foreground-soft)",
-              boxShadow: "0 4px 14px -6px rgba(124,58,97,0.16)",
-            }}
-          >
-            <Settings className="h-3.5 w-3.5" />
-            הגדרות אוטומציה
-          </Link>
-        }
       />
 
       <BringBackHub
