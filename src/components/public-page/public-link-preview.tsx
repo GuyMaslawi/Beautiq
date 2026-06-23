@@ -25,7 +25,7 @@ export function PublicLinkPreview({ slug }: { slug: string }) {
       </p>
 
       <div
-        className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-white px-3 py-2"
+        className="flex items-center gap-2 rounded-xl border border-[var(--border)] bg-surface px-3 py-2"
         dir="ltr"
       >
         <span suppressHydrationWarning className="flex-1 truncate text-sm text-[var(--muted)] font-mono">
@@ -57,7 +57,7 @@ export function PublicLinkPreview({ slug }: { slug: string }) {
           href={`/b/${slug}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="inline-flex h-9 items-center gap-2 rounded-xl border border-[var(--border)] bg-white px-4 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--background-alt)] transition-colors"
+          className="inline-flex h-9 items-center gap-2 rounded-xl border border-[var(--border)] bg-surface px-4 text-sm font-medium text-[var(--foreground)] hover:bg-[var(--background-alt)] transition-colors"
         >
           <ExternalLink className="h-4 w-4" />
           {PUBLIC_PAGE.preview.openButton}

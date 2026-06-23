@@ -1,3 +1,4 @@
+import { PremiumPageShell } from "@/components/premium";
 import { WinBackSection } from "@/components/bring-back/sections/win-back-section";
 
 /**
@@ -11,8 +12,8 @@ export default async function WinBackCampaignsPage({
 }) {
   const params = await searchParams;
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <PremiumPageShell tint="plum" width="default">
       <WinBackSection campaign={params.campaign} />
-    </div>
+    </PremiumPageShell>
   );
 }

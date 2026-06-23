@@ -1,3 +1,4 @@
+import { PremiumPageShell } from "@/components/premium";
 import { ReputationSection } from "@/components/bring-back/sections/reputation-section";
 
 /**
@@ -6,8 +7,8 @@ import { ReputationSection } from "@/components/bring-back/sections/reputation-s
  */
 export default function ReputationPage() {
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <PremiumPageShell tint="plum" width="default">
       <ReputationSection />
-    </div>
+    </PremiumPageShell>
   );
 }

@@ -1,15 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { SETTINGS } from "@/lib/constants/he";
 
 export function PublicLinkCard({ slug }: { slug: string }) {
   const [copied, setCopied] = useState(false);
+  // Resolve the absolute origin only after mount so server and client render
+  // the same markup first (avoids a hydration mismatch), then upgrade to the
+  // full shareable URL.
+  const [origin, setOrigin] = useState("");
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setOrigin(window.location.origin);
+  }, []);
 
-  const publicUrl =
-    typeof window !== "undefined"
-      ? `${window.location.origin}/b/${slug}`
-      : `/b/${slug}`;
+  const publicUrl = `${origin}/b/${slug}`;
 
   async function handleCopy() {
     try {
@@ -49,7 +54,7 @@ export function PublicLinkCard({ slug }: { slug: string }) {
       <button
         type="button"
         onClick={handleCopy}
-        className="rounded-xl border border-[var(--border)] bg-white px-4 py-2 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--background)] active:scale-95"
+        className="bg-surface rounded-xl border border-[var(--border)] px-4 py-2 text-sm font-medium text-[var(--foreground)] transition-colors hover:bg-[var(--background)] active:scale-95"
       >
         {copied ? SETTINGS.publicLink.copied : SETTINGS.publicLink.copyButton}
       </button>

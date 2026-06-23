@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { TrendingUp, Sparkles, Banknote } from "lucide-react";
-import { PageHeader } from "@/components/ui/page-header";
+import { PremiumPageShell, BeautyPageHero } from "@/components/premium";
 import { requireCurrentBusiness } from "@/server/auth/session";
 import { getPricingServices, buildPricingSummary } from "@/server/pricing/queries";
 import { Card } from "@/components/ui/card";
@@ -50,12 +50,14 @@ export default async function PricingPage() {
   }));
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-6" dir="rtl">
+    <PremiumPageShell tint="champagne" width="default">
       {/* Page header */}
-      <PageHeader
+      <BeautyPageHero
         icon={TrendingUp}
+        eyebrow="תמחור ורווחיות"
         title={PRICING.pageTitle}
         subtitle="בדיקה מהירה של מחיר, זמן טיפול ורווחיות השירותים."
+        tint="champagne"
       />
 
       {/* Summary cards */}
@@ -169,6 +171,6 @@ export default async function PricingPage() {
           ))}
         </div>
       )}
-    </div>
+    </PremiumPageShell>
   );
 }

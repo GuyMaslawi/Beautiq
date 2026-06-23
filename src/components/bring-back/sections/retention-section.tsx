@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { HeartHandshake, Users, Clock, CalendarCheck, MessageCircle } from "lucide-react";
-import { PageHeader } from "@/components/ui/page-header";
+import { EditorialSectionHeader } from "@/components/premium";
 import { requireCurrentBusiness } from "@/server/auth/session";
 import { getRetentionClients, getRetentionSummary } from "@/server/retention/queries";
 import { Card } from "@/components/ui/card";
@@ -28,11 +28,13 @@ export async function RetentionSection() {
 
   return (
     <div className="w-full space-y-6" dir="rtl">
-      {/* Page header */}
-      <PageHeader
-        icon={HeartHandshake}
+      {/* Section header */}
+      <EditorialSectionHeader
+        icon={<HeartHandshake className="h-4 w-4" />}
+        eyebrow="שימור לקוחות"
         title={RETENTION.pageTitle}
-        subtitle="לקוחות שלא חזרו לאחרונה והודעות מוכנות לחידוש קשר."
+        description="לקוחות שלא חזרו לאחרונה והודעות מוכנות לחידוש קשר."
+        tint="plum"
       />
 
       {/* Summary cards */}

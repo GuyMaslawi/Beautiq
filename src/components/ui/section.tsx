@@ -16,17 +16,11 @@ interface SectionProps {
 
 export function Section({ title, icon, action, children, className }: SectionProps) {
   return (
-    <div
-      className={cn("bg-surface rounded-2xl border p-6", className)}
-      style={{
-        borderColor: "var(--border)",
-        boxShadow: "0 2px 12px rgba(124,58,97,0.07)",
-      }}
-    >
+    <div className={cn("aura-card relative overflow-hidden rounded-[1.5rem] p-6 md:p-7", className)}>
       <div className="mb-5 flex items-center gap-2.5">
         {icon && (
           <div
-            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
             style={{
               background: "var(--brand-gradient-soft)",
               border: "1px solid rgba(184,107,140,0.16)",

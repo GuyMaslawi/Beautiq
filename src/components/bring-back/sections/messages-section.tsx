@@ -1,5 +1,5 @@
 import { MessageCircle } from "lucide-react";
-import { PageHeader } from "@/components/ui/page-header";
+import { EditorialSectionHeader } from "@/components/premium";
 import { requireCurrentBusiness } from "@/server/auth/session";
 import { getSystemTemplates, getComposerData } from "@/server/messages/queries";
 import { SmartComposer } from "@/components/messages/smart-composer";
@@ -18,11 +18,13 @@ export async function MessagesSection() {
 
   return (
     <div className="w-full space-y-6">
-      {/* Header */}
-      <PageHeader
-        icon={MessageCircle}
+      {/* Section header */}
+      <EditorialSectionHeader
+        icon={<MessageCircle className="h-4 w-4" />}
+        eyebrow="מרכז ההודעות"
         title={MESSAGES.pageTitle}
-        subtitle={MESSAGES.pageSubtitle}
+        description={MESSAGES.pageSubtitle}
+        tint="plum"
       />
 
       {/* Explanation banner */}

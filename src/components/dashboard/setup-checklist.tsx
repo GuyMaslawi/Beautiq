@@ -156,28 +156,28 @@ function CommandCenterHero({
       <AuraBlob color="rgba(201,120,152,0.34)" size={360} style={{ top: -150, insetInlineEnd: -60 }} />
       <AuraBlob color="rgba(157,106,168,0.22)" size={300} style={{ bottom: -160, insetInlineStart: -80 }} />
 
-      <div className="relative flex flex-col gap-7 p-6 md:p-8 lg:flex-row lg:items-end lg:justify-between">
+      <div className="relative flex flex-col gap-5 p-5 md:flex-row md:items-end md:justify-between md:p-6">
         <div className="min-w-0">
           <span className="eyebrow" style={{ color: "rgba(240,168,200,0.9)" }}>
             לוח הבקרה שלך
           </span>
-          <p className="mt-2 text-sm font-medium" style={{ color: "rgba(255,255,255,0.55)" }}>
+          <p className="mt-1.5 text-sm font-medium" style={{ color: "rgba(255,255,255,0.55)" }}>
             שלום,
           </p>
           <h1
-            className="display-num text-[2.1rem] font-bold leading-tight text-white md:text-[2.75rem]"
+            className="display-num text-[1.9rem] font-bold leading-tight text-white md:text-[2.4rem]"
             style={{ textShadow: "0 2px 16px rgba(0,0,0,0.3)" }}
           >
             {businessName}
           </h1>
-          <p className="mt-2 text-sm font-medium" style={{ color: "rgba(255,255,255,0.6)" }}>
+          <p className="mt-1.5 text-sm font-medium" style={{ color: "rgba(255,255,255,0.6)" }}>
             {todayLabel}
           </p>
 
           {/* Primary CTA woven into the hero */}
           <Link
             href="/bookings/new"
-            className="mt-5 inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5 active:scale-[0.98]"
+            className="mt-4 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5 active:scale-[0.98]"
             style={{
               background: "linear-gradient(135deg, #e7a9c4 0%, #c97898 45%, #b86b8c 100%)",
               boxShadow: "0 12px 28px -8px rgba(201,120,152,0.6)",
@@ -276,26 +276,47 @@ function TodayAppointmentsPanel({
       <div className="editorial-rule mx-5" />
 
       {todayBookings.length === 0 ? (
-        <div className="flex flex-col items-center justify-center px-5 py-9 text-center">
+        <div className="flex items-center gap-4 px-5 py-5">
           <div
-            className="mb-3 flex h-12 w-12 items-center justify-center rounded-2xl"
+            className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
             style={{ background: "rgba(184,107,140,0.10)" }}
           >
             <CalendarDays className="h-6 w-6" style={{ color: "#b86b8c" }} />
           </div>
-          <p className="text-sm font-semibold" style={{ color: "var(--foreground-soft)" }}>
-            אין פגישות להיום
-          </p>
-          <p className="mt-1 text-xs" style={{ color: "var(--muted)" }}>
-            קבעי פגישה חדשה או בדקי חלונות פנויים.
-          </p>
-          <Link
-            href="/bookings/new"
-            className="mt-3 text-xs font-semibold transition-opacity hover:opacity-80"
-            style={{ color: "#b86b8c" }}
-          >
-            + קביעת פגישה חדשה
-          </Link>
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold" style={{ color: "var(--foreground-soft)" }}>
+              אין פגישות להיום
+            </p>
+            <p className="mt-0.5 text-xs leading-relaxed" style={{ color: "var(--muted)" }}>
+              אפשר לנצל את הזמן למילוי שעות ריקות או החזרת לקוחות.
+            </p>
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              <Link
+                href="/bookings/new"
+                className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-white transition-transform hover:-translate-y-0.5"
+                style={{ background: "linear-gradient(135deg,#c97898,#b86b8c)" }}
+              >
+                <Plus className="h-3 w-3" />
+                קביעת פגישה חדשה
+              </Link>
+              <Link
+                href="/bookings"
+                className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold transition-transform hover:-translate-y-0.5"
+                style={{ background: "rgba(184,107,140,0.10)", color: "#b86b8c" }}
+              >
+                <CalendarRange className="h-3 w-3" />
+                פתיחת היומן
+              </Link>
+              <Link
+                href="/bring-back?tab=slots"
+                className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold transition-transform hover:-translate-y-0.5"
+                style={{ background: "rgba(61,139,110,0.10)", color: "#2f7d61" }}
+              >
+                <RefreshCcw className="h-3 w-3" />
+                החזרת לקוחות
+              </Link>
+            </div>
+          </div>
         </div>
       ) : (
         <div className="px-4 py-4">
@@ -439,7 +460,8 @@ function AttentionCard({
       </div>
       <div className="min-w-0 flex-1">
         <p className="text-sm font-bold leading-tight" style={{ color: p.fg }}>
-          {count} {label}
+          {count !== "" && count !== undefined ? `${count} ` : ""}
+          {label}
         </p>
         <p className="mt-0.5 text-xs" style={{ color: p.fg, opacity: 0.75 }}>
           {subLabel}
@@ -741,94 +763,104 @@ export function SetupChecklist({
     pendingApprovalCount > 0 || lateCancellationsCount > 0 || extraUrgent.length > 0;
 
   return (
-    <PremiumPageShell tint="blush" width="wide" gap="loose">
-      {/* 1. Command center hero */}
+    <PremiumPageShell
+      tint="blush"
+      width="xwide"
+      gap="default"
+      className="-mt-2 space-y-6 md:-mt-3 md:space-y-7"
+    >
+      {/* Dashboard header — hero + quick actions + "היום" read as one
+          continuous, compact header area (single FadeIn keeps them visually
+          connected instead of floating apart). */}
       <FadeIn>
-        <CommandCenterHero businessName={businessName} metrics={metrics} />
-      </FadeIn>
+        <div className="space-y-5">
+          <div className="space-y-3.5">
+            <CommandCenterHero businessName={businessName} metrics={metrics} />
+            <DashboardQuickActions />
+          </div>
 
-      {/* 2. Quick actions */}
-      <FadeIn delay={0.04}>
-        <DashboardQuickActions />
-      </FadeIn>
-
-      {/* ── היום ── */}
-      <FadeIn delay={0.07}>
-        <section className="space-y-5">
-          <EditorialSectionHeader
-            eyebrow="המוקד היומי"
-            title="היום"
-            description="הפגישות והפעולות שדורשות אותך עכשיו"
-            icon={<CalendarDays className="h-3.5 w-3.5" />}
-            tint="blush"
-          />
-          {hasTodayAttention ? (
+          {/* ── היום ── primary working area: appointments + side rail */}
+          <section className="space-y-4">
+            <EditorialSectionHeader
+              eyebrow="המוקד היומי"
+              title="היום"
+              description="הפגישות והפעולות שדורשות אותך עכשיו"
+              icon={<CalendarDays className="h-3.5 w-3.5" />}
+              tint="blush"
+            />
             <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-5">
-              <div className="space-y-5 lg:col-span-3">
-                <TodayAppointmentsPanel todayBookings={todayBookings} />
-                <WeekCalendarMini allBookings={[...todayBookings, ...upcomingBookings]} />
-              </div>
-              <div className="space-y-3 lg:col-span-2">
-                <p className="eyebrow" style={{ color: "var(--muted)" }}>
-                  דורש את תשומת הלב שלך
-                </p>
-                <div className="space-y-2.5">
-                  {pendingApprovalCount > 0 && (
-                    <AttentionCard
-                      count={pendingApprovalCount}
-                      label="פגישות"
-                      subLabel="עדיין ללא אישור"
-                      action="לאישור עכשיו"
-                      href="/bookings?status=pending"
-                      icon={CalendarDays}
-                      color="warning"
-                      ariaLabel={`${pendingApprovalCount} פגישות ממתינות לאישור — עבור לפגישות ממתינות`}
-                    />
-                  )}
-                  {lateCancellationsCount > 0 && (
-                    <AttentionCard
-                      count={lateCancellationsCount}
-                      label={BOOKINGS.lateCancellation.dashboardCard.title}
-                      subLabel={
-                        lateCancellationsCount === 1
-                          ? BOOKINGS.lateCancellation.dashboardCard.bodySingular
-                          : BOOKINGS.lateCancellation.dashboardCard.bodyPlural(lateCancellationsCount)
-                      }
-                      action={BOOKINGS.lateCancellation.dashboardCard.cta}
-                      href="/bookings?status=cancelled"
-                      icon={XCircle}
-                      color="rose"
-                      ariaLabel={`${lateCancellationsCount} ביטולים מאוחרים — עבור לתורים שבוטלו`}
-                    />
-                  )}
-                  {extraUrgent.map((item) => (
-                    <AttentionCard
-                      key={item.id}
-                      count="!"
-                      label={item.title}
-                      subLabel={item.description}
-                      action={item.actionLabel}
-                      href={item.href}
-                      icon={Clock}
-                      color="warning"
-                      ariaLabel={`${item.title}: ${item.description} — ${item.actionLabel}`}
-                    />
-                  ))}
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+            <div className="lg:col-span-3">
               <TodayAppointmentsPanel todayBookings={todayBookings} />
+            </div>
+            <div className="space-y-3 lg:col-span-2">
+              <p className="eyebrow" style={{ color: "var(--muted)" }}>
+                דורש את תשומת הלב שלך
+              </p>
+              <div className="space-y-2.5">
+                {pendingApprovalCount > 0 && (
+                  <AttentionCard
+                    count={pendingApprovalCount}
+                    label="פגישות"
+                    subLabel="עדיין ללא אישור"
+                    action="לאישור עכשיו"
+                    href="/bookings?status=pending"
+                    icon={CalendarDays}
+                    color="warning"
+                    ariaLabel={`${pendingApprovalCount} פגישות ממתינות לאישור — עבור לפגישות ממתינות`}
+                  />
+                )}
+                {lateCancellationsCount > 0 && (
+                  <AttentionCard
+                    count={lateCancellationsCount}
+                    label={BOOKINGS.lateCancellation.dashboardCard.title}
+                    subLabel={
+                      lateCancellationsCount === 1
+                        ? BOOKINGS.lateCancellation.dashboardCard.bodySingular
+                        : BOOKINGS.lateCancellation.dashboardCard.bodyPlural(lateCancellationsCount)
+                    }
+                    action={BOOKINGS.lateCancellation.dashboardCard.cta}
+                    href="/bookings?status=cancelled"
+                    icon={XCircle}
+                    color="rose"
+                    ariaLabel={`${lateCancellationsCount} ביטולים מאוחרים — עבור לתורים שבוטלו`}
+                  />
+                )}
+                {extraUrgent.map((item) => (
+                  <AttentionCard
+                    key={item.id}
+                    count="!"
+                    label={item.title}
+                    subLabel={item.description}
+                    action={item.actionLabel}
+                    href={item.href}
+                    icon={Clock}
+                    color="warning"
+                    ariaLabel={`${item.title}: ${item.description} — ${item.actionLabel}`}
+                  />
+                ))}
+                {!hasTodayAttention && (
+                  <AttentionCard
+                    count=""
+                    label="הכול תחת שליטה"
+                    subLabel="אין משימות דחופות — אפשר להתמקד בצמיחה"
+                    action="להזדמנויות"
+                    href="/bring-back"
+                    icon={CheckCircle2}
+                    color="green"
+                    ariaLabel="אין משימות דחופות — מעבר להזדמנויות"
+                  />
+                )}
+              </div>
               <WeekCalendarMini allBookings={[...todayBookings, ...upcomingBookings]} />
             </div>
-          )}
-        </section>
+          </div>
+          </section>
+        </div>
       </FadeIn>
 
       {/* ── הכנסות ── */}
       <FadeIn delay={0.1}>
-        <section className="space-y-5">
+        <section className="space-y-4">
           <EditorialSectionHeader
             eyebrow="הכסף שלך"
             title="הכנסות"
@@ -852,7 +884,7 @@ export function SetupChecklist({
 
       {/* ── הזדמנויות ── */}
       <FadeIn delay={0.13}>
-        <section className="space-y-5">
+        <section className="space-y-4">
           <EditorialSectionHeader
             eyebrow="צמיחה"
             title="הזדמנויות"
@@ -924,7 +956,7 @@ export function SetupChecklist({
 
       {/* ── אוטומציות ── */}
       <FadeIn delay={0.16}>
-        <section className="space-y-5">
+        <section className="space-y-4">
           <EditorialSectionHeader
             eyebrow="על טייס אוטומטי"
             title="אוטומציות"

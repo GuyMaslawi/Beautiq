@@ -1,0 +1,281 @@
+/* ════════════════════════════════════════════════════════════════
+ * ALLURA DESIGN LAB — isolated luxury visual system
+ * Everything is scoped under `.allura-lab` so NOTHING leaks into the
+ * real app. Dark aubergine canvas · champagne / rose-gold · pearl ·
+ * cinematic gradients · layered liquid glass · premium glow.
+ * This file touches no real app tokens.
+ * ════════════════════════════════════════════════════════════════ */
+
+.allura-lab {
+  /* ── Canvas — deep plum-black ───────────────────────────── */
+  --lab-ink:        #0c060b;   /* deepest */
+  --lab-bg:         #140a13;   /* base canvas */
+  --lab-bg-2:       #1d0e1c;   /* raised */
+  --lab-plum:       #2a1228;   /* plum surface */
+  --lab-aubergine:  #3a1a36;   /* aubergine */
+  --lab-aubergine-2:#4a2142;   /* lighter aubergine edge */
+  --lab-wine:       #5a1e3e;
+
+  /* ── Metals ─────────────────────────────────────────────── */
+  --lab-champagne:  #ecd9af;   /* champagne pearl */
+  --lab-gold:       #d9bd84;   /* champagne gold */
+  --lab-gold-deep:  #c2a056;   /* deeper gold */
+  --lab-rose:       #e8b8a6;   /* rose gold */
+  --lab-rose-deep:  #d59a86;
+  --lab-blush:      #e7a9c4;   /* signature blush */
+  --lab-orchid:     #b98fce;   /* iridescent violet */
+
+  /* ── Pearl / text ───────────────────────────────────────── */
+  --lab-pearl:      #f6eef2;   /* primary text */
+  --lab-pearl-soft: #d8c7d2;   /* secondary */
+  --lab-pearl-mute: #9c8a98;   /* tertiary / muted */
+  --lab-pearl-faint:#6c5c69;
+
+  /* ── Semantic glows ─────────────────────────────────────── */
+  --lab-live:       #6fe0b0;   /* live / online emerald */
+  --lab-alert:      #f2a35e;   /* attention amber */
+  --lab-hot:        #f06a8a;   /* hot / urgent rose */
+
+  /* ── Signature gradients ────────────────────────────────── */
+  --lab-grad-gold:   linear-gradient(135deg, #f4e6c4 0%, #d9bd84 45%, #c2a056 100%);
+  --lab-grad-rose:   linear-gradient(135deg, #f3d3c4 0%, #e8b8a6 45%, #d59a86 100%);
+  --lab-grad-blush:  linear-gradient(135deg, #f3c6dd 0%, #e7a9c4 50%, #c97898 100%);
+  --lab-grad-orchid: linear-gradient(135deg, #d3b4e6 0%, #b98fce 50%, #8a5fa8 100%);
+  --lab-grad-irid:   linear-gradient(120deg, #e7a9c4 0%, #d9bd84 38%, #b98fce 70%, #e8b8a6 100%);
+  --lab-grad-plum:   linear-gradient(160deg, #3a1a36 0%, #2a1228 55%, #140a13 100%);
+
+  --lab-glass:        rgba(58, 26, 54, 0.42);
+  --lab-glass-strong: rgba(74, 33, 66, 0.62);
+  --lab-glass-edge:   rgba(236, 217, 175, 0.16);
+
+  position: relative;
+  min-height: 100dvh;
+  overflow-x: clip; /* contain atmospheric blobs — no stray horizontal scroll */
+  color: var(--lab-pearl);
+  font-family: var(--font-sans), system-ui, sans-serif;
+  background-color: var(--lab-bg);
+  /* cinematic atmosphere — layered light wells over plum-black */
+  background-image:
+    radial-gradient(70rem 50rem at 82% -12%, rgba(232,184,166,0.20), transparent 58%),
+    radial-gradient(60rem 50rem at 8% 4%,    rgba(185,143,206,0.16), transparent 56%),
+    radial-gradient(80rem 60rem at 50% 116%, rgba(217,189,132,0.12), transparent 60%),
+    radial-gradient(40rem 40rem at 100% 60%, rgba(240,106,138,0.10), transparent 60%);
+  background-attachment: fixed;
+}
+
+/* film grain + vignette for cinematic depth */
+.allura-lab::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(120% 90% at 50% 0%, transparent 55%, rgba(8,4,8,0.55) 100%);
+}
+.allura-lab::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.4;
+  mix-blend-mode: soft-light;
+  background-image: radial-gradient(rgba(255,240,250,0.14) 0.5px, transparent 0.6px);
+  background-size: 3px 3px;
+}
+.allura-lab > * { position: relative; z-index: 1; }
+
+/* ── Typography helpers ───────────────────────────────────── */
+.lab-serif      { font-family: var(--font-display), Georgia, serif; }
+.lab-latin      { font-family: var(--font-latin), Georgia, serif; }
+.lab-eyebrow {
+  font-family: var(--font-latin), serif;
+  text-transform: uppercase;
+  letter-spacing: 0.42em;
+  font-size: 0.66rem;
+  font-weight: 600;
+  color: var(--lab-gold);
+}
+.lab-eyebrow-he {
+  letter-spacing: 0.24em;
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--lab-rose);
+}
+.lab-num { font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+
+/* metallic text */
+.lab-gold-text {
+  background: var(--lab-grad-gold);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.lab-rose-text {
+  background: var(--lab-grad-rose);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.lab-irid-text {
+  background: var(--lab-grad-irid);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: lab-irid 8s linear infinite;
+}
+@keyframes lab-irid { to { background-position: 200% center; } }
+
+/* ── Liquid-glass surfaces ────────────────────────────────── */
+.lab-glass {
+  position: relative;
+  background:
+    linear-gradient(160deg, rgba(74,33,66,0.55) 0%, rgba(42,18,40,0.42) 100%);
+  border: 1px solid rgba(236,217,175,0.14);
+  backdrop-filter: blur(22px) saturate(1.3);
+  -webkit-backdrop-filter: blur(22px) saturate(1.3);
+  box-shadow:
+    0 30px 70px -28px rgba(0,0,0,0.7),
+    inset 0 1px 0 0 rgba(255,240,250,0.10);
+}
+.lab-glass-strong {
+  background:
+    linear-gradient(160deg, rgba(90,40,80,0.62) 0%, rgba(48,20,44,0.55) 100%);
+  border: 1px solid rgba(236,217,175,0.2);
+  backdrop-filter: blur(26px) saturate(1.4);
+  -webkit-backdrop-filter: blur(26px) saturate(1.4);
+  box-shadow:
+    0 40px 90px -30px rgba(0,0,0,0.75),
+    inset 0 1px 0 0 rgba(255,240,250,0.14);
+}
+/* iridescent hairline border (gold→orchid sheen) */
+.lab-edge::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(140deg, rgba(236,217,175,0.55), rgba(231,169,196,0.25) 38%, rgba(185,143,206,0.18) 64%, transparent 88%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+.lab-edge-gold::after {
+  background: linear-gradient(140deg, rgba(236,217,175,0.85), rgba(217,189,132,0.35) 45%, transparent 80%);
+}
+
+/* ── Glow utilities ───────────────────────────────────────── */
+.lab-glow-gold   { box-shadow: 0 0 0 1px rgba(217,189,132,0.25), 0 18px 50px -12px rgba(217,189,132,0.4); }
+.lab-glow-rose   { box-shadow: 0 0 0 1px rgba(231,169,196,0.25), 0 18px 50px -12px rgba(231,169,196,0.42); }
+.lab-glow-live   { box-shadow: 0 0 0 1px rgba(111,224,176,0.35), 0 0 28px -2px rgba(111,224,176,0.55); }
+
+/* champagne medallion / chip */
+.lab-medallion {
+  background: var(--lab-grad-gold);
+  color: #2a1228;
+  box-shadow: 0 12px 30px -10px rgba(217,189,132,0.6), inset 0 1px 0 rgba(255,255,255,0.5);
+}
+.lab-medallion-rose { background: var(--lab-grad-rose); color: #3a1226; }
+.lab-medallion-orchid { background: var(--lab-grad-orchid); color: #1d0e1c; }
+
+/* pill / tag */
+.lab-pill {
+  border: 1px solid rgba(236,217,175,0.22);
+  background: rgba(236,217,175,0.07);
+  color: var(--lab-pearl-soft);
+}
+
+/* hover lift for tiles */
+.lab-lift { transition: transform .4s cubic-bezier(.22,1,.36,1), box-shadow .4s cubic-bezier(.22,1,.36,1); will-change: transform; }
+.lab-lift:hover { transform: translateY(-4px); }
+
+/* ── Atmospheric drifting aura blobs ──────────────────────── */
+.lab-blob {
+  position: absolute;
+  border-radius: 9999px;
+  pointer-events: none;
+  filter: blur(60px);
+  opacity: 0.6;
+  animation: lab-drift 22s ease-in-out infinite;
+}
+@keyframes lab-drift {
+  0%, 100% { transform: translate(0,0) scale(1); }
+  33% { transform: translate(4%, -5%) scale(1.08); }
+  66% { transform: translate(-4%, 4%) scale(0.94); }
+}
+
+/* the AI concierge orb */
+.lab-orb {
+  position: relative;
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at 32% 28%, rgba(255,250,245,0.95), transparent 40%),
+    conic-gradient(from 200deg, #e7a9c4, #d9bd84, #b98fce, #e8b8a6, #e7a9c4);
+  box-shadow:
+    0 0 40px -4px rgba(231,169,196,0.6),
+    0 0 80px -10px rgba(185,143,206,0.5),
+    inset 0 0 24px rgba(255,255,255,0.25);
+  animation: lab-orb-spin 14s linear infinite;
+}
+@keyframes lab-orb-spin { to { transform: rotate(360deg); } }
+.lab-orb-pulse::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  border-radius: 9999px;
+  border: 1px solid rgba(231,169,196,0.4);
+  animation: lab-pulse 2.6s ease-out infinite;
+}
+@keyframes lab-pulse {
+  0% { transform: scale(0.9); opacity: 0.8; }
+  100% { transform: scale(1.5); opacity: 0; }
+}
+
+/* live status dot */
+.lab-live-dot { position: relative; }
+.lab-live-dot::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit;
+  box-shadow: 0 0 0 0 rgba(111,224,176,0.6);
+  animation: lab-ping 2s ease-out infinite;
+}
+@keyframes lab-ping {
+  0% { box-shadow: 0 0 0 0 rgba(111,224,176,0.55); }
+  100% { box-shadow: 0 0 0 12px rgba(111,224,176,0); }
+}
+
+/* timeline "now" line */
+.lab-now-line {
+  background: linear-gradient(90deg, transparent, var(--lab-rose) 12%, var(--lab-champagne) 88%, transparent);
+  box-shadow: 0 0 16px rgba(232,184,166,0.6);
+}
+
+/* shimmer sweep */
+.lab-shimmer {
+  background-size: 200% 100%;
+  animation: lab-shimmer 3s linear infinite;
+}
+@keyframes lab-shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+/* sparkline / progress arcs use currentColor */
+.lab-scrollbar-hide { scrollbar-width: none; }
+.lab-scrollbar-hide::-webkit-scrollbar { display: none; }
+
+/* device frame */
+.lab-phone {
+  border-radius: 2.75rem;
+  background: linear-gradient(160deg, #2a1228, #140a13);
+  border: 1px solid rgba(236,217,175,0.18);
+  box-shadow: 0 60px 120px -30px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,240,250,0.08);
+  padding: 0.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .allura-lab *, .allura-lab *::before, .allura-lab *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}

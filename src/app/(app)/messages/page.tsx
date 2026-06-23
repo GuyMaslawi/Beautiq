@@ -1,3 +1,4 @@
+import { PremiumPageShell } from "@/components/premium";
 import { MessagesSection } from "@/components/bring-back/sections/messages-section";
 
 /**
@@ -6,8 +7,8 @@ import { MessagesSection } from "@/components/bring-back/sections/messages-secti
  */
 export default function MessagesPage() {
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <PremiumPageShell tint="plum" width="default">
       <MessagesSection />
-    </div>
+    </PremiumPageShell>
   );
 }

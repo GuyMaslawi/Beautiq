@@ -1,3 +1,4 @@
+import { PremiumPageShell } from "@/components/premium";
 import { RetentionSection } from "@/components/bring-back/sections/retention-section";
 
 /**
@@ -6,8 +7,8 @@ import { RetentionSection } from "@/components/bring-back/sections/retention-sec
  */
 export default function RetentionPage() {
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <PremiumPageShell tint="plum" width="default">
       <RetentionSection />
-    </div>
+    </PremiumPageShell>
   );
 }

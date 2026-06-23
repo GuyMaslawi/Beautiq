@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { BadgeCheck, CalendarDays, CheckCircle2, MessageCircle } from "lucide-react";
-import { PageHeader } from "@/components/ui/page-header";
+import { EditorialSectionHeader } from "@/components/premium";
 import { requireCurrentBusiness } from "@/server/auth/session";
 import {
   getReputationBookings,
@@ -50,11 +50,13 @@ export async function ReputationSection() {
 
   return (
     <div className="w-full space-y-6" dir="rtl">
-      {/* Page header */}
-      <PageHeader
-        icon={BadgeCheck}
+      {/* Section header */}
+      <EditorialSectionHeader
+        icon={<BadgeCheck className="h-4 w-4" />}
+        eyebrow="מוניטין וביקורות"
         title={REPUTATION.pageTitle}
-        subtitle="הכינו הודעות תודה ובקשות ביקורת אחרי טיפולים שהושלמו."
+        description="הכינו הודעות תודה ובקשות ביקורת אחרי טיפולים שהושלמו."
+        tint="plum"
       />
 
       {/* Summary cards */}

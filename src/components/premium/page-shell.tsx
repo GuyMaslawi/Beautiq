@@ -12,7 +12,7 @@ import { tintAura, type Tint } from "./tokens";
 interface PremiumPageShellProps {
   tint?: Tint;
   /** content max width */
-  width?: "narrow" | "default" | "wide" | "full";
+  width?: "narrow" | "default" | "wide" | "xwide" | "full";
   /** vertical gap between top-level sections */
   gap?: "default" | "loose";
   className?: string;
@@ -23,6 +23,7 @@ const widthMap = {
   narrow: "max-w-3xl",
   default: "max-w-5xl",
   wide: "max-w-6xl",
+  xwide: "max-w-7xl",
   full: "max-w-none",
 } as const;
 

@@ -1,5 +1,5 @@
 import { Globe, ImageIcon, Eye, Star, Lock, Link2 } from "lucide-react";
-import { PageHeader } from "@/components/ui/page-header";
+import { PremiumPageShell, BeautyPageHero } from "@/components/premium";
 import { Section } from "@/components/ui/section";
 import { requireCurrentBusiness } from "@/server/auth/session";
 import {
@@ -37,11 +37,13 @@ export default async function PublicPageSettingsPage() {
   if (!settings) return null;
 
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-6" dir="rtl">
-      <PageHeader
+    <PremiumPageShell tint="rose" width="default">
+      <BeautyPageHero
         icon={Globe}
+        eyebrow="הנוכחות הפומבית שלך"
         title={PUBLIC_PAGE.pageTitle}
         subtitle={PUBLIC_PAGE.pageSubtitle}
+        tint="rose"
       />
 
       {/* 1. Preview / link */}
@@ -141,17 +143,11 @@ export default async function PublicPageSettingsPage() {
       </Section>
 
       {/* 7. Treatment history — locked / coming soon */}
-      <div
-        className="rounded-2xl border p-5 opacity-70"
-        style={{
-          borderColor: "var(--border)",
-          background: "rgba(248,244,246,0.6)",
-        }}
-      >
+      <div className="aura-card relative overflow-hidden rounded-[1.5rem] p-5 opacity-80">
         <div className="flex items-center gap-3">
           <div
-            className="flex h-8 w-8 items-center justify-center rounded-lg shrink-0"
-            style={{ background: "rgba(184,107,140,0.08)" }}
+            className="flex h-9 w-9 items-center justify-center rounded-xl shrink-0"
+            style={{ background: "rgba(184,107,140,0.08)", border: "1px solid rgba(184,107,140,0.16)" }}
           >
             <Lock className="h-4 w-4" style={{ color: "#b86b8c" }} />
           </div>
@@ -165,6 +161,6 @@ export default async function PublicPageSettingsPage() {
           </div>
         </div>
       </div>
-    </div>
+    </PremiumPageShell>
   );
 }

@@ -1,5 +1,5 @@
 import { Megaphone } from "lucide-react";
-import { PageHeader } from "@/components/ui/page-header";
+import { EditorialSectionHeader } from "@/components/premium";
 import { requireCurrentBusiness } from "@/server/auth/session";
 import {
   getWinBackAllCampaigns,
@@ -27,10 +27,12 @@ export async function WinBackSection({ campaign }: { campaign?: string }) {
 
   return (
     <div className="w-full space-y-6" dir="rtl">
-      <PageHeader
-        icon={Megaphone}
+      <EditorialSectionHeader
+        icon={<Megaphone className="h-4 w-4" />}
+        eyebrow="קמפיין החזרה"
         title={WIN_BACK.pageTitle}
-        subtitle={WIN_BACK.pageSubtitle}
+        description={WIN_BACK.pageSubtitle}
+        tint="plum"
         action={
           <span
             className="rounded-full px-2.5 py-0.5 text-xs font-bold"

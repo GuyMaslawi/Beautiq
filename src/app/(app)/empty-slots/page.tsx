@@ -1,3 +1,4 @@
+import { PremiumPageShell } from "@/components/premium";
 import { EmptySlotsSection } from "@/components/bring-back/sections/empty-slots-section";
 
 /**
@@ -6,8 +7,8 @@ import { EmptySlotsSection } from "@/components/bring-back/sections/empty-slots-
  */
 export default function EmptySlotsPage() {
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <PremiumPageShell tint="plum" width="default">
       <EmptySlotsSection />
-    </div>
+    </PremiumPageShell>
   );
 }

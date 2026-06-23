@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { CalendarRange, MessageCircle, Clock, Users } from "lucide-react";
-import { PageHeader } from "@/components/ui/page-header";
+import { EditorialSectionHeader } from "@/components/premium";
 import { requireCurrentBusiness } from "@/server/auth/session";
 import { getEmptySlotsData } from "@/server/empty-slots/queries";
 import { Card } from "@/components/ui/card";
@@ -59,10 +59,12 @@ export async function EmptySlotsSection() {
 
   return (
     <div className="w-full space-y-6" dir="rtl">
-      <PageHeader
-        icon={CalendarRange}
+      <EditorialSectionHeader
+        icon={<CalendarRange className="h-4 w-4" />}
+        eyebrow="מילוי היומן"
         title="חלונות פנויים"
-        subtitle="חלונות זמן פנויים לשבוע הקרוב — שלחי הזמנה ללקוחות שלא חזרו."
+        description="חלונות זמן פנויים לשבוע הקרוב — שלחי הזמנה ללקוחות שלא חזרו."
+        tint="plum"
       />
 
       {/* Suggested clients */}

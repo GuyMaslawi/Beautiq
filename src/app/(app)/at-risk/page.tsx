@@ -1,3 +1,4 @@
+import { PremiumPageShell } from "@/components/premium";
 import { AtRiskSection } from "@/components/bring-back/sections/at-risk-section";
 
 /**
@@ -6,8 +7,8 @@ import { AtRiskSection } from "@/components/bring-back/sections/at-risk-section"
  */
 export default function AtRiskPage() {
   return (
-    <div className="mx-auto w-full max-w-3xl">
+    <PremiumPageShell tint="plum" width="default">
       <AtRiskSection />
-    </div>
+    </PremiumPageShell>
   );
 }

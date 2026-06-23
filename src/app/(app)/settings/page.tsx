@@ -1,5 +1,5 @@
 import { Store, Tag, ShieldCheck, Link2, SlidersHorizontal, CreditCard } from "lucide-react";
-import { PageHeader } from "@/components/ui/page-header";
+import { PremiumPageShell, BeautyPageHero } from "@/components/premium";
 import { Section } from "@/components/ui/section";
 import { requireCurrentBusiness } from "@/server/auth/session";
 import {
@@ -46,11 +46,13 @@ export default async function SettingsPage() {
   if (!settings) return null;
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6">
-      <PageHeader
+    <PremiumPageShell tint="champagne" width="default">
+      <BeautyPageHero
         icon={SlidersHorizontal}
+        eyebrow="הגדרות העסק"
         title={SETTINGS.pageTitle}
         subtitle={SETTINGS.pageSubtitle}
+        tint="champagne"
       />
 
       <div className="space-y-6">
@@ -99,6 +101,6 @@ export default async function SettingsPage() {
           <PublicLinkCard slug={settings.slug} />
         </Section>
       </div>
-    </div>
+    </PremiumPageShell>
   );
 }

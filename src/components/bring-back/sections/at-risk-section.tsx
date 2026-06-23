@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AlertTriangle, Users, ShieldAlert, Shield, Megaphone } from "lucide-react";
-import { PageHeader } from "@/components/ui/page-header";
+import { EditorialSectionHeader } from "@/components/premium";
 import { requireCurrentBusiness } from "@/server/auth/session";
 import { getAtRiskClients } from "@/server/at-risk/queries";
 import type { AtRiskSummary } from "@/server/at-risk/queries";
@@ -32,11 +32,13 @@ export async function AtRiskSection() {
 
   return (
     <div className="w-full space-y-6" dir="rtl">
-      {/* Page header */}
-      <PageHeader
-        icon={AlertTriangle}
+      {/* Section header */}
+      <EditorialSectionHeader
+        icon={<AlertTriangle className="h-4 w-4" />}
+        eyebrow="לקוחות בסיכון"
         title={AT_RISK.pageTitle}
-        subtitle={AT_RISK.pageSubtitle}
+        description={AT_RISK.pageSubtitle}
+        tint="plum"
       />
 
       {/* Summary cards */}

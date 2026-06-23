@@ -41,7 +41,7 @@ export function ReviewsManager({
           {reviews.map((review) => (
             <div
               key={review.id}
-              className="rounded-xl border border-[var(--border)] bg-white p-4"
+              className="rounded-xl border border-[var(--border)] bg-surface p-4"
               style={{ boxShadow: "0 1px 4px rgba(43,37,48,0.05)" }}
             >
               <div className="flex items-start justify-between gap-3">

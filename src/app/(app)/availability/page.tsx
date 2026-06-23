@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Clock } from "lucide-react";
-import { PageHeader } from "@/components/ui/page-header";
+import { PremiumPageShell, BeautyPageHero } from "@/components/premium";
 import { requireTenant } from "@/server/auth/session";
 import { getWeeklyRules, getAvailabilityExceptions } from "@/server/availability/queries";
 import { WeeklyAvailabilityForm } from "@/components/availability/weekly-availability-form";
@@ -30,30 +30,26 @@ export default async function AvailabilityPage() {
   }));
 
   return (
-    <div className="mx-auto w-full max-w-5xl space-y-6">
+    <PremiumPageShell tint="mauve" width="wide">
       {/* Page header */}
-      <PageHeader
+      <BeautyPageHero
         icon={Clock}
+        eyebrow="זמינות ושעות"
         title={AVAILABILITY.pageTitle}
         subtitle={AVAILABILITY.pageSubtitle}
+        tint="mauve"
       />
 
       {/* Empty state guidance — shown only when no rules are configured yet */}
       {!hasRules && (
-        <div
-          className="rounded-2xl border p-5 space-y-3"
-          style={{
-            borderColor: "rgba(184,107,140,0.2)",
-            background: "rgba(184,107,140,0.05)",
-          }}
-        >
+        <div className="aura-card grain ring-soft relative overflow-hidden rounded-[1.5rem] p-6 space-y-3">
           <div className="flex items-center gap-2.5">
-            <div
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-              style={{ background: "rgba(184,107,140,0.12)" }}
+            <span
+              className="ring-soft flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
+              style={{ background: "var(--grad-mauve)" }}
             >
-              <Clock className="h-4 w-4" style={{ color: "#b86b8c" }} />
-            </div>
+              <Clock className="h-4 w-4 text-white" />
+            </span>
             <h2 className="text-foreground font-bold">
               {AVAILABILITY.emptyState.title}
             </h2>
@@ -84,6 +80,6 @@ export default async function AvailabilityPage() {
 
       {/* Exceptions section */}
       <AvailabilityExceptions exceptions={exceptions} />
-    </div>
+    </PremiumPageShell>
   );
 }
