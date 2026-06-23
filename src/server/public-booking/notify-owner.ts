@@ -22,6 +22,7 @@ import { logger } from "@/lib/logger";
 import { APP_URL } from "@/lib/config";
 import { getWhatsAppProviderForBusiness } from "@/server/whatsapp/resolver";
 import { isValidIsraeliPhone, toWaPhone } from "@/lib/phone";
+import { OWNER_NEW_BOOKING_TEMPLATE } from "@/lib/whatsapp/default-templates";
 
 function formatDate(d: Date): string {
   return new Intl.DateTimeFormat("he-IL", {
@@ -162,7 +163,20 @@ async function _notify(params: {
   // לעולם לא חובה ולעולם לא חוסם — נכשל בשקט.
   if (process.env.ENABLE_OWNER_WHATSAPP_NOTIFICATION === "true") {
     const ownerPhone = booking.business.phone?.trim();
-    if (ownerPhone && isValidIsraeliPhone(ownerPhone)) {
+    // אין לשלוח אם מספר הבעלים חסר או לא תקין — מדלגים ומתעדים את הסיבה בבירור.
+    if (!ownerPhone) {
+      logger.warn("[notifyOwner] owner WhatsApp skipped — no business phone on file", {
+        bookingId,
+        businessId,
+      });
+    } else if (!isValidIsraeliPhone(ownerPhone)) {
+      logger.warn("[notifyOwner] owner WhatsApp skipped — business phone is invalid", {
+        bookingId,
+        businessId,
+      });
+    } else {
+      // Plain-text fallback (used by the dev mock / logging only). Real production
+      // sends go through the approved business_new_booking_he template below.
       const waText =
         `היי ${ownerName},\n` +
         `נכנסה בקשת תור חדשה ב־Allura ✨\n\n` +
@@ -175,12 +189,30 @@ async function _notify(params: {
         const sent = await provider.send({
           businessId,
           toPhone: toWaPhone(ownerPhone),
+          // Approved Allura-WABA template — the Meta provider rejects free-text
+          // sends, so an owner notification can only deliver through this template.
+          templateId: OWNER_NEW_BOOKING_TEMPLATE.name,
+          templateLanguage: OWNER_NEW_BOOKING_TEMPLATE.language,
+          templateVariables: {
+            "1": ownerName,
+            "2": booking.client.fullName,
+            "3": booking.service.name,
+            "4": dateStr,
+            "5": timeStr,
+          },
           fallbackText: waText,
           // שדות לוג בלבד אצל הספק — אין כתיבה ל-DB לפיהם.
           automationRunId: `owner-notify:${bookingId}`,
           clientId: "owner",
         });
-        if (sent.success || sent.isMockSkip) notified = true;
+        if (sent.success || sent.isMockSkip) {
+          notified = true;
+        } else {
+          logger.warn("[notifyOwner] owner WhatsApp not delivered", {
+            bookingId,
+            reason: sent.failureReason,
+          });
+        }
       } catch (err) {
         logger.warn("[notifyOwner] owner WhatsApp failed", {
           bookingId,

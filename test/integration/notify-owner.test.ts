@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Prisma } from "@prisma/client";
 import { createPrismaMock, resetPrismaMock } from "../helpers/prisma-mock";
 import { BUSINESS_A } from "../helpers/factories";
@@ -19,6 +19,19 @@ const { sendEmail } = vi.hoisted(() => ({ sendEmail: vi.fn() }));
 vi.mock("@/lib/email/send", () => ({
   sendEmail,
   isEmailConfigured: () => true,
+}));
+
+// The WhatsApp provider resolver is mocked so we can assert on the owner-notify
+// send payload without touching Meta.
+const { ownerWaSend, resolveProvider } = vi.hoisted(() => {
+  const ownerWaSend = vi.fn();
+  return {
+    ownerWaSend,
+    resolveProvider: vi.fn(async () => ({ name: "test_mock", send: ownerWaSend })),
+  };
+});
+vi.mock("@/server/whatsapp/resolver", () => ({
+  getWhatsAppProviderForBusiness: resolveProvider,
 }));
 
 import { notifyOwnerOfNewBooking } from "@/server/public-booking/notify-owner";
@@ -46,6 +59,13 @@ function mockBooking(overrides: Record<string, unknown> = {}) {
 beforeEach(() => {
   resetPrismaMock(prisma);
   sendEmail.mockReset().mockResolvedValue({ ok: true, id: "email_1" });
+  ownerWaSend.mockReset().mockResolvedValue({ success: true, providerMessageId: "wamid.owner" });
+  resolveProvider.mockClear();
+  delete process.env.ENABLE_OWNER_WHATSAPP_NOTIFICATION;
+});
+
+afterEach(() => {
+  delete process.env.ENABLE_OWNER_WHATSAPP_NOTIFICATION;
 });
 
 describe("notifyOwnerOfNewBooking — owner email", () => {
@@ -148,5 +168,89 @@ describe("notifyOwnerOfNewBooking — owner email", () => {
       notifyOwnerOfNewBooking({ bookingId: BOOKING_ID, businessId: BUSINESS_A }),
     ).resolves.toBeUndefined();
     expect(prisma.booking.update).not.toHaveBeenCalled();
+  });
+});
+
+describe("notifyOwnerOfNewBooking — owner WhatsApp (flag-gated)", () => {
+  it("does NOT send WhatsApp when the flag is off (email-only default)", async () => {
+    prisma.booking.findFirst.mockResolvedValue(mockBooking());
+    prisma.booking.update.mockResolvedValue({});
+
+    await notifyOwnerOfNewBooking({ bookingId: BOOKING_ID, businessId: BUSINESS_A });
+
+    expect(ownerWaSend).not.toHaveBeenCalled();
+  });
+
+  it("sends via the approved business_new_booking_he template with ordered variables", async () => {
+    process.env.ENABLE_OWNER_WHATSAPP_NOTIFICATION = "true";
+    prisma.booking.findFirst.mockResolvedValue(mockBooking());
+    prisma.booking.update.mockResolvedValue({});
+
+    await notifyOwnerOfNewBooking({ bookingId: BOOKING_ID, businessId: BUSINESS_A });
+
+    expect(resolveProvider).toHaveBeenCalledWith(BUSINESS_A);
+    expect(ownerWaSend).toHaveBeenCalledTimes(1);
+    const payload = ownerWaSend.mock.calls[0][0];
+    // Tenant-scoped, never free-text: a real template id is always present.
+    expect(payload.businessId).toBe(BUSINESS_A);
+    expect(payload.templateId).toBe("business_new_booking_he");
+    expect(payload.templateLanguage).toBe("he");
+    // Owner's own number, normalized to Meta E.164 (no '+').
+    expect(payload.toPhone).toBe("972501234567");
+    // Positional variables in order: owner, client, service, date, time.
+    expect(payload.templateVariables["2"]).toBe("נועה כהן");
+    expect(payload.templateVariables["3"]).toBe("מניקור ג'ל");
+    expect(payload.templateVariables["5"]).toBe("12:00");
+  });
+
+  it("skips WhatsApp safely (no send) when the business phone is missing", async () => {
+    process.env.ENABLE_OWNER_WHATSAPP_NOTIFICATION = "true";
+    prisma.booking.findFirst.mockResolvedValue(
+      mockBooking({
+        business: {
+          name: "סטודיו יופי",
+          phone: null,
+          members: [{ user: { email: "owner@example.com", name: "בעלת העסק" } }],
+        },
+      }),
+    );
+    prisma.booking.update.mockResolvedValue({});
+
+    await notifyOwnerOfNewBooking({ bookingId: BOOKING_ID, businessId: BUSINESS_A });
+
+    expect(ownerWaSend).not.toHaveBeenCalled();
+    // Email still went out, so the booking is still marked notified.
+    expect(sendEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it("skips WhatsApp safely (no send) when the business phone is invalid", async () => {
+    process.env.ENABLE_OWNER_WHATSAPP_NOTIFICATION = "true";
+    prisma.booking.findFirst.mockResolvedValue(
+      mockBooking({
+        business: {
+          name: "סטודיו יופי",
+          phone: "12", // not a valid Israeli number
+          members: [{ user: { email: "owner@example.com", name: "בעלת העסק" } }],
+        },
+      }),
+    );
+    prisma.booking.update.mockResolvedValue({});
+
+    await notifyOwnerOfNewBooking({ bookingId: BOOKING_ID, businessId: BUSINESS_A });
+
+    expect(ownerWaSend).not.toHaveBeenCalled();
+  });
+
+  it("never throws when the WhatsApp send rejects — booking flow is unaffected", async () => {
+    process.env.ENABLE_OWNER_WHATSAPP_NOTIFICATION = "true";
+    ownerWaSend.mockRejectedValue(new Error("meta down"));
+    prisma.booking.findFirst.mockResolvedValue(mockBooking());
+    prisma.booking.update.mockResolvedValue({});
+
+    await expect(
+      notifyOwnerOfNewBooking({ bookingId: BOOKING_ID, businessId: BUSINESS_A }),
+    ).resolves.toBeUndefined();
+    // Email succeeded, so we still mark the booking as notified.
+    expect(prisma.booking.update).toHaveBeenCalled();
   });
 });

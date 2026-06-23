@@ -120,6 +120,30 @@ export const DEFAULT_TEMPLATES: DefaultTemplate[] = [
   },
 ];
 
+/**
+ * Owner notification template — sent to the BUSINESS OWNER (not a customer) when
+ * a new booking arrives from the public booking page.
+ *
+ * This is intentionally kept OUT of {@link DEFAULT_TEMPLATES}: it is not tied to
+ * an AutomationType / per-business AutomationSetting and is not part of the
+ * per-business operational/marketing readiness. Allura sends it centrally from
+ * its own managed WABA, so the template only needs to exist ONCE in Allura's
+ * Meta account. The owner-notify flow references it by name.
+ *
+ * Meta rules respected: BODY-only, UTILITY category, ends on text (not a
+ * variable), positional {{1}}..{{5}}.
+ */
+export const OWNER_NEW_BOOKING_TEMPLATE = {
+  name: "business_new_booking_he",
+  label: "התראת תור חדש לבעלת העסק",
+  language: "he",
+  category: "UTILITY" as MetaTemplateCategory,
+  body:
+    "היי {{1}} ✨\nנכנסה בקשת תור חדשה ב־Allura:\nלקוחה: {{2}}\nשירות: {{3}}\n{{4}} בשעה {{5}}\n\nלאישור התור — היכנסי ל־Allura",
+  example: ["בעלת העסק", "נועה כהן", "מניקור ג'ל", "שלישי 18.6", "10:30"],
+  variables: ["ownerName", "clientName", "serviceName", "bookingDate", "bookingTime"],
+} as const;
+
 /** The Meta template names we expect, for sync matching. */
 export const DEFAULT_TEMPLATE_NAMES = DEFAULT_TEMPLATES.map((t) => t.name);
 
