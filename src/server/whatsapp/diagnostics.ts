@@ -12,7 +12,11 @@
  */
 
 import { prisma } from "@/server/db/prisma";
-import { resolveWhatsAppConnectionForBusiness } from "@/server/whatsapp/resolver";
+import {
+  resolveWhatsAppConnectionForBusiness,
+  getDecryptedCredentialsForBusiness,
+} from "@/server/whatsapp/resolver";
+import { listTemplates } from "@/lib/whatsapp/meta-templates-api";
 import { isValidIsraeliPhone, phonesEqual } from "@/lib/phone";
 import { whatsAppReasonLabel, type WhatsAppSendReason } from "./reasons";
 import type { AutomationType } from "@prisma/client";
@@ -132,30 +136,69 @@ export async function evaluateWhatsAppSend(params: {
   const settingType = settingTypeFor(messageType);
   let templateName: string | null = null;
   let templateStatus: string | null = null;
+  // The language code we will send to Meta for this template. A WhatsApp template
+  // is identified by name + language, so this must match an APPROVED Meta template
+  // in exactly this language (Hebrew, "he") or the real send fails (error 132001).
+  let templateLanguage = "he";
   let requireOptIn: boolean;
 
   if (settingType) {
     const setting = await prisma.automationSetting.findUnique({
       where: { businessId_type: { businessId, type: settingType } },
-      select: { templateName: true, templateStatus: true, requireOptIn: true },
+      select: {
+        templateName: true,
+        templateStatus: true,
+        templateLanguage: true,
+        requireOptIn: true,
+      },
     });
     templateName = setting?.templateName ?? null;
     templateStatus = setting?.templateStatus ?? null;
+    templateLanguage = setting?.templateLanguage ?? "he";
     // Booking confirmation is transactional — opt-in defaults to false when unset.
     requireOptIn = setting?.requireOptIn ?? (messageType === "booking_confirmation" ? false : true);
   } else {
     // manual/test: any approved template qualifies.
     const settings = await prisma.automationSetting.findMany({
       where: { businessId },
-      select: { templateName: true, templateStatus: true },
+      select: { templateName: true, templateStatus: true, templateLanguage: true },
     });
     const approved = settings.find((s) => s.templateStatus === "approved" && !!s.templateName);
     templateName = approved?.templateName ?? null;
     templateStatus = approved ? "approved" : null;
+    templateLanguage = approved?.templateLanguage ?? "he";
     requireOptIn = false;
   }
 
   const templateApproved = !!templateName && templateStatus === "approved";
+
+  // --- Live name + language verification against Meta ---
+  // The stored templateStatus only tells us a template by this NAME is approved;
+  // it does NOT prove an approved version exists in the language we actually send
+  // ("he"). A template approved only in English ("en") would pass the name check
+  // but fail the real send. We read the WABA's live template list (read-only) and
+  // confirm an APPROVED template with this exact name AND language exists.
+  // Best-effort: when credentials/network are unavailable we set this to null and
+  // skip the check rather than reporting a false failure.
+  let languageVerified: boolean | null = null;
+  let metaLanguagesForName: string[] = [];
+  if (realSendEnabled && connectionOk && templateName) {
+    try {
+      const creds = await getDecryptedCredentialsForBusiness(businessId);
+      if (creds?.wabaId) {
+        const list = await listTemplates(creds.wabaId, creds.accessToken);
+        if (list.ok && list.templates) {
+          const sameName = list.templates.filter((t) => t.name === templateName);
+          metaLanguagesForName = sameName.map((t) => t.language);
+          languageVerified = sameName.some(
+            (t) => t.language === templateLanguage && t.status === "approved",
+          );
+        }
+      }
+    } catch {
+      languageVerified = null;
+    }
+  }
 
   // --- Client (optional) ---
   const client = clientId
@@ -220,8 +263,26 @@ export async function evaluateWhatsAppSend(params: {
       ok,
       code,
       detail: templateName
-        ? `סטטוס: ${templateStatus ?? "לא ידוע"}`
+        ? `סטטוס: ${templateStatus ?? "לא ידוע"} · שפה: ${templateLanguage}`
         : "לא הוגדרה תבנית מאושרת",
+    });
+  }
+
+  // 4b. Template language matches an APPROVED Meta template (name + language).
+  // Only meaningful when a real send is enabled and we could read Meta's live
+  // list. This is what catches a template approved only in English while the code
+  // sends Hebrew — a name-only check would miss it entirely.
+  if (realSendEnabled && templateName && languageVerified !== null) {
+    checks.push({
+      key: "template_language",
+      label: "שפת התבנית תואמת לתבנית מאושרת ב-Meta",
+      ok: languageVerified,
+      code: languageVerified ? undefined : "template_language_mismatch",
+      detail: languageVerified
+        ? `נמצאה תבנית מאושרת בשם "${templateName}" בשפה ${templateLanguage}`
+        : metaLanguagesForName.length > 0
+          ? `התבנית "${templateName}" קיימת ב-Meta בשפות: ${metaLanguagesForName.join(", ")} — חסרה גרסה מאושרת בשפה ${templateLanguage}`
+          : `לא נמצאה תבנית מאושרת בשם "${templateName}" בשפה ${templateLanguage}`,
     });
   }
 

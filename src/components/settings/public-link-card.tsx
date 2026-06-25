@@ -1,28 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { SETTINGS } from "@/lib/constants/he";
+import { publicBusinessUrl } from "@/lib/config";
 
 export function PublicLinkCard({ slug }: { slug: string }) {
   const [copied, setCopied] = useState(false);
-  // Resolve the absolute origin only after mount so server and client render
-  // the same markup first (avoids a hydration mismatch), then upgrade to the
-  // full shareable URL.
-  const [origin, setOrigin] = useState("");
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setOrigin(window.location.origin);
-  }, []);
-
-  const publicUrl = `${origin}/b/${slug}`;
+  // Always build from the canonical app URL (NEXT_PUBLIC_APP_URL) so the link
+  // the owner copies points at the real public domain — not whatever host the
+  // dashboard happens to be served from (proxy / preview deploy / localhost).
+  const publicUrl = publicBusinessUrl(slug);
 
   async function handleCopy() {
     try {
-      await navigator.clipboard.writeText(
-        typeof window !== "undefined"
-          ? `${window.location.origin}/b/${slug}`
-          : `/b/${slug}`,
-      );
+      await navigator.clipboard.writeText(publicUrl);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {

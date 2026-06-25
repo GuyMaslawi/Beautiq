@@ -7,7 +7,9 @@ import {
   getAdminBusinessBookingsThisMonth,
   getAdminBusinessDeletionSummary,
 } from "@/server/admin/queries";
-import { getAdminAutomationInfo, type AdminManualSendEntry } from "@/server/win-back-automation/queries";
+import { getAdminAutomationInfo } from "@/server/win-back-automation/queries";
+import { getAdminMessageLog } from "@/server/admin/message-log";
+import { AdminMessageLogPanel } from "./_components/message-log";
 import { SubscriptionForm } from "./_components/subscription-form";
 import { RunWinBackButton } from "./_components/run-win-back-button";
 import { WhatsAppAdminPanel } from "./_components/whatsapp-admin-panel";
@@ -38,51 +40,6 @@ const PLAN_LABELS: Record<SubscriptionPlan, string> = {
   pro: "פרו",
 };
 
-const STATUS_LABEL: Record<string, { label: string; color: string }> = {
-  queued:    { label: "ממתין",    color: "#6b7280" },
-  sent:      { label: "נשלח ל-Meta", color: "#2563eb" },
-  delivered: { label: "נמסר",    color: "#16a34a" },
-  read:      { label: "נקרא",    color: "#16a34a" },
-  failed:    { label: "נכשל",    color: "#dc2626" },
-  skipped:   { label: "דולג",    color: "#9ca3af" },
-};
-
-function ManualSendRow({ msg }: { msg: AdminManualSendEntry }) {
-  const st = STATUS_LABEL[msg.status] ?? { label: msg.status, color: "#6b7280" };
-  const typeLabel = msg.type === "manual" ? "בדיקה/ידני" : msg.type;
-  const sourceLabel = msg.source === "manual_admin" ? "אדמין" : "בעל עסק";
-  return (
-    <div
-      className="rounded-xl p-3 text-xs space-y-1.5"
-      style={{ background: "rgba(0,0,0,0.025)", border: "1px solid rgba(0,0,0,0.07)" }}
-    >
-      <div className="flex items-center justify-between gap-2">
-        <span className="font-semibold" style={{ color: "#1a1a2e" }}>{msg.clientName}</span>
-        <span className="font-semibold" style={{ color: st.color }}>{st.label}</span>
-      </div>
-      <div className="flex flex-wrap gap-x-4 gap-y-1" style={{ color: "#6b7280" }}>
-        <span>
-          {new Date(msg.createdAt).toLocaleString("he-IL", {
-            day: "numeric", month: "short", hour: "2-digit", minute: "2-digit",
-          })}
-        </span>
-        <span>סוג: {typeLabel}</span>
-        <span>מקור: {sourceLabel}</span>
-        <span dir="ltr">נמען: {msg.maskedPhone}</span>
-        {msg.templateId && <span>תבנית: {msg.templateId}</span>}
-      </div>
-      {msg.providerMessageId && (
-        <div style={{ color: "#2563eb" }} dir="ltr">
-          מזהה Meta: {msg.providerMessageId}
-        </div>
-      )}
-      {msg.failureReason && (
-        <div style={{ color: "#dc2626" }}>סיבת כשל: {msg.failureReason}</div>
-      )}
-    </div>
-  );
-}
-
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex items-start gap-3 py-2.5" style={{ borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
@@ -104,13 +61,15 @@ export default async function AdminBusinessDetailPage({
   await requirePlatformAdmin();
   const { businessId } = await params;
 
-  const [biz, bookingsThisMonth, automationInfo, deletionSummary, admin] = await Promise.all([
-    getAdminBusiness(businessId),
-    getAdminBusinessBookingsThisMonth(businessId),
-    getAdminAutomationInfo(businessId),
-    getAdminBusinessDeletionSummary(businessId),
-    getCurrentUser(),
-  ]);
+  const [biz, bookingsThisMonth, automationInfo, messageLog, deletionSummary, admin] =
+    await Promise.all([
+      getAdminBusiness(businessId),
+      getAdminBusinessBookingsThisMonth(businessId),
+      getAdminAutomationInfo(businessId),
+      getAdminMessageLog(businessId, 25),
+      getAdminBusinessDeletionSummary(businessId),
+      getCurrentUser(),
+    ]);
 
   if (!biz) notFound();
 
@@ -470,7 +429,7 @@ export default async function AdminBusinessDetailPage({
         <WhatsAppAdminPanel businessId={biz.id} />
       </div>
 
-      {/* Last manual send attempts */}
+      {/* Full WhatsApp message log — all sources, classified by outcome */}
       <div
         className="rounded-2xl border p-6"
         style={{
@@ -479,18 +438,14 @@ export default async function AdminBusinessDetailPage({
           boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
         }}
       >
-        <h2 className="mb-4 text-sm font-bold" style={{ color: "#1a1a2e" }}>
-          ניסיון שליחה אחרון (WhatsApp ידני)
+        <h2 className="mb-1 text-sm font-bold" style={{ color: "#1a1a2e" }}>
+          יומן הודעות WhatsApp
         </h2>
-        {automationInfo.lastManualSends.length === 0 ? (
-          <p className="text-sm" style={{ color: "#9ca3af" }}>אין רשומות שליחה ידנית</p>
-        ) : (
-          <div className="space-y-3">
-            {automationInfo.lastManualSends.map((msg: AdminManualSendEntry) => (
-              <ManualSendRow key={msg.id} msg={msg} />
-            ))}
-          </div>
-        )}
+        <p className="mb-4 text-xs" style={{ color: "#888" }}>
+          25 ההודעות האחרונות מכל המקורות (אוטומציה, ידני, ניסיון חוזר) — כולל הודעות
+          שנחסמו במצב בדיקה, מספרים לא תקינים, תבניות חסרות ושגיאות ספק.
+        </p>
+        <AdminMessageLogPanel log={messageLog} />
       </div>
 
       {/* Win-back manual trigger */}

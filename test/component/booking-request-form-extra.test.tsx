@@ -118,6 +118,7 @@ describe("BookingRequestForm — error state", () => {
   it("renders the server formError and a 'back to time' shortcut when slot is taken", async () => {
     boundAction.mockResolvedValue({
       formError: "השעה כבר תפוסה",
+      slotConflict: true,
       errors: { clientName: "נא להזין שם" },
     });
     // Start on quick-pick, jump to details via calendar then submit.

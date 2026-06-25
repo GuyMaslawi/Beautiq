@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 
 import { PublicLinkCard } from "@/components/settings/public-link-card";
 import { SETTINGS } from "@/lib/constants/he";
+import { publicBusinessUrl } from "@/lib/config";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -16,13 +17,13 @@ afterEach(() => {
 });
 
 describe("PublicLinkCard", () => {
-  it("renders the active badge, body and the public URL from window.origin", () => {
+  it("renders the active badge, body and the canonical public URL", () => {
     render(<PublicLinkCard slug="studio-yofi" />);
     expect(screen.getByText(SETTINGS.publicLink.active)).toBeInTheDocument();
     expect(screen.getByText(SETTINGS.publicLink.body)).toBeInTheDocument();
     expect(screen.getByText(SETTINGS.publicLink.slugLabel)).toBeInTheDocument();
     expect(
-      screen.getByText(`${window.location.origin}/b/studio-yofi`),
+      screen.getByText(publicBusinessUrl("studio-yofi")),
     ).toBeInTheDocument();
   });
 
@@ -44,7 +45,7 @@ describe("PublicLinkCard", () => {
     const btn = screen.getByRole("button", { name: SETTINGS.publicLink.copyButton });
     await user.click(btn);
 
-    expect(writeText).toHaveBeenCalledWith(`${window.location.origin}/b/studio-yofi`);
+    expect(writeText).toHaveBeenCalledWith(publicBusinessUrl("studio-yofi"));
     expect(
       await screen.findByRole("button", { name: SETTINGS.publicLink.copied }),
     ).toBeInTheDocument();

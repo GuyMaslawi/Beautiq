@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 
 import { PublicLinkPreview } from "@/components/public-page/public-link-preview";
 import { PUBLIC_PAGE } from "@/lib/constants/he";
+import { publicBusinessUrl } from "@/lib/config";
 
 const writeText = vi.fn(() => Promise.resolve());
 
@@ -22,15 +23,15 @@ describe("PublicLinkPreview", () => {
     expect(
       screen.getByText(PUBLIC_PAGE.preview.description),
     ).toBeInTheDocument();
-    // jsdom origin is http://localhost:3000 by default
+    // Always the canonical public URL, not the dashboard's current origin.
     expect(
-      screen.getByText(`${window.location.origin}/b/studio-yofi`),
+      screen.getByText(publicBusinessUrl("studio-yofi")),
     ).toBeInTheDocument();
 
     const open = screen
       .getByText(PUBLIC_PAGE.preview.openButton)
       .closest("a")!;
-    expect(open.getAttribute("href")).toBe("/b/studio-yofi");
+    expect(open.getAttribute("href")).toBe(publicBusinessUrl("studio-yofi"));
     expect(open).toHaveAttribute("target", "_blank");
   });
 
@@ -40,7 +41,7 @@ describe("PublicLinkPreview", () => {
       screen.getByRole("button", { name: PUBLIC_PAGE.preview.copyButton }),
     );
     expect(writeText).toHaveBeenCalledWith(
-      `${window.location.origin}/b/studio-yofi`,
+      publicBusinessUrl("studio-yofi"),
     );
     expect(screen.getByText(PUBLIC_PAGE.preview.copied)).toBeInTheDocument();
   });

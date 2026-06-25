@@ -757,7 +757,7 @@ export function BookingRequestForm({
           {state.formError && (
             <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
               {state.formError}
-              {state.formError.includes("תפוס") && (
+              {state.slotConflict && (
                 <button
                   type="button"
                   onClick={() => setStep("quickpick")}

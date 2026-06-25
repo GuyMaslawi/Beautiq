@@ -44,13 +44,37 @@ export async function getDayAvailability({
 
   const weekday = israeliWeekday(date);
 
-  const rules = await prisma.availabilityRule.findMany({
-    where: { businessId, weekday, isActive: true },
-    select: { startMinutes: true, endMinutes: true },
-    orderBy: { startMinutes: "asc" },
+  // A date-specific exception overrides the weekly rules: `closed` shuts the day
+  // entirely, `custom_hours` replaces the open window. Without this, a business
+  // that marked a holiday/vacation (closed) or changed hours for one day would
+  // still expose the normal weekly slots on the public booking page.
+  const exception = await prisma.availabilityException.findUnique({
+    where: { businessId_date: { businessId, date: new Date(date) } },
+    select: { type: true, startMinutes: true, endMinutes: true },
   });
-  // No rule for this weekday → the business is closed that day.
-  if (rules.length === 0) return { open: false, slots: [] };
+
+  let rules: { startMinutes: number; endMinutes: number }[];
+
+  if (exception?.type === "closed") {
+    return { open: false, slots: [] };
+  } else if (exception?.type === "custom_hours") {
+    // Missing custom window is treated as closed for that day (matches the
+    // empty-slots engine, which skips such days).
+    if (exception.startMinutes == null || exception.endMinutes == null) {
+      return { open: false, slots: [] };
+    }
+    rules = [
+      { startMinutes: exception.startMinutes, endMinutes: exception.endMinutes },
+    ];
+  } else {
+    rules = await prisma.availabilityRule.findMany({
+      where: { businessId, weekday, isActive: true },
+      select: { startMinutes: true, endMinutes: true },
+      orderBy: { startMinutes: "asc" },
+    });
+    // No rule for this weekday → the business is closed that day.
+    if (rules.length === 0) return { open: false, slots: [] };
+  }
 
   // Day boundaries in Israel wall-clock time
   const dayStart = parseIsraelDateTime(date, "00:00");

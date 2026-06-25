@@ -83,8 +83,11 @@ export async function updateServiceAction(
   const isActive = raw.isActive === "true";
 
   try {
-    await prisma.service.update({
-      where: { id: serviceId },
+    // updateMany scopes by businessId so the write can never touch another
+    // tenant's service, even though getService() above already verified
+    // ownership (CLAUDE.md §10: never mutate business data by record id alone).
+    const { count } = await prisma.service.updateMany({
+      where: { id: serviceId, businessId: tenant.businessId },
       data: {
         name: value.name,
         description: value.description ?? null,
@@ -96,6 +99,7 @@ export async function updateServiceAction(
         isActive,
       },
     });
+    if (count === 0) return { formError: SERVICES.errors.notFound };
   } catch {
     return { formError: SERVICES.errors.generic, values: raw };
   }

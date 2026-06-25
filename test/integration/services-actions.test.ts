@@ -116,7 +116,7 @@ describe("updateServiceAction", () => {
     prisma.service.findFirst.mockResolvedValue(
       makeService({ id: "svc_1", businessId: BUSINESS_A }),
     );
-    prisma.service.update.mockResolvedValue(makeService({ id: "svc_1" }));
+    prisma.service.updateMany.mockResolvedValue({ count: 1 });
 
     await expect(
       updateServiceAction("svc_1", {}, fd(validServiceFields)),
@@ -128,14 +128,20 @@ describe("updateServiceAction", () => {
         where: expect.objectContaining({ id: "svc_1", businessId: BUSINESS_A }),
       }),
     );
-    expect(prisma.service.update).toHaveBeenCalledTimes(1);
+    // The write itself is also scoped by businessId (updateMany, not update-by-id).
+    expect(prisma.service.updateMany).toHaveBeenCalledTimes(1);
+    expect(prisma.service.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { id: "svc_1", businessId: BUSINESS_A },
+      }),
+    );
   });
 
   it("rejects update when the service id belongs to another business (scoped lookup returns null) WITHOUT mutating", async () => {
     prisma.service.findFirst.mockResolvedValue(null); // cross-tenant id: scoped query finds nothing
     const res = await updateServiceAction("svc_other", {}, fd(validServiceFields));
     expect(res.formError).toBeTruthy();
-    expect(prisma.service.update).not.toHaveBeenCalled();
+    expect(prisma.service.updateMany).not.toHaveBeenCalled();
   });
 
   it("returns validation errors before writing when fields are invalid", async () => {
@@ -148,18 +154,18 @@ describe("updateServiceAction", () => {
       fd({ ...validServiceFields, durationMinutes: "abc" }),
     );
     expect(res.errors?.durationMinutes).toBeTruthy();
-    expect(prisma.service.update).not.toHaveBeenCalled();
+    expect(prisma.service.updateMany).not.toHaveBeenCalled();
   });
 
   it("sets isActive=false when the checkbox value is absent", async () => {
     prisma.service.findFirst.mockResolvedValue(
       makeService({ id: "svc_1", businessId: BUSINESS_A }),
     );
-    prisma.service.update.mockResolvedValue(makeService({ id: "svc_1" }));
+    prisma.service.updateMany.mockResolvedValue({ count: 1 });
     await expect(
       updateServiceAction("svc_1", {}, fd({ ...validServiceFields, isActive: "" })),
     ).rejects.toThrow("NEXT_REDIRECT");
-    expect(prisma.service.update).toHaveBeenCalledWith(
+    expect(prisma.service.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
         data: expect.objectContaining({ isActive: false }),
       }),
@@ -170,7 +176,7 @@ describe("updateServiceAction", () => {
     prisma.service.findFirst.mockResolvedValue(
       makeService({ id: "svc_1", businessId: BUSINESS_A }),
     );
-    prisma.service.update.mockRejectedValue(new Error("secret db error"));
+    prisma.service.updateMany.mockRejectedValue(new Error("secret db error"));
     const res = await updateServiceAction("svc_1", {}, fd(validServiceFields));
     expect(res.formError).toBeTruthy();
     expect(res.formError).not.toContain("secret");

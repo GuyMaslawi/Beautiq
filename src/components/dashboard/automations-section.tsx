@@ -74,11 +74,20 @@ export function AutomationsSection({
             <MessageCircle className="h-4 w-4" />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
-              התראות WhatsApp פעילות
-            </p>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
+                התראות WhatsApp פעילות
+              </p>
+              <span
+                className="rounded-full px-2 py-0.5 text-[10px] font-semibold"
+                style={{ background: "rgba(61,139,110,0.12)", color: "#3d8b6e" }}
+              >
+                מנוהל על ידי Allura
+              </span>
+            </div>
             <p className="text-xs" style={{ color: "var(--muted)" }}>
-              Allura שולחת ללקוחות שלך אישורי תור, תזכורות ועדכונים חשובים באופן אוטומטי.
+              שליחת ה-WhatsApp מנוהלת על ידי Allura — אין צורך לחבר חשבון או להגדיר דבר.
+              אנחנו שולחים ללקוחות שלך אישורי תור, תזכורות ועדכונים באופן אוטומטי.
             </p>
           </div>
         </div>

@@ -19,6 +19,7 @@ export type WhatsAppSendReason =
   | "test_phone_not_set"
   | "missing_template"
   | "template_not_approved"
+  | "template_language_mismatch"
   | "invalid_phone"
   | "unsubscribed"
   | "missing_opt_in"
@@ -38,6 +39,8 @@ export const WHATSAPP_REASON_LABELS: Record<WhatsAppSendReason, string> = {
   test_phone_not_set: "מצב בדיקה פעיל אך מספר הבדיקה לא הוגדר",
   missing_template: "תבנית ההודעה עדיין לא מוגדרת",
   template_not_approved: "תבנית ההודעה עדיין לא אושרה על ידי Meta",
+  template_language_mismatch:
+    "התבנית קיימת ב-Meta אך לא בשפה הנדרשת (עברית) — נדרשת גרסה בעברית",
   invalid_phone: "אין מספר טלפון תקין ללקוחה",
   unsubscribed: "הלקוחה הסירה את עצמה מקבלת הודעות",
   missing_opt_in: "הלקוחה לא אישרה קבלת הודעות WhatsApp",

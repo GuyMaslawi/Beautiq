@@ -15,7 +15,8 @@ describe("AutomationsSection (Allura-managed notifications)", () => {
   it("reassures the owner that WhatsApp notifications are active by Allura", () => {
     render(<AutomationsSection {...baseProps} />);
     expect(screen.getByText("התראות WhatsApp פעילות")).toBeInTheDocument();
-    expect(screen.getByText(/Allura שולחת ללקוחות שלך/)).toBeInTheDocument();
+    expect(screen.getByText("מנוהל על ידי Allura")).toBeInTheDocument();
+    expect(screen.getByText(/שליחת ה-WhatsApp מנוהלת על ידי Allura/)).toBeInTheDocument();
   });
 
   it("is purely informational — it links to nothing (no setup task)", () => {

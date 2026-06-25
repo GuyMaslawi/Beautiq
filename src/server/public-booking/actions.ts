@@ -25,6 +25,13 @@ export interface PublicBookingFormState {
   errors?: Partial<Record<string, string>>;
   formError?: string;
   values?: Record<string, string>;
+  /**
+   * Set when the chosen slot is no longer bookable (taken since it was picked,
+   * or now in the past). The submit happens on the details step, which shows
+   * `formError` — so these are surfaced there and the UI offers a shortcut back
+   * to slot selection.
+   */
+  slotConflict?: boolean;
 }
 
 /**
@@ -88,7 +95,8 @@ export async function submitPublicBookingAction(
   // Reject times in the past (5 min tolerance)
   if (startTime.getTime() < Date.now() - 5 * 60 * 1000) {
     return {
-      errors: { date: PUBLIC_BOOKING.errors.pastBooking },
+      formError: PUBLIC_BOOKING.errors.pastBooking,
+      slotConflict: true,
       values: raw,
     };
   }
@@ -103,7 +111,8 @@ export async function submitPublicBookingAction(
   const overlaps = await hasOverlap(tenant, startTime, endTime);
   if (overlaps) {
     return {
-      errors: { date: PUBLIC_BOOKING.errors.overlap },
+      formError: PUBLIC_BOOKING.errors.overlap,
+      slotConflict: true,
       values: raw,
     };
   }

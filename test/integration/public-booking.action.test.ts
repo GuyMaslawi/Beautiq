@@ -142,7 +142,10 @@ describe("submitPublicBookingAction — validation & tenant safety", () => {
       {},
       formData({ ...validFields, date: "2000-01-01" }),
     );
-    expect(res.errors?.date).toBeTruthy();
+    // Surfaced on the details step (where submit happens) via formError, with a
+    // shortcut back to slot selection.
+    expect(res.formError).toBeTruthy();
+    expect(res.slotConflict).toBe(true);
     expect(prisma.booking.create).not.toHaveBeenCalled();
   });
 
@@ -151,7 +154,8 @@ describe("submitPublicBookingAction — validation & tenant safety", () => {
     prisma.service.findFirst.mockResolvedValue(makeService({ id: "svc_1" }));
     hasOverlap.mockResolvedValue(true);
     const res = await submitPublicBookingAction("studio-yofi", {}, formData(validFields));
-    expect(res.errors?.date).toBeTruthy();
+    expect(res.formError).toBeTruthy();
+    expect(res.slotConflict).toBe(true);
     expect(prisma.booking.create).not.toHaveBeenCalled();
   });
 
