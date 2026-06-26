@@ -80,7 +80,7 @@ describe("BookingRequestForm — full calendar step", () => {
     const dateInput = document.querySelector('input[type="date"]') as HTMLInputElement;
     await userEvent.type(dateInput, "2026-07-01");
     await act(async () => { await Promise.resolve(); });
-    expect(await screen.findByText("אין שעות פנויות בתאריך זה")).toBeInTheDocument();
+    expect(await screen.findByText("אין שעות פנויות ביום הזה")).toBeInTheDocument();
   });
 });
 
@@ -169,12 +169,12 @@ describe("BookingRequestForm — success view", () => {
     await userEvent.type(screen.getByLabelText("טלפון"), "0501234567");
     await userEvent.click(screen.getByRole("button", { name: /שליחת בקשה לתור/ }));
 
-    expect(await screen.findByText("הבקשה נשלחה!")).toBeInTheDocument();
+    expect(await screen.findByText("בקשת התור נשלחה")).toBeInTheDocument();
     expect(screen.getByText("מניקור ג'ל")).toBeInTheDocument();
 
-    // Subtitle names the business and sets the right expectation (no manual step).
+    // Subtitle sets the right expectation: the owner approves the request.
     expect(
-      screen.getByText(/העברנו את הפרטים לסטודיו יופי/),
+      screen.getByText(/בעלת העסק תקבל את הבקשה ותאשר את התור/),
     ).toBeInTheDocument();
 
     // "הוספה ליומן" stays.

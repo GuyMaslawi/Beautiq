@@ -1,4 +1,3 @@
-import { Images } from "lucide-react";
 import type { PublicGalleryImage } from "@/server/public-booking/queries";
 
 export function PublicGallerySection({
@@ -8,6 +7,10 @@ export function PublicGallerySection({
   images: PublicGalleryImage[];
   brand: string;
 }) {
+  // Never show a big empty placeholder to customers — hide the gallery when
+  // there is nothing to show. The page only mounts this when images exist.
+  if (images.length === 0) return null;
+
   return (
     <section className="mx-auto w-full max-w-6xl px-5 sm:px-8">
       <div className="mb-6 text-center sm:text-right">
@@ -20,20 +23,8 @@ export function PublicGallerySection({
         <p className="mt-0.5 text-sm text-[var(--muted)]">הצצה לתוצאות ולסגנון שלנו</p>
       </div>
 
-      {images.length === 0 ? (
-        <div
-          className="flex flex-col items-center justify-center rounded-[1.6rem] border border-dashed px-6 py-14 text-center"
-          style={{ borderColor: "rgba(184,107,140,0.28)", background: "rgba(255,255,255,0.6)" }}
-        >
-          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl text-white" style={{ background: `linear-gradient(135deg, ${brand}, ${brand}aa)` }}>
-            <Images className="h-7 w-7" />
-          </div>
-          <p className="text-foreground text-base font-bold">בקרוב יעלו עבודות לגלריה</p>
-          <p className="mt-1 max-w-xs text-sm text-[var(--muted)]">כאן יוצגו תמונות של עבודות ותוצאות מהסטודיו</p>
-        </div>
-      ) : (
-        <div className="grid auto-rows-[1fr] grid-cols-2 gap-3 sm:grid-cols-4">
-          {images.map((img, i) => (
+      <div className="grid auto-rows-[1fr] grid-cols-2 gap-3 sm:grid-cols-4">
+        {images.map((img, i) => (
             <div
               key={img.id}
               className={`group relative overflow-hidden rounded-[1.3rem] shadow-[0_10px_30px_-16px_rgba(124,58,97,0.25)] ${
@@ -55,7 +46,6 @@ export function PublicGallerySection({
             </div>
           ))}
         </div>
-      )}
     </section>
   );
 }

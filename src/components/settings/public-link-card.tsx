@@ -2,14 +2,14 @@
 
 import { useState } from "react";
 import { SETTINGS } from "@/lib/constants/he";
-import { publicBusinessUrl } from "@/lib/config";
+import { usePublicBusinessUrl } from "@/lib/use-public-business-url";
 
 export function PublicLinkCard({ slug }: { slug: string }) {
   const [copied, setCopied] = useState(false);
-  // Always build from the canonical app URL (NEXT_PUBLIC_APP_URL) so the link
-  // the owner copies points at the real public domain — not whatever host the
-  // dashboard happens to be served from (proxy / preview deploy / localhost).
-  const publicUrl = publicBusinessUrl(slug);
+  // Browser-aware booking link: the configured production domain when
+  // NEXT_PUBLIC_APP_URL is set, otherwise the current origin so the copied link
+  // works on localhost / preview deploys.
+  const publicUrl = usePublicBusinessUrl(slug);
 
   async function handleCopy() {
     try {

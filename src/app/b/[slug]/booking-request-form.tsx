@@ -368,6 +368,7 @@ function SuccessView({
   serviceName,
   date,
   time,
+  clientName,
   businessName,
   serviceDuration,
   onReset,
@@ -376,6 +377,7 @@ function SuccessView({
   serviceName?: string;
   date: string;
   time: string;
+  clientName?: string;
   businessName: string;
   serviceDuration?: number;
   onReset: () => void;
@@ -404,33 +406,39 @@ function SuccessView({
 
       <div className="space-y-1.5">
         <h2 className="text-2xl font-bold text-[var(--foreground)]">
-          הבקשה נשלחה!
+          בקשת התור נשלחה
         </h2>
-        <p className="text-sm text-[var(--muted)]">
-          העברנו את הפרטים ל{businessName}. תקבלי עדכון לאחר אישור התור.
+        <p className="mx-auto max-w-xs text-sm text-[var(--muted)]">
+          בעלת העסק תקבל את הבקשה ותאשר את התור. נעדכן אותך בהמשך.
         </p>
       </div>
 
       <div
-        className="mx-auto max-w-xs rounded-2xl px-6 py-5 space-y-3"
+        className="mx-auto max-w-xs rounded-2xl px-6 py-5 space-y-3 text-right"
         style={{ background: `linear-gradient(135deg, ${brandColor}0d, ${brandColor}1e)` }}
       >
         {serviceName && (
-          <div className="flex items-center justify-center gap-2 text-sm font-bold text-[var(--foreground)]">
+          <div className="flex items-center gap-2 text-sm font-bold text-[var(--foreground)]">
             <span>✨</span>
             <span>{serviceName}</span>
           </div>
         )}
         {formattedDate && (
-          <div className="flex items-center justify-center gap-2 text-sm text-[var(--foreground)]">
+          <div className="flex items-center gap-2 text-sm text-[var(--foreground)]">
             <span>📅</span>
             <span>{formattedDate}</span>
           </div>
         )}
         {time && (
-          <div className="flex items-center justify-center gap-2 text-sm font-semibold text-[var(--foreground)]">
+          <div className="flex items-center gap-2 text-sm font-semibold text-[var(--foreground)]">
             <span>🕐</span>
             <span>בשעה {time}</span>
+          </div>
+        )}
+        {clientName && (
+          <div className="flex items-center gap-2 text-sm text-[var(--foreground)]">
+            <span>👤</span>
+            <span>{clientName}</span>
           </div>
         )}
       </div>
@@ -490,6 +498,7 @@ export function BookingRequestForm({
   const [selectedServiceId, setSelectedServiceId] = useState(initialServiceId);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
+  const [clientName, setClientName] = useState("");
   const [slots, setSlots] = useState<string[] | null>(null);
 
   const slotsLoading =
@@ -557,6 +566,7 @@ export function BookingRequestForm({
         serviceName={selectedService?.name}
         date={selectedDate}
         time={selectedTime}
+        clientName={clientName}
         businessName={businessName}
         serviceDuration={selectedService?.durationMinutes}
         onReset={() => window.location.reload()}
@@ -711,7 +721,7 @@ export function BookingRequestForm({
               ) : slots !== null && slots.length === 0 ? (
                 <div className="rounded-2xl bg-gray-50 p-6 text-center">
                   <p className="text-sm font-medium text-[var(--foreground)]">
-                    אין שעות פנויות בתאריך זה
+                    אין שעות פנויות ביום הזה
                   </p>
                   <p className="mt-1 text-xs text-[var(--muted)]">
                     נסי לבחור תאריך אחר
@@ -806,6 +816,8 @@ export function BookingRequestForm({
               type="text"
               autoComplete="name"
               placeholder="לדוגמה: נועה כהן"
+              value={clientName}
+              onChange={(e) => setClientName(e.target.value)}
               className={inputCls}
               aria-invalid={!!state.errors?.clientName}
             />

@@ -4,14 +4,15 @@ import { useState } from "react";
 import { Copy, ExternalLink, CheckCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PUBLIC_PAGE } from "@/lib/constants/he";
-import { publicBusinessUrl } from "@/lib/config";
+import { usePublicBusinessUrl } from "@/lib/use-public-business-url";
 
 export function PublicLinkPreview({ slug }: { slug: string }) {
   const [copied, setCopied] = useState(false);
 
-  // Canonical public URL (NEXT_PUBLIC_APP_URL), not the current dashboard host,
-  // so the copied/opened link is always the one clients can actually reach.
-  const publicUrl = publicBusinessUrl(slug);
+  // Browser-aware booking link: the configured production domain when
+  // NEXT_PUBLIC_APP_URL is set, otherwise the current origin so the copied/opened
+  // link works on localhost / preview deploys.
+  const publicUrl = usePublicBusinessUrl(slug);
 
   const handleCopy = async () => {
     try {

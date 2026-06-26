@@ -7,7 +7,7 @@ import { PublicReviewsSection } from "@/app/b/[slug]/_components/reviews-section
 import { PublicSiteFooter } from "@/app/b/[slug]/_components/site-footer";
 import { PublicTrustSection } from "@/app/b/[slug]/_components/trust-section";
 import { PublicBusinessInfo } from "@/app/b/[slug]/_components/business-info";
-import { PublicBusinessHero } from "@/app/b/[slug]/_components/business-hero";
+import { PublicBusinessHeader } from "@/app/b/[slug]/_components/business-hero";
 import type {
   PublicBusiness,
   PublicGalleryImage,
@@ -55,10 +55,13 @@ const REVIEWS: PublicReview[] = [
 ];
 
 describe("PublicGallerySection", () => {
-  it("renders the Hebrew empty state when there are no images", () => {
-    render(<PublicGallerySection images={[]} brand={BRAND} />);
-    expect(screen.getByText("בקרוב יעלו עבודות לגלריה")).toBeInTheDocument();
-    expect(screen.queryByRole("img")).not.toBeInTheDocument();
+  it("renders nothing when there are no images (no giant empty placeholder)", () => {
+    const { container } = render(
+      <PublicGallerySection images={[]} brand={BRAND} />,
+    );
+    expect(container.firstChild).toBeNull();
+    expect(screen.queryByText("בקרוב יעלו עבודות לגלריה")).not.toBeInTheDocument();
+    expect(screen.queryByText("העבודות שלנו")).not.toBeInTheDocument();
   });
 
   it("renders an image grid when images exist (caption falls back to empty alt)", () => {
@@ -181,56 +184,63 @@ describe("PublicBusinessInfo", () => {
   });
 });
 
-describe("PublicBusinessHero", () => {
-  it("renders the business name, tagline and booking card", () => {
+describe("PublicBusinessHeader", () => {
+  it("renders the business name and tagline (compact, no booking card inside)", () => {
     render(
-      <PublicBusinessHero
+      <PublicBusinessHeader
         business={makePublicBusiness({ introMessage: "ברוכה הבאה" })}
         brand={BRAND}
         avgRating={4.5}
-        bookingForm={<div data-testid="booking-form">form</div>}
       />,
     );
     expect(
       screen.getByRole("heading", { level: 1, name: "סטודיו יופי" }),
     ).toBeInTheDocument();
     expect(screen.getByText("ברוכה הבאה")).toBeInTheDocument();
-    expect(screen.getByTestId("booking-form")).toBeInTheDocument();
-    expect(screen.getByText("קביעת תור ב־3 צעדים")).toBeInTheDocument();
+    // The header no longer owns the booking card — that lives in its own region.
+    expect(screen.queryByText("קביעת תור ב־3 צעדים")).not.toBeInTheDocument();
   });
 
-  it("exposes a focusable #book booking anchor for the sticky CTA", () => {
+  it("does not render a cover image when the business has no cover (no giant empty hero)", () => {
     const { container } = render(
-      <PublicBusinessHero
-        business={makePublicBusiness()}
+      <PublicBusinessHeader
+        business={makePublicBusiness({ coverImageUrl: null, logoUrl: null })}
         brand={BRAND}
         avgRating={null}
-        bookingForm={<div>form</div>}
       />,
     );
-    const book = container.querySelector("#book");
-    expect(book).not.toBeNull();
-    expect(book).toHaveAttribute("tabindex", "-1");
+    // No <img> at all when there's neither a cover nor a logo — just initials.
+    expect(container.querySelector("img")).toBeNull();
+  });
+
+  it("renders the cover image when one is provided", () => {
+    const { container } = render(
+      <PublicBusinessHeader
+        business={makePublicBusiness({ coverImageUrl: "https://x/cover.jpg" })}
+        brand={BRAND}
+        avgRating={null}
+      />,
+    );
+    const cover = container.querySelector('img[src="https://x/cover.jpg"]');
+    expect(cover).not.toBeNull();
   });
 
   it("shows the rating badge only when avgRating is provided", () => {
     const { rerender } = render(
-      <PublicBusinessHero
+      <PublicBusinessHeader
         business={makePublicBusiness({ reviews: REVIEWS })}
         brand={BRAND}
         avgRating={4.5}
-        bookingForm={<div>form</div>}
       />,
     );
     expect(screen.getByText("4.5")).toBeInTheDocument();
     expect(screen.getByText(/2 ביקורות/)).toBeInTheDocument();
 
     rerender(
-      <PublicBusinessHero
+      <PublicBusinessHeader
         business={makePublicBusiness()}
         brand={BRAND}
         avgRating={null}
-        bookingForm={<div>form</div>}
       />,
     );
     expect(screen.queryByText("4.5")).not.toBeInTheDocument();
@@ -238,7 +248,7 @@ describe("PublicBusinessHero", () => {
 
   it("renders social/contact buttons only when their values exist", () => {
     render(
-      <PublicBusinessHero
+      <PublicBusinessHeader
         business={makePublicBusiness({
           instagramUrl: "@studio",
           facebookUrl: null,
@@ -246,7 +256,6 @@ describe("PublicBusinessHero", () => {
         })}
         brand={BRAND}
         avgRating={null}
-        bookingForm={<div>form</div>}
       />,
     );
     expect(screen.getByLabelText("Instagram")).toBeInTheDocument();
@@ -255,9 +264,9 @@ describe("PublicBusinessHero", () => {
     expect(screen.getByLabelText("WhatsApp")).toBeInTheDocument();
   });
 
-  it("does not leak null/undefined into the rendered hero", () => {
+  it("does not leak null/undefined into the rendered header", () => {
     const { container } = render(
-      <PublicBusinessHero
+      <PublicBusinessHeader
         business={makePublicBusiness({
           description: null,
           introMessage: null,
@@ -265,7 +274,6 @@ describe("PublicBusinessHero", () => {
         })}
         brand={BRAND}
         avgRating={null}
-        bookingForm={<div>form</div>}
       />,
     );
     expect(container.textContent ?? "").not.toMatch(/undefined|null|NaN/);
