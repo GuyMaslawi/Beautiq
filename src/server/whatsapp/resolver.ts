@@ -351,20 +351,37 @@ export async function getWhatsAppDiagnostic(
   return { ok, statusLabel, details };
 }
 
-/**
- * Server-side ONLY. Returns the decrypted access token + ids for a business so
- * template create/sync calls can run. NEVER return this to the client.
- * Resolves the token from Mode B (encrypted) or Mode A (env fallback).
- */
-export async function getDecryptedCredentialsForBusiness(
-  businessId: string,
-): Promise<{
+/** Where a resolved id came from — purely for safe admin diagnostics. */
+export type CredentialSource = "connection" | "env" | "none";
+
+export interface DecryptedWhatsAppCredentials {
   accessToken: string;
   phoneNumberId?: string;
   wabaId?: string;
   apiVersion: string;
-} | null> {
+  /** Which resolution branch produced these credentials. */
+  credentialMode: "allura_managed" | "per_business";
+  /** Where the WABA id came from (DB connection vs env vs unset). */
+  wabaIdSource: CredentialSource;
+  /** Where the phone number id came from (DB connection vs env vs unset). */
+  phoneNumberIdSource: CredentialSource;
+  /** True when META_WHATSAPP_WABA_ID is present in the environment. */
+  envWabaIdPresent: boolean;
+}
+
+/**
+ * Server-side ONLY. Returns the decrypted access token + ids for a business so
+ * template create/sync calls can run. NEVER return this to the client.
+ * Resolves the token from Mode B (encrypted) or Mode A (env fallback).
+ *
+ * Also reports WHERE each id came from (connection vs env) — these source fields
+ * are safe (no token) and drive the admin template-sync diagnostics.
+ */
+export async function getDecryptedCredentialsForBusiness(
+  businessId: string,
+): Promise<DecryptedWhatsAppCredentials | null> {
   const apiVersion = process.env.META_WHATSAPP_API_VERSION ?? "v19.0";
+  const envWabaIdPresent = !!process.env.META_WHATSAPP_WABA_ID;
 
   const connection = await prisma.whatsAppConnection.findUnique({
     where: { businessId },
@@ -380,6 +397,10 @@ export async function getDecryptedCredentialsForBusiness(
       phoneNumberId: process.env.META_WHATSAPP_PHONE_NUMBER_ID ?? undefined,
       wabaId: process.env.META_WHATSAPP_WABA_ID ?? undefined,
       apiVersion,
+      credentialMode: "allura_managed",
+      wabaIdSource: process.env.META_WHATSAPP_WABA_ID ? "env" : "none",
+      phoneNumberIdSource: process.env.META_WHATSAPP_PHONE_NUMBER_ID ? "env" : "none",
+      envWabaIdPresent,
     };
   }
 
@@ -391,11 +412,23 @@ export async function getDecryptedCredentialsForBusiness(
   }
   if (!accessToken) return null;
 
+  const wabaId = connection.wabaId ?? process.env.META_WHATSAPP_WABA_ID ?? undefined;
+  const phoneNumberId =
+    connection.phoneNumberId ?? process.env.META_WHATSAPP_PHONE_NUMBER_ID ?? undefined;
+
   return {
     accessToken,
-    phoneNumberId: connection.phoneNumberId ?? process.env.META_WHATSAPP_PHONE_NUMBER_ID ?? undefined,
-    wabaId: connection.wabaId ?? process.env.META_WHATSAPP_WABA_ID ?? undefined,
+    phoneNumberId,
+    wabaId,
     apiVersion,
+    credentialMode: "per_business",
+    wabaIdSource: connection.wabaId ? "connection" : process.env.META_WHATSAPP_WABA_ID ? "env" : "none",
+    phoneNumberIdSource: connection.phoneNumberId
+      ? "connection"
+      : process.env.META_WHATSAPP_PHONE_NUMBER_ID
+        ? "env"
+        : "none",
+    envWabaIdPresent,
   };
 }
 

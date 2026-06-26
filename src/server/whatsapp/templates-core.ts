@@ -48,12 +48,56 @@ export interface TemplateSetupItem {
   fbtraceId?: string;
 }
 
+/**
+ * Safe, token-free diagnostics for the "sync" action. Surfaces exactly which
+ * WABA/phone ids were used, where they came from, and what Meta returned, so a
+ * "לא נמצאה תבנית" result is debuggable without guessing. NEVER carries the
+ * access token. Admin-only display.
+ */
+export interface SyncDiagnostics {
+  /** WABA id used for listTemplates (the account we asked Meta about). */
+  wabaId?: string;
+  /** Where that WABA id came from: DB connection, env var, or unset. */
+  wabaIdSource: "connection" | "env" | "none";
+  /** True when META_WHATSAPP_WABA_ID is set in the environment. */
+  envWabaIdPresent: boolean;
+  /** Phone Number ID that real sends would use (NOT used for listTemplates). */
+  phoneNumberId?: string;
+  phoneNumberIdSource: "connection" | "env" | "none";
+  /** Which resolver branch produced the credentials. */
+  credentialMode: "allura_managed" | "per_business";
+  apiVersion: string;
+  /** How many templates Meta returned for this WABA. */
+  returnedCount: number;
+  /** The names/languages/categories/statuses Meta returned (raw + normalized). */
+  returnedTemplates: Array<{
+    name: string;
+    language: string;
+    category?: string;
+    /** Normalized status (approved/pending/rejected/unknown). */
+    status: TemplateStatus;
+    /** Exact status string from Meta (e.g. "APPROVED"). */
+    rawStatus?: string;
+  }>;
+  /** The 4 names+languages we look for, and whether each matched. */
+  expected: Array<{ name: string; language: string; matched: boolean }>;
+  /** When listTemplates itself failed (HTTP/permission/token), the safe reason. */
+  listError?: string;
+  listHttpStatus?: number;
+  listErrorCode?: number;
+  listErrorType?: string;
+  /** A single-line Hebrew interpretation of the most likely root cause. */
+  hint: string;
+}
+
 export interface TemplateSetupResult {
   success: boolean;
   /** Owner-facing Hebrew summary. */
   statusLabel: string;
   /** Per-template outcome for admin diagnostics. */
   items: TemplateSetupItem[];
+  /** Safe diagnostics for the sync action (admin-only). Absent for create. */
+  syncDiagnostics?: SyncDiagnostics;
   /**
    * True when every OPERATIONAL (core/transactional) template in this run is
    * pending/approved — i.e. the WhatsApp setup is usable for booking/reminder/
@@ -255,12 +299,42 @@ export async function createDefaultTemplatesForBusiness(
   return { ...summary, items };
 }
 
+/** Masks the middle of an id so logs/UI can show it without leaking the full id. */
+function maskId(id: string | undefined): string {
+  if (!id) return "(unset)";
+  if (id.length <= 8) return id;
+  return `${id.slice(0, 5)}…${id.slice(-4)}`;
+}
+
 /** Option B — sync template statuses by reading the WABA's existing templates. */
 export async function syncTemplatesForBusiness(
   businessId: string,
 ): Promise<TemplateSetupResult> {
   const creds = await getDecryptedCredentialsForBusiness(businessId);
+
+  // Common diagnostic header (no token) — available even on the early failures.
+  const envWabaIdPresent = creds?.envWabaIdPresent ?? !!process.env.META_WHATSAPP_WABA_ID;
+
   if (!creds?.wabaId) {
+    const diag: SyncDiagnostics = {
+      wabaId: undefined,
+      wabaIdSource: creds?.wabaIdSource ?? "none",
+      envWabaIdPresent,
+      phoneNumberId: creds?.phoneNumberId,
+      phoneNumberIdSource: creds?.phoneNumberIdSource ?? "none",
+      credentialMode: creds?.credentialMode ?? "allura_managed",
+      apiVersion: creds?.apiVersion ?? (process.env.META_WHATSAPP_API_VERSION ?? "v19.0"),
+      returnedCount: 0,
+      returnedTemplates: [],
+      expected: DEFAULT_TEMPLATES.map((t) => ({ name: t.name, language: t.language, matched: false })),
+      hint: envWabaIdPresent
+        ? "ה-WABA ID לא נפתר מהחיבור או מה-env — בדקי את META_WHATSAPP_WABA_ID או את החיבור בבסיס הנתונים."
+        : "META_WHATSAPP_WABA_ID לא מוגדר בסביבה (production) — יש להגדירו ב-Vercel.",
+    };
+    console.warn(
+      `[WhatsApp sync] businessId=${businessId} — no WABA id resolved. ` +
+        `mode=${diag.credentialMode} envWabaIdPresent=${envWabaIdPresent}`,
+    );
     return {
       success: false,
       statusLabel: "WhatsApp לא מחובר — יש לחבר את WhatsApp לפני סנכרון תבניות",
@@ -268,11 +342,75 @@ export async function syncTemplatesForBusiness(
       operationalReady: false,
       marketingReady: false,
       marketingFailed: false,
+      syncDiagnostics: diag,
     };
   }
 
   const list = await listTemplates(creds.wabaId, creds.accessToken);
+
+  // Build the per-template match info up front (also used to construct the hint).
+  const returnedTemplates = (list.templates ?? []).map((t) => ({
+    name: t.name,
+    language: t.language,
+    category: t.category,
+    status: t.status,
+    rawStatus: t.rawStatus,
+  }));
+  const expected = DEFAULT_TEMPLATES.map((tpl) => ({
+    name: tpl.name,
+    language: tpl.language,
+    matched: (list.templates ?? []).some(
+      (t) => t.name === tpl.name && t.language === tpl.language,
+    ),
+  }));
+
+  const baseDiag = {
+    wabaId: creds.wabaId,
+    wabaIdSource: creds.wabaIdSource,
+    envWabaIdPresent,
+    phoneNumberId: creds.phoneNumberId,
+    phoneNumberIdSource: creds.phoneNumberIdSource,
+    credentialMode: creds.credentialMode,
+    apiVersion: creds.apiVersion,
+    returnedCount: returnedTemplates.length,
+    returnedTemplates,
+    expected,
+  };
+
+  // Server log: safe, token-free. WABA id is masked in logs; the full id is only
+  // returned to the admin UI (it is not a secret, but logs are shared more widely).
+  console.info(
+    `[WhatsApp sync] businessId=${businessId} ` +
+      `waba=${maskId(creds.wabaId)} wabaSource=${creds.wabaIdSource} ` +
+      `phone=${maskId(creds.phoneNumberId)} phoneSource=${creds.phoneNumberIdSource} ` +
+      `mode=${creds.credentialMode} apiVersion=${creds.apiVersion} ` +
+      `listOk=${list.ok} returnedCount=${returnedTemplates.length} ` +
+      `returned=[${returnedTemplates.map((t) => `${t.name}/${t.language}/${t.rawStatus ?? t.status}`).join(", ")}] ` +
+      `matched=[${expected.filter((e) => e.matched).map((e) => e.name).join(", ")}]` +
+      (list.ok ? "" : ` listError="${list.error}" httpStatus=${list.httpStatus} code=${list.errorCode} type=${list.errorType}`),
+  );
+
   if (!list.ok || !list.templates) {
+    // listTemplates failed outright — almost always token/permission/WABA, not a
+    // name mismatch. Codes: 190 = bad token, 200/10 = missing permission, 100 =
+    // bad WABA id / object.
+    const code = list.errorCode;
+    const hint =
+      code === 190
+        ? "ה-Access Token לא תקין או פג תוקף (code 190) — חדשי את META_WHATSAPP_ACCESS_TOKEN."
+        : code === 200 || code === 10
+          ? "לטוקן חסרה הרשאת whatsapp_business_management (code 200) — הוסיפי את ההרשאה ל-System User token."
+          : code === 100
+            ? "ה-WABA ID כנראה שגוי או לא נגיש לטוקן (code 100) — ודאי שזה ה-WABA הנכון."
+            : `קריאת רשימת התבניות נכשלה — ${list.error ?? "שגיאה לא ידועה"}.`;
+    const diag: SyncDiagnostics = {
+      ...baseDiag,
+      listError: list.error,
+      listHttpStatus: list.httpStatus,
+      listErrorCode: list.errorCode,
+      listErrorType: list.errorType,
+      hint,
+    };
     return {
       success: false,
       statusLabel: list.error ? `סנכרון נכשל — ${list.error}` : "סנכרון נכשל",
@@ -280,6 +418,7 @@ export async function syncTemplatesForBusiness(
       operationalReady: false,
       marketingReady: false,
       marketingFailed: false,
+      syncDiagnostics: diag,
     };
   }
 
@@ -297,10 +436,26 @@ export async function syncTemplatesForBusiness(
       items.push(item);
     } else {
       item.status = "error";
-      item.error = "לא נמצאה תבנית";
+      // Distinguish "name exists but language differs" from "name absent entirely".
+      const sameName = list.templates.filter((t) => t.name === tpl.name);
+      item.error = sameName.length
+        ? `נמצאה תבנית בשם זה אך בשפה ${sameName.map((t) => t.language).join("/")} (מצפים ל-${tpl.language})`
+        : "לא נמצאה תבנית";
       items.push(item);
     }
   }
+
+  // Interpret the result for the admin.
+  const hint =
+    returnedTemplates.length === 0
+      ? `Meta החזירה 0 תבניות עבור ה-WABA הזה — כמעט תמיד זה ה-WABA הלא נכון (התבניות נוצרו ב-WABA אחר) או שלטוקן חסרה הרשאת whatsapp_business_management. ודאי שה-WABA ID (מקור: ${creds.wabaIdSource}) הוא אותו WABA שבו נוצרו התבניות ב-WhatsApp Manager.`
+      : matched === DEFAULT_TEMPLATES.length
+        ? "כל התבניות נמצאו והותאמו בהצלחה."
+        : matched > 0
+          ? "חלק מהתבניות הותאמו — לשאר יש אי-התאמה בשם או בשפה (ראי הרשימה שהוחזרה)."
+          : "Meta החזירה תבניות, אך אף אחת מהן לא תואמת בשם+שפה לתבניות הצפויות — השוואת השמות/שפות מול הרשימה שהוחזרה תראה את ההבדל.";
+
+  const diag: SyncDiagnostics = { ...baseDiag, hint };
 
   revalidatePath("/automations");
 
@@ -317,5 +472,6 @@ export async function syncTemplatesForBusiness(
     operationalReady: summary.operationalReady,
     marketingReady: summary.marketingReady,
     marketingFailed: summary.marketingFailed,
+    syncDiagnostics: diag,
   };
 }

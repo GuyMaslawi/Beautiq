@@ -177,6 +177,67 @@ export function WhatsAppAdminPanel({ businessId }: Props) {
         </div>
       )}
 
+      {/* Sync diagnostics (admin-only, token-free) */}
+      {templateResult?.syncDiagnostics && (
+        <div
+          className="rounded-xl border p-4 space-y-2 text-xs"
+          style={{ borderColor: "#e5e7eb", background: "#0b1020", color: "#cbd5e1" }}
+        >
+          <p className="text-sm font-semibold" style={{ color: "#fff" }}>
+            דיאגנוסטיקת סנכרון תבניות (מנהל בלבד)
+          </p>
+
+          <p style={{ color: "#fde68a" }}>{templateResult.syncDiagnostics.hint}</p>
+
+          <div className="space-y-0.5" style={{ direction: "ltr" }}>
+            <div>WABA ID (listTemplates): <b>{templateResult.syncDiagnostics.wabaId ?? "(unset)"}</b></div>
+            <div>WABA ID source: <b>{templateResult.syncDiagnostics.wabaIdSource}</b></div>
+            <div>META_WHATSAPP_WABA_ID loaded: <b>{templateResult.syncDiagnostics.envWabaIdPresent ? "yes" : "no"}</b></div>
+            <div>Phone Number ID (send): <b>{templateResult.syncDiagnostics.phoneNumberId ?? "(unset)"}</b> (source: {templateResult.syncDiagnostics.phoneNumberIdSource})</div>
+            <div>Credential mode: <b>{templateResult.syncDiagnostics.credentialMode}</b></div>
+            <div>Graph API version: <b>{templateResult.syncDiagnostics.apiVersion}</b></div>
+            <div>Templates returned by Meta: <b>{templateResult.syncDiagnostics.returnedCount}</b></div>
+            {templateResult.syncDiagnostics.listError && (
+              <div style={{ color: "#fca5a5" }}>
+                listTemplates error: {templateResult.syncDiagnostics.listError}
+                {typeof templateResult.syncDiagnostics.listErrorCode === "number"
+                  ? ` (code ${templateResult.syncDiagnostics.listErrorCode}`
+                  : ""}
+                {templateResult.syncDiagnostics.listErrorType
+                  ? ` · ${templateResult.syncDiagnostics.listErrorType})`
+                  : typeof templateResult.syncDiagnostics.listErrorCode === "number"
+                    ? ")"
+                    : ""}
+              </div>
+            )}
+          </div>
+
+          {templateResult.syncDiagnostics.returnedTemplates.length > 0 && (
+            <div className="space-y-0.5" style={{ direction: "ltr" }}>
+              <div className="font-semibold" style={{ color: "#fff" }}>
+                Returned templates (name · language · category · status):
+              </div>
+              {templateResult.syncDiagnostics.returnedTemplates.map((t, i) => (
+                <div key={`${t.name}-${t.language}-${i}`}>
+                  {t.name} · {t.language} · {t.category ?? "—"} · {t.rawStatus ?? "?"} → {t.status}
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="space-y-0.5" style={{ direction: "ltr" }}>
+            <div className="font-semibold" style={{ color: "#fff" }}>
+              Expected (name · language → matched):
+            </div>
+            {templateResult.syncDiagnostics.expected.map((e) => (
+              <div key={e.name} style={{ color: e.matched ? "#86efac" : "#fca5a5" }}>
+                {e.name} · {e.language} → {e.matched ? "matched" : "NOT FOUND"}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Diagnostic result */}
       {diagnostic && (
         <div

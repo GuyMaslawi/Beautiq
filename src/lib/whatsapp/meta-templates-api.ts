@@ -182,6 +182,8 @@ export interface ListedTemplate {
   name: string;
   language: string;
   status: TemplateStatus;
+  /** The exact status string Meta returned (e.g. "APPROVED"), before normalization. */
+  rawStatus?: string;
   category?: string;
 }
 
@@ -189,6 +191,12 @@ export interface ListTemplatesResult {
   ok: boolean;
   templates?: ListedTemplate[];
   error?: string;
+  /** HTTP status from the Graph API call — surfaced for admin diagnostics. */
+  httpStatus?: number;
+  /** Meta error code (e.g. 190 invalid token, 200 missing permission), when present. */
+  errorCode?: number;
+  /** Meta error type (e.g. OAuthException), when present. */
+  errorType?: string;
 }
 
 /** Lists all message templates in a WABA (handles a single page; enough for our 4). */
@@ -206,18 +214,25 @@ export async function listTemplates(
     });
     const data = (await res.json()) as {
       data?: Array<{ name: string; language: string; status: string; category?: string }>;
-      error?: { message?: string };
+      error?: { message?: string; code?: number; type?: string };
     };
     if (!res.ok) {
-      return { ok: false, error: scrubToken(data.error?.message ?? `HTTP ${res.status}`) };
+      return {
+        ok: false,
+        error: scrubToken(data.error?.message ?? `HTTP ${res.status}`),
+        httpStatus: res.status,
+        errorCode: data.error?.code,
+        errorType: data.error?.type,
+      };
     }
     const templates = (data.data ?? []).map((t) => ({
       name: t.name,
       language: t.language,
       status: normalizeTemplateStatus(t.status),
+      rawStatus: t.status,
       category: t.category,
     }));
-    return { ok: true, templates };
+    return { ok: true, templates, httpStatus: res.status };
   } catch (err) {
     return { ok: false, error: err instanceof Error ? scrubToken(err.message) : "שגיאת רשת" };
   }
