@@ -24,6 +24,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/db/prisma";
 import { normalizePhone } from "@/lib/phone";
 
+// This endpoint must never be statically optimized or cached: Meta calls it with
+// per-request query params (verification) and live event payloads (POST). Pin it
+// to the Node.js runtime so crypto + Prisma behave as on the server.
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
+
 // ---------------------------------------------------------------------------
 // Meta webhook payload types
 // ---------------------------------------------------------------------------
@@ -239,21 +245,40 @@ async function processChange(change: MetaWebhookChange): Promise<void> {
 export async function GET(request: NextRequest) {
   const { searchParams } = request.nextUrl;
   const mode = searchParams.get("hub.mode");
-  const token = searchParams.get("hub.verify_token");
   const challenge = searchParams.get("hub.challenge");
 
-  const verifyToken = process.env.META_WEBHOOK_VERIFY_TOKEN;
+  // Trim both sides: tokens pasted into Vercel/Meta almost always pick up a
+  // trailing newline or spaces, which silently breaks a strict === comparison
+  // even when the values look identical. This is the most common cause of
+  // "The callback URL or verify token couldn't be validated."
+  const token = (searchParams.get("hub.verify_token") ?? "").trim();
+  const verifyToken = (process.env.META_WEBHOOK_VERIFY_TOKEN ?? "").trim();
+
+  const tokenMatches = verifyToken.length > 0 && token === verifyToken;
+
+  // Safe debug log — never logs the token value itself, only metadata.
+  console.log(
+    "[WhatsApp webhook] verification attempt — " +
+      `mode=${mode ?? "(none)"} ` +
+      `tokenPresent=${token.length > 0 ? "yes" : "no"} ` +
+      `tokenMatches=${tokenMatches ? "yes" : "no"} ` +
+      `challengePresent=${challenge ? "yes" : "no"}`,
+  );
+
   if (!verifyToken) {
     console.error("[WhatsApp webhook] META_WEBHOOK_VERIFY_TOKEN is not set");
     return new NextResponse("Forbidden", { status: 403 });
   }
 
-  if (mode === "subscribe" && token === verifyToken && challenge) {
-    console.log("[WhatsApp webhook] verification challenge accepted");
-    return new NextResponse(challenge, { status: 200 });
+  if (mode === "subscribe" && tokenMatches && challenge) {
+    // Echo the challenge back verbatim as plain text — Meta compares the body
+    // byte-for-byte against what it sent.
+    return new NextResponse(challenge, {
+      status: 200,
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
   }
 
-  console.warn("[WhatsApp webhook] verification challenge rejected — token mismatch or missing params");
   return new NextResponse("Forbidden", { status: 403 });
 }
 

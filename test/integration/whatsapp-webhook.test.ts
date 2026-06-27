@@ -85,6 +85,60 @@ describe("webhook GET — verification challenge", () => {
     );
     expect(res.status).toBe(403);
   });
+
+  it("403 when the challenge is missing", async () => {
+    process.env.META_WEBHOOK_VERIFY_TOKEN = "secret_verify";
+    const res = await GET(getReq({ "hub.mode": "subscribe", "hub.verify_token": "secret_verify" }));
+    expect(res.status).toBe(403);
+  });
+
+  it("returns the challenge as plain text with a 200", async () => {
+    process.env.META_WEBHOOK_VERIFY_TOKEN = "secret_verify";
+    const res = await GET(
+      getReq({ "hub.mode": "subscribe", "hub.verify_token": "secret_verify", "hub.challenge": "123456" }),
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toContain("text/plain");
+    expect(await res.text()).toBe("123456");
+  });
+
+  it("tolerates trailing whitespace/newline on the stored verify token", async () => {
+    // Simulates a token pasted into Vercel with a trailing newline.
+    process.env.META_WEBHOOK_VERIFY_TOKEN = "secret_verify\n";
+    const res = await GET(
+      getReq({ "hub.mode": "subscribe", "hub.verify_token": "secret_verify", "hub.challenge": "123456" }),
+    );
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("123456");
+  });
+
+  it("requires no auth/session — a bare request with valid token succeeds", async () => {
+    // No cookies/headers/session set on the request at all.
+    process.env.META_WEBHOOK_VERIFY_TOKEN = "secret_verify";
+    const url = new URL("https://example.com/api/whatsapp/webhook");
+    url.searchParams.set("hub.mode", "subscribe");
+    url.searchParams.set("hub.verify_token", "secret_verify");
+    url.searchParams.set("hub.challenge", "999");
+    const res = await GET(new NextRequest(url.toString(), { method: "GET" }));
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe("999");
+  });
+
+  it("does not log the verify token value", async () => {
+    process.env.META_WEBHOOK_VERIFY_TOKEN = "super_secret_token_value";
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    await GET(
+      getReq({
+        "hub.mode": "subscribe",
+        "hub.verify_token": "super_secret_token_value",
+        "hub.challenge": "123",
+      }),
+    );
+    const loggedToken = logSpy.mock.calls.some((call) =>
+      call.some((arg) => typeof arg === "string" && arg.includes("super_secret_token_value")),
+    );
+    expect(loggedToken).toBe(false);
+  });
 });
 
 describe("webhook POST — signature validation", () => {
