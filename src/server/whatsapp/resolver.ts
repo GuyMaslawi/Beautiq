@@ -249,6 +249,8 @@ export async function getWhatsAppDiagnostic(
       lastVerifiedAt: true,
       lastError: true,
       connectedAt: true,
+      connectionSource: true,
+      numberConfirmedAt: true,
     },
   });
 
@@ -256,6 +258,17 @@ export async function getWhatsAppDiagnostic(
 
   const hasConnection = !!connection;
   const isActive = connection?.status === "active";
+
+  // Resolve the *actual* send decision so the panel can report whether the
+  // confirmation gate is currently blocking and whether outbound sends are
+  // allowed — these mirror exactly what the public-booking flow will hit.
+  const resolved = await resolveWhatsAppConnectionForBusiness(businessId);
+  const gateBlocking =
+    isActive && !!connection?.connectionSource && !connection?.numberConfirmedAt;
+  const sendsAllowed =
+    realSendEnabled &&
+    resolved.provider.name !== "disabled" &&
+    resolved.provider.name !== "dev_mock";
 
   details.push({
     label: "חיבור WhatsApp בסיס הנתונים",
@@ -302,6 +315,26 @@ export async function getWhatsAppDiagnostic(
     if (connection.lastError) {
       details.push({ label: "שגיאה אחרונה", ok: false, value: connection.lastError });
     }
+
+    // Confirmation-gate inputs — the two fields that decide whether the
+    // guided-flow gate blocks sends before they ever reach Meta.
+    details.push({
+      label: "מקור החיבור (connectionSource)",
+      ok: true,
+      value: connection.connectionSource ?? "(לא מוגדר — מנוהל/legacy)",
+    });
+    details.push({
+      label: "מספר אושר (numberConfirmedAt)",
+      ok: !!connection.numberConfirmedAt,
+      value: connection.numberConfirmedAt
+        ? `כן — ${new Date(connection.numberConfirmedAt).toLocaleString("he-IL", {
+            day: "numeric",
+            month: "short",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}`
+        : "לא",
+    });
   }
 
   details.push({ label: "שליחה אמיתית מופעלת (ENABLE_REAL_WHATSAPP_SEND)", ok: realSendEnabled });
@@ -316,6 +349,20 @@ export async function getWhatsAppDiagnostic(
     label: "מצב בדיקה (WHATSAPP_TEST_MODE)",
     ok: !testModeActive,
     value: testModeActive ? "פעיל — שליחה רק למספר בדיקה" : "כבוי",
+  });
+  details.push({
+    label: "חוסם אישור מספר (confirmation gate)",
+    ok: !gateBlocking,
+    value: gateBlocking ? "כן — שליחה חסומה עד אישור המספר" : "לא",
+  });
+  details.push({
+    label: "שליחה יוצאת מותרת",
+    ok: sendsAllowed,
+    value: sendsAllowed
+      ? testModeActive
+        ? "כן — אך רק למספר הבדיקה"
+        : "כן"
+      : "לא",
   });
 
   // Derive main status label

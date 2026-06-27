@@ -15,13 +15,16 @@
 
 import { prisma } from "@/server/db/prisma";
 import { requirePlatformAdmin } from "./auth";
-import { getWhatsAppDiagnostic, type WhatsAppDiagnosticResult } from "@/server/whatsapp/resolver";
+import {
+  getWhatsAppDiagnostic,
+  getDecryptedCredentialsForBusiness,
+  type WhatsAppDiagnosticResult,
+} from "@/server/whatsapp/resolver";
 import {
   createDefaultTemplatesForBusiness,
   syncTemplatesForBusiness,
   type TemplateSetupResult,
 } from "@/server/whatsapp/templates-core";
-import { createMetaCloudApiProvider } from "@/lib/whatsapp/meta-cloud-api";
 import { revalidatePath } from "next/cache";
 
 export interface ConnectFromEnvResult {
@@ -32,6 +35,48 @@ export interface ConnectFromEnvResult {
   /** True when Meta API verification succeeded */
   verified: boolean;
   error?: string;
+}
+
+export interface ConfirmNumberResult {
+  success: boolean;
+  statusLabel: string;
+  phoneNumberId?: string;
+  wabaId?: string;
+  /** ISO timestamp of confirmation when success=true */
+  confirmedAt?: string;
+  error?: string;
+}
+
+/**
+ * Lightweight reachability check: confirms the given Phone Number ID is readable
+ * with the current access token via the Meta Graph API. Never logs or returns
+ * the token; error messages are scrubbed of any token-like substring.
+ */
+async function verifyPhoneNumberReachable(opts: {
+  accessToken: string;
+  phoneNumberId: string;
+  apiVersion: string;
+}): Promise<{ reachable: boolean; displayPhoneNumber?: string; error?: string }> {
+  try {
+    const res = await fetch(
+      `https://graph.facebook.com/${opts.apiVersion}/${opts.phoneNumberId}?fields=display_phone_number,verified_name`,
+      { headers: { Authorization: `Bearer ${opts.accessToken}` }, cache: "no-store" },
+    );
+    if (res.ok) {
+      const data = (await res.json()) as { display_phone_number?: string };
+      return { reachable: true, displayPhoneNumber: data.display_phone_number };
+    }
+    const errData = (await res.json().catch(() => ({}))) as {
+      error?: { message?: string; code?: number };
+    };
+    const msg = errData.error?.message ?? `HTTP ${res.status}`;
+    return { reachable: false, error: msg.replace(/EAA\S+/g, "[token]") };
+  } catch (err) {
+    return {
+      reachable: false,
+      error: err instanceof Error ? err.message.replace(/EAA\S+/g, "[token]") : "שגיאת רשת",
+    };
+  }
 }
 
 /**
@@ -75,53 +120,23 @@ export async function adminConnectBusinessFromEnv(
   }
 
   // Verify credentials against Meta API before saving
-  let verified = false;
-  let displayPhoneNumber: string | undefined;
-  let lastError: string | undefined;
-
-  try {
-    const provider = createMetaCloudApiProvider({ accessToken, phoneNumberId, apiVersion });
-    // Use a lightweight Meta Graph API call to verify — fetch phone number details
-    const verifyRes = await fetch(
-      `https://graph.facebook.com/${apiVersion}/${phoneNumberId}?fields=display_phone_number,verified_name`,
-      {
-        headers: { Authorization: `Bearer ${accessToken}` },
-        cache: "no-store",
-      },
-    );
-    // Prevent token from appearing in logs even on error
-    void provider; // reference to suppress unused warning
-
-    if (verifyRes.ok) {
-      const data = (await verifyRes.json()) as {
-        display_phone_number?: string;
-        verified_name?: string;
-      };
-      displayPhoneNumber = data.display_phone_number;
-      verified = true;
-    } else {
-      const errData = (await verifyRes.json()) as {
-        error?: { message?: string; code?: number };
-      };
-      const msg = errData.error?.message ?? `HTTP ${verifyRes.status}`;
-      // Strip any token hints from error message before saving
-      lastError = msg.replace(/EAA\S+/g, "[token]");
-      console.error(
-        `[adminConnectBusinessFromEnv] Meta verification failed — businessId=${businessId} ` +
-          `status=${verifyRes.status} message=${lastError}`,
-      );
-    }
-  } catch (err) {
-    lastError =
-      err instanceof Error ? err.message.replace(/EAA\S+/g, "[token]") : "שגיאת רשת";
+  const check = await verifyPhoneNumberReachable({ accessToken, phoneNumberId, apiVersion });
+  const verified = check.reachable;
+  const displayPhoneNumber = check.displayPhoneNumber;
+  const lastError = check.error;
+  if (!verified) {
     console.error(
-      `[adminConnectBusinessFromEnv] network error — businessId=${businessId}`,
-      lastError,
+      `[adminConnectBusinessFromEnv] Meta verification failed — businessId=${businessId} message=${lastError}`,
     );
   }
 
   const now = new Date();
 
+  // This is an Allura-managed / env (Mode A) connection — it is NOT a guided
+  // owner-onboarding flow, so it must never sit behind the number-confirmation
+  // gate. On a successful phone check we confirm the number automatically
+  // (numberConfirmedAt) and clear any stale guided-flow connectionSource so the
+  // resolver's gate (connectionSource && !numberConfirmedAt) can never block it.
   await prisma.whatsAppConnection.upsert({
     where: { businessId },
     create: {
@@ -135,6 +150,8 @@ export async function adminConnectBusinessFromEnv(
       lastVerifiedAt: verified ? now : null,
       lastError: lastError ?? null,
       connectedAt: verified ? now : null,
+      connectionSource: null,
+      numberConfirmedAt: verified ? now : null,
     },
     update: {
       provider: "meta_cloud",
@@ -147,6 +164,8 @@ export async function adminConnectBusinessFromEnv(
       lastError: lastError ?? null,
       connectedAt: verified ? now : undefined,
       disconnectedAt: verified ? null : now,
+      connectionSource: null,
+      numberConfirmedAt: verified ? now : null,
     },
   });
 
@@ -204,7 +223,15 @@ export async function adminSyncTemplatesForBusiness(
   return result;
 }
 
-/** Admin: disconnect a business's WhatsApp and clear its stored token. */
+/**
+ * Admin: disconnect a business's WhatsApp and clear its stored token.
+ *
+ * Sets status=not_connected and clears the guided-flow gate fields
+ * (connectionSource / numberConfirmedAt). With no active per-business
+ * connection, the resolver falls through to the Allura-managed (env) sender,
+ * which does NOT require number confirmation — so disconnecting cleanly forces
+ * env fallback without leaving a stale gate behind.
+ */
 export async function adminDisconnectBusiness(
   businessId: string,
 ): Promise<{ success: boolean }> {
@@ -217,8 +244,103 @@ export async function adminDisconnectBusiness(
       useEnvFallback: false,
       disconnectedAt: new Date(),
       lastError: null,
+      connectionSource: null,
+      numberConfirmedAt: null,
     },
   });
   revalidatePath(`/admin/businesses/${businessId}`);
   return { success: true };
+}
+
+/**
+ * Admin: confirm the connected number for an existing active connection.
+ *
+ * Use this to clear a stuck confirmation gate — an active connection that was
+ * created through the guided flow (connectionSource set) but never had its
+ * number confirmed (numberConfirmedAt=null), so the resolver blocks every send
+ * with NUMBER_NOT_CONFIRMED_REASON ("awaiting_confirmation" in the message log).
+ *
+ * numberConfirmedAt is set ONLY after a live Meta Graph API check confirms the
+ * Phone Number ID is reachable with the current token. Never logs the token.
+ */
+export async function adminConfirmConnectedNumber(
+  businessId: string,
+): Promise<ConfirmNumberResult> {
+  await requirePlatformAdmin();
+
+  const connection = await prisma.whatsAppConnection.findUnique({
+    where: { businessId },
+    select: {
+      status: true,
+      phoneNumberId: true,
+      wabaId: true,
+      displayPhoneNumber: true,
+    },
+  });
+
+  if (!connection) {
+    return { success: false, statusLabel: "אין חיבור WhatsApp לעסק זה" };
+  }
+  if (connection.status !== "active") {
+    return {
+      success: false,
+      statusLabel: `החיבור אינו פעיל (סטטוס: ${connection.status}) — יש לחבר מחדש לפני אישור`,
+    };
+  }
+
+  const creds = await getDecryptedCredentialsForBusiness(businessId);
+  if (!creds?.accessToken) {
+    return { success: false, statusLabel: "לא ניתן לאחזר Access Token לעסק" };
+  }
+
+  const phoneNumberId = connection.phoneNumberId ?? creds.phoneNumberId;
+  if (!phoneNumberId) {
+    return { success: false, statusLabel: "חסר Phone Number ID — לא ניתן לאמת" };
+  }
+
+  const check = await verifyPhoneNumberReachable({
+    accessToken: creds.accessToken,
+    phoneNumberId,
+    apiVersion: creds.apiVersion,
+  });
+
+  if (!check.reachable) {
+    await prisma.whatsAppConnection.update({
+      where: { businessId },
+      data: { lastError: check.error ?? "אימות המספר נכשל" },
+    });
+    revalidatePath(`/admin/businesses/${businessId}`);
+    console.error(
+      `[adminConfirmConnectedNumber] reachability check failed — businessId=${businessId} message=${check.error}`,
+    );
+    return {
+      success: false,
+      statusLabel: `אימות המספר נכשל — ${check.error ?? "שגיאה לא ידועה"}`,
+      phoneNumberId,
+      wabaId: connection.wabaId ?? undefined,
+      error: check.error,
+    };
+  }
+
+  const now = new Date();
+  await prisma.whatsAppConnection.update({
+    where: { businessId },
+    data: {
+      numberConfirmedAt: now,
+      lastVerifiedAt: now,
+      lastError: null,
+      displayPhoneNumber: check.displayPhoneNumber ?? connection.displayPhoneNumber ?? undefined,
+    },
+  });
+  revalidatePath(`/admin/businesses/${businessId}`);
+
+  return {
+    success: true,
+    statusLabel: check.displayPhoneNumber
+      ? `המספר אושר — ${check.displayPhoneNumber}`
+      : "המספר אושר בהצלחה — שליחה מאופשרת",
+    phoneNumberId,
+    wabaId: connection.wabaId ?? undefined,
+    confirmedAt: now.toISOString(),
+  };
 }

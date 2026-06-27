@@ -7,7 +7,9 @@ import {
   adminCreateTemplatesForBusiness,
   adminSyncTemplatesForBusiness,
   adminDisconnectBusiness,
+  adminConfirmConnectedNumber,
   type ConnectFromEnvResult,
+  type ConfirmNumberResult,
 } from "@/server/admin/whatsapp-actions";
 import type { WhatsAppDiagnosticResult } from "@/server/whatsapp/resolver";
 import type { TemplateSetupResult } from "@/server/whatsapp/templates-core";
@@ -19,9 +21,11 @@ interface Props {
 export function WhatsAppAdminPanel({ businessId }: Props) {
   const [diagnostic, setDiagnostic] = useState<WhatsAppDiagnosticResult | null>(null);
   const [connectResult, setConnectResult] = useState<ConnectFromEnvResult | null>(null);
+  const [confirmResult, setConfirmResult] = useState<ConfirmNumberResult | null>(null);
   const [templateResult, setTemplateResult] = useState<TemplateSetupResult | null>(null);
   const [loadingDiag, setLoadingDiag] = useState(false);
   const [loadingConnect, setLoadingConnect] = useState(false);
+  const [loadingConfirm, setLoadingConfirm] = useState(false);
   const [loadingTpl, setLoadingTpl] = useState(false);
 
   async function handleCreateTemplates() {
@@ -82,6 +86,20 @@ export function WhatsAppAdminPanel({ businessId }: Props) {
     }
   }
 
+  async function handleConfirmNumber() {
+    setLoadingConfirm(true);
+    setConfirmResult(null);
+    try {
+      const result = await adminConfirmConnectedNumber(businessId);
+      setConfirmResult(result);
+      // Refresh diagnostic so the gate/sends-allowed rows update immediately
+      const diag = await adminCheckWhatsAppDiagnostic(businessId);
+      setDiagnostic(diag);
+    } finally {
+      setLoadingConfirm(false);
+    }
+  }
+
   return (
     <div dir="rtl" className="space-y-4">
       <p className="text-xs" style={{ color: "#888" }}>
@@ -106,6 +124,15 @@ export function WhatsAppAdminPanel({ businessId }: Props) {
           style={{ background: "#0ea5e9", color: "#fff" }}
         >
           {loadingConnect ? "מחבר..." : "חיבור WhatsApp לעסק בדיקה"}
+        </button>
+
+        <button
+          onClick={handleConfirmNumber}
+          disabled={loadingConfirm}
+          className="rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
+          style={{ background: "#16a34a", color: "#fff" }}
+        >
+          {loadingConfirm ? "מאמת..." : "אישור המספר המחובר"}
         </button>
 
         <button
@@ -149,6 +176,26 @@ export function WhatsAppAdminPanel({ businessId }: Props) {
           <p className="font-semibold">{connectResult.statusLabel}</p>
           {connectResult.phoneNumberId && (
             <p className="mt-1 text-xs opacity-75">Phone Number ID: {connectResult.phoneNumberId}</p>
+          )}
+        </div>
+      )}
+
+      {/* Confirm-number result */}
+      {confirmResult && (
+        <div
+          className="rounded-xl px-4 py-3 text-sm"
+          style={{
+            background: confirmResult.success ? "rgba(22,163,74,0.07)" : "rgba(220,38,38,0.07)",
+            border: `1px solid ${confirmResult.success ? "rgba(22,163,74,0.25)" : "rgba(220,38,38,0.25)"}`,
+            color: confirmResult.success ? "#15803d" : "#dc2626",
+          }}
+        >
+          <p className="font-semibold">{confirmResult.statusLabel}</p>
+          {confirmResult.phoneNumberId && (
+            <p className="mt-1 text-xs opacity-75">Phone Number ID: {confirmResult.phoneNumberId}</p>
+          )}
+          {confirmResult.confirmedAt && (
+            <p className="mt-0.5 text-xs opacity-75">numberConfirmedAt: {confirmResult.confirmedAt}</p>
           )}
         </div>
       )}
