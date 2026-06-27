@@ -10,7 +10,13 @@
  * SAFETY: Never log the access token or any credentials.
  */
 
-import type { WhatsAppProvider, SendMessageParams, SendMessageResult } from "./provider";
+import type {
+  WhatsAppProvider,
+  SendMessageParams,
+  SendMessageResult,
+  MetaErrorDetails,
+} from "./provider";
+import { maskPhone } from "@/lib/phone";
 
 const META_GRAPH_BASE = "https://graph.facebook.com";
 
@@ -56,6 +62,33 @@ export function buildMetaErrorReason(
   if (typeof error?.error_subcode === "number") parts.push(`subcode ${error.error_subcode}`);
   if (error?.fbtrace_id) parts.push(`trace ${error.fbtrace_id}`);
   return parts.length > 0 ? `${message} [${parts.join(" · ")}]` : message;
+}
+
+/**
+ * Extracts the structured Meta error fields for persistence/display. Only Meta's
+ * own diagnostic fields are kept — there is never a token or header here, so the
+ * sanitized raw is just the error object itself. Returns undefined when there is
+ * no error object to describe.
+ */
+export function buildMetaErrorDetails(
+  error: MetaErrorResponse["error"] | undefined,
+): MetaErrorDetails | undefined {
+  if (!error) return undefined;
+  return {
+    code: typeof error.code === "number" ? error.code : undefined,
+    subcode: typeof error.error_subcode === "number" ? error.error_subcode : undefined,
+    type: error.type,
+    fbtraceId: error.fbtrace_id,
+    // error.* contains only Meta diagnostic fields — no credential is ever present.
+    rawSanitized: JSON.stringify({
+      message: error.message,
+      type: error.type,
+      code: error.code,
+      error_subcode: error.error_subcode,
+      fbtrace_id: error.fbtrace_id,
+      error_data: error.error_data,
+    }),
+  };
 }
 
 /** Converts Record<"1"|"2"|..., string> → positional body component parameters for Meta. */
@@ -129,13 +162,15 @@ export function createMetaCloudApiProvider(
       };
 
       const url = `${META_GRAPH_BASE}/${config.apiVersion}/${config.phoneNumberId}/messages`;
+      const maskedTo = maskPhone(recipientPhone);
 
       console.log(
-        `[WhatsApp meta_cloud_api] sending — businessId=${businessId} clientId=${clientId} runId=${automationRunId} to=${recipientPhone} template=${templateId}`,
+        `[WhatsApp meta_cloud_api] sending — businessId=${businessId} clientId=${clientId} runId=${automationRunId} to=${maskedTo} phoneNumberId=${config.phoneNumberId} template=${templateId} lang=${templateLanguage ?? "he"}`,
       );
-      // Full payload (access token is only in the Authorization header, not here)
+      // Payload shape for diagnostics, with the recipient masked. The access token
+      // is only ever in the Authorization header, never in the body.
       console.log(
-        `[WhatsApp meta_cloud_api] REQUEST PAYLOAD:\n${JSON.stringify(payload, null, 2)}`,
+        `[WhatsApp meta_cloud_api] REQUEST PAYLOAD:\n${JSON.stringify({ ...payload, to: maskedTo }, null, 2)}`,
       );
 
       let response: Response;
@@ -152,7 +187,12 @@ export function createMetaCloudApiProvider(
         const reason =
           networkErr instanceof Error ? networkErr.message : "שגיאת רשת בשליחת הודעת WhatsApp";
         console.error(`[WhatsApp meta_cloud_api] network error — ${reason}`);
-        return { success: false, providerMessageId: null, failureReason: reason };
+        return {
+          success: false,
+          providerMessageId: null,
+          failureReason: reason,
+          phoneNumberIdUsed: config.phoneNumberId,
+        };
       }
 
       let body: MetaMessageResponse & MetaErrorResponse;
@@ -163,6 +203,7 @@ export function createMetaCloudApiProvider(
           success: false,
           providerMessageId: null,
           failureReason: `Meta API החזיר תשובה לא תקינה (HTTP ${response.status})`,
+          phoneNumberIdUsed: config.phoneNumberId,
         };
       }
 
@@ -173,8 +214,9 @@ export function createMetaCloudApiProvider(
 
       if (!response.ok || body.error) {
         const reason = buildMetaErrorReason(body.error, response.status);
+        const metaError = buildMetaErrorDetails(body.error);
         console.error(
-          `[WhatsApp meta_cloud_api] API error — businessId=${businessId} code=${body.error?.code} type=${body.error?.type} subcode=${body.error?.error_subcode} fbtrace=${body.error?.fbtrace_id} message=${body.error?.message}`,
+          `[WhatsApp meta_cloud_api] API error — businessId=${businessId} to=${maskedTo} phoneNumberId=${config.phoneNumberId} template=${templateId} httpStatus=${response.status} code=${body.error?.code} type=${body.error?.type} subcode=${body.error?.error_subcode} fbtrace=${body.error?.fbtrace_id} message=${body.error?.message}`,
         );
 
         // On "Required parameter is missing" (131008) fetch the template definition
@@ -193,15 +235,21 @@ export function createMetaCloudApiProvider(
           }
         }
 
-        return { success: false, providerMessageId: null, failureReason: reason };
+        return {
+          success: false,
+          providerMessageId: null,
+          failureReason: reason,
+          metaError,
+          phoneNumberIdUsed: config.phoneNumberId,
+        };
       }
 
       const providerMessageId = body.messages?.[0]?.id ?? null;
       console.log(
-        `[WhatsApp meta_cloud_api] sent — businessId=${businessId} clientId=${clientId} msgId=${providerMessageId}`,
+        `[WhatsApp meta_cloud_api] sent — businessId=${businessId} clientId=${clientId} to=${maskedTo} phoneNumberId=${config.phoneNumberId} msgId=${providerMessageId}`,
       );
 
-      return { success: true, providerMessageId };
+      return { success: true, providerMessageId, phoneNumberIdUsed: config.phoneNumberId };
     },
   };
 }

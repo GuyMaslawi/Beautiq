@@ -130,6 +130,49 @@ describe("meta-cloud-api send()", () => {
     assertTokenOnlyInAuthHeader();
   });
 
+  it("returns structured metaError (code/subcode/type/fbtrace + sanitized raw) and the phone number id used", async () => {
+    fetchSpy.mockResolvedValue(
+      jsonResponse(
+        {
+          error: {
+            message: "Recipient phone number not in allowed list",
+            type: "OAuthException",
+            code: 131030,
+            error_subcode: 2655007,
+            fbtrace_id: "AfbTrace999",
+          },
+        },
+        400,
+      ),
+    );
+
+    const res = await provider.send(baseParams);
+    expect(res.success).toBe(false);
+    expect(res.phoneNumberIdUsed).toBe("phone_123");
+    expect(res.metaError).toBeDefined();
+    expect(res.metaError?.code).toBe(131030);
+    expect(res.metaError?.subcode).toBe(2655007);
+    expect(res.metaError?.type).toBe("OAuthException");
+    expect(res.metaError?.fbtraceId).toBe("AfbTrace999");
+    // Sanitized raw carries only Meta diagnostic fields — never the token.
+    expect(res.metaError?.rawSanitized).toContain("131030");
+    expect(res.metaError?.rawSanitized).not.toContain(REAL_TOKEN);
+    assertTokenOnlyInAuthHeader();
+  });
+
+  it("masks the recipient phone in logs and never logs the full number", async () => {
+    fetchSpy.mockResolvedValue(
+      jsonResponse({ messaging_product: "whatsapp", messages: [{ id: "wamid.OK" }] }, 200),
+    );
+    await provider.send(baseParams);
+    const logs = loggedText();
+    // Full E.164 digits must never appear; the masked form must.
+    expect(logs).not.toContain("972501112222");
+    expect(logs).toContain("972***222");
+    // The phone number id used is safe to log and helps verify the live id.
+    expect(logs).toContain("phone_123");
+  });
+
   it("returns safe failure on a network error (fetch throws)", async () => {
     fetchSpy.mockRejectedValue(new Error("ECONNRESET"));
     const res = await provider.send(baseParams);

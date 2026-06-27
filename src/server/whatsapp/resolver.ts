@@ -31,6 +31,7 @@ import {
   devMockProvider,
   createDisabledProvider,
   createTestModeProvider,
+  NUMBER_NOT_CONFIRMED_REASON,
   type WhatsAppProvider,
 } from "@/lib/whatsapp/provider";
 
@@ -140,9 +141,7 @@ export async function resolveWhatsAppConnectionForBusiness(
     if (connection.connectionSource && !connection.numberConfirmedAt) {
       return {
         mode: "per_business",
-        provider: createDisabledProvider(
-          "יש לאשר את מספר ה-WhatsApp המחובר לפני שליחת הודעות",
-        ),
+        provider: createDisabledProvider(NUMBER_NOT_CONFIRMED_REASON),
         isEnvFallback: connection.useEnvFallback,
         isAlluraManaged: false,
         isTestMode,

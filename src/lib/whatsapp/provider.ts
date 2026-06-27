@@ -37,12 +37,33 @@ export interface SendMessageParams {
   clientId: string;
 }
 
+/**
+ * Structured Meta Cloud API error — only the provider's own diagnostic fields.
+ * Safe to persist/display: never contains the access token or any credential.
+ */
+export interface MetaErrorDetails {
+  code?: number;
+  subcode?: number;
+  type?: string;
+  fbtraceId?: string;
+  /** Sanitized JSON string of Meta's error.* object (no token, no headers). */
+  rawSanitized?: string;
+}
+
 export interface SendMessageResult {
   success: boolean;
   /** Provider-assigned message id (null for dev mock) */
   providerMessageId: string | null;
   /** Human-readable failure reason when success=false */
   failureReason?: string;
+  /**
+   * Structured Meta error fields, populated by the Meta Cloud API provider when
+   * a real send is rejected. Absent for blocks that never reach Meta (test-mode,
+   * disabled/confirmation-gate, dev mock).
+   */
+  metaError?: MetaErrorDetails;
+  /** The Phone Number ID the send was actually attempted with (Meta provider only). */
+  phoneNumberIdUsed?: string;
   /**
    * True when the provider is the dev mock — the message was NOT sent.
    * Caller should record status=skipped rather than sent/failed so dev runs
@@ -89,6 +110,15 @@ export const devMockProvider: WhatsAppProvider = {
 // ---------------------------------------------------------------------------
 
 export const DISABLED_REASON = "חיבור WhatsApp לא מוגדר";
+
+/**
+ * Returned by the resolver's confirmation gate: a guided-flow connection whose
+ * number the owner has not yet confirmed. The send is blocked BEFORE any Meta
+ * call, so this is never a provider/Meta error — the admin log classifies it as
+ * its own outcome so it is not mistaken for a Meta rejection.
+ */
+export const NUMBER_NOT_CONFIRMED_REASON =
+  "יש לאשר את מספר ה-WhatsApp המחובר לפני שליחת הודעות";
 
 /** Returns a safe failure without attempting to send. */
 export function createDisabledProvider(reason = DISABLED_REASON): WhatsAppProvider {

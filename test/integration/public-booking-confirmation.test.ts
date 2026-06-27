@@ -142,6 +142,50 @@ describe("sendBookingConfirmation — sending", () => {
     expect(prisma.booking.update).not.toHaveBeenCalled();
   });
 
+  it("persists the structured Meta error fields + phone number id on a provider failure", async () => {
+    send.mockResolvedValue({
+      success: false,
+      providerMessageId: null,
+      failureReason: "Recipient not in allowed list [code 131030 · trace AfbTrace999]",
+      phoneNumberIdUsed: "1170382949488802",
+      metaError: {
+        code: 131030,
+        subcode: 2655007,
+        type: "OAuthException",
+        fbtraceId: "AfbTrace999",
+        rawSanitized: '{"code":131030,"fbtrace_id":"AfbTrace999"}',
+      },
+    });
+    await sendBookingConfirmation(BASE);
+    const failed = prisma.automationMessage.update.mock.calls
+      .map((c) => c[0])
+      .find((u) => u.data.status === "failed");
+    expect(failed).toBeDefined();
+    expect(failed.data.errorCode).toBe(131030);
+    expect(failed.data.errorSubcode).toBe(2655007);
+    expect(failed.data.errorType).toBe("OAuthException");
+    expect(failed.data.errorFbtraceId).toBe("AfbTrace999");
+    expect(failed.data.errorRaw).toContain("131030");
+    expect(failed.data.phoneNumberId).toBe("1170382949488802");
+  });
+
+  it("logs the failure with a masked recipient + Meta diagnostics, never the full phone", async () => {
+    send.mockResolvedValue({
+      success: false,
+      failureReason: "rejected",
+      phoneNumberIdUsed: "1170382949488802",
+      metaError: { code: 131030, fbtraceId: "AfbTrace999" },
+    });
+    await sendBookingConfirmation(BASE);
+    const logs = loggedText();
+    expect(logs).toContain("050***567"); // masked recipient
+    expect(logs).not.toContain("0501234567");
+    expect(logs).not.toContain("972501234567");
+    expect(logs).toContain("code=131030");
+    expect(logs).toContain("fbtrace=AfbTrace999");
+    expect(logs).toContain("phoneNumberId=1170382949488802");
+  });
+
   it("never throws even if the provider itself throws", async () => {
     send.mockRejectedValue(new Error("boom"));
     await expect(sendBookingConfirmation(BASE)).resolves.toBeUndefined();

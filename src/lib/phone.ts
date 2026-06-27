@@ -63,3 +63,14 @@ export function phonesEqual(a: string, b: string): boolean {
   if (!a || !b) return false;
   return normalizePhone(a) === normalizePhone(b);
 }
+
+/**
+ * Masks a phone number for safe logging/display — keeps the first 3 and last 3
+ * digits, hides the middle (e.g. "972***155"). NEVER log a full phone number.
+ */
+export function maskPhone(phone: string | null | undefined): string {
+  if (!phone) return "***";
+  const d = phone.replace(/\D/g, "");
+  if (d.length < 7) return "***";
+  return `${d.slice(0, 3)}***${d.slice(-3)}`;
+}

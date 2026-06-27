@@ -2,6 +2,7 @@ import { prisma } from "@/server/db/prisma";
 import {
   DEV_MOCK_SKIP_REASON,
   TEST_MODE_BLOCKED_REASON,
+  NUMBER_NOT_CONFIRMED_REASON,
 } from "@/lib/whatsapp/provider";
 
 /**
@@ -25,11 +26,21 @@ export type MessageOutcome =
   | "queued"
   | "failed"
   | "test_mode_blocked"
+  | "awaiting_confirmation"
   | "invalid_phone"
   | "missing_template"
   | "opted_out"
   | "dev_mock"
   | "skipped";
+
+/** Safe Meta diagnostic fields surfaced to admins for a failed provider send. */
+export interface AdminMessageMetaError {
+  code: number | null;
+  subcode: number | null;
+  type: string | null;
+  fbtraceId: string | null;
+  raw: string | null;
+}
 
 export interface AdminMessageLogEntry {
   id: string;
@@ -42,8 +53,12 @@ export interface AdminMessageLogEntry {
   failureReason: string | null;
   maskedPhone: string;
   templateId: string | null;
+  templateLanguage: string | null;
+  phoneNumberId: string | null;
   providerMessageId: string | null;
   retryCount: number;
+  /** Present only when Meta returned a structured error for this send. */
+  metaError: AdminMessageMetaError | null;
 }
 
 export interface AdminMessageLog {
@@ -86,6 +101,8 @@ function classifyOutcome(
 
   // status === "failed"
   if (reason === TEST_MODE_BLOCKED_REASON) return "test_mode_blocked";
+  // The confirmation gate blocks the send BEFORE Meta — not a provider error.
+  if (reason === NUMBER_NOT_CONFIRMED_REASON) return "awaiting_confirmation";
   if (reason.includes("טלפון")) return "invalid_phone";
   if (reason.includes("תבנית")) return "missing_template";
   return "failed";
@@ -98,6 +115,7 @@ const EMPTY_SUMMARY: Record<MessageOutcome, number> = {
   queued: 0,
   failed: 0,
   test_mode_blocked: 0,
+  awaiting_confirmation: 0,
   invalid_phone: 0,
   missing_template: 0,
   opted_out: 0,
@@ -122,8 +140,15 @@ export async function getAdminMessageLog(
       failureReason: true,
       phone: true,
       templateId: true,
+      templateLanguage: true,
+      phoneNumberId: true,
       providerMessageId: true,
       retryCount: true,
+      errorCode: true,
+      errorSubcode: true,
+      errorType: true,
+      errorFbtraceId: true,
+      errorRaw: true,
       client: { select: { fullName: true } },
     },
   });
@@ -133,6 +158,12 @@ export async function getAdminMessageLog(
   const entries: AdminMessageLogEntry[] = msgs.map((m) => {
     const outcome = classifyOutcome(m.status, m.failureReason);
     summary[outcome] += 1;
+    const hasMetaError =
+      m.errorCode !== null ||
+      m.errorSubcode !== null ||
+      m.errorType !== null ||
+      m.errorFbtraceId !== null ||
+      m.errorRaw !== null;
     return {
       id: m.id,
       createdAt: m.createdAt,
@@ -144,8 +175,19 @@ export async function getAdminMessageLog(
       failureReason: m.failureReason,
       maskedPhone: maskPhoneForLog(m.phone),
       templateId: m.templateId,
+      templateLanguage: m.templateLanguage,
+      phoneNumberId: m.phoneNumberId,
       providerMessageId: m.providerMessageId,
       retryCount: m.retryCount,
+      metaError: hasMetaError
+        ? {
+            code: m.errorCode,
+            subcode: m.errorSubcode,
+            type: m.errorType,
+            fbtraceId: m.errorFbtraceId,
+            raw: m.errorRaw,
+          }
+        : null,
     };
   });
 

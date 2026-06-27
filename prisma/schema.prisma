@@ -910,6 +910,19 @@ model AutomationMessage {
   status            AutomationMessageStatus @default(queued)
   providerMessageId String?
   failureReason     String?
+  /// BCP 47 language code of the template actually used for the send (e.g. "he")
+  templateLanguage  String?
+  /// Phone Number ID the send was actually attempted with — lets admins verify
+  /// the live id (e.g. a stale per-business connection vs the env value).
+  phoneNumberId     String?
+  /// Structured Meta Cloud API error fields, populated on provider failure.
+  /// These are Meta's own diagnostic fields — safe to display, never a credential.
+  errorCode         Int?
+  errorSubcode      Int?
+  errorType         String?
+  errorFbtraceId    String?
+  /// Sanitized raw Meta error object (JSON string of error.* only, no token/headers)
+  errorRaw          String?
   sentAt            DateTime?
   deliveredAt       DateTime?
   readAt            DateTime?

@@ -18,7 +18,7 @@
 
 import { prisma } from "@/server/db/prisma";
 import { getWhatsAppProviderForBusiness } from "@/server/whatsapp/resolver";
-import { isValidIsraeliPhone, toWaPhone } from "@/lib/phone";
+import { isValidIsraeliPhone, toWaPhone, maskPhone } from "@/lib/phone";
 
 const DEFAULT_BODY =
   "היי {שם הלקוח} ✨\nהתור שלך אצל {שם העסק} נקבע בהצלחה:\n{שירות}\n{תאריך} בשעה {שעה}\n\nנשלח באמצעות Allura";
@@ -314,6 +314,8 @@ async function _send(params: {
             status: "sent",
             sentAt: new Date(),
             providerMessageId: result.providerMessageId ?? undefined,
+            templateLanguage,
+            phoneNumberId: result.phoneNumberIdUsed ?? undefined,
           },
         }),
         prisma.booking.update({
@@ -329,13 +331,32 @@ async function _send(params: {
       const reason = result.failureReason ?? "שגיאה לא ידועה";
       await prisma.automationMessage.update({
         where: { id: msg.id },
-        data: { status: "failed", failedAt: new Date(), failureReason: reason },
+        data: {
+          status: "failed",
+          failedAt: new Date(),
+          failureReason: reason,
+          templateLanguage,
+          phoneNumberId: result.phoneNumberIdUsed ?? undefined,
+          errorCode: result.metaError?.code ?? undefined,
+          errorSubcode: result.metaError?.subcode ?? undefined,
+          errorType: result.metaError?.type ?? undefined,
+          errorFbtraceId: result.metaError?.fbtraceId ?? undefined,
+          errorRaw: result.metaError?.rawSanitized ?? undefined,
+        },
       });
       await prisma.automationRun.update({
         where: { id: run.id },
         data: { status: "failed", finishedAt: new Date(), failedCount: 1 },
       });
-      console.warn(`[sendBookingConfirmation] failed bookingId=${bookingId}: ${reason}`);
+      // Safe structured failure log — never the token or the full phone.
+      console.warn(
+        `[sendBookingConfirmation] send failed —` +
+          ` businessId=${businessId} bookingId=${bookingId} templateId=${templateName ?? "—"}` +
+          ` recipient=${maskPhone(clientPhone)} phoneNumberId=${result.phoneNumberIdUsed ?? "—"}` +
+          ` code=${result.metaError?.code ?? "—"} subcode=${result.metaError?.subcode ?? "—"}` +
+          ` type=${result.metaError?.type ?? "—"} fbtrace=${result.metaError?.fbtraceId ?? "—"}` +
+          ` reason="${reason}"`,
+      );
     }
   } catch (err) {
     const reason = String(err);
