@@ -5,7 +5,7 @@ import type {
 } from "@/server/admin/message-log";
 
 const OUTCOME_META: Record<MessageOutcome, { label: string; color: string; bg: string }> = {
-  sent: { label: "נשלח ל-Meta", color: "#2563eb", bg: "rgba(37,99,235,0.10)" },
+  sent: { label: "נשלח ל-Meta — סטטוס מסירה טרם התקבל", color: "#2563eb", bg: "rgba(37,99,235,0.10)" },
   delivered: { label: "נמסר", color: "#16a34a", bg: "rgba(22,163,74,0.10)" },
   read: { label: "נקרא", color: "#16a34a", bg: "rgba(22,163,74,0.10)" },
   queued: { label: "ממתין", color: "#6b7280", bg: "rgba(107,114,128,0.10)" },
@@ -32,6 +32,8 @@ const SOURCE_LABEL: Record<string, string> = {
   manual_owner: "בעל עסק",
   manual_admin: "אדמין",
   retry: "ניסיון חוזר",
+  public_booking: "הזמנה ציבורית",
+  owner_notification: "התראה לבעלת העסק",
 };
 
 function OutcomeBadge({ outcome }: { outcome: MessageOutcome }) {

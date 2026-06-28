@@ -128,7 +128,8 @@ async function processStatusEvent(statusEvent: MetaStatusEvent): Promise<void> {
 
   if (!message) {
     console.log(
-      `[WhatsApp webhook] status event for unknown providerMessageId=${providerMessageId} status=${status}`,
+      `[WhatsApp webhook] status event for unknown providerMessageId=${providerMessageId} ` +
+        `status=${status} eventTime=${eventTime.toISOString()}`,
     );
     return;
   }
@@ -177,9 +178,12 @@ async function processStatusEvent(statusEvent: MetaStatusEvent): Promise<void> {
     data: connectionUpdate,
   });
 
+  // Safe structured log — providerMessageId, status, event timestamp and the
+  // resolved businessId only. Never the recipient phone, message body or token.
   console.log(
     `[WhatsApp webhook] status updated — businessId=${message.businessId} ` +
-      `msgId=${message.id} providerMessageId=${providerMessageId} status=${status}`,
+      `msgId=${message.id} providerMessageId=${providerMessageId} status=${status} ` +
+      `eventTime=${eventTime.toISOString()}`,
   );
 }
 

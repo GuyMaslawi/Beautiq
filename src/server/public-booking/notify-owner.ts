@@ -77,6 +77,7 @@ async function _notify(params: {
       startTime: true,
       ownerNotifiedAt: true,
       priceSnapshot: true,
+      clientId: true,
       client: { select: { fullName: true, phone: true } },
       service: { select: { name: true } },
       business: {
@@ -184,7 +185,39 @@ async function _notify(params: {
         `שירות: ${booking.service.name}\n` +
         `${dateStr} בשעה ${timeStr}\n\n` +
         `לאישור התור:\n${BOOKINGS_URL}`;
+
+      // Persist the owner-notification attempt so it is observable in the admin
+      // message log exactly like the customer confirmation (source =
+      // "owner_notification", recipient = the masked business phone). Without a
+      // row, an enabled owner WhatsApp send would never appear anywhere.
+      // The AutomationMessage FK requires a clientId + runId; we reuse the
+      // booking's clientId (the row is grouped under the same booking) — the
+      // source label is what distinguishes it as the owner copy.
       try {
+        const run = await prisma.automationRun.create({
+          data: {
+            businessId,
+            type: "booking_confirmation",
+            status: "running",
+            eligibleCount: 1,
+          },
+        });
+        const msg = await prisma.automationMessage.create({
+          data: {
+            businessId,
+            runId: run.id,
+            clientId: booking.clientId,
+            bookingId,
+            type: "booking_confirmation",
+            phone: ownerPhone,
+            messageText: waText,
+            templateId: OWNER_NEW_BOOKING_TEMPLATE.name,
+            templateLanguage: OWNER_NEW_BOOKING_TEMPLATE.language,
+            status: "queued",
+            source: "owner_notification",
+          },
+        });
+
         const provider = await getWhatsAppProviderForBusiness(businessId);
         const sent = await provider.send({
           businessId,
@@ -201,13 +234,45 @@ async function _notify(params: {
             "5": timeStr,
           },
           fallbackText: waText,
-          // שדות לוג בלבד אצל הספק — אין כתיבה ל-DB לפיהם.
-          automationRunId: `owner-notify:${bookingId}`,
-          clientId: "owner",
+          automationRunId: run.id,
+          clientId: booking.clientId,
         });
+
         if (sent.success || sent.isMockSkip) {
+          await prisma.automationMessage.update({
+            where: { id: msg.id },
+            data: {
+              status: "sent",
+              sentAt: new Date(),
+              providerMessageId: sent.providerMessageId ?? undefined,
+              templateLanguage: OWNER_NEW_BOOKING_TEMPLATE.language,
+              phoneNumberId: sent.phoneNumberIdUsed ?? undefined,
+            },
+          });
+          await prisma.automationRun.update({
+            where: { id: run.id },
+            data: { status: "completed", finishedAt: new Date(), sentCount: 1 },
+          });
           notified = true;
         } else {
+          await prisma.automationMessage.update({
+            where: { id: msg.id },
+            data: {
+              status: "failed",
+              failedAt: new Date(),
+              failureReason: sent.failureReason ?? "שגיאה לא ידועה",
+              phoneNumberId: sent.phoneNumberIdUsed ?? undefined,
+              errorCode: sent.metaError?.code ?? undefined,
+              errorSubcode: sent.metaError?.subcode ?? undefined,
+              errorType: sent.metaError?.type ?? undefined,
+              errorFbtraceId: sent.metaError?.fbtraceId ?? undefined,
+              errorRaw: sent.metaError?.rawSanitized ?? undefined,
+            },
+          });
+          await prisma.automationRun.update({
+            where: { id: run.id },
+            data: { status: "failed", finishedAt: new Date(), failedCount: 1 },
+          });
           logger.warn("[notifyOwner] owner WhatsApp not delivered", {
             bookingId,
             reason: sent.failureReason,
