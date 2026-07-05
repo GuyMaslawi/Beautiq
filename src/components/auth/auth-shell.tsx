@@ -85,7 +85,7 @@ function FormPanel({ children }: { children: React.ReactNode }) {
               boxShadow: "0 8px 20px -6px rgba(157,106,168,0.55)",
             }}
           >
-            B
+            A
           </span>
           <div>
             <span className="text-foreground block text-xl font-bold tracking-tight leading-none">

@@ -1,7 +1,11 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { SUPPORT_EMAIL } from "@/lib/config";
+import {
+  BRAND_DESCRIPTION,
+  LEGAL_ENTITY_NAME,
+  SUPPORT_EMAIL,
+} from "@/lib/config";
 
 // עמוד ציבורי — תנאי שימוש. אינו דורש התחברות ואינו משתמש
 // במעטפת המאומתת (סרגל צד). נדרש לפרסום אפליקציית Meta/WhatsApp.
@@ -121,9 +125,12 @@ export default function TermsPage() {
         </Section>
 
         <footer className="mt-10 border-t border-[var(--border)] pt-6">
-          <p className="text-muted text-sm">
-            Allura מופעלת על ידי [שם העסק המשפטי].
-          </p>
+          <p className="text-muted text-sm">{BRAND_DESCRIPTION}</p>
+          {LEGAL_ENTITY_NAME && (
+            <p className="text-muted mt-2 text-sm">
+              Allura מופעלת על ידי {LEGAL_ENTITY_NAME}.
+            </p>
+          )}
           <p className="text-muted mt-2 text-sm">
             ראה גם:{" "}
             <Link
@@ -131,6 +138,13 @@ export default function TermsPage() {
               className="text-primary font-medium hover:underline"
             >
               מדיניות פרטיות
+            </Link>{" "}
+            ·{" "}
+            <Link
+              href="/contact"
+              className="text-primary font-medium hover:underline"
+            >
+              צור קשר
             </Link>
           </p>
         </footer>

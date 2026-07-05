@@ -1,4 +1,5 @@
 import type { PublicBusiness } from "@/server/public-booking/queries";
+import { APP_URL } from "@/lib/config";
 import { InstagramIcon, FacebookIcon, WhatsAppIcon } from "./icons";
 import {
   normalizeInstagramUrl,
@@ -60,9 +61,14 @@ export function PublicSiteFooter({ business }: { business: PublicBusiness }) {
         </p>
         <p className="text-xs text-[var(--muted-light)]">
           מופעל על ידי{" "}
-          <span className="font-semibold text-[var(--foreground-soft)]">
+          <a
+            href={APP_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-[var(--foreground-soft)] hover:underline"
+          >
             Allura
-          </span>
+          </a>
         </p>
       </div>
     </footer>

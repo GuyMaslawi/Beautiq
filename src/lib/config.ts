@@ -17,6 +17,18 @@ export const APP_DOMAIN = APP_URL.replace(/^https?:\/\//, "");
 /** כתובת התמיכה הרשמית. */
 export const SUPPORT_EMAIL = "support@allura.info";
 
+/** תיאור המותג הרשמי — מוצג בעמודים ציבוריים (נדרש גם לאימות המותג מול Meta). */
+export const BRAND_DESCRIPTION =
+  "Allura היא מערכת CRM וניהול תורים לעסקי יופי וטיפוח בישראל.";
+
+/**
+ * שם הישות המשפטית שמפעילה את Allura (עוסק/חברה רשומים).
+ * TODO: להגדיר NEXT_PUBLIC_LEGAL_ENTITY_NAME בפרודקשן — Meta מצפה לקשר ברור
+ * בין המותג לעסק הרשום. כל עוד לא הוגדר, שורת "מופעלת על ידי" לא תוצג.
+ */
+export const LEGAL_ENTITY_NAME =
+  process.env.NEXT_PUBLIC_LEGAL_ENTITY_NAME?.trim() || null;
+
 /**
  * כתובת הבסיס לקישורים שמוצגים לבעלת העסק בדפדפן.
  * - אם הוגדר NEXT_PUBLIC_APP_URL — תמיד משתמשים בו (הדומיין הקנוני בפרודקשן).
