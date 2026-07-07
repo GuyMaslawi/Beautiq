@@ -105,9 +105,9 @@ export function BookingAdvancedFilter({
           style={
             isActive
               ? {
-                  background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
+                  background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)",
                   color: "#fff",
-                  boxShadow: "0 2px 8px rgba(184,107,140,0.30)",
+                  boxShadow: "0 2px 8px rgba(172,92,127,0.30)",
                   border: "1.5px solid transparent",
                 }
               : {
@@ -193,7 +193,7 @@ export function BookingAdvancedFilter({
                         navigate(buildUrl({ status: undefined, serviceId: undefined }))
                       }
                       className="w-full rounded-xl py-2 text-sm font-medium transition-opacity hover:opacity-75"
-                      style={{ color: "#b86b8c", background: "rgba(184,107,140,0.07)" }}
+                      style={{ color: "#ac5c7f", background: "rgba(172,92,127,0.07)" }}
                     >
                       ניקוי כל הפילטרים
                     </button>
@@ -213,9 +213,9 @@ export function BookingAdvancedFilter({
               key={chip.label}
               className="flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium"
               style={{
-                borderColor: "rgba(184,107,140,0.35)",
-                background: "rgba(184,107,140,0.08)",
-                color: "#b86b8c",
+                borderColor: "rgba(172,92,127,0.35)",
+                background: "rgba(172,92,127,0.08)",
+                color: "#ac5c7f",
               }}
             >
               {chip.label}
@@ -268,7 +268,7 @@ function FilterPill({
       style={
         active
           ? {
-              background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
+              background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)",
               borderColor: "transparent",
               color: "#fff",
             }

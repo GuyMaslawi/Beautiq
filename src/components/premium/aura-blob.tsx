@@ -15,7 +15,7 @@ interface AuraBlobProps {
 }
 
 export function AuraBlob({
-  color = "rgba(201,120,152,0.30)",
+  color = "rgba(199,111,147,0.30)",
   size = 320,
   className,
   still,

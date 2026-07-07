@@ -1,9 +1,17 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowRight, X } from "lucide-react";
 import { requirePlatformAdmin } from "@/server/admin/auth";
 import { getAdminBusiness } from "@/server/admin/queries";
 import { getAdminBusinessClients } from "@/server/admin/client-queries";
 import { AdminClientEditModal } from "@/app/admin/clients/_components/admin-client-edit-modal";
+import {
+  Table,
+  TableBody,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 function fmtDate(d: Date | null): string {
   if (!d) return "—";
@@ -39,21 +47,23 @@ export default async function AdminBusinessClientsPage({
       <div className="flex flex-wrap items-center gap-3">
         <Link
           href={`/admin/businesses/${businessId}`}
-          className="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
-          style={{ background: "#f3f4f6", color: "#555" }}
+          className="flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:bg-background-alt hover:text-foreground"
         >
-          ← חזרה לעסק
+          <ArrowRight className="h-3.5 w-3.5" />
+          חזרה לעסק
         </Link>
       </div>
 
       <div>
-        <h1 className="text-2xl font-bold" style={{ color: "#1a1a2e" }}>
+        <p className="eyebrow text-primary">ניהול עסקים</p>
+        <h1 className="font-display mt-1 text-2xl font-semibold tracking-tight text-foreground">
           לקוחות העסק
         </h1>
-        <p className="mt-1 text-sm" style={{ color: "#888" }}>
+        <p className="mt-1 text-sm text-muted">
           {biz.name} — {clients.length} לקוחות
           {q ? " (תוצאות חיפוש)" : ""}
         </p>
+        <div className="editorial-rule mt-4" />
       </div>
 
       {/* Search */}
@@ -63,118 +73,94 @@ export default async function AdminBusinessClientsPage({
           name="q"
           defaultValue={q}
           placeholder="חיפוש לפי שם, טלפון או אימייל"
-          className="w-full max-w-sm rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#1a1a2e]/15"
-          style={{ borderColor: "rgba(0,0,0,0.12)", background: "#fff", color: "#1a1a2e" }}
+          className="w-full max-w-sm rounded-xl border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-light hover:border-border-strong focus:border-primary focus:ring-2 focus:ring-primary/20"
         />
         <button
           type="submit"
-          className="rounded-xl px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-80"
-          style={{ background: "#1a1a2e" }}
+          className="bg-brand-gradient rounded-xl px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
         >
           חיפוש
         </button>
         {q && (
           <Link
             href={`/admin/businesses/${businessId}/clients`}
-            className="rounded-xl px-3 py-2 text-sm font-medium transition-colors"
-            style={{ background: "#f3f4f6", color: "#555" }}
+            className="flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-2 text-sm font-medium text-muted transition-colors hover:bg-background-alt hover:text-foreground"
           >
-            ניקוי ✕
+            ניקוי
+            <X className="h-3.5 w-3.5" />
           </Link>
         )}
       </form>
 
       {/* Table */}
       {clients.length === 0 ? (
-        <div
-          className="rounded-2xl border px-6 py-16 text-center"
-          style={{ background: "#fff", borderColor: "rgba(0,0,0,0.07)" }}
-        >
-          <p className="font-semibold" style={{ color: "#1a1a2e" }}>
+        <div className="aura-card rounded-2xl px-6 py-16 text-center">
+          <p className="font-semibold text-foreground">
             {q ? "לא נמצאו לקוחות מתאימים." : "אין עדיין לקוחות לעסק זה."}
           </p>
         </div>
       ) : (
-        <div
-          className="overflow-hidden rounded-2xl border"
-          style={{
-            background: "#fff",
-            borderColor: "rgba(0,0,0,0.07)",
-            boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-          }}
-        >
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr style={{ borderBottom: "1px solid rgba(0,0,0,0.07)", background: "#f9f9fb" }}>
-                  {["שם", "טלפון", "אימייל", "תורים", "סה״כ הוצאה", "ביקור אחרון", "הצטרפה", ""].map(
-                    (col) => (
-                      <th
-                        key={col}
-                        className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide whitespace-nowrap"
-                        style={{ color: "#888" }}
-                      >
-                        {col}
-                      </th>
-                    ),
-                  )}
-                </tr>
-              </thead>
-              <tbody>
-                {clients.map((c) => (
-                  <tr
-                    key={c.id}
-                    style={{ borderBottom: "1px solid rgba(0,0,0,0.05)" }}
-                  >
-                    <td className="px-4 py-3 font-medium whitespace-nowrap" style={{ color: "#1a1a2e" }}>
-                      {c.fullName}
-                      {c.unsubscribedAt && (
-                        <span className="mr-2 text-xs" style={{ color: "#dc2626" }}>
-                          (הוסרה)
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap" dir="ltr" style={{ color: "#444", textAlign: "right" }}>
-                      {c.phone}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap" dir="ltr" style={{ color: "#444", textAlign: "right" }}>
-                      {c.email ?? "—"}
-                    </td>
-                    <td className="px-4 py-3 text-center tabular-nums" style={{ color: "#444" }}>
-                      {c.totalBookings}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap tabular-nums" style={{ color: "#444" }}>
-                      ₪{c.totalSpent.toLocaleString("he-IL")}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-xs" style={{ color: "#666" }}>
-                      {fmtDate(c.lastBookingAt)}
-                    </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-xs" style={{ color: "#888" }}>
-                      {fmtDate(c.createdAt)}
-                    </td>
-                    <td className="px-4 py-3">
-                      <AdminClientEditModal
-                        clientId={c.id}
-                        initialData={{
-                          fullName: c.fullName,
-                          phone: c.phone,
-                          email: c.email,
-                          notes: c.notes,
-                          whatsappOptIn: c.whatsappOptIn,
-                          marketingOptIn: c.marketingOptIn,
-                          businessName: biz.name,
-                        }}
-                      />
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div
-            className="px-4 py-3 text-xs"
-            style={{ borderTop: "1px solid rgba(0,0,0,0.05)", background: "#fafafa", color: "#888" }}
-          >
+        <div className="aura-card overflow-hidden rounded-2xl">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {["שם", "טלפון", "אימייל", "תורים", "סה״כ הוצאה", "ביקור אחרון", "הצטרפה", ""].map(
+                  (col, i) => (
+                    <TableHead key={`${col}-${i}`} className="px-4">
+                      {col}
+                    </TableHead>
+                  ),
+                )}
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {clients.map((c) => (
+                <TableRow key={c.id}>
+                  <td className="px-4 py-3 font-medium whitespace-nowrap text-foreground">
+                    {c.fullName}
+                    {c.unsubscribedAt && (
+                      <span className="mr-2 text-xs" style={{ color: "var(--error)" }}>
+                        (הוסרה)
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-right text-foreground-soft" dir="ltr">
+                    {c.phone}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-right text-foreground-soft" dir="ltr">
+                    {c.email ?? "—"}
+                  </td>
+                  <td className="px-4 py-3 text-center tabular-nums text-foreground-soft">
+                    {c.totalBookings}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap tabular-nums text-foreground-soft">
+                    ₪{c.totalSpent.toLocaleString("he-IL")}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs text-muted">
+                    {fmtDate(c.lastBookingAt)}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-xs text-muted">
+                    {fmtDate(c.createdAt)}
+                  </td>
+                  <td className="px-4 py-3">
+                    <AdminClientEditModal
+                      clientId={c.id}
+                      initialData={{
+                        fullName: c.fullName,
+                        phone: c.phone,
+                        email: c.email,
+                        notes: c.notes,
+                        whatsappOptIn: c.whatsappOptIn,
+                        marketingOptIn: c.marketingOptIn,
+                        businessName: biz.name,
+                      }}
+                    />
+                  </td>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+          <div className="border-t border-border bg-background-alt/50 px-4 py-3 text-xs text-muted">
             מציג {clients.length} לקוחות
           </div>
         </div>

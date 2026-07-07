@@ -54,10 +54,10 @@ export function WinBackAutomationsCard({ setting, connection, stats }: Props) {
         <div
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
           style={{
-            background: "rgba(184,107,140,0.10)",
+            background: "rgba(172,92,127,0.10)",
           }}
         >
-          <RefreshCcw className="h-5 w-5" style={{ color: "#b86b8c" }} />
+          <RefreshCcw className="h-5 w-5" style={{ color: "#ac5c7f" }} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex flex-wrap items-center gap-2">
@@ -112,11 +112,11 @@ export function WinBackAutomationsCard({ setting, connection, stats }: Props) {
           href="/bring-back"
           className="flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
           style={{
-            background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
+            background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)",
           }}
         >
           {c.manageCta}
-          <ArrowLeft className="h-3 w-3 rotate-180" />
+          <ArrowLeft className="h-3 w-3" />
         </Link>
       </div>
     </div>

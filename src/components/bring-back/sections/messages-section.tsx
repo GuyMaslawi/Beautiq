@@ -31,16 +31,16 @@ export async function MessagesSection() {
       <div
         className="flex items-start gap-3 rounded-2xl border p-4"
         style={{
-          borderColor: "rgba(184,107,140,0.20)",
-          background: "rgba(184,107,140,0.06)",
+          borderColor: "rgba(172,92,127,0.20)",
+          background: "rgba(172,92,127,0.06)",
           boxShadow: "0 1px 6px rgba(43,37,48,0.04)",
         }}
       >
         <div
           className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
-          style={{ background: "rgba(184,107,140,0.13)" }}
+          style={{ background: "rgba(172,92,127,0.13)" }}
         >
-          <MessageCircle className="h-4 w-4" style={{ color: "#b86b8c" }} />
+          <MessageCircle className="h-4 w-4" style={{ color: "#ac5c7f" }} />
         </div>
         <p className="text-foreground text-sm leading-relaxed">{MESSAGES.explanation}</p>
       </div>

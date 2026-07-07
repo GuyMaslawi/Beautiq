@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion } from "motion/react";
-import { CheckCircle2, Sparkles, Star } from "lucide-react";
+import { CheckCircle2, MessageCircle, Sparkles, Star, Wallet } from "lucide-react";
 import { BRAND } from "@/lib/constants/he";
 import { APP_DOMAIN } from "@/lib/config";
 
@@ -69,22 +69,12 @@ function FormPanel({ children }: { children: React.ReactNode }) {
       initial={{ opacity: 0, x: 24 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
-      className="relative flex w-full shrink-0 flex-col justify-center overflow-hidden px-6 py-12 md:w-[480px] md:px-12"
-      style={{
-        background:
-          "radial-gradient(40rem 30rem at 100% -10%, rgba(201,120,152,0.08), transparent 60%), radial-gradient(36rem 28rem at -10% 110%, rgba(157,106,168,0.06), transparent 60%), #fdfbfc",
-      }}
+      className="app-ambient relative flex w-full shrink-0 flex-col justify-center overflow-hidden px-4 py-10 sm:px-6 sm:py-12 md:w-[480px] md:px-10"
     >
-      <div className="relative mx-auto w-full max-w-[360px]">
+      <div className="aura-card relative mx-auto w-full max-w-[400px] rounded-3xl px-6 py-8 sm:px-8">
         {/* Brand mark */}
-        <Link href="/login" className="mb-10 flex items-center gap-3 no-underline">
-          <span
-            className="ring-soft flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white text-base font-bold"
-            style={{
-              background: "linear-gradient(135deg, #c97898 0%, #b86b8c 52%, #9d6aa8 100%)",
-              boxShadow: "0 8px 20px -6px rgba(157,106,168,0.55)",
-            }}
-          >
+        <Link href="/login" className="mb-8 flex items-center gap-3 no-underline">
+          <span className="brand-chip flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-base font-bold">
             A
           </span>
           <div>
@@ -98,19 +88,16 @@ function FormPanel({ children }: { children: React.ReactNode }) {
         {children}
 
         {/* Trust pills — subtle social proof */}
-        <div className="mt-8 pt-6 border-t border-border">
+        <div className="mt-8 pt-6">
+          <div className="editorial-rule mb-5" />
           <div className="flex flex-wrap gap-2">
             {FORM_TRUST_PILLS.map((pill) => (
               <div
                 key={pill}
-                className="flex items-center gap-1.5 rounded-full px-3 py-1.5"
-                style={{
-                  background: "rgba(184,107,140,0.06)",
-                  border: "1px solid rgba(184,107,140,0.14)",
-                }}
+                className="flex items-center gap-1.5 rounded-full border border-[var(--primary)]/15 bg-[var(--primary)]/5 px-3 py-1.5"
               >
-                <CheckCircle2 className="h-3 w-3 shrink-0" style={{ color: "#b86b8c" }} />
-                <span className="text-xs font-medium" style={{ color: "#8a8190" }}>
+                <CheckCircle2 className="text-primary h-3 w-3 shrink-0" />
+                <span className="text-muted text-xs font-medium">
                   {pill}
                 </span>
               </div>
@@ -134,9 +121,9 @@ function PreviewPanel() {
     >
       {/* Atmospheric glow orbs */}
       <div className="pointer-events-none absolute inset-0" aria-hidden="true">
-        <div style={{ position: "absolute", top: "-100px", right: "-100px", width: 520, height: 520, borderRadius: "50%", background: "radial-gradient(circle,rgba(201,120,152,.22) 0%,transparent 70%)", filter: "blur(60px)" }} />
+        <div style={{ position: "absolute", top: "-100px", right: "-100px", width: 520, height: 520, borderRadius: "50%", background: "radial-gradient(circle,rgba(199,111,147,.22) 0%,transparent 70%)", filter: "blur(60px)" }} />
         <div style={{ position: "absolute", bottom: "-90px", left: "-90px", width: 400, height: 400, borderRadius: "50%", background: "radial-gradient(circle,rgba(192,149,96,.14) 0%,transparent 70%)", filter: "blur(55px)" }} />
-        <div style={{ position: "absolute", top: "38%", left: "8%", width: 280, height: 280, borderRadius: "50%", background: "radial-gradient(circle,rgba(184,107,140,.13) 0%,transparent 70%)", filter: "blur(70px)" }} />
+        <div style={{ position: "absolute", top: "38%", left: "8%", width: 280, height: 280, borderRadius: "50%", background: "radial-gradient(circle,rgba(172,92,127,.13) 0%,transparent 70%)", filter: "blur(70px)" }} />
         <div style={{ position: "absolute", top: "60%", right: "5%", width: 220, height: 220, borderRadius: "50%", background: "radial-gradient(circle,rgba(150,80,200,.10) 0%,transparent 70%)", filter: "blur(55px)" }} />
       </div>
 
@@ -151,10 +138,10 @@ function PreviewPanel() {
         >
           <div
             className="inline-flex items-center gap-2 rounded-full px-3.5 py-1.5"
-            style={{ background: "rgba(201,120,152,.10)", border: "1px solid rgba(201,120,152,.22)" }}
+            style={{ background: "rgba(199,111,147,.10)", border: "1px solid rgba(199,111,147,.22)" }}
           >
-            <Sparkles className="h-3.5 w-3.5" style={{ color: "#c97898" }} />
-            <span className="text-xs font-semibold tracking-wide" style={{ color: "rgba(201,120,152,.9)" }}>
+            <Sparkles className="h-3.5 w-3.5" style={{ color: "#c76f93" }} />
+            <span className="text-xs font-semibold tracking-wide" style={{ color: "rgba(199,111,147,.9)" }}>
               פלטפורמה חכמה לעסקי יופי
             </span>
           </div>
@@ -168,12 +155,12 @@ function PreviewPanel() {
           className="mb-7 w-full max-w-md"
         >
           <h2
-            className="font-bold leading-tight text-white"
-            style={{ fontSize: "2.25rem", letterSpacing: "-0.02em" }}
+            className="font-display font-semibold leading-tight text-white"
+            style={{ fontSize: "2.35rem", letterSpacing: "-0.02em" }}
           >
             פחות ביטולים.
             <br />
-            <span style={{ color: "#c97898" }}>יותר לקוחות חוזרות.</span>
+            <span style={{ color: "#c76f93" }}>יותר לקוחות חוזרות.</span>
           </h2>
           <p className="mt-3 text-sm leading-relaxed" style={{ color: "rgba(255,255,255,.52)" }}>
             הסטודיו שלך מסודר, מקצועי ורווחי יותר — במקום אחד.
@@ -212,7 +199,7 @@ function PreviewPanel() {
               boxShadow: "0 8px 24px rgba(0,0,0,.28)",
             }}
           >
-            <span className="text-base">💰</span>
+            <Wallet className="h-4 w-4 shrink-0" style={{ color: "#e7a9c4" }} />
             <div>
               <p className="text-[9px] font-medium" style={{ color: "rgba(255,255,255,.5)" }}>הכנסות החודש</p>
               <p className="text-sm font-bold text-white">₪4,200</p>
@@ -226,7 +213,7 @@ function PreviewPanel() {
           <div
             className="absolute inset-0 rounded-2xl pointer-events-none"
             style={{
-              boxShadow: "0 0 60px rgba(201,120,152,0.18), 0 0 120px rgba(184,107,140,0.10)",
+              boxShadow: "0 0 60px rgba(199,111,147,0.18), 0 0 120px rgba(172,92,127,0.10)",
               zIndex: 0,
             }}
           />
@@ -274,8 +261,8 @@ function PreviewPanel() {
                   <span
                     className="flex h-5 w-5 shrink-0 items-center justify-center rounded-md text-white text-[8px] font-bold"
                     style={{
-                      background: "linear-gradient(135deg,#c97898,#b86b8c)",
-                      boxShadow: "0 1px 6px rgba(184,107,140,0.50)",
+                      background: "linear-gradient(135deg,#c76f93,#ac5c7f)",
+                      boxShadow: "0 1px 6px rgba(172,92,127,0.50)",
                     }}
                   >
                     A
@@ -291,7 +278,7 @@ function PreviewPanel() {
                   <div
                     className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[8px] font-bold"
                     style={{
-                      background: "linear-gradient(135deg,rgba(201,120,152,.55),rgba(184,107,140,.40))",
+                      background: "linear-gradient(135deg,rgba(199,111,147,.55),rgba(172,92,127,.40))",
                       color: "#f0c0d4",
                       border: "1px solid rgba(255,255,255,0.15)",
                     }}
@@ -321,9 +308,9 @@ function PreviewPanel() {
                             style={
                               item.active
                                 ? {
-                                    background: "linear-gradient(135deg, rgba(201,120,152,0.20) 0%, rgba(184,107,140,0.13) 100%)",
+                                    background: "linear-gradient(135deg, rgba(199,111,147,0.20) 0%, rgba(172,92,127,0.13) 100%)",
                                     color: "#e0a0c0",
-                                    boxShadow: "inset 0 0 0 1px rgba(184,107,140,0.28)",
+                                    boxShadow: "inset 0 0 0 1px rgba(172,92,127,0.28)",
                                   }
                                 : { color: "rgba(255,255,255,0.45)" }
                             }
@@ -347,7 +334,7 @@ function PreviewPanel() {
                   <span className="text-[9px] font-bold" style={{ color: "#2b2530" }}>לוח הבקרה</span>
                   <span
                     className="rounded-full px-1.5 py-0.5 text-[8px] font-medium"
-                    style={{ background: "rgba(184,107,140,.10)", color: "#b86b8c" }}
+                    style={{ background: "rgba(172,92,127,.10)", color: "#ac5c7f" }}
                   >
                     ✓ הכל כאן
                   </span>
@@ -360,7 +347,7 @@ function PreviewPanel() {
                     className="relative overflow-hidden rounded-xl px-2.5 py-2"
                     style={{
                       background: "linear-gradient(145deg, #2b0e1f 0%, #3e1630 55%, #2c1527 100%)",
-                      border: "1px solid rgba(184,107,140,0.28)",
+                      border: "1px solid rgba(172,92,127,0.28)",
                     }}
                   >
                     <div className="flex items-start justify-between gap-2">
@@ -411,7 +398,7 @@ function PreviewPanel() {
                           m.accent
                             ? {
                                 background: "linear-gradient(135deg, #fdf0f7 0%, #f5e8f2 100%)",
-                                border: "1px solid rgba(184,107,140,0.20)",
+                                border: "1px solid rgba(172,92,127,0.20)",
                               }
                             : {
                                 background: "#fff",
@@ -422,7 +409,7 @@ function PreviewPanel() {
                         <p className="text-[7px]" style={{ color: "#8a8190" }}>{m.label}</p>
                         <p
                           className="mt-0.5 text-[11px] font-bold tabular-nums"
-                          style={{ color: m.accent ? "#b86b8c" : "#2b2530" }}
+                          style={{ color: m.accent ? "#ac5c7f" : "#2b2530" }}
                         >
                           {m.value}
                         </p>
@@ -446,13 +433,13 @@ function PreviewPanel() {
                       >
                         <span
                           className="w-7 shrink-0 text-[8px] font-bold tabular-nums"
-                          style={{ color: "#b86b8c" }}
+                          style={{ color: "#ac5c7f" }}
                         >
                           {item.time}
                         </span>
                         <div
                           className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[8px] font-semibold text-white"
-                          style={{ background: "linear-gradient(135deg, rgba(201,120,152,0.85), rgba(184,107,140,0.75))" }}
+                          style={{ background: "linear-gradient(135deg, rgba(199,111,147,0.85), rgba(172,92,127,0.75))" }}
                         >
                           {item.name[0]}
                         </div>
@@ -491,7 +478,7 @@ function PreviewPanel() {
               boxShadow: "0 8px 24px rgba(0,0,0,.28)",
             }}
           >
-            <span className="text-base">💬</span>
+            <MessageCircle className="h-4 w-4 shrink-0" style={{ color: "#e7a9c4" }} />
             <div>
               <p className="text-[9px] font-medium" style={{ color: "rgba(255,255,255,.5)" }}>תזכורת נשלחה</p>
               <p className="text-[11px] font-bold text-white">נועה לוי · מחר 10:00</p>
@@ -516,7 +503,7 @@ function PreviewPanel() {
                   border: "1px solid rgba(255,255,255,.09)",
                 }}
               >
-                <CheckCircle2 className="h-3 w-3 shrink-0" style={{ color: "#c97898" }} />
+                <CheckCircle2 className="h-3 w-3 shrink-0" style={{ color: "#c76f93" }} />
                 <span className="text-xs font-medium" style={{ color: "rgba(255,255,255,.55)" }}>
                   {point}
                 </span>

@@ -261,7 +261,7 @@ export function ClientEditModal({ clientId, initialData }: Props) {
                       className="rounded-lg px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
                       style={{
                         background:
-                          "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
+                          "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)",
                       }}
                     >
                       {isPending ? c.savingButton : c.saveButton}

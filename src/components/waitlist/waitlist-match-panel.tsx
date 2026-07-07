@@ -125,17 +125,17 @@ export function WaitlistMatchPanel({
     <div
       className="rounded-2xl p-5 space-y-3"
       style={{
-        background: "linear-gradient(135deg, rgba(184,107,140,0.06) 0%, rgba(201,120,152,0.04) 100%)",
-        border: "1px solid rgba(184,107,140,0.22)",
+        background: "linear-gradient(135deg, rgba(172,92,127,0.06) 0%, rgba(199,111,147,0.04) 100%)",
+        border: "1px solid rgba(172,92,127,0.22)",
       }}
       dir="rtl"
     >
       <div className="flex items-center gap-3">
         <div
           className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-          style={{ background: "rgba(184,107,140,0.12)" }}
+          style={{ background: "rgba(172,92,127,0.12)" }}
         >
-          <Users2 className="h-5 w-5" style={{ color: "#b86b8c" }} />
+          <Users2 className="h-5 w-5" style={{ color: "#ac5c7f" }} />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
@@ -150,7 +150,7 @@ export function WaitlistMatchPanel({
       <button
         onClick={() => setOpen((v) => !v)}
         className="inline-flex items-center gap-1.5 text-sm font-semibold transition-opacity hover:opacity-80"
-        style={{ color: "#b86b8c" }}
+        style={{ color: "#ac5c7f" }}
       >
         {open ? WAITLIST.match.hideCandidates : WAITLIST.match.viewCandidates}
         {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}

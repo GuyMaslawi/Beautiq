@@ -14,11 +14,17 @@ import {
  */
 export function PublicBrandFooter() {
   return (
-    <footer className="border-t border-[var(--border)] bg-surface">
+    <footer className="bg-surface/70 backdrop-blur">
+      <div className="editorial-rule mx-auto w-full max-w-5xl" />
       <div className="mx-auto flex w-full max-w-5xl flex-col items-center gap-3 px-5 py-10 text-center sm:px-8">
-        <p className="text-foreground text-lg font-bold tracking-tight">
-          Allura
-        </p>
+        <div className="flex items-center gap-2.5">
+          <span className="brand-chip flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-sm font-bold">
+            A
+          </span>
+          <p className="font-display text-foreground text-xl font-semibold tracking-tight">
+            Allura
+          </p>
+        </div>
         <p className="text-muted max-w-md text-sm leading-relaxed">
           {BRAND_DESCRIPTION}
         </p>

@@ -63,8 +63,8 @@ export function BookingRow({ booking }: { booking: BookingListItem }) {
         borderColor: "var(--border)",
         ...(isPendingApproval
           ? {
-              background: "rgba(184,107,140,0.07)",
-              boxShadow: "inset -3px 0 0 #b86b8c",
+              background: "rgba(172,92,127,0.07)",
+              boxShadow: "inset -3px 0 0 #ac5c7f",
             }
           : {}),
       }}
@@ -76,10 +76,10 @@ export function BookingRow({ booking }: { booking: BookingListItem }) {
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
             style={{
               background: isActive
-                ? "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)"
+                ? "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)"
                 : "linear-gradient(135deg, #c8b8c0 0%, #b0a0a8 100%)",
               boxShadow: isActive
-                ? "0 2px 6px rgba(184,107,140,0.28)"
+                ? "0 2px 6px rgba(172,92,127,0.28)"
                 : "0 1px 4px rgba(43,37,48,0.10)",
             }}
           >
@@ -107,7 +107,7 @@ export function BookingRow({ booking }: { booking: BookingListItem }) {
       <td className="px-4 py-3 whitespace-nowrap">
         <p
           className="text-sm font-bold"
-          style={{ color: isToday ? "#b86b8c" : "var(--foreground-soft)" }}
+          style={{ color: isToday ? "#ac5c7f" : "var(--foreground-soft)" }}
         >
           {dateLabel}
         </p>

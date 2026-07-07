@@ -15,8 +15,8 @@ export function PlaceholderPage({
           className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-2xl text-xl"
           style={{
             background:
-              "linear-gradient(135deg, rgba(201,120,152,0.12) 0%, rgba(184,107,140,0.18) 100%)",
-            border: "1px solid rgba(184,107,140,0.15)",
+              "linear-gradient(135deg, rgba(199,111,147,0.12) 0%, rgba(172,92,127,0.18) 100%)",
+            border: "1px solid rgba(172,92,127,0.15)",
           }}
         >
           ✦

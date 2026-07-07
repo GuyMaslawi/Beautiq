@@ -127,7 +127,7 @@ function ReminderCard({
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-semibold text-white"
             style={{
               background:
-                "linear-gradient(135deg, rgba(201,120,152,0.85) 0%, rgba(184,107,140,0.75) 100%)",
+                "linear-gradient(135deg, rgba(199,111,147,0.85) 0%, rgba(172,92,127,0.75) 100%)",
             }}
           >
             {getInitial(item.clientName)}
@@ -156,14 +156,14 @@ function ReminderCard({
           className="flex items-center gap-1.5 text-sm"
           style={{ color: "var(--foreground-soft)" }}
         >
-          <Clock className="h-3.5 w-3.5 shrink-0" style={{ color: "#b86b8c" }} />
+          <Clock className="h-3.5 w-3.5 shrink-0" style={{ color: "#ac5c7f" }} />
           {formatDateTime(item.startTimeISO)}
         </span>
         <span
           className="rounded-full px-2 py-0.5 text-xs"
           style={{
-            background: "rgba(184,107,140,0.08)",
-            color: "#b86b8c",
+            background: "rgba(172,92,127,0.08)",
+            color: "#ac5c7f",
           }}
         >
           {c.reminderIn(reminderHours)}
@@ -303,9 +303,9 @@ export function RemindersDueList({
       >
         <div
           className="mb-3 flex h-12 w-12 items-center justify-center rounded-full"
-          style={{ background: "rgba(184,107,140,0.08)" }}
+          style={{ background: "rgba(172,92,127,0.08)" }}
         >
-          <CheckCircle2 className="h-6 w-6" style={{ color: "#b86b8c" }} />
+          <CheckCircle2 className="h-6 w-6" style={{ color: "#ac5c7f" }} />
         </div>
         <p className="font-semibold" style={{ color: "var(--foreground)" }}>
           {dl.emptyTitle}

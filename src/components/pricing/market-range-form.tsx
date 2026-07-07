@@ -57,14 +57,14 @@ export function MarketRangeForm({
               placeholder={PRICING.marketRange.minPlaceholder}
               className="w-full rounded-lg border py-2 pr-7 pl-2 text-sm text-right"
               style={{
-                borderColor: state.fieldErrors?.min ? "#e05a7a" : "var(--border)",
+                borderColor: state.fieldErrors?.min ? "var(--error)" : "var(--border)",
                 background: "#fafafa",
                 outline: "none",
               }}
             />
           </div>
           {state.fieldErrors?.min && (
-            <p className="text-xs" style={{ color: "#e05a7a" }}>{state.fieldErrors.min}</p>
+            <p className="text-xs" style={{ color: "var(--error)" }}>{state.fieldErrors.min}</p>
           )}
         </div>
 
@@ -85,14 +85,14 @@ export function MarketRangeForm({
               placeholder={PRICING.marketRange.avgPlaceholder}
               className="w-full rounded-lg border py-2 pr-7 pl-2 text-sm text-right"
               style={{
-                borderColor: state.fieldErrors?.avg ? "#e05a7a" : "var(--border)",
+                borderColor: state.fieldErrors?.avg ? "var(--error)" : "var(--border)",
                 background: "#fafafa",
                 outline: "none",
               }}
             />
           </div>
           {state.fieldErrors?.avg && (
-            <p className="text-xs" style={{ color: "#e05a7a" }}>{state.fieldErrors.avg}</p>
+            <p className="text-xs" style={{ color: "var(--error)" }}>{state.fieldErrors.avg}</p>
           )}
         </div>
 
@@ -113,20 +113,20 @@ export function MarketRangeForm({
               placeholder={PRICING.marketRange.maxPlaceholder}
               className="w-full rounded-lg border py-2 pr-7 pl-2 text-sm text-right"
               style={{
-                borderColor: state.fieldErrors?.max ? "#e05a7a" : "var(--border)",
+                borderColor: state.fieldErrors?.max ? "var(--error)" : "var(--border)",
                 background: "#fafafa",
                 outline: "none",
               }}
             />
           </div>
           {state.fieldErrors?.max && (
-            <p className="text-xs" style={{ color: "#e05a7a" }}>{state.fieldErrors.max}</p>
+            <p className="text-xs" style={{ color: "var(--error)" }}>{state.fieldErrors.max}</p>
           )}
         </div>
       </div>
 
       {state.formError && (
-        <p className="text-xs" style={{ color: "#e05a7a" }}>{state.formError}</p>
+        <p className="text-xs" style={{ color: "var(--error)" }}>{state.formError}</p>
       )}
 
       {state.success && (

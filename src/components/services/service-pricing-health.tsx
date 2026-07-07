@@ -76,7 +76,7 @@ export function ServicePricingHealth({
     >
       <div className="p-5 space-y-4">
         <div className="flex items-center gap-2">
-          <TrendingUp className="h-4 w-4" style={{ color: "#b86b8c" }} />
+          <TrendingUp className="h-4 w-4" style={{ color: "#ac5c7f" }} />
           <h3 className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
             בריאות תמחור
           </h3>
@@ -86,7 +86,7 @@ export function ServicePricingHealth({
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
           <div className="space-y-0.5">
             <p className="text-xs" style={{ color: "#8a8190" }}>{PRICING.card.pricePerHour}</p>
-            <p className="text-base font-bold" style={{ color: "#b86b8c" }}>
+            <p className="text-base font-bold" style={{ color: "#ac5c7f" }}>
               {formatILS(service.pricePerHour)}
             </p>
           </div>
@@ -164,7 +164,7 @@ export function ServicePricingHealth({
           type="button"
           onClick={() => setRangeOpen((o) => !o)}
           className="flex items-center gap-1.5 text-xs font-medium transition-opacity hover:opacity-70"
-          style={{ color: "#b86b8c" }}
+          style={{ color: "#ac5c7f" }}
         >
           {rangeOpen ? (
             <>

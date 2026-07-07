@@ -39,7 +39,7 @@ export function ClientOptInForm({ clientId, whatsappOptIn, marketingOptIn }: Pro
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
-        <MessageCircle className="h-4 w-4 shrink-0" style={{ color: "#b86b8c" }} />
+        <MessageCircle className="h-4 w-4 shrink-0" style={{ color: "#ac5c7f" }} />
         <p className="text-muted text-xs font-semibold uppercase tracking-wider">
           {c.optInSection}
         </p>
@@ -69,7 +69,7 @@ export function ClientOptInForm({ clientId, whatsappOptIn, marketingOptIn }: Pro
             disabled={isPending}
             className="rounded-lg px-4 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
             style={{
-              background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
+              background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)",
             }}
           >
             {isPending ? c.optInSaving : c.optInSave}

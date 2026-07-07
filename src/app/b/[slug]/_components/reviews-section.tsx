@@ -63,7 +63,7 @@ export function PublicReviewsSection({
             <Quote className="mb-3 h-8 w-8 shrink-0" style={{ color: `${brand}66` }} />
             <StarRow rating={review.rating} size="sm" />
             <p className="text-foreground-soft mt-3 flex-1 text-sm leading-relaxed">{review.reviewText}</p>
-            <div className="mt-5 flex items-center gap-2.5 border-t pt-4" style={{ borderColor: "rgba(184,107,140,0.14)" }}>
+            <div className="mt-5 flex items-center gap-2.5 border-t pt-4" style={{ borderColor: "rgba(172,92,127,0.14)" }}>
               <div
                 className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
                 style={{ background: grd }}

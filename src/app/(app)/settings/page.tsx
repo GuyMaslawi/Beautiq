@@ -40,7 +40,7 @@ export default async function SettingsPage() {
 
       <div className="space-y-6">
         {/* Section 1 — Business details */}
-        <Section title={SETTINGS.businessDetails.sectionTitle} icon={<Store className="h-4 w-4" style={{ color: "#b86b8c" }} />}>
+        <Section title={SETTINGS.businessDetails.sectionTitle} icon={<Store className="h-4 w-4" style={{ color: "#ac5c7f" }} />}>
           <BusinessDetailsForm
             action={updateBusinessDetailsAction}
             initialValues={{
@@ -54,7 +54,7 @@ export default async function SettingsPage() {
         </Section>
 
         {/* Section 2 — Business categories */}
-        <Section title={SETTINGS.categories.sectionTitle} icon={<Tag className="h-4 w-4" style={{ color: "#b86b8c" }} />}>
+        <Section title={SETTINGS.categories.sectionTitle} icon={<Tag className="h-4 w-4" style={{ color: "#ac5c7f" }} />}>
           <BusinessCategoriesForm
             action={updateBusinessCategoriesAction}
             allCategories={allCategories}
@@ -63,7 +63,7 @@ export default async function SettingsPage() {
         </Section>
 
         {/* Section 3 — Public link (informational, coming soon) */}
-        <Section title={SETTINGS.publicLink.sectionTitle} icon={<Link2 className="h-4 w-4" style={{ color: "#b86b8c" }} />}>
+        <Section title={SETTINGS.publicLink.sectionTitle} icon={<Link2 className="h-4 w-4" style={{ color: "#ac5c7f" }} />}>
           <PublicLinkCard slug={settings.slug} />
         </Section>
       </div>

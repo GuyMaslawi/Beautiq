@@ -172,7 +172,7 @@ export function WinBackSettingsForm({
   };
 
   const chipActive = {
-    background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
+    background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)",
     color: "#fff",
     border: "none",
   };
@@ -454,7 +454,7 @@ export function WinBackSettingsForm({
               {/* Active-mode banner */}
               <div
                 className="rounded-lg px-3 py-2"
-                style={{ background: "rgba(201,120,152,0.08)", border: "1px solid rgba(201,120,152,0.25)" }}
+                style={{ background: "rgba(199,111,147,0.08)", border: "1px solid rgba(199,111,147,0.25)" }}
               >
                 <p className="text-xs font-medium" style={{ color: "#8a3d60" }}>
                   {tm.activeBanner}
@@ -503,7 +503,7 @@ export function WinBackSettingsForm({
         style={{
           background: saved
             ? "linear-gradient(135deg, #3d8b6e 0%, #2d7060 100%)"
-            : "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
+            : "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)",
         }}
       >
         {isPending ? c.saving : saved ? c.saved : c.saveButton}

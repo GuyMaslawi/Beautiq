@@ -66,8 +66,8 @@ export function Button({
       style={
         isGradient
           ? {
-              background: "linear-gradient(135deg, #c97898 0%, #b86b8c 52%, #9d6aa8 100%)",
-              boxShadow: "0 4px 14px rgba(157,106,168,0.34), 0 1px 3px rgba(184,107,140,0.30), inset 0 1px 0 rgba(255,255,255,0.22)",
+              background: "var(--brand-gradient)",
+              boxShadow: "var(--brand-shadow)",
               ...style,
             }
           : isDestructive

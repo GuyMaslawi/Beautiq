@@ -37,9 +37,9 @@ export async function WinBackSection({ campaign }: { campaign?: string }) {
           <span
             className="rounded-full px-2.5 py-0.5 text-xs font-bold"
             style={{
-              background: "rgba(184,107,140,0.12)",
-              color: "#b86b8c",
-              border: "1px solid rgba(184,107,140,0.25)",
+              background: "rgba(172,92,127,0.12)",
+              color: "#ac5c7f",
+              border: "1px solid rgba(172,92,127,0.25)",
             }}
           >
             {WIN_BACK.proBadge}

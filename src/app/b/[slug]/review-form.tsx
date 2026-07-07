@@ -1,7 +1,7 @@
 "use client";
 
 import { useActionState, useState } from "react";
-import { Star } from "lucide-react";
+import { Heart, Star } from "lucide-react";
 import {
   submitPublicReviewAction,
   type PublicReviewFormState,
@@ -17,7 +17,8 @@ function StarPicker({ value, onChange }: { value: number; onChange: (v: number) 
           key={n}
           type="button"
           onClick={() => onChange(n)}
-          className="focus:outline-none"
+          aria-label={`${n} כוכבים`}
+          className="flex h-11 w-11 items-center justify-center rounded-xl transition-transform hover:scale-110 focus:outline-none active:scale-95"
         >
           <Star
             className="h-7 w-7 transition-colors"
@@ -46,7 +47,9 @@ export function PublicReviewForm({
   if (state.success) {
     return (
       <div className="rounded-2xl bg-green-50 px-5 py-6 text-center">
-        <div className="text-3xl mb-2">🌸</div>
+        <span className="mx-auto mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-green-100 text-green-600">
+          <Heart className="h-5 w-5" fill="currentColor" />
+        </span>
         <p className="font-semibold text-green-800 text-sm">תודה רבה על הביקורת!</p>
         <p className="text-xs text-green-600 mt-1">הביקורת שלך התקבלה בהצלחה.</p>
       </div>

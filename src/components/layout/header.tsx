@@ -38,13 +38,7 @@ export function Header({ businessName, isAdmin = false }: { businessName: string
         <div className="flex h-14 items-center justify-between px-4">
           {/* Brand */}
           <Link href="/dashboard" className="flex items-center gap-2 no-underline">
-            <span
-              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white text-xs font-bold"
-              style={{
-                background: "linear-gradient(135deg, #c97898 0%, #b86b8c 52%, #9d6aa8 100%)",
-                boxShadow: "0 2px 6px rgba(184,107,140,0.45)",
-              }}
-            >
+            <span className="brand-chip flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold">
               B
             </span>
             <span
@@ -103,13 +97,7 @@ export function Header({ businessName, isAdmin = false }: { businessName: string
                 style={{ borderBottom: "1px solid var(--sidebar-border)" }}
               >
                 <div className="flex items-center gap-2.5">
-                  <span
-                    className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-white text-xs font-bold"
-                    style={{
-                      background: "linear-gradient(135deg, #c97898 0%, #b86b8c 52%, #9d6aa8 100%)",
-                      boxShadow: "0 2px 6px rgba(184,107,140,0.45)",
-                    }}
-                  >
+                  <span className="brand-chip flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-xs font-bold">
                     B
                   </span>
                   <span
@@ -140,7 +128,7 @@ export function Header({ businessName, isAdmin = false }: { businessName: string
                     className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold"
                     style={{
                       background:
-                        "linear-gradient(135deg, rgba(201,120,152,0.55) 0%, rgba(184,107,140,0.40) 100%)",
+                        "linear-gradient(135deg, rgba(199,111,147,0.55) 0%, rgba(172,92,127,0.40) 100%)",
                       color: "#f0c0d4",
                       border: "1px solid rgba(255,255,255,0.18)",
                     }}

@@ -331,7 +331,7 @@ function buildEmailHtml(v: {
         ${v.priceStr ? row("מחיר", v.priceStr) : ""}
         ${row("סטטוס", v.statusLabel)}
       </table>
-      <a href="${BOOKINGS_URL}" style="display:inline-block;margin-top:20px;background:#b86b8c;color:#fff;text-decoration:none;padding:12px 20px;border-radius:12px;font-weight:700;font-size:14px">לאישור וניהול התור</a>
+      <a href="${BOOKINGS_URL}" style="display:inline-block;margin-top:20px;background:#ac5c7f;color:#fff;text-decoration:none;padding:12px 20px;border-radius:12px;font-weight:700;font-size:14px">לאישור וניהול התור</a>
     </div>
     <p style="text-align:center;color:#b3a8b0;font-size:12px;margin:16px 0 0">Allura</p>
   </div>

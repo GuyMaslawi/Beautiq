@@ -29,7 +29,7 @@ const STATUS_CONFIG: Record<string, { label: string; bg: string; color: string; 
   {
     sent:      { label: "נשלח",  bg: "rgba(61,139,110,0.08)",  color: "#2a6e57", border: "rgba(61,139,110,0.25)"  },
     delivered: { label: "נמסר",  bg: "rgba(61,139,110,0.12)",  color: "#1d5240", border: "rgba(61,139,110,0.35)"  },
-    read:      { label: "נקרא",  bg: "rgba(184,107,140,0.10)", color: "#7a3558", border: "rgba(184,107,140,0.30)" },
+    read:      { label: "נקרא",  bg: "rgba(172,92,127,0.10)", color: "#7a3558", border: "rgba(172,92,127,0.30)" },
     failed:    { label: "נכשל",  bg: "rgba(190,74,74,0.09)",   color: "#8b2e2e", border: "rgba(190,74,74,0.25)"   },
     skipped:   { label: "דולג",  bg: "rgba(148,163,184,0.10)", color: "#6b7280", border: "rgba(148,163,184,0.25)" },
     queued:    { label: "ממתין", bg: "rgba(59,122,181,0.08)",  color: "#2e5c8a", border: "rgba(59,122,181,0.25)"  },
@@ -180,9 +180,9 @@ export function ManualRunCard({ isAdmin = false }: { isAdmin?: boolean }) {
       >
         <div
           className="flex h-9 w-9 items-center justify-center rounded-xl shrink-0"
-          style={{ background: "rgba(184,107,140,0.10)" }}
+          style={{ background: "rgba(172,92,127,0.10)" }}
         >
-          <Play className="h-4 w-4" style={{ color: "#b86b8c" }} />
+          <Play className="h-4 w-4" style={{ color: "#ac5c7f" }} />
         </div>
         <div>
           <h3 className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
@@ -246,7 +246,7 @@ export function ManualRunCard({ isAdmin = false }: { isAdmin?: boolean }) {
               <button
                 onClick={handleCheck}
                 className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all hover:opacity-90 active:scale-[0.98]"
-                style={{ background: "#b86b8c", color: "#fff" }}
+                style={{ background: "#ac5c7f", color: "#fff" }}
               >
                 <Users className="h-4 w-4" />
                 בדיקת זכאות
@@ -258,7 +258,7 @@ export function ManualRunCard({ isAdmin = false }: { isAdmin?: boolean }) {
         {/* ── CHECKING ─────────────────────────────────────── */}
         {step === "checking" && (
           <div className="flex items-center gap-2.5 py-3">
-            <Loader2 className="h-4 w-4 animate-spin" style={{ color: "#b86b8c" }} />
+            <Loader2 className="h-4 w-4 animate-spin" style={{ color: "#ac5c7f" }} />
             <p className="text-sm" style={{ color: "var(--muted)" }}>בודקת זכאות לקוחות…</p>
           </div>
         )}
@@ -364,7 +364,7 @@ export function ManualRunCard({ isAdmin = false }: { isAdmin?: boolean }) {
                       <button
                         onClick={() => setStep("confirming")}
                         className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium transition-all hover:opacity-90 active:scale-[0.98]"
-                        style={{ background: "#b86b8c", color: "#fff" }}
+                        style={{ background: "#ac5c7f", color: "#fff" }}
                       >
                         <Play className="h-3.5 w-3.5" />
                         שליחה עכשיו
@@ -412,8 +412,8 @@ export function ManualRunCard({ isAdmin = false }: { isAdmin?: boolean }) {
                   <div
                     className="rounded-xl p-4 space-y-3"
                     style={{
-                      background: "rgba(184,107,140,0.06)",
-                      border: "1px solid rgba(184,107,140,0.22)",
+                      background: "rgba(172,92,127,0.06)",
+                      border: "1px solid rgba(172,92,127,0.22)",
                     }}
                   >
                     <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>
@@ -428,7 +428,7 @@ export function ManualRunCard({ isAdmin = false }: { isAdmin?: boolean }) {
                         onClick={handleRun}
                         disabled={isPending}
                         className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all hover:opacity-90 disabled:opacity-50"
-                        style={{ background: "#b86b8c", color: "#fff" }}
+                        style={{ background: "#ac5c7f", color: "#fff" }}
                       >
                         {isPending ? (
                           <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -460,7 +460,7 @@ export function ManualRunCard({ isAdmin = false }: { isAdmin?: boolean }) {
         {/* ── RUNNING ──────────────────────────────────────── */}
         {step === "running" && (
           <div className="flex items-center gap-2.5 py-3">
-            <Loader2 className="h-4 w-4 animate-spin" style={{ color: "#b86b8c" }} />
+            <Loader2 className="h-4 w-4 animate-spin" style={{ color: "#ac5c7f" }} />
             <p className="text-sm" style={{ color: "var(--muted)" }}>מריץ אוטומציה…</p>
           </div>
         )}
@@ -563,7 +563,7 @@ export function ManualRunCard({ isAdmin = false }: { isAdmin?: boolean }) {
             {runResult.messages.length > 0 && (
               <div className="space-y-1.5">
                 <div
-                  className="overflow-hidden rounded-xl border"
+                  className="overflow-x-auto rounded-xl border"
                   style={{ borderColor: "var(--border)" }}
                 >
                   <table className="w-full text-xs" dir="rtl">
@@ -651,9 +651,9 @@ export function ManualRunCard({ isAdmin = false }: { isAdmin?: boolean }) {
                 }}
                 className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-sm font-medium transition-all hover:opacity-90 active:scale-[0.98]"
                 style={{
-                  background: "rgba(184,107,140,0.10)",
+                  background: "rgba(172,92,127,0.10)",
                   color: "#8a3d60",
-                  border: "1px solid rgba(184,107,140,0.20)",
+                  border: "1px solid rgba(172,92,127,0.20)",
                 }}
               >
                 <XCircle className="h-3.5 w-3.5" />

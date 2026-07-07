@@ -52,7 +52,7 @@ export function BeautyPageHero({
       }}
     >
       <AuraBlob
-        color="rgba(201,120,152,0.22)"
+        color="rgba(199,111,147,0.22)"
         size={360}
         style={{ top: -180, insetInlineEnd: -80 }}
       />
@@ -73,7 +73,7 @@ export function BeautyPageHero({
               </span>
             )}
           </div>
-          <h1 className="display-num text-foreground text-[2rem] font-bold md:text-[2.5rem]">
+          <h1 className="font-display text-foreground text-[2rem] font-semibold leading-tight tracking-tight md:text-[2.5rem]">
             {title}
           </h1>
           {subtitle && (

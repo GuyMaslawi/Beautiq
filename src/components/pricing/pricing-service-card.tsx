@@ -92,7 +92,7 @@ export function PricingServiceCard({ service, insights }: PricingServiceCardProp
           <Link
             href={`/services/${service.id}`}
             className="shrink-0 flex items-center gap-1 text-xs font-medium transition-opacity hover:opacity-70"
-            style={{ color: "#b86b8c" }}
+            style={{ color: "#ac5c7f" }}
           >
             {PRICING.card.editService}
             <ExternalLink className="h-3 w-3" />
@@ -109,7 +109,7 @@ export function PricingServiceCard({ service, insights }: PricingServiceCardProp
           </div>
           <div className="space-y-0.5">
             <p className="text-xs" style={{ color: "#8a8190" }}>{PRICING.card.pricePerHour}</p>
-            <p className="text-base font-bold" style={{ color: "#b86b8c" }}>
+            <p className="text-base font-bold" style={{ color: "#ac5c7f" }}>
               {formatILS(service.pricePerHour)}
             </p>
           </div>
@@ -194,7 +194,7 @@ export function PricingServiceCard({ service, insights }: PricingServiceCardProp
           type="button"
           onClick={() => setRangeOpen((o) => !o)}
           className="flex items-center gap-1.5 text-xs font-medium transition-opacity hover:opacity-70"
-          style={{ color: "#b86b8c" }}
+          style={{ color: "#ac5c7f" }}
         >
           {rangeOpen ? (
             <>

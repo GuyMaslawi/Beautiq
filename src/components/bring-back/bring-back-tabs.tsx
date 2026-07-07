@@ -20,9 +20,9 @@ const SUB_TABS: { key: HubSubTab; label: string }[] = [
 ];
 
 const ACTIVE_STYLE: React.CSSProperties = {
-  background: "linear-gradient(135deg, #c97898 0%, #b86b8c 55%, #9d6aa8 100%)",
+  background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 55%, #92609f 100%)",
   color: "#fff",
-  boxShadow: "0 8px 20px -8px rgba(184,107,140,0.6)",
+  boxShadow: "0 8px 20px -8px rgba(172,92,127,0.6)",
 };
 
 /**
@@ -89,9 +89,9 @@ export function BringBackTabs({
                 style={
                   active
                     ? {
-                        background: "rgba(184,107,140,0.10)",
-                        color: "#b86b8c",
-                        boxShadow: "inset 0 0 0 1px rgba(184,107,140,0.22)",
+                        background: "rgba(172,92,127,0.10)",
+                        color: "#ac5c7f",
+                        boxShadow: "inset 0 0 0 1px rgba(172,92,127,0.22)",
                       }
                     : undefined
                 }

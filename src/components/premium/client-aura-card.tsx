@@ -64,7 +64,7 @@ export function ClientAuraCard({
       )}
       style={{
         background: "linear-gradient(170deg, rgba(255,255,255,0.94) 0%, rgba(255,255,255,0.82) 100%)",
-        border: "1px solid rgba(184,107,140,0.14)",
+        border: "1px solid rgba(172,92,127,0.14)",
         boxShadow: "0 6px 20px -10px rgba(124,58,97,0.16), inset 0 1px 0 rgba(255,255,255,0.9)",
       }}
     >
@@ -79,8 +79,8 @@ export function ClientAuraCard({
           <span
             className="relative flex h-12 w-12 items-center justify-center rounded-full text-base font-bold text-white"
             style={{
-              background: "linear-gradient(135deg, #c97898 0%, #b86b8c 55%, #9d6aa8 100%)",
-              boxShadow: "0 6px 16px -6px rgba(184,107,140,0.6)",
+              background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 55%, #92609f 100%)",
+              boxShadow: "0 6px 16px -6px rgba(172,92,127,0.6)",
             }}
           >
             {initials}
@@ -113,7 +113,7 @@ export function ClientAuraCard({
             <div
               key={i}
               className="rounded-xl px-2 py-2 text-center"
-              style={{ background: "rgba(247,238,243,0.5)", border: "1px solid rgba(184,107,140,0.1)" }}
+              style={{ background: "rgba(247,238,243,0.5)", border: "1px solid rgba(172,92,127,0.1)" }}
             >
               <div className="display-num text-foreground text-sm font-bold">{s.value}</div>
               <div className="mt-0.5 text-[10px] leading-tight" style={{ color: "var(--muted)" }}>
@@ -127,7 +127,7 @@ export function ClientAuraCard({
       {highlight && <div className="mt-3">{highlight}</div>}
 
       {actions && (
-        <div className="mt-3.5 flex items-center gap-2 border-t pt-3" style={{ borderColor: "rgba(184,107,140,0.12)" }}>
+        <div className="mt-3.5 flex items-center gap-2 border-t pt-3" style={{ borderColor: "rgba(172,92,127,0.12)" }}>
           {actions}
         </div>
       )}

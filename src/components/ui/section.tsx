@@ -23,13 +23,13 @@ export function Section({ title, icon, action, children, className }: SectionPro
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
             style={{
               background: "var(--brand-gradient-soft)",
-              border: "1px solid rgba(184,107,140,0.16)",
+              border: "1px solid rgba(172,92,127,0.16)",
             }}
           >
             {icon}
           </div>
         )}
-        <h2 className="text-foreground text-base font-semibold">{title}</h2>
+        <h2 className="font-display text-foreground text-[1.05rem] font-semibold">{title}</h2>
         {action && <div className="ms-auto shrink-0">{action}</div>}
       </div>
       {children}

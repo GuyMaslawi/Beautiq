@@ -39,7 +39,7 @@ export function EditorialSectionHeader({
               </span>
             </div>
           )}
-          <h2 className="text-foreground text-xl font-bold tracking-tight md:text-[1.4rem]">
+          <h2 className="font-display text-foreground text-xl font-semibold tracking-tight md:text-[1.4rem]">
             {title}
           </h2>
           {description && (

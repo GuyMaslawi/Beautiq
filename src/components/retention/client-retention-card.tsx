@@ -46,10 +46,10 @@ export function ClientRetentionCard({
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
           style={{
             background:
-              "linear-gradient(135deg, rgba(201,120,152,0.12) 0%, rgba(184,107,140,0.08) 100%)",
+              "linear-gradient(135deg, rgba(199,111,147,0.12) 0%, rgba(172,92,127,0.08) 100%)",
           }}
         >
-          <HeartHandshake className="h-4 w-4" style={{ color: "#b86b8c" }} />
+          <HeartHandshake className="h-4 w-4" style={{ color: "#ac5c7f" }} />
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-foreground text-sm font-semibold">

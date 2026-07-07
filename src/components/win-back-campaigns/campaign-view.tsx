@@ -143,11 +143,11 @@ const ACCENT: Record<
   },
   vip: {
     bg: "rgba(247,238,243,0.85)",
-    border: "rgba(184,107,140,0.22)",
-    borderStrong: "rgba(184,107,140,0.50)",
+    border: "rgba(172,92,127,0.22)",
+    borderStrong: "rgba(172,92,127,0.50)",
     text: "#8a4070",
-    iconBg: "rgba(184,107,140,0.12)",
-    iconColor: "#b86b8c",
+    iconBg: "rgba(172,92,127,0.12)",
+    iconColor: "#ac5c7f",
   },
 };
 
@@ -1026,9 +1026,9 @@ export function CampaignView({
                     key={v}
                     className="rounded-md px-2 py-0.5 font-mono text-xs"
                     style={{
-                      background: "rgba(184,107,140,0.08)",
+                      background: "rgba(172,92,127,0.08)",
                       color: "#8a4070",
-                      border: "1px solid rgba(184,107,140,0.18)",
+                      border: "1px solid rgba(172,92,127,0.18)",
                     }}
                   >
                     {v}
@@ -1361,15 +1361,15 @@ export function CampaignView({
               metrics.totalRecoverable > 0
                 ? "rgba(247,238,243,0.85)"
                 : "rgba(255,255,255,0.90)",
-            border: "1px solid rgba(184,107,140,0.22)",
+            border: "1px solid rgba(172,92,127,0.22)",
             boxShadow: "0 1px 6px rgba(43,37,48,0.06)",
           }}
         >
           <div
             className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl"
-            style={{ background: "rgba(184,107,140,0.12)" }}
+            style={{ background: "rgba(172,92,127,0.12)" }}
           >
-            <Users className="h-4 w-4" style={{ color: "#b86b8c" }} />
+            <Users className="h-4 w-4" style={{ color: "#ac5c7f" }} />
           </div>
           <p
             className="text-2xl font-bold tabular-nums"
@@ -1425,9 +1425,9 @@ export function CampaignView({
         >
           <div
             className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl"
-            style={{ background: "rgba(184,107,140,0.08)" }}
+            style={{ background: "rgba(172,92,127,0.08)" }}
           >
-            <Megaphone className="h-4 w-4" style={{ color: "#b86b8c" }} />
+            <Megaphone className="h-4 w-4" style={{ color: "#ac5c7f" }} />
           </div>
           <p
             className="text-2xl font-bold tabular-nums"

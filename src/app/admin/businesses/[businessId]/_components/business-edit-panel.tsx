@@ -46,17 +46,13 @@ interface Props {
 type Tab = "business" | "page" | "owner";
 
 const inputClass =
-  "w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#1a1a2e]/15";
-const inputStyle = {
-  borderColor: "rgba(0,0,0,0.12)",
-  background: "#fff",
-  color: "#1a1a2e",
-} as const;
-const labelClass = "block text-xs font-semibold mb-1";
-const labelStyle = { color: "#555" } as const;
+  "w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-light hover:border-border-strong focus:border-primary focus:ring-2 focus:ring-primary/20";
+const inputStyle = {} as const;
+const labelClass = "block text-xs font-semibold mb-1 text-muted";
+const labelStyle = {} as const;
 
 function errStyle(hasError?: boolean) {
-  return hasError ? { ...inputStyle, borderColor: "#dc2626" } : inputStyle;
+  return hasError ? { borderColor: "var(--error)" } : inputStyle;
 }
 
 function TextField({
@@ -91,7 +87,11 @@ function TextField({
         className={inputClass}
         style={errStyle(!!error)}
       />
-      {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
+      {error && (
+        <p className="mt-1 text-xs" style={{ color: "var(--error)" }}>
+          {error}
+        </p>
+      )}
     </div>
   );
 }
@@ -114,11 +114,9 @@ function Toggle({
         value="true"
         defaultChecked={defaultChecked}
         className="h-4 w-4 cursor-pointer rounded"
-        style={{ accentColor: "#1a1a2e" }}
+        style={{ accentColor: "var(--primary)" }}
       />
-      <span className="text-sm" style={{ color: "#444" }}>
-        {label}
-      </span>
+      <span className="text-sm text-foreground-soft">{label}</span>
     </label>
   );
 }
@@ -146,18 +144,11 @@ export function AdminBusinessEditPanel({ businessId, business, owner }: Props) {
 
   return (
     <div
-      className="rounded-2xl border"
-      style={{
-        background: "#fff",
-        borderColor: "rgba(0,0,0,0.07)",
-        boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-      }}
+      className="rounded-2xl border border-border bg-surface"
+      style={{ boxShadow: "var(--shadow-sm)" }}
     >
       {/* Tab bar */}
-      <div
-        className="flex gap-1 px-4 pt-4"
-        style={{ borderBottom: "1px solid rgba(0,0,0,0.07)" }}
-      >
+      <div className="flex gap-1 border-b border-border px-4 pt-4">
         {tabs.map((t) => {
           const active = tab === t.key;
           return (
@@ -167,9 +158,11 @@ export function AdminBusinessEditPanel({ businessId, business, owner }: Props) {
               onClick={() => setTab(t.key)}
               className="rounded-t-lg px-4 py-2 text-sm font-semibold transition-colors"
               style={{
-                color: active ? "#1a1a2e" : "#888",
-                borderBottom: active ? "2px solid #1a1a2e" : "2px solid transparent",
-                background: active ? "rgba(0,0,0,0.025)" : "transparent",
+                color: active ? "var(--primary)" : "var(--muted)",
+                borderBottom: active
+                  ? "2px solid var(--primary)"
+                  : "2px solid transparent",
+                background: active ? "var(--primary-light)" : "transparent",
               }}
             >
               {t.label}
@@ -185,7 +178,10 @@ export function AdminBusinessEditPanel({ businessId, business, owner }: Props) {
         {tab !== "owner" && (
           <form action={bizFormAction} className="space-y-5">
             {bizState.formError && (
-              <p className="rounded-xl bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">
+              <p
+                className="rounded-xl px-4 py-2.5 text-sm font-medium"
+                style={{ background: "var(--error-light)", color: "var(--error)" }}
+              >
                 {bizState.formError}
               </p>
             )}
@@ -315,14 +311,8 @@ export function AdminBusinessEditPanel({ businessId, business, owner }: Props) {
                   placeholder="#C9A24B"
                 />
               </div>
-              <div
-                className="grid grid-cols-1 gap-2.5 rounded-xl p-4 sm:grid-cols-2"
-                style={{ background: "#f9f9fb" }}
-              >
-                <p
-                  className="col-span-full text-xs font-semibold"
-                  style={{ color: "#888" }}
-                >
+              <div className="grid grid-cols-1 gap-2.5 rounded-xl bg-background-alt p-4 sm:grid-cols-2">
+                <p className="col-span-full text-xs font-semibold text-muted">
                   מה מוצג בעמוד ההזמנות הציבורי
                 </p>
                 <Toggle name="showServices" label="שירותים" defaultChecked={business.showServices} />
@@ -339,14 +329,13 @@ export function AdminBusinessEditPanel({ businessId, business, owner }: Props) {
               <button
                 type="submit"
                 disabled={bizPending}
-                className="rounded-xl px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-                style={{ background: "#1a1a2e" }}
+                className="bg-brand-gradient rounded-xl px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60"
               >
                 {bizPending ? "שומר…" : "שמירת שינויים"}
               </button>
               {bizState.success && (
-                <span className="text-sm font-medium text-green-700">
-                  ✓ השינויים נשמרו
+                <span className="text-sm font-medium" style={{ color: "var(--success)" }}>
+                  השינויים נשמרו
                 </span>
               )}
             </div>
@@ -357,16 +346,17 @@ export function AdminBusinessEditPanel({ businessId, business, owner }: Props) {
         {tab === "owner" && (
           <>
             {!owner ? (
-              <p className="text-sm" style={{ color: "#888" }}>
-                לא נמצא בעלים לעסק זה.
-              </p>
+              <p className="text-sm text-muted">לא נמצא בעלים לעסק זה.</p>
             ) : (
               <form action={ownerFormAction} className="space-y-5">
-                <p className="text-xs" style={{ color: "#888" }}>
+                <p className="text-xs text-muted">
                   עריכת חשבון המשתמש של בעלת העסק. האימייל משמש להתחברות למערכת.
                 </p>
                 {ownerState.formError && (
-                  <p className="rounded-xl bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">
+                  <p
+                    className="rounded-xl px-4 py-2.5 text-sm font-medium"
+                    style={{ background: "var(--error-light)", color: "var(--error)" }}
+                  >
                     {ownerState.formError}
                   </p>
                 )}
@@ -391,14 +381,13 @@ export function AdminBusinessEditPanel({ businessId, business, owner }: Props) {
                   <button
                     type="submit"
                     disabled={ownerPending}
-                    className="rounded-xl px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-                    style={{ background: "#1a1a2e" }}
+                    className="bg-brand-gradient rounded-xl px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60"
                   >
                     {ownerPending ? "שומר…" : "שמירת שינויים"}
                   </button>
                   {ownerState.success && (
-                    <span className="text-sm font-medium text-green-700">
-                      ✓ פרטי הבעלים נשמרו
+                    <span className="text-sm font-medium" style={{ color: "var(--success)" }}>
+                      פרטי הבעלים נשמרו
                     </span>
                   )}
                 </div>

@@ -64,10 +64,9 @@ export function AppNav({ light = false, isAdmin = false }: AppNavProps) {
           style={
             active
               ? {
-                  background:
-                    "linear-gradient(135deg, rgba(201,120,152,0.16) 0%, rgba(184,107,140,0.10) 100%)",
-                  color: "#b86b8c",
-                  boxShadow: "inset 0 0 0 1px rgba(184,107,140,0.22)",
+                  background: "var(--brand-gradient-soft)",
+                  color: "var(--primary)",
+                  boxShadow: "inset 0 0 0 1px rgba(172,92,127,0.22)",
                 }
               : undefined
           }
@@ -75,7 +74,7 @@ export function AppNav({ light = false, isAdmin = false }: AppNavProps) {
           {Icon && (
             <Icon
               className="h-4 w-4 shrink-0"
-              style={active ? { color: "#b86b8c" } : { color: "var(--muted)" }}
+              style={active ? { color: "var(--primary)" } : { color: "var(--muted)" }}
             />
           )}
           <span className="flex-1">{item.label}</span>

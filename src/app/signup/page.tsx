@@ -11,7 +11,7 @@ export default async function SignupPage() {
   return (
     <AuthShell>
       <div className="mb-8">
-        <h1 className="text-foreground text-2xl font-bold">
+        <h1 className="font-display text-foreground text-3xl font-semibold tracking-tight">
           {AUTH.signup.title}
         </h1>
         <p className="text-muted mt-1">{AUTH.signup.subtitle}</p>

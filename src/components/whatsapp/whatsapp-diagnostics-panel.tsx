@@ -80,9 +80,9 @@ export function WhatsAppDiagnosticsPanel({
       <div className="flex items-center gap-3 px-5 py-4 border-b" style={{ borderColor: "var(--border)" }}>
         <div
           className="flex h-9 w-9 items-center justify-center rounded-xl shrink-0"
-          style={{ background: "rgba(184,107,140,0.10)" }}
+          style={{ background: "rgba(172,92,127,0.10)" }}
         >
-          <Stethoscope className="h-4 w-4" style={{ color: "#b86b8c" }} />
+          <Stethoscope className="h-4 w-4" style={{ color: "#ac5c7f" }} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
@@ -146,7 +146,7 @@ export function WhatsAppDiagnosticsPanel({
             onClick={handleDryRun}
             disabled={isDryRunning}
             className="inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-medium transition-all hover:opacity-90 active:scale-[0.98] disabled:opacity-50"
-            style={{ background: "rgba(184,107,140,0.10)", border: "1px solid rgba(184,107,140,0.25)", color: "#b86b8c" }}
+            style={{ background: "rgba(172,92,127,0.10)", border: "1px solid rgba(172,92,127,0.25)", color: "#ac5c7f" }}
           >
             {isDryRunning ? <RotateCw className="h-3.5 w-3.5 animate-spin" /> : <Search className="h-3.5 w-3.5" />}
             {isDryRunning ? "בודק..." : "בדיקת זכאות לשליחה"}

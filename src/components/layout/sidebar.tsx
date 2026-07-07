@@ -35,7 +35,7 @@ export function Sidebar({
         className="pointer-events-none absolute -top-16 right-0 left-0 h-48"
         style={{
           background:
-            "radial-gradient(60% 80% at 70% 0%, rgba(201,120,152,0.28) 0%, transparent 70%)",
+            "radial-gradient(60% 80% at 70% 0%, rgba(199,111,147,0.28) 0%, transparent 70%)",
         }}
       />
 
@@ -44,13 +44,7 @@ export function Sidebar({
         className="flex h-16 items-center gap-3 px-5"
         style={{ borderBottom: "1px solid var(--sidebar-border)" }}
       >
-        <span
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-white text-sm font-bold"
-          style={{
-            background: "linear-gradient(135deg, #c97898 0%, #b86b8c 52%, #9d6aa8 100%)",
-            boxShadow: "0 2px 10px rgba(184,107,140,0.50)",
-          }}
-        >
+        <span className="brand-chip flex h-8 w-8 shrink-0 items-center justify-center rounded-xl text-sm font-bold">
           B
         </span>
         <span
@@ -72,7 +66,7 @@ export function Sidebar({
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold"
               style={{
                 background:
-                  "linear-gradient(135deg, rgba(201,120,152,0.55) 0%, rgba(184,107,140,0.40) 100%)",
+                  "linear-gradient(135deg, rgba(199,111,147,0.55) 0%, rgba(172,92,127,0.40) 100%)",
                 color: "#f0c0d4",
                 border: "1px solid rgba(255,255,255,0.18)",
               }}

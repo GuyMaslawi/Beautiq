@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "סקירה" },
@@ -13,7 +14,7 @@ export function AdminNav() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex items-center gap-1">
+    <nav className="flex items-center gap-1 overflow-x-auto scrollbar-hide">
       {NAV_ITEMS.map(({ href, label }) => {
         const isActive =
           href === "/admin" ? pathname === "/admin" : pathname.startsWith(href);
@@ -21,12 +22,10 @@ export function AdminNav() {
           <Link
             key={href}
             href={href}
-            className="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
-            style={
-              isActive
-                ? { background: "rgba(255,255,255,0.15)", color: "#fff" }
-                : { color: "rgba(255,255,255,0.65)" }
-            }
+            className={cn(
+              "sidebar-nav-item whitespace-nowrap rounded-xl px-3 py-1.5 text-sm font-medium",
+              isActive && "active",
+            )}
           >
             {label}
           </Link>

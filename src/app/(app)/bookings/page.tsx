@@ -93,8 +93,8 @@ const TABLE_COLS: ColDef[] = [
 function SortIcon({ field, sortField, sortDir, hasExplicitSort }: { field: BookingSortField; sortField: BookingSortField; sortDir: BookingSortDir; hasExplicitSort: boolean }) {
   if (!hasExplicitSort || sortField !== field) return <ChevronsUpDown className="h-3 w-3 opacity-40" />;
   return sortDir === "asc"
-    ? <ChevronUp className="h-3 w-3" style={{ color: "#b86b8c" }} />
-    : <ChevronDown className="h-3 w-3" style={{ color: "#b86b8c" }} />;
+    ? <ChevronUp className="h-3 w-3" style={{ color: "#ac5c7f" }} />
+    : <ChevronDown className="h-3 w-3" style={{ color: "#ac5c7f" }} />;
 }
 
 // ---------------------------------------------------------------------------
@@ -231,8 +231,8 @@ export default async function BookingsPage({
         href="/bookings"
         className="flex h-9 items-center gap-1.5 px-3 text-xs font-medium transition-colors"
         style={{
-          background: !isCalendarView ? "rgba(157,106,168,0.12)" : "transparent",
-          color: !isCalendarView ? "#9d6aa8" : "var(--foreground-soft)",
+          background: !isCalendarView ? "rgba(146,96,159,0.12)" : "transparent",
+          color: !isCalendarView ? "#92609f" : "var(--foreground-soft)",
         }}
       >
         <List className="h-3.5 w-3.5" />
@@ -243,8 +243,8 @@ export default async function BookingsPage({
         className="flex h-9 items-center gap-1.5 border-r px-3 text-xs font-medium transition-colors"
         style={{
           borderColor: "var(--border)",
-          background: isCalendarView ? "rgba(157,106,168,0.12)" : "transparent",
-          color: isCalendarView ? "#9d6aa8" : "var(--foreground-soft)",
+          background: isCalendarView ? "rgba(146,96,159,0.12)" : "transparent",
+          color: isCalendarView ? "#92609f" : "var(--foreground-soft)",
         }}
       >
         <CalendarRange className="h-3.5 w-3.5" />
@@ -257,7 +257,7 @@ export default async function BookingsPage({
     <Link
       href="/bookings/new"
       className="flex shrink-0 cursor-pointer items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition-opacity hover:opacity-90"
-      style={{ background: "linear-gradient(135deg, #c97898 0%, #9d6aa8 100%)", color: "#fff", boxShadow: "0 8px 18px -6px rgba(157,106,168,0.5)" }}
+      style={{ background: "linear-gradient(135deg, #c76f93 0%, #92609f 100%)", color: "#fff", boxShadow: "0 8px 18px -6px rgba(146,96,159,0.5)" }}
     >
       <Plus className="h-4 w-4" />
       תור חדש
@@ -455,7 +455,7 @@ export default async function BookingsPage({
                           <th
                             key={col.field}
                             className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide"
-                            style={{ color: (hasExplicitSort && sortField === col.field) ? "#b86b8c" : "var(--muted)" }}
+                            style={{ color: (hasExplicitSort && sortField === col.field) ? "#ac5c7f" : "var(--muted)" }}
                           >
                             <Link
                               href={sortHref(col.field)}
@@ -498,7 +498,7 @@ export default async function BookingsPage({
                 <Link
                   href="/bookings"
                   className="font-medium hover:underline"
-                  style={{ color: "#b86b8c" }}
+                  style={{ color: "#ac5c7f" }}
                 >
                   צפייה בכל התורים ←
                 </Link>

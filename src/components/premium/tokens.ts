@@ -34,12 +34,12 @@ export const tintGradient: Record<Tint, string> = {
 
 /** Solid-ish accent color per family (for text / thin accents). */
 export const tintAccent: Record<Tint, string> = {
-  blush: "#c97898",
-  rose: "#b86b8c",
-  mauve: "#9d6aa8",
+  blush: "#bd6489",
+  rose: "#ac5c7f",
+  mauve: "#92609f",
   plum: "#7c3a61",
-  champagne: "#b88a3e",
-  sage: "#3d8b6e",
+  champagne: "#a87c2a",
+  sage: "#357c62",
 };
 
 /** Soft tinted surface wash per family (for nested chips / aura panels). */
@@ -64,7 +64,7 @@ export type ToneKey =
 /** Semantic tone → {accent text, soft bg, border}. Used by pills/insights. */
 export const tone: Record<ToneKey, { fg: string; bg: string; border: string; glow: string }> = {
   neutral: { fg: "#3d3545", bg: "rgba(138,129,144,0.10)", border: "rgba(138,129,144,0.22)", glow: "rgba(138,129,144,0.14)" },
-  brand:   { fg: "#b86b8c", bg: "rgba(184,107,140,0.10)", border: "rgba(184,107,140,0.24)", glow: "rgba(201,120,152,0.20)" },
+  brand:   { fg: "#ac5c7f", bg: "rgba(172,92,127,0.10)", border: "rgba(172,92,127,0.24)", glow: "rgba(199,111,147,0.20)" },
   success: { fg: "#2f7d61", bg: "rgba(61,139,110,0.10)", border: "rgba(61,139,110,0.24)", glow: "rgba(61,139,110,0.18)" },
   warning: { fg: "#a06a14", bg: "rgba(184,124,30,0.10)", border: "rgba(184,124,30,0.24)", glow: "rgba(184,124,30,0.18)" },
   danger:  { fg: "#b13b3b", bg: "rgba(190,74,74,0.10)", border: "rgba(190,74,74,0.24)", glow: "rgba(190,74,74,0.16)" },

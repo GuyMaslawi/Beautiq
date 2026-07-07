@@ -6,6 +6,7 @@ import {
   LEGAL_ENTITY_NAME,
   SUPPORT_EMAIL,
 } from "@/lib/config";
+import { PublicBrandFooter } from "@/components/public/brand-footer";
 
 // עמוד ציבורי — מדיניות פרטיות. אינו דורש התחברות ואינו משתמש
 // במעטפת המאומתת (סרגל צד). נדרש לפרסום אפליקציית Meta/WhatsApp.
@@ -26,7 +27,9 @@ function Section({
 }) {
   return (
     <section className="mt-8">
-      <h2 className="text-foreground-soft text-xl font-semibold">{title}</h2>
+      <h2 className="font-display text-foreground-soft text-xl font-semibold tracking-tight">
+        {title}
+      </h2>
       <div className="text-foreground/90 mt-3 space-y-3 leading-relaxed">
         {children}
       </div>
@@ -36,19 +39,21 @@ function Section({
 
 export default function PrivacyPage() {
   return (
-    <main className="bg-background min-h-screen px-5 py-12">
-      <article className="bg-surface shadow-md mx-auto max-w-2xl rounded-2xl border border-[var(--border)] px-6 py-10 sm:px-10">
-        <header className="border-b border-[var(--border)] pb-6">
+    <div className="app-ambient flex min-h-screen flex-col">
+      <main className="flex-1 px-5 py-12">
+      <article className="aura-card mx-auto max-w-3xl rounded-3xl px-6 py-10 sm:px-10">
+        <header>
           <Link
             href="/"
-            className="text-primary text-sm font-medium hover:underline"
+            className="eyebrow text-primary hover:underline"
           >
             Allura
           </Link>
-          <h1 className="text-foreground mt-3 text-3xl font-bold">
+          <h1 className="font-display text-foreground mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
             מדיניות פרטיות
           </h1>
           <p className="text-muted mt-2 text-sm">עודכן לאחרונה: {LAST_UPDATED}</p>
+          <div className="editorial-rule mt-6" />
         </header>
 
         <Section title="מה זה Allura">
@@ -158,7 +163,8 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
-        <footer className="mt-10 border-t border-[var(--border)] pt-6">
+        <footer className="mt-10">
+          <div className="editorial-rule mb-6" />
           <p className="text-muted text-sm">{BRAND_DESCRIPTION}</p>
           {LEGAL_ENTITY_NAME && (
             <p className="text-muted mt-2 text-sm">
@@ -183,6 +189,9 @@ export default function PrivacyPage() {
           </p>
         </footer>
       </article>
-    </main>
+      </main>
+
+      <PublicBrandFooter />
+    </div>
   );
 }

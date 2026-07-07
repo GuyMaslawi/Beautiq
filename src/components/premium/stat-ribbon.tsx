@@ -29,7 +29,7 @@ export function StatRibbon({
       {stats.map((s, i) => {
         const color =
           s.tone === "brand"
-            ? "#b86b8c"
+            ? "#ac5c7f"
             : s.tone === "success"
             ? "#2f7d61"
             : s.tone === "warning"

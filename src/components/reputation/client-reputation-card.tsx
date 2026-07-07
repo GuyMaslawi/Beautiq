@@ -64,7 +64,7 @@ export function ClientReputationCard({
   return (
     <Card className="p-5 space-y-3">
       <div className="flex items-center gap-2.5">
-        <BadgeCheck className="h-4 w-4 shrink-0" style={{ color: "#b86b8c" }} />
+        <BadgeCheck className="h-4 w-4 shrink-0" style={{ color: "#ac5c7f" }} />
         <p className="text-foreground font-semibold text-sm">
           {REPUTATION.clientCard.title}
         </p>

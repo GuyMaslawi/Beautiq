@@ -261,13 +261,13 @@ function Stepper({ current }: { current: Step }) {
               className="flex h-7 w-7 items-center justify-center rounded-full text-xs font-bold transition-all"
               style={{
                 background: done
-                  ? "rgba(184,107,140,0.15)"
+                  ? "rgba(172,92,127,0.15)"
                   : active
-                    ? "linear-gradient(135deg,#c97898 0%,#b86b8c 100%)"
+                    ? "linear-gradient(135deg,#c76f93 0%,#ac5c7f 100%)"
                     : "var(--border)",
-                color: done ? "#b86b8c" : active ? "#fff" : "var(--muted)",
+                color: done ? "#ac5c7f" : active ? "#fff" : "var(--muted)",
                 boxShadow: active
-                  ? "0 2px 8px rgba(184,107,140,0.30)"
+                  ? "0 2px 8px rgba(172,92,127,0.30)"
                   : "none",
               }}
             >
@@ -275,7 +275,7 @@ function Stepper({ current }: { current: Step }) {
             </div>
             <span
               className="hidden text-center text-[10px] font-medium sm:block"
-              style={{ color: active ? "#b86b8c" : "var(--muted)" }}
+              style={{ color: active ? "#ac5c7f" : "var(--muted)" }}
             >
               {s.label}
             </span>
@@ -439,12 +439,12 @@ function StepUpload({
               }}
               className="flex items-start gap-3 rounded-2xl border p-4 text-right transition-all"
               style={{
-                background: isActive ? "rgba(184,107,140,0.07)" : "var(--surface)",
+                background: isActive ? "rgba(172,92,127,0.07)" : "var(--surface)",
                 borderColor: isActive
-                  ? "rgba(184,107,140,0.40)"
+                  ? "rgba(172,92,127,0.40)"
                   : "var(--border)",
                 boxShadow: isActive
-                  ? "0 0 0 2px rgba(184,107,140,0.12)"
+                  ? "0 0 0 2px rgba(172,92,127,0.12)"
                   : "none",
               }}
             >
@@ -452,13 +452,13 @@ function StepUpload({
                 className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
                 style={{
                   background: isActive
-                    ? "rgba(184,107,140,0.15)"
+                    ? "rgba(172,92,127,0.15)"
                     : "var(--border)",
                 }}
               >
                 <Icon
                   className="h-4 w-4"
-                  style={{ color: isActive ? "#b86b8c" : "var(--muted)" }}
+                  style={{ color: isActive ? "#ac5c7f" : "var(--muted)" }}
                 />
               </div>
               <div className="min-w-0">
@@ -493,19 +493,19 @@ function StepUpload({
             className="flex w-full flex-col items-center justify-center gap-3 rounded-2xl border-2 border-dashed py-10 transition-colors"
             style={{
               borderColor: fileName
-                ? "rgba(184,107,140,0.40)"
+                ? "rgba(172,92,127,0.40)"
                 : "var(--border)",
               background: fileName
-                ? "rgba(184,107,140,0.04)"
+                ? "rgba(172,92,127,0.04)"
                 : "var(--surface)",
             }}
           >
             <Upload
               className="h-8 w-8"
-              style={{ color: fileName ? "#b86b8c" : "var(--muted)" }}
+              style={{ color: fileName ? "#ac5c7f" : "var(--muted)" }}
             />
             {fileName ? (
-              <span className="text-sm font-medium" style={{ color: "#b86b8c" }}>
+              <span className="text-sm font-medium" style={{ color: "#ac5c7f" }}>
                 {CLIENT_IMPORT.upload.fileSelected(fileName)}
               </span>
             ) : (
@@ -575,7 +575,7 @@ function StepUpload({
           onClick={handleNext}
           disabled={processing}
           style={{
-            background: "linear-gradient(135deg,#c97898 0%,#b86b8c 100%)",
+            background: "linear-gradient(135deg,#c76f93 0%,#ac5c7f 100%)",
             color: "#fff",
           }}
         >
@@ -631,7 +631,7 @@ function StepMapping({
     <div className="space-y-1">
       <label className="flex items-center gap-1 text-xs font-medium" style={{ color: "var(--foreground)" }}>
         {label}
-        <span className="font-normal" style={{ color: required ? "#b86b8c" : "var(--muted)" }}>
+        <span className="font-normal" style={{ color: required ? "#ac5c7f" : "var(--muted)" }}>
           {required
             ? CLIENT_IMPORT.mapping.required
             : CLIENT_IMPORT.mapping.optional}
@@ -756,7 +756,7 @@ function StepMapping({
         <Button
           onClick={handleNext}
           style={{
-            background: "linear-gradient(135deg,#c97898 0%,#b86b8c 100%)",
+            background: "linear-gradient(135deg,#c76f93 0%,#ac5c7f 100%)",
             color: "#fff",
           }}
         >
@@ -982,7 +982,7 @@ function StepPreview({
           style={{
             background:
               validRows.length > 0
-                ? "linear-gradient(135deg,#c97898 0%,#b86b8c 100%)"
+                ? "linear-gradient(135deg,#c76f93 0%,#ac5c7f 100%)"
                 : undefined,
             color: validRows.length > 0 ? "#fff" : undefined,
           }}
@@ -1013,15 +1013,15 @@ function StepResult({
       <div
         className="rounded-2xl border p-6 text-center"
         style={{
-          background: "rgba(184,107,140,0.06)",
-          borderColor: "rgba(184,107,140,0.22)",
+          background: "rgba(172,92,127,0.06)",
+          borderColor: "rgba(172,92,127,0.22)",
         }}
       >
         <div
           className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl"
-          style={{ background: "rgba(184,107,140,0.12)" }}
+          style={{ background: "rgba(172,92,127,0.12)" }}
         >
-          <Users className="h-7 w-7" style={{ color: "#b86b8c" }} />
+          <Users className="h-7 w-7" style={{ color: "#ac5c7f" }} />
         </div>
         <h2
           className="text-xl font-bold"
@@ -1080,9 +1080,9 @@ function StepResult({
             type="button"
             className="w-full rounded-xl px-4 py-3 text-sm font-semibold transition-opacity hover:opacity-90"
             style={{
-              background: "linear-gradient(135deg,#c97898 0%,#b86b8c 100%)",
+              background: "linear-gradient(135deg,#c76f93 0%,#ac5c7f 100%)",
               color: "#fff",
-              boxShadow: "0 2px 8px rgba(184,107,140,0.25)",
+              boxShadow: "0 2px 8px rgba(172,92,127,0.25)",
             }}
           >
             {CLIENT_IMPORT.result.ctaViewClients}
@@ -1105,9 +1105,9 @@ function StepResult({
             type="button"
             className="w-full rounded-xl border px-4 py-3 text-sm font-medium transition-colors"
             style={{
-              borderColor: "rgba(184,107,140,0.30)",
-              color: "#b86b8c",
-              background: "rgba(184,107,140,0.06)",
+              borderColor: "rgba(172,92,127,0.30)",
+              color: "#ac5c7f",
+              background: "rgba(172,92,127,0.06)",
             }}
           >
             {CLIENT_IMPORT.result.ctaBringBack}
@@ -1119,12 +1119,12 @@ function StepResult({
       <div
         className="rounded-xl px-4 py-3 text-sm"
         style={{
-          background: "rgba(184,107,140,0.05)",
-          border: "1px solid rgba(184,107,140,0.15)",
+          background: "rgba(172,92,127,0.05)",
+          border: "1px solid rgba(172,92,127,0.15)",
           color: "var(--foreground-soft)",
         }}
       >
-        <Info className="inline-block h-3.5 w-3.5 ml-1.5 mb-0.5" style={{ color: "#b86b8c" }} />
+        <Info className="inline-block h-3.5 w-3.5 ml-1.5 mb-0.5" style={{ color: "#ac5c7f" }} />
         {CLIENT_IMPORT.result.bringBackNote}
       </div>
     </div>

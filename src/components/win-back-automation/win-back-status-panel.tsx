@@ -64,9 +64,9 @@ const READINESS_CONFIG: Record<
   },
   ready: {
     label: "המערכת מוכנה לשליחה",
-    color: "#b86b8c",
-    bg: "rgba(184,107,140,0.08)",
-    border: "rgba(184,107,140,0.18)",
+    color: "#ac5c7f",
+    bg: "rgba(172,92,127,0.08)",
+    border: "rgba(172,92,127,0.18)",
     Icon: CheckCircle2,
   },
   no_whatsapp: {
@@ -232,15 +232,15 @@ export function WinBackStatusPanel(props: Props) {
         {/* ── KPI ── */}
         <div
           className="flex items-baseline gap-3 rounded-2xl px-5 py-4"
-          style={{ background: "rgba(184,107,140,0.08)" }}
+          style={{ background: "rgba(172,92,127,0.08)" }}
         >
           <span
             className="text-4xl font-bold tabular-nums leading-none"
-            style={{ color: "#b86b8c" }}
+            style={{ color: "#ac5c7f" }}
           >
             {eligibleCount}
           </span>
-          <span className="text-base font-semibold" style={{ color: "#b86b8c" }}>
+          <span className="text-base font-semibold" style={{ color: "#ac5c7f" }}>
             לקוחות להחזרה
           </span>
         </div>
@@ -252,7 +252,7 @@ export function WinBackStatusPanel(props: Props) {
             disabled={isToggling}
             onClick={handleToggle}
             className="flex w-full items-center justify-center gap-2 rounded-xl py-3.5 text-base font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-            style={{ background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)" }}
+            style={{ background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)" }}
           >
             <Zap className="h-5 w-5" />
             {isToggling ? "מפעיל…" : "הפעלת החזרת לקוחות"}
@@ -489,7 +489,7 @@ export function WinBackStatusPanel(props: Props) {
                       onClick={() => setShowRunConfirm(true)}
                       className="flex w-full items-center justify-center gap-2 rounded-lg py-2 text-xs font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
                       style={{
-                        background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
+                        background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)",
                       }}
                     >
                       <Play className="h-3.5 w-3.5" />
@@ -515,7 +515,7 @@ export function WinBackStatusPanel(props: Props) {
                           onClick={handleRunConfirm}
                           className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold text-white"
                           style={{
-                            background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
+                            background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)",
                           }}
                         >
                           <Play className="h-3 w-3" />

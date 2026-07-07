@@ -74,9 +74,9 @@ function PeriodFilter({
           style={
             current === opt.value
               ? {
-                  background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
+                  background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)",
                   color: "#fff",
-                  boxShadow: "0 2px 8px rgba(184,107,140,0.30)",
+                  boxShadow: "0 2px 8px rgba(172,92,127,0.30)",
                 }
               : { color: "var(--foreground-soft)" }
           }
@@ -136,7 +136,7 @@ function ProfitVisual({ revenue, expenses, profit }: { revenue: number; expenses
   const max = Math.max(revenue, expenses, 1);
   const bars = [
     { label: FINANCE.summary.revenue, value: revenue, color: "#3d8b6e", pct: (revenue / max) * 100 },
-    { label: FINANCE.summary.expenses, value: expenses, color: "#b86b8c", pct: (expenses / max) * 100 },
+    { label: FINANCE.summary.expenses, value: expenses, color: "#ac5c7f", pct: (expenses / max) * 100 },
     { label: FINANCE.summary.profit, value: profit, color: profit >= 0 ? "#b8960a" : "#ef4444", pct: Math.abs(profit) / max * 100 },
   ];
 
@@ -150,7 +150,7 @@ function ProfitVisual({ revenue, expenses, profit }: { revenue: number; expenses
       style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.94), rgba(255,255,255,0.82))", border: "1px solid rgba(255,255,255,0.7)", boxShadow: "0 12px 32px -16px rgba(124,58,97,0.16), inset 0 1px 0 rgba(255,255,255,0.9)" }}
     >
       <div className="mb-4 flex items-center gap-2">
-        <BarChart2 className="h-4 w-4" style={{ color: "#b86b8c" }} />
+        <BarChart2 className="h-4 w-4" style={{ color: "#ac5c7f" }} />
         <h3 className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
           {FINANCE.profitVisual.title}
         </h3>
@@ -194,7 +194,7 @@ function TopServices({ services }: { services: FinanceData["topServices"] }) {
       style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.94), rgba(255,255,255,0.82))", border: "1px solid rgba(255,255,255,0.7)", boxShadow: "0 12px 32px -16px rgba(124,58,97,0.16), inset 0 1px 0 rgba(255,255,255,0.9)" }}
     >
       <div className="mb-4 flex items-center gap-2">
-        <Sparkles className="h-4 w-4" style={{ color: "#b86b8c" }} />
+        <Sparkles className="h-4 w-4" style={{ color: "#ac5c7f" }} />
         <h3 className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
           {FINANCE.topServices.title}
         </h3>
@@ -274,9 +274,9 @@ function ExpenseList({
             <span
               className="rounded-full px-2.5 py-0.5 text-xs font-medium"
               style={{
-                background: "rgba(184,107,140,0.10)",
-                color: "#b86b8c",
-                border: "1px solid rgba(184,107,140,0.20)",
+                background: "rgba(172,92,127,0.10)",
+                color: "#ac5c7f",
+                border: "1px solid rgba(172,92,127,0.20)",
               }}
             >
               {categoryLabel(exp.category)}
@@ -296,7 +296,7 @@ function ExpenseList({
           </div>
 
           {/* Amount */}
-          <span className="shrink-0 text-sm font-bold" style={{ color: "#b86b8c" }}>
+          <span className="shrink-0 text-sm font-bold" style={{ color: "#ac5c7f" }}>
             {formatILS(exp.amount)}
           </span>
 
@@ -342,7 +342,7 @@ function TargetVsActual({ forecast }: { forecast: RevenueForecastData }) {
 
   const segments = [
     { label: FINANCE.summary.revenue, value: forecast.completedRevenue, color: "#3d8b6e" },
-    { label: "תורים קרובים", value: forecast.upcomingRevenue, color: "#c97898" },
+    { label: "תורים קרובים", value: forecast.upcomingRevenue, color: "#c76f93" },
     { label: "פער ליעד", value: forecast.gapToTarget, color: "#d4a81e" },
     { label: "הכנסה שאבדה", value: forecast.lostRevenue, color: "#e06060" },
   ].filter((s) => s.value > 0);
@@ -355,13 +355,13 @@ function TargetVsActual({ forecast }: { forecast: RevenueForecastData }) {
       style={{ background: "linear-gradient(180deg, rgba(255,255,255,0.94), rgba(255,255,255,0.82))", border: "1px solid rgba(255,255,255,0.7)", boxShadow: "0 12px 32px -16px rgba(124,58,97,0.16), inset 0 1px 0 rgba(255,255,255,0.9)" }}
     >
       <div className="mb-1 flex items-center gap-2">
-        <Target className="h-4 w-4" style={{ color: "#b86b8c" }} />
+        <Target className="h-4 w-4" style={{ color: "#ac5c7f" }} />
         <h3 className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
           יעד מול ביצוע · החודש
         </h3>
         <span
           className="ms-auto rounded-full px-2 py-0.5 text-[10px] font-bold"
-          style={{ background: "rgba(184,107,140,0.10)", color: "#b86b8c" }}
+          style={{ background: "rgba(172,92,127,0.10)", color: "#ac5c7f" }}
         >
           {CONFIDENCE_LABEL[forecast.confidence]}
         </span>
@@ -380,7 +380,7 @@ function TargetVsActual({ forecast }: { forecast: RevenueForecastData }) {
         </div>
         <div>
           <p className="text-xs" style={{ color: "var(--muted)" }}>צפי לסוף החודש</p>
-          <p className="text-lg font-bold tabular-nums" style={{ color: "#b86b8c" }}>
+          <p className="text-lg font-bold tabular-nums" style={{ color: "#ac5c7f" }}>
             {formatILS(forecast.expectedRevenue)}
           </p>
         </div>
@@ -590,8 +590,8 @@ export function FinancePageClient({ data, period, forecast }: FinancePageClientP
               <span
                 className="ms-2 rounded-full px-2 py-0.5 text-xs font-medium"
                 style={{
-                  background: "rgba(184,107,140,0.10)",
-                  color: "#b86b8c",
+                  background: "rgba(172,92,127,0.10)",
+                  color: "#ac5c7f",
                 }}
               >
                 {expenses.length}
@@ -601,7 +601,7 @@ export function FinancePageClient({ data, period, forecast }: FinancePageClientP
           <button
             onClick={openAdd}
             className="flex items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-            style={{ background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)" }}
+            style={{ background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)" }}
           >
             <Plus className="h-3.5 w-3.5" />
             <span>{FINANCE.expenseList.addButton}</span>
@@ -616,7 +616,7 @@ export function FinancePageClient({ data, period, forecast }: FinancePageClientP
             <button
               onClick={openAdd}
               className="mx-auto mt-4 flex items-center gap-1.5 rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-              style={{ background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)" }}
+              style={{ background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)" }}
             >
               <Plus className="h-3.5 w-3.5" />
               <span>{FINANCE.expenseList.emptyCta}</span>

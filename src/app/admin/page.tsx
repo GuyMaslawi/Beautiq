@@ -1,42 +1,45 @@
 import Link from "next/link";
-import { Building2, Clock, CheckCircle2, Tag, XCircle, CalendarDays, Users2 } from "lucide-react";
+import {
+  Building2,
+  Clock,
+  CheckCircle2,
+  Tag,
+  XCircle,
+  CalendarDays,
+  Users2,
+  ArrowLeft,
+} from "lucide-react";
 import { getAdminOverviewStats } from "@/server/admin/queries";
+import { Card } from "@/components/ui/card";
 
 function StatCard({
   label,
   value,
   icon,
   color,
+  bg,
 }: {
   label: string;
   value: number;
   icon: React.ReactNode;
   color: string;
+  bg: string;
 }) {
   return (
-    <div
-      className="flex items-center gap-4 rounded-2xl border p-5"
-      style={{
-        background: "#fff",
-        borderColor: "rgba(0,0,0,0.07)",
-        boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-      }}
-    >
+    <Card className="flex items-center gap-4 p-5">
       <div
         className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
-        style={{ background: `${color}15` }}
+        style={{ background: bg }}
       >
         <span style={{ color }}>{icon}</span>
       </div>
       <div>
-        <p className="text-2xl font-bold tabular-nums" style={{ color: "#1a1a2e" }}>
+        <p className="display-num text-2xl font-bold tabular-nums text-foreground">
           {value.toLocaleString("he-IL")}
         </p>
-        <p className="mt-0.5 text-xs font-medium" style={{ color: "#888" }}>
-          {label}
-        </p>
+        <p className="mt-0.5 text-xs font-medium text-muted">{label}</p>
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -46,12 +49,12 @@ export default async function AdminPage() {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold" style={{ color: "#1a1a2e" }}>
+        <p className="eyebrow text-primary">ניהול מערכת</p>
+        <h1 className="font-display mt-1 text-2xl font-semibold tracking-tight text-foreground">
           סקירה כללית
         </h1>
-        <p className="mt-1 text-sm" style={{ color: "#888" }}>
-          נתוני פלטפורמת Allura בזמן אמת
-        </p>
+        <p className="mt-1 text-sm text-muted">נתוני פלטפורמת Allura בזמן אמת</p>
+        <div className="editorial-rule mt-4" />
       </div>
 
       {/* Stats grid */}
@@ -60,71 +63,69 @@ export default async function AdminPage() {
           label="סך הכל עסקים"
           value={stats.totalBusinesses}
           icon={<Building2 className="h-5 w-5" />}
-          color="#1a1a2e"
+          color="var(--primary)"
+          bg="var(--primary-light)"
         />
         <StatCard
           label="בתקופת ניסיון"
           value={stats.trialCount}
           icon={<Clock className="h-5 w-5" />}
-          color="#7c3aed"
+          color="var(--mauve)"
+          bg="var(--mauve-light)"
         />
         <StatCard
           label="פעילים"
           value={stats.activeCount}
           icon={<CheckCircle2 className="h-5 w-5" />}
-          color="#16a34a"
+          color="var(--success)"
+          bg="var(--success-light)"
         />
         <StatCard
           label="בהנחה"
           value={stats.discountedCount}
           icon={<Tag className="h-5 w-5" />}
-          color="#d97706"
+          color="var(--accent)"
+          bg="var(--accent-light)"
         />
         <StatCard
           label="מושהים / בוטלו"
           value={stats.suspendedOrCancelledCount}
           icon={<XCircle className="h-5 w-5" />}
-          color="#dc2626"
+          color="var(--error)"
+          bg="var(--error-light)"
         />
         <StatCard
           label="תורים החודש"
           value={stats.bookingsThisMonth}
           icon={<CalendarDays className="h-5 w-5" />}
-          color="#0284c7"
+          color="var(--info)"
+          bg="var(--info-light)"
         />
         <StatCard
           label="לקוחות במערכת"
           value={stats.totalClients}
           icon={<Users2 className="h-5 w-5" />}
-          color="#0891b2"
+          color="var(--primary)"
+          bg="var(--primary-light)"
         />
       </div>
 
       {/* Quick link */}
-      <div
-        className="flex items-center justify-between rounded-2xl border p-5"
-        style={{
-          background: "#fff",
-          borderColor: "rgba(0,0,0,0.07)",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-        }}
-      >
+      <Card className="flex items-center justify-between gap-4 p-5">
         <div>
-          <p className="font-semibold" style={{ color: "#1a1a2e" }}>
-            ניהול עסקים
-          </p>
-          <p className="mt-0.5 text-sm" style={{ color: "#888" }}>
+          <p className="font-semibold text-foreground">ניהול עסקים</p>
+          <p className="mt-0.5 text-sm text-muted">
             חיפוש, סינון, עדכון תכניות וסטטוסים
           </p>
         </div>
         <Link
           href="/admin/businesses"
-          className="rounded-xl px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
-          style={{ background: "#1a1a2e" }}
+          className="bg-brand-gradient flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90"
         >
-          לרשימת העסקים ←
+          לרשימת העסקים
+          <ArrowLeft className="h-4 w-4" />
         </Link>
-      </div>
+      </Card>
     </div>
   );
 }

@@ -17,7 +17,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Calendar, Clock, MapPin, Phone } from "lucide-react";
+import { Calendar, Clock, MapPin, Phone, Sparkles } from "lucide-react";
 import { formatDateHebrew } from "@/lib/booking/success-links";
 
 export interface BookingSelection {
@@ -83,7 +83,7 @@ export function AppointmentSummary({
 
       <div className="space-y-2.5 text-sm">
         <div className="flex items-center gap-2 font-bold text-[var(--foreground)]">
-          <span aria-hidden="true">✨</span>
+          <Sparkles className="h-4 w-4 shrink-0" style={{ color: brand }} />
           <span>{selection.serviceName}</span>
         </div>
 

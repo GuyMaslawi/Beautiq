@@ -61,8 +61,7 @@ export function RunWinBackButton({ businessId }: { businessId: string }) {
         <button
           onClick={handleRun}
           disabled={loading}
-          className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-          style={{ background: "#7c3aed" }}
+          className="bg-brand-gradient flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
         >
           {loading ? (
             <RotateCw className="h-4 w-4 animate-spin" />
@@ -72,8 +71,8 @@ export function RunWinBackButton({ businessId }: { businessId: string }) {
           {loading ? "מריץ..." : "הפעל Win-Back עכשיו"}
         </button>
         {result && !loading && (
-          <span className="text-xs font-medium" style={{ color: "#16a34a" }}>
-            ✓ הושלם — נשלחו {result.totalSent}, דמה {result.totalMock}, נכשלו {result.totalFailed}
+          <span className="text-xs font-medium" style={{ color: "var(--success)" }}>
+            הושלם — נשלחו {result.totalSent}, דמה {result.totalMock}, נכשלו {result.totalFailed}
           </span>
         )}
       </div>
@@ -81,7 +80,11 @@ export function RunWinBackButton({ businessId }: { businessId: string }) {
       {error && (
         <div
           className="rounded-xl p-3 text-sm"
-          style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#dc2626" }}
+          style={{
+            background: "var(--error-light)",
+            border: "1px solid color-mix(in srgb, var(--error) 25%, transparent)",
+            color: "var(--error)",
+          }}
         >
           {error}
         </div>
@@ -90,14 +93,17 @@ export function RunWinBackButton({ businessId }: { businessId: string }) {
       {result && (
         <div
           className="rounded-xl p-4"
-          style={{ background: "#f8f8ff", border: "1px solid rgba(124,58,237,0.15)" }}
+          style={{
+            background: "var(--mauve-light)",
+            border: "1px solid color-mix(in srgb, var(--mauve) 20%, transparent)",
+          }}
         >
-          <p className="mb-2 text-xs font-bold" style={{ color: "#7c3aed" }}>
+          <p className="mb-2 text-xs font-bold" style={{ color: "var(--mauve)" }}>
             תוצאת הרצה
           </p>
           <pre
-            className="overflow-x-auto text-xs"
-            style={{ color: "#1a1a2e", fontFamily: "monospace", whiteSpace: "pre-wrap", wordBreak: "break-all" }}
+            className="overflow-x-auto text-xs text-foreground"
+            style={{ fontFamily: "monospace", whiteSpace: "pre-wrap", wordBreak: "break-all" }}
           >
             {JSON.stringify(result, null, 2)}
           </pre>

@@ -78,7 +78,7 @@ function Row({ entry }: { entry: WaitlistEntryItem }) {
       className="lift space-y-3 rounded-[1.35rem] p-4"
       style={{
         background: "linear-gradient(170deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.82) 100%)",
-        border: "1px solid rgba(184,107,140,0.14)",
+        border: "1px solid rgba(172,92,127,0.14)",
         boxShadow: "0 6px 20px -10px rgba(124,58,97,0.16), inset 0 1px 0 rgba(255,255,255,0.9)",
         opacity: isTerminal ? 0.65 : 1,
       }}
@@ -86,7 +86,7 @@ function Row({ entry }: { entry: WaitlistEntryItem }) {
       <div className="flex items-center gap-3.5">
         <div
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-          style={{ background: "linear-gradient(135deg,#c97898,#9d6aa8)", boxShadow: "0 6px 16px -6px rgba(184,107,140,0.55)" }}
+          style={{ background: "linear-gradient(135deg,#c76f93,#92609f)", boxShadow: "0 6px 16px -6px rgba(172,92,127,0.55)" }}
         >
           {getInitial(entry.clientName)}
         </div>

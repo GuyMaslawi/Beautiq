@@ -1,4 +1,5 @@
 import * as React from "react";
+import { Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { tintGradient, type Tint } from "./tokens";
 
@@ -54,7 +55,7 @@ export function ServiceShowcaseCard({
       )}
       style={{
         background: "linear-gradient(168deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.84) 100%)",
-        border: selected ? "1.5px solid rgba(184,107,140,0.5)" : "1px solid rgba(184,107,140,0.14)",
+        border: selected ? "1.5px solid rgba(172,92,127,0.5)" : "1px solid rgba(172,92,127,0.14)",
         boxShadow: selected
           ? "0 16px 40px -16px rgba(124,58,97,0.26)"
           : "0 8px 24px -12px rgba(124,58,97,0.15), inset 0 1px 0 rgba(255,255,255,0.9)",
@@ -72,7 +73,7 @@ export function ServiceShowcaseCard({
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white"
               style={{ background: tintGradient[tint], boxShadow: "0 8px 18px -6px rgba(168,124,66,0.45)" }}
             >
-              {icon ?? <span className="text-lg">✦</span>}
+              {icon ?? <Sparkles className="h-[18px] w-[18px]" />}
             </span>
             <div className="min-w-0">
               <h3 className="text-foreground truncate text-[16px] font-bold tracking-tight">{name}</h3>
@@ -93,12 +94,15 @@ export function ServiceShowcaseCard({
           {duration}
         </div>
         {price !== undefined && (
-          <div className="text-left" dir="ltr">
-            <span className="display-num text-xl font-bold" style={{ color: "#b86b8c" }}>
+          <div className="flex items-baseline gap-1 text-left" dir="ltr">
+            <span
+              className="display-num text-xl font-bold tracking-tight"
+              style={{ color: "var(--primary)" }}
+            >
               {price}
             </span>
             {priceNote && (
-              <span className="ms-1 text-[11px]" style={{ color: "var(--muted)" }}>
+              <span className="text-[11px]" style={{ color: "var(--muted)" }}>
                 {priceNote}
               </span>
             )}
@@ -107,12 +111,12 @@ export function ServiceShowcaseCard({
       </div>
 
       {insight && (
-        <div className="border-t px-5 py-3" style={{ borderColor: "rgba(184,107,140,0.1)" }}>
+        <div className="border-t px-5 py-3" style={{ borderColor: "rgba(172,92,127,0.1)" }}>
           {insight}
         </div>
       )}
       {footer && (
-        <div className="mt-auto border-t px-5 py-3" style={{ borderColor: "rgba(184,107,140,0.1)" }}>
+        <div className="mt-auto border-t px-5 py-3" style={{ borderColor: "rgba(172,92,127,0.1)" }}>
           {footer}
         </div>
       )}

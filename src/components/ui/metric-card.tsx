@@ -28,23 +28,23 @@ export function MetricCard({
   compact,
   className,
 }: MetricCardProps) {
-  const accentColor = highlight ? "#b86b8c" : warn ? "#b87c1e" : "#2b2530";
-  const countColor = highlight ? "#b86b8c" : warn ? "#7a6400" : "#2b2530";
+  const accentColor = highlight ? "#ac5c7f" : warn ? "#b87c1e" : "#2b2530";
+  const countColor = highlight ? "#ac5c7f" : warn ? "#7a6400" : "#2b2530";
   const surface = highlight
     ? "rgba(247,238,243,0.85)"
     : warn
     ? "rgba(254,246,228,0.80)"
     : "rgba(255,255,255,0.90)";
   const borderColor = highlight
-    ? "rgba(184,107,140,0.22)"
+    ? "rgba(172,92,127,0.22)"
     : warn
     ? "rgba(184,150,10,0.22)"
     : "var(--border)";
   const iconBubbleBg = highlight
-    ? "linear-gradient(135deg, rgba(201,120,152,0.18) 0%, rgba(157,106,168,0.13) 100%)"
+    ? "linear-gradient(135deg, rgba(199,111,147,0.18) 0%, rgba(146,96,159,0.13) 100%)"
     : warn
     ? "linear-gradient(135deg, rgba(192,149,96,0.18) 0%, rgba(184,124,30,0.12) 100%)"
-    : "linear-gradient(135deg, rgba(201,120,152,0.13) 0%, rgba(157,106,168,0.09) 100%)";
+    : "linear-gradient(135deg, rgba(199,111,147,0.13) 0%, rgba(146,96,159,0.09) 100%)";
 
   if (compact) {
     return (
@@ -58,7 +58,7 @@ export function MetricCard({
             : "rgba(255,255,255,0.80)",
           border: `1px solid ${
             highlight
-              ? "rgba(184,107,140,0.20)"
+              ? "rgba(172,92,127,0.20)"
               : warn
               ? "rgba(184,150,10,0.20)"
               : "var(--border)"
@@ -89,10 +89,10 @@ export function MetricCard({
         className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl"
         style={{
           background: iconBubbleBg,
-          border: "1px solid rgba(184,107,140,0.14)",
+          border: "1px solid rgba(172,92,127,0.14)",
         }}
       >
-        <span style={{ color: highlight ? "#b86b8c" : warn ? "#b87c1e" : "#b86b8c" }}>
+        <span style={{ color: highlight ? "#ac5c7f" : warn ? "#b87c1e" : "#ac5c7f" }}>
           {icon}
         </span>
       </div>

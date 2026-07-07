@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { X } from "lucide-react";
 import { requirePlatformAdmin } from "@/server/admin/auth";
 import { getAdminClients } from "@/server/admin/client-queries";
 import { AdminClientsSearch } from "./_components/admin-clients-search";
@@ -20,11 +21,12 @@ export default async function AdminClientsPage({
     <div className="space-y-6">
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold" style={{ color: "#1a1a2e" }}>
+        <div className="min-w-0 flex-1">
+          <p className="eyebrow text-primary">ניהול מערכת</p>
+          <h1 className="font-display mt-1 text-2xl font-semibold tracking-tight text-foreground">
             ניהול לקוחות
           </h1>
-          <p className="mt-1 text-sm" style={{ color: "#888" }}>
+          <p className="mt-1 text-sm text-muted">
             כל הלקוחות במערכת
             {q ? " — תוצאות לפי סינון" : ` — ${clients.length} לקוחות`}
           </p>
@@ -32,29 +34,23 @@ export default async function AdminClientsPage({
         {q && (
           <Link
             href="/admin/clients"
-            className="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
-            style={{ background: "#f3f4f6", color: "#555" }}
+            className="flex shrink-0 items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:bg-background-alt hover:text-foreground"
           >
-            ניקוי סינון ✕
+            ניקוי סינון
+            <X className="h-3.5 w-3.5" />
           </Link>
         )}
       </div>
+      <div className="editorial-rule" />
 
       {/* Search */}
       <AdminClientsSearch defaultQ={q} />
 
       {/* Table */}
       {clients.length === 0 ? (
-        <div
-          className="rounded-2xl border px-6 py-16 text-center"
-          style={{ background: "#fff", borderColor: "rgba(0,0,0,0.07)" }}
-        >
-          <p className="font-semibold" style={{ color: "#1a1a2e" }}>
-            לא נמצאו לקוחות מתאימים.
-          </p>
-          <p className="mt-1 text-sm" style={{ color: "#888" }}>
-            נסו לשנות את תנאי החיפוש
-          </p>
+        <div className="aura-card rounded-2xl px-6 py-16 text-center">
+          <p className="font-semibold text-foreground">לא נמצאו לקוחות מתאימים.</p>
+          <p className="mt-1 text-sm text-muted">נסו לשנות את תנאי החיפוש</p>
         </div>
       ) : (
         <AdminClientsTable clients={clients} isTestMode={isTestMode} />

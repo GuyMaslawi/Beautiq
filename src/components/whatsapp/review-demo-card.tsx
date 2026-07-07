@@ -94,9 +94,9 @@ export function ReviewDemoCard({
       >
         <div
           className="flex h-9 w-9 items-center justify-center rounded-xl shrink-0"
-          style={{ background: "rgba(184,107,140,0.10)" }}
+          style={{ background: "rgba(172,92,127,0.10)" }}
         >
-          <ShieldCheck className="h-4 w-4" style={{ color: "#b86b8c" }} />
+          <ShieldCheck className="h-4 w-4" style={{ color: "#ac5c7f" }} />
         </div>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">

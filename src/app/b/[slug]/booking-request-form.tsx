@@ -1,7 +1,16 @@
 "use client";
 
 import { Fragment, useActionState, useState, useEffect } from "react";
-import { Clock, Check, ChevronRight, Calendar, Zap } from "lucide-react";
+import {
+  Clock,
+  Check,
+  ChevronRight,
+  Calendar,
+  CalendarPlus,
+  Sparkles,
+  User,
+  Zap,
+} from "lucide-react";
 import {
   submitPublicBookingAction,
   type PublicBookingFormState,
@@ -16,7 +25,7 @@ import { useBookingSelection } from "./_components/booking-selection";
 
 type Step = "service" | "quickpick" | "calendar" | "details";
 
-const DEFAULT_BRAND = "#b86b8c";
+const DEFAULT_BRAND = "#ac5c7f";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -224,7 +233,7 @@ function QuickPickSlots({
         <button
           type="button"
           onClick={onShowCalendar}
-          className="flex items-center justify-center gap-2 mx-auto rounded-xl px-5 py-2.5 text-sm font-semibold border-2 transition-all"
+          className="mx-auto flex min-h-[44px] items-center justify-center gap-2 rounded-xl border-2 bg-white px-5 py-2.5 text-sm font-semibold transition-all hover:opacity-90 active:scale-[.98]"
           style={{ borderColor: brandColor, color: brandColor }}
         >
           <Calendar className="h-4 w-4" />
@@ -239,7 +248,7 @@ function QuickPickSlots({
       {/* Quick slot groups */}
       {groups.map((group) => (
         <div key={group.date}>
-          <p className="text-xs font-semibold text-[var(--muted)] mb-2 uppercase tracking-wide">
+          <p className="eyebrow mb-2 text-[var(--muted)]">
             {group.label}
           </p>
           <div className="flex flex-wrap gap-2" dir="ltr">
@@ -248,8 +257,12 @@ function QuickPickSlots({
                 key={slot}
                 type="button"
                 onClick={() => onSelect(group.date, slot)}
-                className="rounded-xl px-4 py-2 text-sm font-bold transition-all hover:opacity-90 active:scale-[.97]"
-                style={{ background: brandGrd, color: "white" }}
+                className="display-num min-h-[44px] min-w-[76px] rounded-xl px-4 py-2 text-sm font-bold transition-all hover:opacity-90 active:scale-[.97]"
+                style={{
+                  background: brandGrd,
+                  color: "white",
+                  boxShadow: `0 8px 18px -8px ${brandColor}99`,
+                }}
               >
                 {slot}
               </button>
@@ -262,7 +275,7 @@ function QuickPickSlots({
       <button
         type="button"
         onClick={onShowCalendar}
-        className="flex items-center gap-1.5 text-xs font-semibold mt-2 transition-opacity hover:opacity-70"
+        className="mt-1 flex min-h-[44px] items-center gap-1.5 text-xs font-semibold transition-opacity hover:opacity-70"
         style={{ color: "var(--muted)" }}
       >
         <Calendar className="h-3.5 w-3.5" />
@@ -292,7 +305,7 @@ function SlotPill({
     <button
       type="button"
       onClick={onSelect}
-      className="rounded-xl px-5 py-2.5 text-sm font-semibold transition-all"
+      className="display-num min-h-[44px] rounded-xl px-5 py-2.5 text-sm font-semibold transition-all"
       style={{
         background: selected ? brandGrd : "white",
         color: selected ? "white" : "var(--foreground)",
@@ -322,7 +335,7 @@ function BackBtn({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex items-center gap-0.5 text-sm transition-colors"
+      className="-my-2 flex min-h-[44px] items-center gap-0.5 px-1 text-sm transition-colors hover:text-[var(--foreground)]"
       style={{ color: "var(--muted)" }}
     >
       <ChevronRight className="h-4 w-4" />
@@ -348,11 +361,15 @@ function PrimaryBtn({
       type={onClick ? "button" : "submit"}
       onClick={onClick}
       disabled={disabled}
-      className="w-full rounded-2xl py-4 text-sm font-bold transition-all hover:opacity-90 active:scale-[.98] disabled:cursor-not-allowed disabled:hover:opacity-100 shadow-sm"
+      className="w-full rounded-2xl py-4 text-sm font-bold transition-all hover:opacity-90 active:scale-[.98] disabled:cursor-not-allowed disabled:hover:opacity-100"
       style={
         disabled
           ? { background: "#f1edf0", color: "#9a8f96" }
-          : { background: brandGrd, color: "white" }
+          : {
+              background: brandGrd,
+              color: "white",
+              boxShadow: `0 10px 24px -10px ${brandColor}b3`,
+            }
       }
     >
       {children}
@@ -395,52 +412,69 @@ function SuccessView({
   const calEnd = `${y}${m}${d}T${endH}${endM}00`;
   const calUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodeURIComponent(`${serviceName ?? "תור"} — ${businessName}`)}&dates=${calStart}/${calEnd}`;
 
+  const detailRows = [
+    serviceName
+      ? { icon: Sparkles, text: serviceName, bold: true }
+      : null,
+    formattedDate ? { icon: Calendar, text: formattedDate, bold: false } : null,
+    time ? { icon: Clock, text: `בשעה ${time}`, bold: false } : null,
+    clientName ? { icon: User, text: clientName, bold: false } : null,
+  ].filter(Boolean) as { icon: typeof Sparkles; text: string; bold: boolean }[];
+
   return (
     <div className="text-center space-y-6 py-4">
-      <div
-        className="mx-auto flex h-24 w-24 items-center justify-center rounded-full text-5xl"
-        style={{ background: `linear-gradient(135deg, ${brandColor}22, ${brandColor}44)` }}
-      >
-        🎉
+      {/* Branded success medallion */}
+      <div className="relative mx-auto h-20 w-20">
+        <span
+          aria-hidden
+          className="absolute -inset-3 rounded-full"
+          style={{
+            background: `radial-gradient(circle, ${brandColor}2e 0%, transparent 70%)`,
+          }}
+        />
+        <span
+          className="relative flex h-20 w-20 items-center justify-center rounded-full text-white"
+          style={{
+            background: brandGrd,
+            boxShadow: `0 16px 34px -12px ${brandColor}b3, inset 0 1px 0 rgba(255,255,255,0.35)`,
+          }}
+        >
+          <Check className="h-9 w-9" strokeWidth={2.5} />
+        </span>
       </div>
 
       <div className="space-y-1.5">
-        <h2 className="text-2xl font-bold text-[var(--foreground)]">
+        <h2 className="font-display text-2xl font-semibold tracking-tight text-[var(--foreground)]">
           בקשת התור נשלחה
         </h2>
-        <p className="mx-auto max-w-xs text-sm text-[var(--muted)]">
+        <p className="mx-auto max-w-xs text-sm leading-6 text-[var(--muted)]">
           בעלת העסק תקבל את הבקשה ותאשר את התור. נעדכן אותך בהמשך.
         </p>
       </div>
 
       <div
-        className="mx-auto max-w-xs rounded-2xl px-6 py-5 space-y-3 text-right"
-        style={{ background: `linear-gradient(135deg, ${brandColor}0d, ${brandColor}1e)` }}
+        className="mx-auto max-w-xs space-y-3 rounded-2xl border bg-white px-6 py-5 text-right"
+        style={{
+          borderColor: `${brandColor}26`,
+          boxShadow: `0 14px 34px -18px ${brandColor}59`,
+        }}
       >
-        {serviceName && (
-          <div className="flex items-center gap-2 text-sm font-bold text-[var(--foreground)]">
-            <span>✨</span>
-            <span>{serviceName}</span>
+        {detailRows.map(({ icon: Icon, text, bold }) => (
+          <div
+            key={text}
+            className={`flex items-center gap-2.5 text-sm text-[var(--foreground)] ${
+              bold ? "font-bold" : ""
+            }`}
+          >
+            <span
+              className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full"
+              style={{ background: `${brandColor}14`, color: brandColor }}
+            >
+              <Icon className="h-3.5 w-3.5" />
+            </span>
+            <span>{text}</span>
           </div>
-        )}
-        {formattedDate && (
-          <div className="flex items-center gap-2 text-sm text-[var(--foreground)]">
-            <span>📅</span>
-            <span>{formattedDate}</span>
-          </div>
-        )}
-        {time && (
-          <div className="flex items-center gap-2 text-sm font-semibold text-[var(--foreground)]">
-            <span>🕐</span>
-            <span>בשעה {time}</span>
-          </div>
-        )}
-        {clientName && (
-          <div className="flex items-center gap-2 text-sm text-[var(--foreground)]">
-            <span>👤</span>
-            <span>{clientName}</span>
-          </div>
-        )}
+        ))}
       </div>
 
       <div className="flex flex-col gap-3">
@@ -448,17 +482,22 @@ function SuccessView({
           href={calUrl}
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold transition-all hover:opacity-90"
-          style={{ background: brandGrd, color: "white" }}
+          className="flex min-h-[48px] items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-bold transition-all hover:opacity-90 active:scale-[.98]"
+          style={{
+            background: brandGrd,
+            color: "white",
+            boxShadow: `0 10px 24px -10px ${brandColor}b3`,
+          }}
         >
-          📅 הוספה ליומן
+          <CalendarPlus className="h-4 w-4" />
+          הוספה ליומן
         </a>
       </div>
 
       <button
         type="button"
         onClick={onReset}
-        className="text-sm underline underline-offset-2 hover:opacity-75 transition-opacity"
+        className="min-h-[44px] text-sm underline underline-offset-2 hover:opacity-75 transition-opacity"
         style={{ color: "var(--muted)" }}
       >
         שליחת בקשה נוספת
@@ -587,9 +626,9 @@ export function BookingRequestForm({
       {/* ── STEP 1: Service ─────────────────────────────────────────────── */}
       {step === "service" && (
         <div className="space-y-4">
-          <p className="text-sm font-semibold text-[var(--foreground)] mb-1">
+          <h3 className="font-display mb-1 text-lg font-semibold tracking-tight text-[var(--foreground)]">
             באיזה שירות את מעוניינת?
-          </p>
+          </h3>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {services.map((service) => (
               <ServiceCard
@@ -639,11 +678,11 @@ export function BookingRequestForm({
           )}
 
           <div>
-            <div className="flex items-center gap-2 mb-4">
+            <div className="mb-4 flex items-center gap-2">
               <Zap className="h-4 w-4 shrink-0" style={{ color: brandColor }} />
-              <span className="font-semibold text-sm text-[var(--foreground)]">
+              <h3 className="font-display text-lg font-semibold tracking-tight text-[var(--foreground)]">
                 התורים הקרובים
-              </span>
+              </h3>
             </div>
             <QuickPickSlots
               slug={slug}
@@ -719,7 +758,7 @@ export function BookingRequestForm({
                   טוענת שעות פנויות…
                 </div>
               ) : slots !== null && slots.length === 0 ? (
-                <div className="rounded-2xl bg-gray-50 p-6 text-center">
+                <div className="rounded-2xl border border-[var(--border)] bg-[var(--background-alt)] p-6 text-center">
                   <p className="text-sm font-medium text-[var(--foreground)]">
                     אין שעות פנויות ביום הזה
                   </p>
@@ -752,7 +791,7 @@ export function BookingRequestForm({
             onClick={() => setStep("details")}
             brandColor={brandColor}
           >
-            המשך למילוי פרטים →
+            המשך למילוי פרטים
           </PrimaryBtn>
 
           <div className="flex justify-end">
@@ -862,10 +901,20 @@ export function BookingRequestForm({
           <button
             type="submit"
             disabled={pending}
-            className="w-full rounded-2xl py-4 text-sm font-bold text-white transition-all hover:opacity-90 active:scale-[.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-sm"
-            style={{ background: `linear-gradient(135deg, ${brandColor}cc 0%, ${brandColor} 100%)` }}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl py-4 text-sm font-bold text-white transition-all hover:opacity-90 active:scale-[.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              background: `linear-gradient(135deg, ${brandColor}cc 0%, ${brandColor} 100%)`,
+              boxShadow: `0 10px 24px -10px ${brandColor}b3`,
+            }}
           >
-            {pending ? "שולח…" : "שליחת בקשה לתור ✓"}
+            {pending ? (
+              "שולח…"
+            ) : (
+              <>
+                שליחת בקשה לתור
+                <Check className="h-4 w-4" strokeWidth={2.5} />
+              </>
+            )}
           </button>
 
           <div className="flex justify-end">

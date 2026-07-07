@@ -97,7 +97,7 @@ export function PublicBookingHero({
           </span>
 
           <div className="min-w-0 flex-1 pb-1">
-            <h1 className="display-num truncate text-xl font-bold text-[var(--foreground)] sm:text-[1.7rem]">
+            <h1 className="font-display truncate text-[1.45rem] font-semibold tracking-tight text-[var(--foreground)] sm:text-3xl">
               {name}
             </h1>
             {tagline && (

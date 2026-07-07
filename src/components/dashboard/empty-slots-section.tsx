@@ -86,7 +86,7 @@ function EmptySlotCard({
       className="rounded-2xl border p-4 space-y-3"
       style={{
         background: "#fff",
-        borderColor: "rgba(184,107,140,0.18)",
+        borderColor: "rgba(172,92,127,0.18)",
         boxShadow: "0 1px 4px rgba(43,37,48,0.05)",
       }}
     >
@@ -95,7 +95,7 @@ function EmptySlotCard({
         <div className="space-y-0.5 min-w-0">
           <p className="text-foreground font-semibold text-sm">{dateLabel}</p>
           <div className="flex items-center gap-1.5">
-            <Clock className="h-3.5 w-3.5 shrink-0" style={{ color: "#b86b8c" }} />
+            <Clock className="h-3.5 w-3.5 shrink-0" style={{ color: "#ac5c7f" }} />
             <p className="text-muted text-xs">
               {startTime}–{endTime}
             </p>
@@ -103,7 +103,7 @@ function EmptySlotCard({
         </div>
         <span
           className="shrink-0 rounded-full px-2.5 py-1 text-xs font-medium"
-          style={{ background: "rgba(184,107,140,0.10)", color: "#b86b8c" }}
+          style={{ background: "rgba(172,92,127,0.10)", color: "#ac5c7f" }}
         >
           {EMPTY_SLOTS.freeWindow} · {formatDurationHebrew(slot.durationMinutes)}
         </span>
@@ -113,7 +113,7 @@ function EmptySlotCard({
       <button
         onClick={() => setIsExpanded((v) => !v)}
         className="flex items-center gap-2 text-sm font-medium transition-opacity hover:opacity-80"
-        style={{ color: "#b86b8c" }}
+        style={{ color: "#ac5c7f" }}
       >
         <MessageCircle className="h-4 w-4" />
         {EMPTY_SLOTS.prepareMessage}
@@ -143,7 +143,7 @@ function EmptySlotCard({
                   className="rounded-full px-3 py-1 text-xs font-medium transition-colors"
                   style={
                     selectedClientId === null
-                      ? { background: "#b86b8c", color: "#fff" }
+                      ? { background: "#ac5c7f", color: "#fff" }
                       : { background: "rgba(43,37,48,0.06)", color: "#8a8190" }
                   }
                 >
@@ -160,7 +160,7 @@ function EmptySlotCard({
                     className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors"
                     style={
                       selectedClientId === client.id
-                        ? { background: "#b86b8c", color: "#fff" }
+                        ? { background: "#ac5c7f", color: "#fff" }
                         : { background: "rgba(43,37,48,0.06)", color: "#2b2530" }
                     }
                   >
@@ -223,7 +223,7 @@ export function EmptySlotsSection({
     <section id="empty-slots" className="space-y-4">
       {/* Header */}
       <div className="flex items-center gap-2">
-        <Clock className="h-4.5 w-4.5 shrink-0" style={{ color: "#b86b8c" }} />
+        <Clock className="h-4.5 w-4.5 shrink-0" style={{ color: "#ac5c7f" }} />
         <div>
           <h2 className="text-foreground font-bold">
             {EMPTY_SLOTS.sectionTitle}

@@ -203,7 +203,7 @@ export function ExpenseFormModal({ open, expense, onClose }: Props) {
               type="submit"
               disabled={isPending}
               className="flex-1 rounded-xl py-2.5 text-sm font-semibold text-white transition-opacity disabled:opacity-60"
-              style={{ background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)" }}
+              style={{ background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)" }}
             >
               {isPending ? FINANCE.expenseForm.saving : FINANCE.expenseForm.saveButton}
             </button>

@@ -22,6 +22,9 @@ interface Props {
 
 const initialState: AdminUpdateClientState = {};
 
+const fieldClass =
+  "w-full rounded-xl border border-border bg-background-alt px-3 py-2 text-sm text-foreground outline-none transition placeholder:text-muted-light focus:border-primary focus:ring-2 focus:ring-primary/20";
+
 export function AdminClientEditModal({ clientId, initialData }: Props) {
   const [open, setOpen] = useState(false);
   const [openKey, setOpenKey] = useState(0);
@@ -44,8 +47,7 @@ export function AdminClientEditModal({ clientId, initialData }: Props) {
       <button
         type="button"
         onClick={handleOpen}
-        className="rounded-lg px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-80"
-        style={{ background: "#1a1a2e" }}
+        className="bg-brand-gradient rounded-xl px-3 py-1.5 text-xs font-medium text-white transition-opacity hover:opacity-90"
       >
         עריכה
       </button>
@@ -57,66 +59,64 @@ export function AdminClientEditModal({ clientId, initialData }: Props) {
             onClick={() => setOpen(false)}
           />
           <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
-            <div
-              className="relative w-full sm:max-w-md flex flex-col rounded-t-2xl sm:rounded-2xl overflow-hidden max-h-[90dvh]"
-              style={{ background: "#fff" }}
-            >
+            <div className="relative flex max-h-[90dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-surface sm:max-w-md sm:rounded-2xl">
               {/* Header */}
-              <div
-                className="flex shrink-0 items-center justify-between px-5 py-4"
-                style={{ borderBottom: "1px solid rgba(0,0,0,0.08)" }}
-              >
+              <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-4">
                 <div>
-                  <h2 className="text-base font-bold" style={{ color: "#1a1a2e" }}>
+                  <h2 className="text-base font-bold text-foreground">
                     עריכת לקוחה
                   </h2>
-                  <p className="text-xs mt-0.5" style={{ color: "#888" }}>
+                  <p className="mt-0.5 text-xs text-muted">
                     עסק: {initialData.businessName}
                   </p>
                 </div>
                 <button
                   type="button"
                   onClick={() => setOpen(false)}
-                  className="rounded-full p-1.5 transition-opacity hover:opacity-70"
-                  style={{ color: "#888" }}
+                  className="rounded-full p-1.5 text-muted transition-opacity hover:opacity-70"
                 >
                   <X className="h-4 w-4" />
                 </button>
               </div>
 
               {/* Body */}
-              <div className="flex-1 overflow-y-auto min-h-0">
-                <form key={openKey} action={formAction} className="p-5 space-y-4">
+              <div className="min-h-0 flex-1 overflow-y-auto">
+                <form key={openKey} action={formAction} className="space-y-4 p-5">
                   {state.formError && (
-                    <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">
+                    <p
+                      className="rounded-lg px-3 py-2 text-xs"
+                      style={{ background: "var(--error-light)", color: "var(--error)" }}
+                    >
                       {state.formError}
                     </p>
                   )}
 
                   {/* Full name */}
                   <div className="space-y-1">
-                    <label className="block text-xs font-semibold" style={{ color: "#555" }}>
+                    <label className="block text-xs font-semibold text-muted">
                       שם לקוחה
                     </label>
                     <input
                       type="text"
                       name="fullName"
                       defaultValue={initialData.fullName}
-                      className="w-full rounded-lg border px-3 py-2 text-sm outline-none transition focus:ring-2"
-                      style={{
-                        borderColor: state.fieldErrors?.fullName ? "#dc2626" : "rgba(0,0,0,0.12)",
-                        background: "#f9f9fb",
-                        color: "#1a1a2e",
-                      }}
+                      className={fieldClass}
+                      style={
+                        state.fieldErrors?.fullName
+                          ? { borderColor: "var(--error)" }
+                          : undefined
+                      }
                     />
                     {state.fieldErrors?.fullName && (
-                      <p className="text-xs text-red-600">{state.fieldErrors.fullName}</p>
+                      <p className="text-xs" style={{ color: "var(--error)" }}>
+                        {state.fieldErrors.fullName}
+                      </p>
                     )}
                   </div>
 
                   {/* Phone */}
                   <div className="space-y-1">
-                    <label className="block text-xs font-semibold" style={{ color: "#555" }}>
+                    <label className="block text-xs font-semibold text-muted">
                       טלפון
                     </label>
                     <input
@@ -125,22 +125,23 @@ export function AdminClientEditModal({ clientId, initialData }: Props) {
                       dir="ltr"
                       defaultValue={initialData.phone}
                       placeholder="0501234567"
-                      className="w-full rounded-lg border px-3 py-2 text-sm outline-none transition focus:ring-2"
-                      style={{
-                        borderColor: state.fieldErrors?.phone ? "#dc2626" : "rgba(0,0,0,0.12)",
-                        background: "#f9f9fb",
-                        color: "#1a1a2e",
-                        textAlign: "left",
-                      }}
+                      className={`${fieldClass} text-left`}
+                      style={
+                        state.fieldErrors?.phone
+                          ? { borderColor: "var(--error)" }
+                          : undefined
+                      }
                     />
                     {state.fieldErrors?.phone && (
-                      <p className="text-xs text-red-600">{state.fieldErrors.phone}</p>
+                      <p className="text-xs" style={{ color: "var(--error)" }}>
+                        {state.fieldErrors.phone}
+                      </p>
                     )}
                   </div>
 
                   {/* Email */}
                   <div className="space-y-1">
-                    <label className="block text-xs font-semibold" style={{ color: "#555" }}>
+                    <label className="block text-xs font-semibold text-muted">
                       אימייל
                     </label>
                     <input
@@ -149,22 +150,23 @@ export function AdminClientEditModal({ clientId, initialData }: Props) {
                       dir="ltr"
                       defaultValue={initialData.email ?? ""}
                       placeholder="example@email.com"
-                      className="w-full rounded-lg border px-3 py-2 text-sm outline-none transition focus:ring-2"
-                      style={{
-                        borderColor: state.fieldErrors?.email ? "#dc2626" : "rgba(0,0,0,0.12)",
-                        background: "#f9f9fb",
-                        color: "#1a1a2e",
-                        textAlign: "left",
-                      }}
+                      className={`${fieldClass} text-left`}
+                      style={
+                        state.fieldErrors?.email
+                          ? { borderColor: "var(--error)" }
+                          : undefined
+                      }
                     />
                     {state.fieldErrors?.email && (
-                      <p className="text-xs text-red-600">{state.fieldErrors.email}</p>
+                      <p className="text-xs" style={{ color: "var(--error)" }}>
+                        {state.fieldErrors.email}
+                      </p>
                     )}
                   </div>
 
                   {/* Notes */}
                   <div className="space-y-1">
-                    <label className="block text-xs font-semibold" style={{ color: "#555" }}>
+                    <label className="block text-xs font-semibold text-muted">
                       הערות פנימיות
                     </label>
                     <textarea
@@ -172,31 +174,23 @@ export function AdminClientEditModal({ clientId, initialData }: Props) {
                       rows={3}
                       defaultValue={initialData.notes ?? ""}
                       placeholder="הערות על הלקוחה"
-                      className="w-full resize-none rounded-lg border px-3 py-2 text-sm outline-none transition focus:ring-2"
-                      style={{
-                        borderColor: "rgba(0,0,0,0.12)",
-                        background: "#f9f9fb",
-                        color: "#1a1a2e",
-                      }}
+                      className={`${fieldClass} resize-none`}
                     />
                   </div>
 
                   {/* Opt-ins */}
-                  <div
-                    className="space-y-2 rounded-xl p-3"
-                    style={{ background: "#f3f4f6" }}
-                  >
+                  <div className="space-y-2 rounded-xl bg-background-alt p-3">
                     <AdminCheckboxRow
                       name="whatsappOptIn"
                       label="מאשרת קבלת הודעות WhatsApp"
                       defaultChecked={initialData.whatsappOptIn}
-                      color="#16a34a"
+                      color="var(--success)"
                     />
                     <AdminCheckboxRow
                       name="marketingOptIn"
                       label="מאשרת הודעות שיווקיות"
                       defaultChecked={initialData.marketingOptIn}
-                      color="#3b7ab5"
+                      color="var(--info)"
                     />
                   </div>
 
@@ -205,16 +199,14 @@ export function AdminClientEditModal({ clientId, initialData }: Props) {
                     <button
                       type="button"
                       onClick={() => setOpen(false)}
-                      className="rounded-lg px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80"
-                      style={{ color: "#555", background: "#f3f4f6", border: "1px solid rgba(0,0,0,0.1)" }}
+                      className="rounded-xl border border-border bg-background-alt px-4 py-2 text-sm font-medium text-muted transition-opacity hover:opacity-80"
                     >
                       ביטול
                     </button>
                     <button
                       type="submit"
                       disabled={isPending}
-                      className="rounded-lg px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-                      style={{ background: "#1a1a2e" }}
+                      className="bg-brand-gradient rounded-xl px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
                     >
                       {isPending ? "שומר…" : "שמירת שינויים"}
                     </button>
@@ -251,9 +243,7 @@ function AdminCheckboxRow({
         className="mt-0.5 h-4 w-4 cursor-pointer rounded"
         style={{ accentColor: color }}
       />
-      <span className="text-sm leading-5" style={{ color: "#444" }}>
-        {label}
-      </span>
+      <span className="text-sm leading-5 text-foreground-soft">{label}</span>
     </label>
   );
 }

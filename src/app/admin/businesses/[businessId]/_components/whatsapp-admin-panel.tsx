@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { Check, X } from "lucide-react";
 import {
   adminConnectBusinessFromEnv,
   adminCheckWhatsAppDiagnostic,
@@ -17,6 +18,16 @@ import type { TemplateSetupResult } from "@/server/whatsapp/templates-core";
 interface Props {
   businessId: string;
 }
+
+/* Token-based result surface styles */
+const resultBox = (tone: "success" | "error" | "warning") => ({
+  background: `var(--${tone}-light)`,
+  border: `1px solid color-mix(in srgb, var(--${tone}) 30%, transparent)`,
+  color: `var(--${tone})`,
+});
+
+const secondaryBtn =
+  "rounded-xl border border-border bg-surface px-4 py-2 text-sm font-medium text-foreground-soft transition-colors hover:bg-background-alt disabled:opacity-50";
 
 export function WhatsAppAdminPanel({ businessId }: Props) {
   const [diagnostic, setDiagnostic] = useState<WhatsAppDiagnosticResult | null>(null);
@@ -102,7 +113,7 @@ export function WhatsAppAdminPanel({ businessId }: Props) {
 
   return (
     <div dir="rtl" className="space-y-4">
-      <p className="text-xs" style={{ color: "#888" }}>
+      <p className="text-xs text-muted">
         חיבור WhatsApp לעסק בדיקה — משתמש בנתוני env המערכת (Mode A).
         מיועד לניהול ובדיקות בלבד. הבעלים לא רואה אפשרות זו.
       </p>
@@ -111,8 +122,7 @@ export function WhatsAppAdminPanel({ businessId }: Props) {
         <button
           onClick={handleDiagnostic}
           disabled={loadingDiag}
-          className="rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
-          style={{ background: "#f3f4f6", color: "#333", border: "1px solid #e5e7eb" }}
+          className={secondaryBtn}
         >
           {loadingDiag ? "בודק..." : "בדיקת חיבור WhatsApp"}
         </button>
@@ -120,8 +130,8 @@ export function WhatsAppAdminPanel({ businessId }: Props) {
         <button
           onClick={handleConnect}
           disabled={loadingConnect}
-          className="rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
-          style={{ background: "#0ea5e9", color: "#fff" }}
+          className="rounded-xl px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ background: "var(--info)" }}
         >
           {loadingConnect ? "מחבר..." : "חיבור WhatsApp לעסק בדיקה"}
         </button>
@@ -129,8 +139,8 @@ export function WhatsAppAdminPanel({ businessId }: Props) {
         <button
           onClick={handleConfirmNumber}
           disabled={loadingConfirm}
-          className="rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
-          style={{ background: "#16a34a", color: "#fff" }}
+          className="rounded-xl px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+          style={{ background: "var(--success)" }}
         >
           {loadingConfirm ? "מאמת..." : "אישור המספר המחובר"}
         </button>
@@ -138,8 +148,7 @@ export function WhatsAppAdminPanel({ businessId }: Props) {
         <button
           onClick={handleCreateTemplates}
           disabled={loadingTpl}
-          className="rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
-          style={{ background: "#b86b8c", color: "#fff" }}
+          className="bg-brand-gradient rounded-xl px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-50"
         >
           {loadingTpl ? "פועל..." : "יצירת תבניות"}
         </button>
@@ -147,8 +156,7 @@ export function WhatsAppAdminPanel({ businessId }: Props) {
         <button
           onClick={handleSyncTemplates}
           disabled={loadingTpl}
-          className="rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
-          style={{ background: "#f3f4f6", color: "#333", border: "1px solid #e5e7eb" }}
+          className={secondaryBtn}
         >
           {loadingTpl ? "מסנכרן..." : "סנכרון תבניות"}
         </button>
@@ -156,8 +164,8 @@ export function WhatsAppAdminPanel({ businessId }: Props) {
         <button
           onClick={handleDisconnect}
           disabled={loadingConnect}
-          className="rounded-lg px-4 py-2 text-sm font-medium transition-colors disabled:opacity-50"
-          style={{ background: "#fef2f2", color: "#dc2626", border: "1px solid #fecaca" }}
+          className="rounded-xl px-4 py-2 text-sm font-medium transition-colors hover:opacity-90 disabled:opacity-50"
+          style={resultBox("error")}
         >
           ניתוק
         </button>
@@ -167,11 +175,7 @@ export function WhatsAppAdminPanel({ businessId }: Props) {
       {connectResult && (
         <div
           className="rounded-xl px-4 py-3 text-sm"
-          style={{
-            background: connectResult.success ? "rgba(22,163,74,0.07)" : "rgba(220,38,38,0.07)",
-            border: `1px solid ${connectResult.success ? "rgba(22,163,74,0.25)" : "rgba(220,38,38,0.25)"}`,
-            color: connectResult.success ? "#15803d" : "#dc2626",
-          }}
+          style={resultBox(connectResult.success ? "success" : "error")}
         >
           <p className="font-semibold">{connectResult.statusLabel}</p>
           {connectResult.phoneNumberId && (
@@ -184,11 +188,7 @@ export function WhatsAppAdminPanel({ businessId }: Props) {
       {confirmResult && (
         <div
           className="rounded-xl px-4 py-3 text-sm"
-          style={{
-            background: confirmResult.success ? "rgba(22,163,74,0.07)" : "rgba(220,38,38,0.07)",
-            border: `1px solid ${confirmResult.success ? "rgba(22,163,74,0.25)" : "rgba(220,38,38,0.25)"}`,
-            color: confirmResult.success ? "#15803d" : "#dc2626",
-          }}
+          style={resultBox(confirmResult.success ? "success" : "error")}
         >
           <p className="font-semibold">{confirmResult.statusLabel}</p>
           {confirmResult.phoneNumberId && (
@@ -203,12 +203,8 @@ export function WhatsAppAdminPanel({ businessId }: Props) {
       {/* Template setup result */}
       {templateResult && (
         <div
-          className="rounded-xl px-4 py-3 text-sm space-y-1.5"
-          style={{
-            background: templateResult.success ? "rgba(22,163,74,0.07)" : "rgba(234,179,8,0.08)",
-            border: `1px solid ${templateResult.success ? "rgba(22,163,74,0.25)" : "rgba(234,179,8,0.30)"}`,
-            color: templateResult.success ? "#15803d" : "#92400e",
-          }}
+          className="space-y-1.5 rounded-xl px-4 py-3 text-sm"
+          style={resultBox(templateResult.success ? "success" : "warning")}
         >
           <p className="font-semibold">{templateResult.statusLabel}</p>
           {templateResult.items.length > 0 && (
@@ -227,25 +223,30 @@ export function WhatsAppAdminPanel({ businessId }: Props) {
       {/* Sync diagnostics (admin-only, token-free) */}
       {templateResult?.syncDiagnostics && (
         <div
-          className="rounded-xl border p-4 space-y-2 text-xs"
-          style={{ borderColor: "#e5e7eb", background: "#0b1020", color: "#cbd5e1" }}
+          className="space-y-2 rounded-xl p-4 text-xs"
+          style={{
+            background:
+              "linear-gradient(135deg, var(--sidebar-bg-from) 0%, var(--sidebar-bg-mid) 55%, var(--sidebar-bg-to) 100%)",
+            border: "1px solid var(--sidebar-border)",
+            color: "var(--sidebar-fg-muted)",
+          }}
         >
-          <p className="text-sm font-semibold" style={{ color: "#fff" }}>
+          <p className="text-sm font-semibold" style={{ color: "var(--sidebar-fg)" }}>
             דיאגנוסטיקת סנכרון תבניות (מנהל בלבד)
           </p>
 
-          <p style={{ color: "#fde68a" }}>{templateResult.syncDiagnostics.hint}</p>
+          <p style={{ color: "#e3c79a" }}>{templateResult.syncDiagnostics.hint}</p>
 
           <div className="space-y-0.5" style={{ direction: "ltr" }}>
-            <div>WABA ID (listTemplates): <b>{templateResult.syncDiagnostics.wabaId ?? "(unset)"}</b></div>
-            <div>WABA ID source: <b>{templateResult.syncDiagnostics.wabaIdSource}</b></div>
-            <div>META_WHATSAPP_WABA_ID loaded: <b>{templateResult.syncDiagnostics.envWabaIdPresent ? "yes" : "no"}</b></div>
-            <div>Phone Number ID (send): <b>{templateResult.syncDiagnostics.phoneNumberId ?? "(unset)"}</b> (source: {templateResult.syncDiagnostics.phoneNumberIdSource})</div>
-            <div>Credential mode: <b>{templateResult.syncDiagnostics.credentialMode}</b></div>
-            <div>Graph API version: <b>{templateResult.syncDiagnostics.apiVersion}</b></div>
-            <div>Templates returned by Meta: <b>{templateResult.syncDiagnostics.returnedCount}</b></div>
+            <div>WABA ID (listTemplates): <b style={{ color: "var(--sidebar-fg)" }}>{templateResult.syncDiagnostics.wabaId ?? "(unset)"}</b></div>
+            <div>WABA ID source: <b style={{ color: "var(--sidebar-fg)" }}>{templateResult.syncDiagnostics.wabaIdSource}</b></div>
+            <div>META_WHATSAPP_WABA_ID loaded: <b style={{ color: "var(--sidebar-fg)" }}>{templateResult.syncDiagnostics.envWabaIdPresent ? "yes" : "no"}</b></div>
+            <div>Phone Number ID (send): <b style={{ color: "var(--sidebar-fg)" }}>{templateResult.syncDiagnostics.phoneNumberId ?? "(unset)"}</b> (source: {templateResult.syncDiagnostics.phoneNumberIdSource})</div>
+            <div>Credential mode: <b style={{ color: "var(--sidebar-fg)" }}>{templateResult.syncDiagnostics.credentialMode}</b></div>
+            <div>Graph API version: <b style={{ color: "var(--sidebar-fg)" }}>{templateResult.syncDiagnostics.apiVersion}</b></div>
+            <div>Templates returned by Meta: <b style={{ color: "var(--sidebar-fg)" }}>{templateResult.syncDiagnostics.returnedCount}</b></div>
             {templateResult.syncDiagnostics.listError && (
-              <div style={{ color: "#fca5a5" }}>
+              <div style={{ color: "#f09090" }}>
                 listTemplates error: {templateResult.syncDiagnostics.listError}
                 {typeof templateResult.syncDiagnostics.listErrorCode === "number"
                   ? ` (code ${templateResult.syncDiagnostics.listErrorCode}`
@@ -261,7 +262,7 @@ export function WhatsAppAdminPanel({ businessId }: Props) {
 
           {templateResult.syncDiagnostics.returnedTemplates.length > 0 && (
             <div className="space-y-0.5" style={{ direction: "ltr" }}>
-              <div className="font-semibold" style={{ color: "#fff" }}>
+              <div className="font-semibold" style={{ color: "var(--sidebar-fg)" }}>
                 Returned templates (name · language · category · status):
               </div>
               {templateResult.syncDiagnostics.returnedTemplates.map((t, i) => (
@@ -273,11 +274,11 @@ export function WhatsAppAdminPanel({ businessId }: Props) {
           )}
 
           <div className="space-y-0.5" style={{ direction: "ltr" }}>
-            <div className="font-semibold" style={{ color: "#fff" }}>
+            <div className="font-semibold" style={{ color: "var(--sidebar-fg)" }}>
               Expected (name · language → matched):
             </div>
             {templateResult.syncDiagnostics.expected.map((e) => (
-              <div key={e.name} style={{ color: e.matched ? "#86efac" : "#fca5a5" }}>
+              <div key={e.name} style={{ color: e.matched ? "#6fc1a0" : "#f09090" }}>
                 {e.name} · {e.language} → {e.matched ? "matched" : "NOT FOUND"}
               </div>
             ))}
@@ -288,24 +289,28 @@ export function WhatsAppAdminPanel({ businessId }: Props) {
       {/* Diagnostic result */}
       {diagnostic && (
         <div
-          className="rounded-xl border p-4 space-y-2"
-          style={{ borderColor: diagnostic.ok ? "rgba(22,163,74,0.25)" : "rgba(234,179,8,0.35)", background: "#fafafa" }}
+          className="space-y-2 rounded-xl border bg-background-alt/60 p-4"
+          style={{
+            borderColor: `color-mix(in srgb, var(--${diagnostic.ok ? "success" : "warning"}) 35%, transparent)`,
+          }}
         >
           <p
             className="text-sm font-semibold"
-            style={{ color: diagnostic.ok ? "#15803d" : "#92400e" }}
+            style={{ color: diagnostic.ok ? "var(--success)" : "var(--warning)" }}
           >
             {diagnostic.statusLabel}
           </p>
           <div className="space-y-1">
             {diagnostic.details.map((d, i) => (
-              <div key={i} className="flex items-start gap-2 text-xs" style={{ color: "#555" }}>
-                <span style={{ color: d.ok ? "#16a34a" : "#dc2626", fontWeight: 700 }}>
-                  {d.ok ? "✓" : "✗"}
-                </span>
+              <div key={i} className="flex items-start gap-2 text-xs text-foreground-soft">
+                {d.ok ? (
+                  <Check className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "var(--success)" }} />
+                ) : (
+                  <X className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "var(--error)" }} />
+                )}
                 <span>
                   {d.label}
-                  {d.value ? <span style={{ color: "#888" }}> — {d.value}</span> : null}
+                  {d.value ? <span className="text-muted"> — {d.value}</span> : null}
                 </span>
               </div>
             ))}

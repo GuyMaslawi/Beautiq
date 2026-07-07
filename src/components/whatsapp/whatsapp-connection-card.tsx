@@ -948,7 +948,7 @@ export function WhatsAppConnectionCard({
           <button
             onClick={() => setConnectError({ kind: "already_registered" })}
             className="text-xs font-semibold underline"
-            style={{ color: "#b86b8c" }}
+            style={{ color: "#ac5c7f" }}
           >
             המספר כבר רשום ב־WhatsApp? כך מחברים מספר קיים
           </button>
@@ -1036,7 +1036,7 @@ export function WhatsAppConnectionCard({
       {!isTransient && flowPhase !== "cancelled" && state === "not_connected" && (
         <div
           className="space-y-3 rounded-xl px-4 py-3.5"
-          style={{ background: "rgba(184,107,140,0.05)", border: "1px solid rgba(184,107,140,0.14)" }}
+          style={{ background: "rgba(172,92,127,0.05)", border: "1px solid rgba(172,92,127,0.14)" }}
         >
           <p className="text-xs leading-relaxed" style={{ color: "var(--foreground)" }}>
             כדי לשלוח הודעות אוטומטיות ללקוחות, צריך לחבר את WhatsApp Business של העסק.
@@ -1047,7 +1047,7 @@ export function WhatsAppConnectionCard({
               <li key={step} className="flex items-center gap-2.5 text-xs" style={{ color: "var(--foreground)" }}>
                 <span
                   className="flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-bold shrink-0"
-                  style={{ background: "rgba(184,107,140,0.12)", color: "#b86b8c" }}
+                  style={{ background: "rgba(172,92,127,0.12)", color: "#ac5c7f" }}
                 >
                   {i + 1}
                 </span>
@@ -1220,7 +1220,7 @@ export function WhatsAppConnectionCard({
                   onClick={handleCreateTemplates}
                   disabled={busy}
                   className="rounded-xl px-4 py-2.5 text-sm font-semibold transition-opacity disabled:opacity-50"
-                  style={{ background: "#b86b8c", color: "#fff" }}
+                  style={{ background: "#ac5c7f", color: "#fff" }}
                 >
                   {busy ? "פועל..." : "הכנת תבניות WhatsApp"}
                 </button>
@@ -1228,7 +1228,7 @@ export function WhatsAppConnectionCard({
                   onClick={handleSyncTemplates}
                   disabled={busy}
                   className="rounded-xl px-4 py-2.5 text-sm font-medium transition-opacity disabled:opacity-50"
-                  style={{ background: "rgba(184,107,140,0.10)", color: "#b86b8c", border: "1px solid rgba(184,107,140,0.25)" }}
+                  style={{ background: "rgba(172,92,127,0.10)", color: "#ac5c7f", border: "1px solid rgba(172,92,127,0.25)" }}
                 >
                   סנכרון תבניות
                 </button>
@@ -1285,7 +1285,7 @@ export function WhatsAppConnectionCard({
                                 onClick={() => handleRetryTemplate(it.name)}
                                 disabled={busy}
                                 className="mt-1 rounded-lg px-2.5 py-1 text-xs font-semibold transition-opacity disabled:opacity-50"
-                                style={{ background: "rgba(184,107,140,0.12)", color: "#b86b8c", border: "1px solid rgba(184,107,140,0.25)" }}
+                                style={{ background: "rgba(172,92,127,0.12)", color: "#ac5c7f", border: "1px solid rgba(172,92,127,0.25)" }}
                               >
                                 נסה ליצור שוב
                               </button>
@@ -1463,7 +1463,7 @@ function ChooserModal({
         {info && (
           <div
             className="rounded-xl px-3.5 py-3 text-xs leading-relaxed space-y-2"
-            style={{ background: "rgba(184,107,140,0.05)", border: "1px solid rgba(184,107,140,0.16)", color: "var(--foreground)" }}
+            style={{ background: "rgba(172,92,127,0.05)", border: "1px solid rgba(172,92,127,0.16)", color: "var(--foreground)" }}
           >
             <p>{info.explanation}</p>
 
@@ -1575,7 +1575,7 @@ function ConnectErrorModal({
           <button
             onClick={onUseNew}
             className="rounded-xl px-4 py-2.5 text-sm font-medium"
-            style={{ background: "rgba(184,107,140,0.10)", color: "#b86b8c", border: "1px solid rgba(184,107,140,0.25)" }}
+            style={{ background: "rgba(172,92,127,0.10)", color: "#ac5c7f", border: "1px solid rgba(172,92,127,0.25)" }}
           >
             להשתמש במספר חדש
           </button>

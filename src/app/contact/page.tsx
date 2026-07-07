@@ -18,18 +18,21 @@ export const metadata: Metadata = {
 
 export default function ContactPage() {
   return (
-    <div className="bg-background flex min-h-screen flex-col">
+    <div className="app-ambient flex min-h-screen flex-col">
       <main className="flex-1 px-5 py-12">
-        <article className="bg-surface shadow-md mx-auto max-w-2xl rounded-2xl border border-[var(--border)] px-6 py-10 sm:px-10">
-          <header className="border-b border-[var(--border)] pb-6">
+        <article className="aura-card mx-auto max-w-3xl rounded-3xl px-6 py-10 sm:px-10">
+          <header>
             <Link
               href="/"
-              className="text-primary text-sm font-medium hover:underline"
+              className="eyebrow text-primary hover:underline"
             >
               Allura
             </Link>
-            <h1 className="text-foreground mt-3 text-3xl font-bold">צור קשר</h1>
+            <h1 className="font-display text-foreground mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">
+              צור קשר
+            </h1>
             <p className="text-muted mt-2 text-sm">{BRAND_DESCRIPTION}</p>
+            <div className="editorial-rule mt-6" />
           </header>
 
           <div className="text-foreground/90 mt-8 space-y-4 leading-relaxed">
@@ -59,7 +62,8 @@ export default function ContactPage() {
             </p>
           </div>
 
-          <footer className="mt-10 border-t border-[var(--border)] pt-6">
+          <footer className="mt-10">
+            <div className="editorial-rule mb-6" />
             <p className="text-muted text-sm">
               מידע נוסף:{" "}
               <Link

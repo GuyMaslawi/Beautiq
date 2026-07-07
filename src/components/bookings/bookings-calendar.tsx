@@ -43,7 +43,7 @@ const STATUS_BG: Record<string, string> = {
 };
 const STATUS_BORDER: Record<string, string> = {
   pending: "rgba(184,150,10,0.35)",
-  approved: "rgba(184,107,140,0.35)",
+  approved: "rgba(172,92,127,0.35)",
   completed: "rgba(61,139,110,0.35)",
   cancelled: "rgba(148,163,184,0.30)",
   no_show: "rgba(190,74,74,0.30)",
@@ -213,7 +213,7 @@ function AppointmentPanel({
         {booking.notes && (
           <div
             className="rounded-lg p-2.5 text-xs"
-            style={{ background: "rgba(184,107,140,0.06)", color: "var(--foreground-soft)" }}
+            style={{ background: "rgba(172,92,127,0.06)", color: "var(--foreground-soft)" }}
           >
             {booking.notes}
           </div>
@@ -225,9 +225,9 @@ function AppointmentPanel({
           href={`/bookings/${booking.id}`}
           className="flex-1 flex h-8 items-center justify-center rounded-xl text-xs font-semibold transition-opacity hover:opacity-90"
           style={{
-            background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
+            background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)",
             color: "#fff",
-            boxShadow: "0 1px 4px rgba(184,107,140,0.22)",
+            boxShadow: "0 1px 4px rgba(172,92,127,0.22)",
           }}
         >
           לפרטי התור
@@ -320,8 +320,8 @@ function NowIndicator({ dateStr }: { dateStr: string }) {
       className="absolute left-0 right-0 z-20 pointer-events-none flex items-center"
       style={{ top: top - 1 }}
     >
-      <div className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: "#b86b8c" }} />
-      <div className="flex-1 h-[1.5px]" style={{ background: "#b86b8c" }} />
+      <div className="h-2.5 w-2.5 rounded-full shrink-0" style={{ background: "#ac5c7f" }} />
+      <div className="flex-1 h-[1.5px]" style={{ background: "#ac5c7f" }} />
     </div>
   );
 }
@@ -503,8 +503,8 @@ export function BookingsCalendar({
               onClick={() => navigate(calDate, "day")}
               className="flex h-8 items-center gap-1.5 px-3 text-xs font-medium transition-colors"
               style={{
-                background: calView === "day" ? "rgba(184,107,140,0.10)" : "transparent",
-                color: calView === "day" ? "#b86b8c" : "var(--foreground-soft)",
+                background: calView === "day" ? "rgba(172,92,127,0.10)" : "transparent",
+                color: calView === "day" ? "#ac5c7f" : "var(--foreground-soft)",
               }}
             >
               <CalendarDays className="h-3.5 w-3.5" />
@@ -515,8 +515,8 @@ export function BookingsCalendar({
               className="flex h-8 items-center gap-1.5 border-r px-3 text-xs font-medium transition-colors"
               style={{
                 borderColor: "var(--border)",
-                background: calView === "week" ? "rgba(184,107,140,0.10)" : "transparent",
-                color: calView === "week" ? "#b86b8c" : "var(--foreground-soft)",
+                background: calView === "week" ? "rgba(172,92,127,0.10)" : "transparent",
+                color: calView === "week" ? "#ac5c7f" : "var(--foreground-soft)",
               }}
             >
               <CalendarRange className="h-3.5 w-3.5" />
@@ -528,9 +528,9 @@ export function BookingsCalendar({
             href="/bookings/new"
             className="flex h-8 items-center gap-1.5 rounded-xl px-3 text-xs font-semibold transition-opacity hover:opacity-90"
             style={{
-              background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
+              background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)",
               color: "#fff",
-              boxShadow: "0 1px 4px rgba(184,107,140,0.22)",
+              boxShadow: "0 1px 4px rgba(172,92,127,0.22)",
             }}
           >
             <Plus className="h-3.5 w-3.5" />
@@ -574,14 +574,14 @@ export function BookingsCalendar({
                   >
                     <p
                       className="text-[10px] font-medium"
-                      style={{ color: isToday ? "#b86b8c" : "var(--muted)" }}
+                      style={{ color: isToday ? "#ac5c7f" : "var(--muted)" }}
                     >
                       {HEBREW_DAYS_SHORT[dow]}
                     </p>
                     <div
                       className="mx-auto mt-0.5 flex h-6 w-6 items-center justify-center rounded-full text-xs font-bold"
                       style={{
-                        background: isToday ? "#b86b8c" : "transparent",
+                        background: isToday ? "#ac5c7f" : "transparent",
                         color: isToday ? "#fff" : "var(--foreground-soft)",
                       }}
                     >
@@ -634,8 +634,8 @@ export function BookingsCalendar({
                   href="/bookings/new"
                   className="flex items-center gap-1 text-xs font-semibold rounded-lg px-3 py-1.5 transition-opacity hover:opacity-80 pointer-events-auto"
                   style={{
-                    background: "rgba(184,107,140,0.10)",
-                    color: "#b86b8c",
+                    background: "rgba(172,92,127,0.10)",
+                    color: "#ac5c7f",
                   }}
                 >
                   <Plus className="h-3.5 w-3.5" />

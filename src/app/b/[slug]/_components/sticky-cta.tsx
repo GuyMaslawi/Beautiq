@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Sparkles } from "lucide-react";
 import { brandGradient, getBusinessWhatsAppHref } from "./helpers";
 import { WhatsAppIcon } from "./icons";
 
@@ -59,10 +60,14 @@ export function StickyBookingCta({
         <button
           type="button"
           onClick={goToBooking}
-          className="flex flex-1 items-center justify-center gap-2 rounded-2xl py-4 text-sm font-bold text-white shadow-xl transition-all hover:opacity-90 active:scale-[.98]"
-          style={{ background: brandGradient(brand) }}
+          className="flex min-h-[52px] flex-1 items-center justify-center gap-2 rounded-2xl py-4 text-sm font-bold text-white transition-all hover:opacity-90 active:scale-[.98]"
+          style={{
+            background: brandGradient(brand),
+            boxShadow: `0 12px 28px -10px ${brand}cc`,
+          }}
         >
-          קביעת תור עכשיו ✨
+          <Sparkles className="h-4 w-4" />
+          קביעת תור עכשיו
         </button>
         {waHref && (
           <a

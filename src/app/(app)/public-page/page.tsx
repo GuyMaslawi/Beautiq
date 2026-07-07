@@ -49,7 +49,7 @@ export default async function PublicPageSettingsPage() {
       {/* 1. Preview / link */}
       <Section
         title={PUBLIC_PAGE.preview.sectionTitle}
-        icon={<Link2 className="h-4 w-4" style={{ color: "#b86b8c" }} />}
+        icon={<Link2 className="h-4 w-4" style={{ color: "#ac5c7f" }} />}
       >
         <PublicLinkPreview slug={settings.slug} />
       </Section>
@@ -57,7 +57,7 @@ export default async function PublicPageSettingsPage() {
       {/* 1b. Embedded preview */}
       <Section
         title="תצוגה מקדימה"
-        icon={<Eye className="h-4 w-4" style={{ color: "#b86b8c" }} />}
+        icon={<Eye className="h-4 w-4" style={{ color: "#ac5c7f" }} />}
       >
         <PublicPagePreviewPanel slug={settings.slug} />
       </Section>
@@ -65,7 +65,7 @@ export default async function PublicPageSettingsPage() {
       {/* 2. Business profile */}
       <Section
         title={PUBLIC_PAGE.profile.sectionTitle}
-        icon={<Globe className="h-4 w-4" style={{ color: "#b86b8c" }} />}
+        icon={<Globe className="h-4 w-4" style={{ color: "#ac5c7f" }} />}
       >
         <PublicProfileForm
           action={updatePublicProfileAction}
@@ -84,7 +84,7 @@ export default async function PublicPageSettingsPage() {
       {/* 3. Logo + cover */}
       <Section
         title={PUBLIC_PAGE.branding.sectionTitle}
-        icon={<ImageIcon className="h-4 w-4" style={{ color: "#b86b8c" }} />}
+        icon={<ImageIcon className="h-4 w-4" style={{ color: "#ac5c7f" }} />}
       >
         <BrandingForm
           action={updateBrandingAction}
@@ -99,7 +99,7 @@ export default async function PublicPageSettingsPage() {
       {/* 4. Visibility toggles */}
       <Section
         title={PUBLIC_PAGE.visibility.sectionTitle}
-        icon={<Eye className="h-4 w-4" style={{ color: "#b86b8c" }} />}
+        icon={<Eye className="h-4 w-4" style={{ color: "#ac5c7f" }} />}
       >
         <VisibilityForm
           action={updateVisibilityAction}
@@ -118,7 +118,7 @@ export default async function PublicPageSettingsPage() {
       {/* 5. Gallery */}
       <Section
         title={PUBLIC_PAGE.gallery.sectionTitle}
-        icon={<ImageIcon className="h-4 w-4" style={{ color: "#b86b8c" }} />}
+        icon={<ImageIcon className="h-4 w-4" style={{ color: "#ac5c7f" }} />}
       >
         <p className="text-sm text-[var(--muted)] mb-4">
           {PUBLIC_PAGE.gallery.sectionSubtitle}
@@ -133,7 +133,7 @@ export default async function PublicPageSettingsPage() {
       {/* 6. Reviews */}
       <Section
         title={PUBLIC_PAGE.reviews.sectionTitle}
-        icon={<Star className="h-4 w-4" style={{ color: "#b86b8c" }} />}
+        icon={<Star className="h-4 w-4" style={{ color: "#ac5c7f" }} />}
       >
         <ReviewsManager
           reviews={reviews}
@@ -146,9 +146,9 @@ export default async function PublicPageSettingsPage() {
         <div className="flex items-center gap-3">
           <div
             className="flex h-9 w-9 items-center justify-center rounded-xl shrink-0"
-            style={{ background: "rgba(184,107,140,0.08)", border: "1px solid rgba(184,107,140,0.16)" }}
+            style={{ background: "rgba(172,92,127,0.08)", border: "1px solid rgba(172,92,127,0.16)" }}
           >
-            <Lock className="h-4 w-4" style={{ color: "#b86b8c" }} />
+            <Lock className="h-4 w-4" style={{ color: "#ac5c7f" }} />
           </div>
           <div>
             <p className="text-sm font-semibold text-[var(--foreground)]">

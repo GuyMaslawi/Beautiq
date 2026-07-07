@@ -95,7 +95,7 @@ export async function EmptySlotsSection() {
                     className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-semibold text-white"
                     style={{
                       background:
-                        "linear-gradient(135deg, rgba(201,120,152,0.85) 0%, rgba(184,107,140,0.75) 100%)",
+                        "linear-gradient(135deg, rgba(199,111,147,0.85) 0%, rgba(172,92,127,0.75) 100%)",
                     }}
                   >
                     {getInitial(client.fullName)}
@@ -240,9 +240,9 @@ export async function EmptySlotsSection() {
                           aria-label={`שלחי הזמנה ל-${client.fullName}`}
                           className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-opacity hover:opacity-80"
                           style={{
-                            background: "rgba(184,107,140,0.08)",
-                            color: "#b86b8c",
-                            border: "1px solid rgba(184,107,140,0.20)",
+                            background: "rgba(172,92,127,0.08)",
+                            color: "#ac5c7f",
+                            border: "1px solid rgba(172,92,127,0.20)",
                           }}
                         >
                           <Users className="h-3 w-3" />

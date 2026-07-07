@@ -51,7 +51,7 @@ export function RevenueSection({ forecast }: { forecast: RevenueForecastData }) 
 
         <div className="aura-card flex flex-col justify-center gap-1.5 rounded-[1.4rem] p-5">
           <div className="flex items-center gap-2">
-            <Target className="h-4 w-4" style={{ color: "#b86b8c" }} />
+            <Target className="h-4 w-4" style={{ color: "var(--primary)" }} />
             <span className="text-foreground text-sm font-bold">תחזית הכנסות</span>
           </div>
           <p className="text-xs leading-relaxed" style={{ color: "var(--muted)" }}>
@@ -72,11 +72,11 @@ export function RevenueSection({ forecast }: { forecast: RevenueForecastData }) 
           className="relative h-full overflow-hidden rounded-[1.5rem] p-6 md:p-7"
           style={{
             background: "linear-gradient(150deg, #2b0e1f 0%, #44183a 50%, #2c1527 100%)",
-            border: "1px solid rgba(184,107,140,0.3)",
+            border: "1px solid rgba(172,92,127,0.3)",
             boxShadow: "0 20px 50px -20px rgba(120,40,80,0.45), inset 0 1px 0 rgba(255,255,255,0.06)",
           }}
         >
-          <AuraBlob color="rgba(201,120,152,0.3)" size={260} style={{ top: -120, insetInlineEnd: -40 }} />
+          <AuraBlob color="rgba(199,111,147,0.3)" size={260} style={{ top: -120, insetInlineEnd: -40 }} />
           <div className="relative flex items-center justify-between">
             <span className="eyebrow" style={{ color: "rgba(240,168,200,0.85)" }}>
               צפי לסוף החודש
@@ -98,7 +98,7 @@ export function RevenueSection({ forecast }: { forecast: RevenueForecastData }) 
                   className="h-full rounded-full transition-all duration-700"
                   style={{
                     width: `${Math.min(100, forecast.actualProgressPct)}%`,
-                    background: "linear-gradient(90deg, #c97898 0%, #f0a8c8 100%)",
+                    background: "linear-gradient(90deg, #c76f93 0%, #f0a8c8 100%)",
                   }}
                 />
               </div>

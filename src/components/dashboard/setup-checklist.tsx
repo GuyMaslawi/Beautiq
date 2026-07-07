@@ -43,6 +43,10 @@ import type { SuggestedClient } from "@/server/empty-slots/queries";
 
 const TZ = "Asia/Jerusalem";
 
+function formatILS(amount: number): string {
+  return `₪${Math.round(amount).toLocaleString("he-IL")}`;
+}
+
 function formatTimeOnly(iso: string): string {
   return new Date(iso).toLocaleTimeString("he-IL", {
     timeZone: TZ,
@@ -105,7 +109,7 @@ function HeroStat({
   return (
     <Link
       href={href}
-      className="ring-soft group flex items-center gap-3 rounded-2xl px-4 py-3 transition-transform hover:-translate-y-0.5 active:scale-[0.98] md:min-w-[11.5rem]"
+      className="ring-soft group flex items-center gap-3 rounded-2xl px-4 py-3 transition-transform hover:-translate-y-0.5 active:scale-[0.98]"
       style={{
         background: "rgba(255,255,255,0.08)",
         border: "1px solid rgba(255,255,255,0.14)",
@@ -119,9 +123,9 @@ function HeroStat({
       >
         <Icon className="h-4 w-4" style={{ color: iconColor }} />
       </span>
-      <span className="flex flex-col leading-tight">
-        <span className="display-num text-xl font-bold text-white">{value}</span>
-        <span className="text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
+      <span className="flex min-w-0 flex-col leading-tight">
+        <span className="display-num truncate text-xl font-bold text-white">{value}</span>
+        <span className="truncate text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
           {label}
         </span>
       </span>
@@ -132,9 +136,11 @@ function HeroStat({
 function CommandCenterHero({
   businessName,
   metrics,
+  pendingApprovalCount,
 }: {
   businessName: string;
   metrics: DashboardMetrics;
+  pendingApprovalCount: number;
 }) {
   const todayLabel = new Date().toLocaleDateString("he-IL", {
     timeZone: TZ,
@@ -148,38 +154,41 @@ function CommandCenterHero({
       className="spotlight grain relative isolate overflow-hidden rounded-[1.75rem]"
       style={{
         background: "linear-gradient(150deg, #2b0e1f 0%, #44183a 48%, #2c1527 100%)",
-        border: "1px solid rgba(184,107,140,0.30)",
+        border: "1px solid rgba(172,92,127,0.30)",
         boxShadow: "0 24px 60px -22px rgba(60,20,45,0.6), inset 0 1px 0 rgba(255,255,255,0.06)",
       }}
     >
-      <AuraBlob color="rgba(201,120,152,0.34)" size={360} style={{ top: -150, insetInlineEnd: -60 }} />
-      <AuraBlob color="rgba(157,106,168,0.22)" size={300} style={{ bottom: -160, insetInlineStart: -80 }} />
+      <AuraBlob color="rgba(199,111,147,0.34)" size={360} style={{ top: -150, insetInlineEnd: -60 }} />
+      <AuraBlob color="rgba(146,96,159,0.22)" size={300} style={{ bottom: -160, insetInlineStart: -80 }} />
 
-      <div className="relative flex flex-col gap-6 p-5 md:flex-row md:items-center md:justify-between md:gap-10 md:p-7">
-        <div className="min-w-0">
-          <span className="eyebrow" style={{ color: "rgba(240,168,200,0.9)" }}>
-            לוח הבקרה שלך
-          </span>
-          <p className="mt-1.5 text-sm font-medium" style={{ color: "rgba(255,255,255,0.55)" }}>
-            שלום,
-          </p>
-          <h1
-            className="display-num text-[1.9rem] font-bold leading-tight text-white md:text-[2.4rem]"
-            style={{ textShadow: "0 2px 16px rgba(0,0,0,0.3)" }}
-          >
-            {businessName}
-          </h1>
-          <p className="mt-1.5 text-sm font-medium" style={{ color: "rgba(255,255,255,0.6)" }}>
-            {todayLabel}
-          </p>
+      <div className="relative p-5 md:p-7">
+        {/* Greeting row — warm serif greeting on the lead side, CTA on the trailing side */}
+        <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between md:gap-10">
+          <div className="min-w-0">
+            <span className="eyebrow" style={{ color: "rgba(240,168,200,0.9)" }}>
+              לוח הבקרה שלך
+            </span>
+            <p className="mt-1.5 text-sm font-medium" style={{ color: "rgba(255,255,255,0.55)" }}>
+              שלום,
+            </p>
+            <h1
+              className="font-display text-[2rem] font-semibold leading-tight tracking-tight text-white md:text-[2.5rem]"
+              style={{ textShadow: "0 2px 16px rgba(0,0,0,0.3)" }}
+            >
+              {businessName}
+            </h1>
+            <p className="mt-1.5 text-sm font-medium" style={{ color: "rgba(255,255,255,0.6)" }}>
+              {todayLabel}
+            </p>
+          </div>
 
           {/* Primary CTA woven into the hero */}
           <Link
             href="/bookings/new"
-            className="mt-4 inline-flex items-center gap-2 rounded-full px-5 py-2.5 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5 active:scale-[0.98]"
+            className="inline-flex shrink-0 items-center justify-center gap-2 self-start rounded-full px-5 py-2.5 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5 active:scale-[0.98] md:self-auto"
             style={{
-              background: "linear-gradient(135deg, #e7a9c4 0%, #c97898 45%, #b86b8c 100%)",
-              boxShadow: "0 12px 28px -8px rgba(201,120,152,0.6)",
+              background: "linear-gradient(135deg, #e7a9c4 0%, #c76f93 45%, var(--primary) 100%)",
+              boxShadow: "0 12px 28px -8px rgba(199,111,147,0.6)",
             }}
           >
             <CalendarDays className="h-4 w-4" />
@@ -188,14 +197,31 @@ function CommandCenterHero({
           </Link>
         </div>
 
-        {/* Live pulse stats */}
-        <div className="flex shrink-0 gap-2.5 md:flex-col md:gap-3">
+        {/* Live pulse stats — a dense, symmetric band across the full hero width */}
+        <div
+          className="mt-5 grid grid-cols-2 gap-2.5 pt-5 md:mt-6 md:grid-cols-4 md:gap-3"
+          style={{ borderTop: "1px solid rgba(255,255,255,0.10)" }}
+        >
           <HeroStat
             href="/bookings?filter=today"
             icon={CalendarDays}
             value={metrics.bookingsToday}
             label="פגישות היום"
             iconColor="#f0a8c8"
+          />
+          <HeroStat
+            href="/bookings?status=pending"
+            icon={Clock}
+            value={pendingApprovalCount}
+            label="ממתינות לאישור"
+            iconColor="#f5c88a"
+          />
+          <HeroStat
+            href="/finance"
+            icon={TrendingUp}
+            value={formatILS(metrics.monthRevenue)}
+            label="הכנסה החודש"
+            iconColor="#9fe3c2"
           />
           <HeroStat
             href="/clients"
@@ -233,7 +259,7 @@ function ActionPill({
         boxShadow: "0 4px 14px -6px rgba(124,58,97,0.16)",
       }}
     >
-      <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: "#b86b8c" }} />
+      <Icon className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--primary)" }} />
       <span>{label}</span>
     </Link>
   );
@@ -260,13 +286,13 @@ function TodayAppointmentsPanel({
   todayBookings: UpcomingBookingItem[];
 }) {
   return (
-    <div className="aura-card overflow-hidden rounded-[1.4rem]">
+    <div className="aura-card overflow-hidden rounded-2xl">
       <div className="flex items-center justify-between px-5 py-4">
-        <h3 className="text-foreground text-[15px] font-bold">הפגישות שלך להיום</h3>
+        <h3 className="text-foreground font-display text-[15px] font-bold tracking-tight">הפגישות שלך להיום</h3>
         <Link
           href="/bookings"
           className="flex items-center gap-1.5 text-xs font-semibold transition-opacity hover:opacity-80"
-          style={{ color: "#b86b8c" }}
+          style={{ color: "var(--primary)" }}
         >
           <CalendarDays className="h-3.5 w-3.5" />
           כל הפגישות
@@ -278,9 +304,9 @@ function TodayAppointmentsPanel({
         <div className="flex items-center gap-4 px-5 py-5">
           <div
             className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
-            style={{ background: "rgba(184,107,140,0.10)" }}
+            style={{ background: "rgba(172,92,127,0.10)" }}
           >
-            <CalendarDays className="h-6 w-6" style={{ color: "#b86b8c" }} />
+            <CalendarDays className="h-6 w-6" style={{ color: "var(--primary)" }} />
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold" style={{ color: "var(--foreground-soft)" }}>
@@ -293,7 +319,7 @@ function TodayAppointmentsPanel({
               <Link
                 href="/bookings/new"
                 className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold text-white transition-transform hover:-translate-y-0.5"
-                style={{ background: "linear-gradient(135deg,#c97898,#b86b8c)" }}
+                style={{ background: "linear-gradient(135deg,#c76f93,#ac5c7f)" }}
               >
                 <Plus className="h-3 w-3" />
                 קביעת פגישה חדשה
@@ -301,7 +327,7 @@ function TodayAppointmentsPanel({
               <Link
                 href="/bookings"
                 className="inline-flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-semibold transition-transform hover:-translate-y-0.5"
-                style={{ background: "rgba(184,107,140,0.10)", color: "#b86b8c" }}
+                style={{ background: "rgba(172,92,127,0.10)", color: "var(--primary)" }}
               >
                 <CalendarRange className="h-3 w-3" />
                 פתיחת היומן
@@ -344,7 +370,7 @@ function TodayAppointmentsPanel({
 
 const TONE_HEX: Record<ToneKey, { fg: string; bg: string; border: string }> = {
   neutral: { fg: "#3d3545", bg: "rgba(138,129,144,0.10)", border: "rgba(138,129,144,0.22)" },
-  brand: { fg: "#b86b8c", bg: "rgba(184,107,140,0.10)", border: "rgba(184,107,140,0.24)" },
+  brand: { fg: "var(--primary)", bg: "rgba(172,92,127,0.10)", border: "rgba(172,92,127,0.24)" },
   success: { fg: "#2f7d61", bg: "rgba(61,139,110,0.10)", border: "rgba(61,139,110,0.24)" },
   warning: { fg: "#a06a14", bg: "rgba(184,124,30,0.10)", border: "rgba(184,124,30,0.24)" },
   danger: { fg: "#b13b3b", bg: "rgba(190,74,74,0.10)", border: "rgba(190,74,74,0.24)" },
@@ -375,7 +401,7 @@ function TimelineRow({
   return (
     <Link href={href} className="group relative flex gap-3 rounded-xl px-2 py-2 transition-colors hover:bg-background-alt">
       <div className="relative flex w-12 shrink-0 flex-col items-center pt-0.5">
-        <span className="display-num text-sm font-bold" style={{ color: "#b86b8c" }}>
+        <span className="display-num text-sm font-bold" style={{ color: "var(--primary)" }}>
           {time}
         </span>
         <span className="mt-1.5 h-2 w-2 rounded-full" style={{ background: c.fg, boxShadow: `0 0 0 3px ${c.bg}` }} />
@@ -383,14 +409,14 @@ function TimelineRow({
           <span
             aria-hidden
             className="mt-1 w-px flex-1"
-            style={{ background: "linear-gradient(to bottom, rgba(184,107,140,0.28), transparent)" }}
+            style={{ background: "linear-gradient(to bottom, rgba(172,92,127,0.28), transparent)" }}
           />
         )}
       </div>
       <div className="flex min-w-0 flex-1 items-center gap-3 pb-3">
         <span
           className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-          style={{ background: "linear-gradient(135deg,#c97898,#9d6aa8)" }}
+          style={{ background: "linear-gradient(135deg,#c76f93,#92609f)" }}
         >
           {initials}
         </span>
@@ -512,13 +538,13 @@ function WeekCalendarMini({
   }, [allBookings]);
 
   return (
-    <div className="aura-card rounded-[1.4rem] p-4">
+    <div className="aura-card rounded-2xl p-4">
       <div className="mb-3 flex items-center justify-between">
-        <h3 className="text-foreground text-sm font-bold">מבט על השבוע</h3>
+        <h3 className="text-foreground font-display text-sm font-bold tracking-tight">מבט על השבוע</h3>
         <Link
           href="/bookings/new"
           className="rounded-full px-2.5 py-1 text-xs font-semibold transition-opacity hover:opacity-80"
-          style={{ background: "rgba(184,107,140,0.10)", color: "#b86b8c" }}
+          style={{ background: "rgba(172,92,127,0.10)", color: "var(--primary)" }}
         >
           + הוספת משבצת
         </Link>
@@ -531,8 +557,8 @@ function WeekCalendarMini({
             className="flex flex-col items-center gap-1 rounded-2xl py-3"
             style={
               slot.isToday
-                ? { background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)", boxShadow: "0 8px 18px -6px rgba(184,107,140,0.45)" }
-                : { background: "rgba(247,238,243,0.5)", border: "1px solid rgba(184,107,140,0.08)" }
+                ? { background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)", boxShadow: "0 8px 18px -6px rgba(172,92,127,0.45)" }
+                : { background: "rgba(247,238,243,0.5)", border: "1px solid rgba(172,92,127,0.08)" }
             }
           >
             <span className="text-xs font-semibold" style={{ color: slot.isToday ? "rgba(255,255,255,0.85)" : "var(--muted)" }}>
@@ -551,7 +577,7 @@ function WeekCalendarMini({
       <Link
         href="/bookings"
         className="mt-3 flex items-center gap-1.5 pt-3 text-xs font-medium transition-opacity hover:opacity-80"
-        style={{ borderTop: "1px solid rgba(184,107,140,0.12)", color: "#b86b8c" }}
+        style={{ borderTop: "1px solid rgba(172,92,127,0.12)", color: "var(--primary)" }}
       >
         <CalendarRange className="h-3 w-3" />
         <span>צפייה בכל המשבצות</span>
@@ -568,11 +594,11 @@ function FollowUpClientsPreview({ clients }: { clients: SuggestedClient[] }) {
   const displayed = clients.slice(0, 3);
 
   return (
-    <div className="aura-card overflow-hidden rounded-[1.4rem]">
+    <div className="aura-card overflow-hidden rounded-2xl">
       <div className="flex items-center justify-between px-5 py-4">
-        <h3 className="text-foreground text-sm font-bold">לקוחות למעקב ושימור</h3>
+        <h3 className="text-foreground font-display text-sm font-bold tracking-tight">לקוחות למעקב ושימור</h3>
         {clients.length > 3 && (
-          <Link href="/bring-back" className="flex items-center gap-1 text-xs font-semibold transition-opacity hover:opacity-80" style={{ color: "#b86b8c" }}>
+          <Link href="/bring-back" className="flex items-center gap-1 text-xs font-semibold transition-opacity hover:opacity-80" style={{ color: "var(--primary)" }}>
             <span>הכול</span>
             <ArrowLeft className="h-3 w-3" />
           </Link>
@@ -583,7 +609,7 @@ function FollowUpClientsPreview({ clients }: { clients: SuggestedClient[] }) {
       {clients.length === 0 ? (
         <div className="px-5 py-6 text-center">
           <p className="text-sm" style={{ color: "var(--muted)" }}>אין לקוחות למעקב כרגע</p>
-          <Link href="/bring-back" className="mt-2 inline-block text-xs font-semibold transition-opacity hover:opacity-80" style={{ color: "#b86b8c" }}>
+          <Link href="/bring-back" className="mt-2 inline-block text-xs font-semibold transition-opacity hover:opacity-80" style={{ color: "var(--primary)" }}>
             מעבר להחזרת לקוחות
           </Link>
         </div>
@@ -595,11 +621,11 @@ function FollowUpClientsPreview({ clients }: { clients: SuggestedClient[] }) {
               <div
                 key={client.id}
                 className="flex flex-col items-center gap-2 rounded-2xl p-3 text-center"
-                style={{ background: "rgba(247,238,243,0.45)", border: "1px solid rgba(184,107,140,0.1)" }}
+                style={{ background: "rgba(247,238,243,0.45)", border: "1px solid rgba(172,92,127,0.1)" }}
               >
                 <span
                   className="flex h-11 w-11 items-center justify-center rounded-full text-base font-bold text-white"
-                  style={{ background: "linear-gradient(135deg,#c97898,#9d6aa8)" }}
+                  style={{ background: "linear-gradient(135deg,#c76f93,#92609f)" }}
                 >
                   {getInitial(client.fullName)}
                 </span>
@@ -640,17 +666,17 @@ function SetupProgressRibbon({ setup }: { setup: SetupState }) {
   if (progressPct === 100) return null;
 
   return (
-    <div className="aura-card rounded-[1.4rem] p-5">
+    <div className="aura-card rounded-2xl p-5">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-3">
           <span
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl text-white"
-            style={{ background: "linear-gradient(135deg,#c97898,#9d6aa8)" }}
+            style={{ background: "linear-gradient(135deg,#c76f93,#92609f)" }}
           >
             <Sparkles className="h-5 w-5" />
           </span>
           <div>
-            <h3 className="text-foreground text-sm font-bold">{DASHBOARD.progress.title}</h3>
+            <h3 className="text-foreground font-display text-sm font-bold tracking-tight">{DASHBOARD.progress.title}</h3>
             <p className="text-xs" style={{ color: "var(--muted)" }}>
               {completedCount}/{totalCount} הושלמו · {progressPct}%
             </p>
@@ -665,7 +691,7 @@ function SetupProgressRibbon({ setup }: { setup: SetupState }) {
               className="flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-transform hover:-translate-y-0.5"
               style={{
                 background: item.done ? "rgba(61,139,110,0.08)" : "rgba(255,255,255,0.7)",
-                border: `1px solid ${item.done ? "rgba(61,139,110,0.2)" : "rgba(184,107,140,0.16)"}`,
+                border: `1px solid ${item.done ? "rgba(61,139,110,0.2)" : "rgba(172,92,127,0.16)"}`,
                 color: item.done ? "#2f7d61" : "var(--foreground-soft)",
               }}
             >
@@ -676,10 +702,10 @@ function SetupProgressRibbon({ setup }: { setup: SetupState }) {
         </div>
       </div>
 
-      <div className="mt-4 h-1.5 overflow-hidden rounded-full" style={{ background: "rgba(184,107,140,0.1)" }}>
+      <div className="mt-4 h-1.5 overflow-hidden rounded-full" style={{ background: "rgba(172,92,127,0.1)" }}>
         <div
           className="h-full rounded-full transition-all duration-700"
-          style={{ width: `${progressPct}%`, background: "linear-gradient(90deg, #c97898 0%, #b86b8c 100%)" }}
+          style={{ width: `${progressPct}%`, background: "linear-gradient(90deg, #c76f93 0%, #ac5c7f 100%)" }}
         />
       </div>
     </div>
@@ -766,7 +792,11 @@ export function SetupChecklist({
       <FadeIn>
         <div className="space-y-5">
           <div className="space-y-3.5">
-            <CommandCenterHero businessName={businessName} metrics={metrics} />
+            <CommandCenterHero
+              businessName={businessName}
+              metrics={metrics}
+              pendingApprovalCount={pendingApprovalCount}
+            />
             <DashboardQuickActions />
           </div>
 
@@ -846,7 +876,7 @@ export function SetupChecklist({
               <Link
                 href="/finance"
                 className="flex items-center gap-1 text-xs font-semibold transition-opacity hover:opacity-80"
-                style={{ color: "#b86b8c" }}
+                style={{ color: "var(--primary)" }}
               >
                 פירוט מלא
                 <ArrowLeft className="h-3 w-3" />

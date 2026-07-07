@@ -57,12 +57,12 @@ export function BookingCard({ booking }: { booking: BookingListItem }) {
         isActive
           ? {
               background: "linear-gradient(165deg, rgba(243,238,246,0.7) 0%, rgba(255,255,255,0.92) 55%)",
-              border: "1px solid rgba(157,106,168,0.22)",
+              border: "1px solid rgba(146,96,159,0.22)",
               boxShadow: "0 8px 24px -12px rgba(124,58,97,0.18), inset 0 1px 0 rgba(255,255,255,0.9)",
             }
           : {
               background: "linear-gradient(170deg, rgba(255,255,255,0.95) 0%, rgba(255,255,255,0.84) 100%)",
-              border: "1px solid rgba(184,107,140,0.12)",
+              border: "1px solid rgba(172,92,127,0.12)",
               boxShadow: "0 6px 20px -12px rgba(124,58,97,0.14), inset 0 1px 0 rgba(255,255,255,0.9)",
             }
       }
@@ -75,10 +75,10 @@ export function BookingCard({ booking }: { booking: BookingListItem }) {
           className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
           style={{
             background: isActive
-              ? "linear-gradient(135deg, #c97898 0%, #9d6aa8 100%)"
+              ? "linear-gradient(135deg, #c76f93 0%, #92609f 100%)"
               : "linear-gradient(135deg, #c8b8c0 0%, #b0a0a8 100%)",
             boxShadow: isActive
-              ? "0 6px 16px -6px rgba(157,106,168,0.5)"
+              ? "0 6px 16px -6px rgba(146,96,159,0.5)"
               : "0 1px 4px rgba(43,37,48,0.10)",
           }}
         >
@@ -104,7 +104,7 @@ export function BookingCard({ booking }: { booking: BookingListItem }) {
 
             {/* Date + time */}
             <span className="flex items-center gap-1.5 text-sm font-medium"
-              style={{ color: isToday ? "#b86b8c" : "var(--foreground-soft)" }}>
+              style={{ color: isToday ? "#ac5c7f" : "var(--foreground-soft)" }}>
               <CalendarDays className="h-3.5 w-3.5 shrink-0" />
               <span>{dateLabel}</span>
               <span className="font-normal" style={{ color: "var(--muted)" }}>

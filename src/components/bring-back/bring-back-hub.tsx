@@ -105,7 +105,7 @@ function ClientCard({
           <Link
             href={`/bookings/new?clientId=${client.id}`}
             className="flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-opacity hover:opacity-80"
-            style={{ background: "rgba(184,107,140,0.1)", color: "#b86b8c", border: "1px solid rgba(184,107,140,0.22)" }}
+            style={{ background: "rgba(172,92,127,0.1)", color: "#ac5c7f", border: "1px solid rgba(172,92,127,0.22)" }}
           >
             <CalendarDays className="h-3.5 w-3.5" />
             קבעי תור
@@ -135,7 +135,7 @@ function ClientCard({
                   className="rounded-full px-3 py-1 text-xs font-medium transition-all"
                   style={
                     selectedOffer === opt.value
-                      ? { background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)", color: "#fff" }
+                      ? { background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)", color: "#fff" }
                       : { background: "var(--background-alt)", color: "var(--muted)", border: "1px solid var(--border)" }
                   }
                 >
@@ -217,7 +217,7 @@ export function BringBackHub({ clients, businessName }: BringBackHubProps) {
         {clients.length > 0 && (
           <span
             className="display-num rounded-full px-2.5 py-0.5 text-sm font-bold"
-            style={{ background: "rgba(184,107,140,0.12)", color: "#b86b8c" }}
+            style={{ background: "rgba(172,92,127,0.12)", color: "#ac5c7f" }}
           >
             {clients.length}
           </span>

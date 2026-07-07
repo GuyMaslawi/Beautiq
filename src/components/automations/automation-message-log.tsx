@@ -31,7 +31,7 @@ const STATUS_STYLE: Record<string, { bg: string; color: string; border: string }
   queued:    { bg: "rgba(59,122,181,0.08)",   color: "#2e5c8a", border: "rgba(59,122,181,0.25)" },
   sent:      { bg: "rgba(61,139,110,0.08)",   color: "#2a6e57", border: "rgba(61,139,110,0.25)" },
   delivered: { bg: "rgba(61,139,110,0.12)",   color: "#1d5240", border: "rgba(61,139,110,0.35)" },
-  read:      { bg: "rgba(184,107,140,0.10)",  color: "#7a3558", border: "rgba(184,107,140,0.30)" },
+  read:      { bg: "rgba(172,92,127,0.10)",  color: "#7a3558", border: "rgba(172,92,127,0.30)" },
   failed:    { bg: "rgba(190,74,74,0.09)",    color: "#8b2e2e", border: "rgba(190,74,74,0.25)" },
   skipped:   { bg: "rgba(148,163,184,0.10)",  color: "#6b7280", border: "rgba(148,163,184,0.25)" },
 };
@@ -117,9 +117,9 @@ export function AutomationMessageLog({ messages }: AutomationMessageLogProps) {
       >
         <div
           className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-2xl"
-          style={{ background: "rgba(184,107,140,0.10)" }}
+          style={{ background: "rgba(172,92,127,0.10)" }}
         >
-          <MessageSquare className="h-5 w-5" style={{ color: "#b86b8c" }} />
+          <MessageSquare className="h-5 w-5" style={{ color: "#ac5c7f" }} />
         </div>
         <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
           עדיין לא נשלחו הודעות
@@ -220,9 +220,9 @@ export function AutomationMessageLog({ messages }: AutomationMessageLogProps) {
                     <span
                       className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
                       style={{
-                        background: "rgba(184,107,140,0.08)",
+                        background: "rgba(172,92,127,0.08)",
                         color: "#8a3d60",
-                        border: "1px solid rgba(184,107,140,0.20)",
+                        border: "1px solid rgba(172,92,127,0.20)",
                       }}
                     >
                       {typeLabel}

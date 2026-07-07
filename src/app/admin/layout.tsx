@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ArrowRight, Sparkles } from "lucide-react";
 import { requirePlatformAdmin } from "@/server/admin/auth";
 import { AdminNav } from "./_components/admin-nav";
 
@@ -10,27 +11,48 @@ export default async function AdminLayout({
   await requirePlatformAdmin();
 
   return (
-    <div dir="rtl" className="min-h-screen" style={{ background: "#f5f5f7" }}>
-      {/* Admin top bar */}
+    <div dir="rtl" className="app-ambient min-h-screen">
+      {/* Admin top bar — dark plum, same language as the app sidebar */}
       <header
-        className="sticky top-0 z-10 flex items-center justify-between border-b px-6 py-3"
+        className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b px-4 py-3 sm:px-6"
         style={{
-          background: "#1a1a2e",
-          borderColor: "rgba(255,255,255,0.08)",
+          background:
+            "linear-gradient(135deg, var(--sidebar-bg-from) 0%, var(--sidebar-bg-mid) 55%, var(--sidebar-bg-to) 100%)",
+          borderColor: "var(--sidebar-border)",
         }}
       >
-        <div className="flex items-center gap-6">
-          <span className="text-base font-bold tracking-tight text-white">
-            Allura Admin
-          </span>
+        <div className="flex min-w-0 items-center gap-3 sm:gap-6">
+          <div className="flex items-center gap-2.5">
+            <span className="brand-chip flex h-8 w-8 shrink-0 items-center justify-center rounded-xl">
+              <Sparkles className="h-4 w-4" />
+            </span>
+            <div className="leading-tight">
+              <span
+                className="block text-sm font-bold tracking-tight"
+                style={{ color: "var(--sidebar-fg)" }}
+              >
+                Allura
+              </span>
+              <span
+                className="eyebrow block"
+                style={{ color: "var(--sidebar-fg-muted)", fontSize: "0.625rem" }}
+              >
+                ניהול מערכת
+              </span>
+            </div>
+          </div>
           <AdminNav />
         </div>
         <Link
           href="/dashboard"
-          className="rounded-full px-3 py-1 text-xs font-medium transition-colors hover:bg-white/10"
-          style={{ color: "rgba(255,255,255,0.55)", border: "1px solid rgba(255,255,255,0.12)" }}
+          className="flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors hover:bg-white/10"
+          style={{
+            color: "var(--sidebar-fg-muted)",
+            borderColor: "var(--sidebar-border)",
+          }}
         >
-          ← חזרה לפלטפורמה
+          חזרה לפלטפורמה
+          <ArrowRight className="h-3.5 w-3.5" />
         </Link>
       </header>
 

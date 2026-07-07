@@ -60,7 +60,7 @@ export function BookingConfirmationCard({
   const saveBtnStyle = {
     background: saved
       ? "linear-gradient(135deg, #3d8b6e 0%, #2d7060 100%)"
-      : "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
+      : "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)",
   };
 
   return (
@@ -74,7 +74,7 @@ export function BookingConfirmationCard({
         }}
       >
         <div className="flex items-center gap-3">
-          <MessageCircle className="h-4 w-4 shrink-0" style={{ color: "#c97898" }} />
+          <MessageCircle className="h-4 w-4 shrink-0" style={{ color: "#c76f93" }} />
           <h3 className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
             אישור תור
           </h3>
@@ -154,8 +154,8 @@ export function BookingConfirmationCard({
               <div
                 className="rounded-xl px-4 py-3"
                 style={{
-                  background: "rgba(201,120,152,0.06)",
-                  border: "1px solid rgba(201,120,152,0.12)",
+                  background: "rgba(199,111,147,0.06)",
+                  border: "1px solid rgba(199,111,147,0.12)",
                 }}
               >
                 <p className="text-sm font-medium leading-relaxed" style={{ color: "var(--foreground)" }}>
@@ -168,7 +168,7 @@ export function BookingConfirmationCard({
 
               {/* requireOptIn toggle */}
               <div className="flex items-start gap-3">
-                <ShieldCheck className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#c97898" }} />
+                <ShieldCheck className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#c76f93" }} />
                 <div className="flex-1">
                   <div className="flex items-center justify-between gap-3">
                     <label className="text-sm font-medium leading-snug" style={{ color: "var(--foreground)" }}>

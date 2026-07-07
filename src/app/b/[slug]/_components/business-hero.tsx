@@ -97,7 +97,7 @@ export function PublicBusinessHeader({
             target="_blank"
             rel="noopener noreferrer"
             aria-label="Instagram"
-            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--border)] bg-white text-[var(--muted)] transition-colors hover:border-pink-300 hover:text-pink-600"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[var(--border)] bg-white text-[var(--muted)] transition-colors hover:border-[var(--primary)] hover:text-[var(--primary)]"
           >
             <InstagramIcon className="h-4 w-4" />
           </a>

@@ -58,14 +58,7 @@ export function AutomationsSection({
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
       {/* Reassuring "active" card — spans two columns on desktop */}
-      <div
-        className="flex flex-col gap-3 rounded-2xl p-5 sm:col-span-2"
-        style={{
-          background: "var(--surface)",
-          border: "1px solid var(--border)",
-          boxShadow: "var(--shadow-sm)",
-        }}
-      >
+      <div className="aura-card flex flex-col gap-3 rounded-[1.4rem] p-5 sm:col-span-2">
         <div className="flex items-center gap-2.5">
           <span
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
@@ -113,19 +106,12 @@ export function AutomationsSection({
       </div>
 
       {/* Recent activity — read-only */}
-      <div
-        className="flex flex-col gap-2.5 rounded-2xl p-5"
-        style={{
-          background: "var(--surface)",
-          border: "1px solid var(--border)",
-          boxShadow: "var(--shadow-sm)",
-        }}
-      >
+      <div className="aura-card flex flex-col gap-2.5 rounded-[1.4rem] p-5">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium" style={{ color: "var(--foreground-soft)" }}>
             פעילות אחרונה
           </span>
-          <Activity className="h-4 w-4" style={{ color: "#b86b8c" }} />
+          <Activity className="h-4 w-4" style={{ color: "var(--primary)" }} />
         </div>
         <p className="text-sm font-bold leading-snug" style={{ color: "var(--foreground)" }}>
           {activityValue}

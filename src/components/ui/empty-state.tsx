@@ -17,7 +17,7 @@ export function EmptyState({ title, body, cta, ctaHref, icon }: EmptyStateProps)
       style={{
         background:
           "linear-gradient(135deg, rgba(253,240,247,0.7) 0%, rgba(243,238,246,0.5) 35%, rgba(255,255,255,1) 75%)",
-        border: "1px solid rgba(184,107,140,0.14)",
+        border: "1px solid rgba(172,92,127,0.14)",
         boxShadow: "0 4px 18px rgba(124,58,97,0.07)",
       }}
     >
@@ -32,7 +32,7 @@ export function EmptyState({ title, body, cta, ctaHref, icon }: EmptyStateProps)
           height: 200,
           borderRadius: "50%",
           background:
-            "radial-gradient(circle, rgba(201,120,152,0.10) 0%, transparent 70%)",
+            "radial-gradient(circle, rgba(199,111,147,0.10) 0%, transparent 70%)",
           filter: "blur(30px)",
         }}
       />
@@ -43,19 +43,19 @@ export function EmptyState({ title, body, cta, ctaHref, icon }: EmptyStateProps)
           className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl"
           style={{
             background:
-              "linear-gradient(135deg, rgba(201,120,152,0.13) 0%, rgba(184,107,140,0.18) 100%)",
-            border: "1px solid rgba(184,107,140,0.18)",
-            boxShadow: "0 2px 12px rgba(184,107,140,0.10)",
+              "linear-gradient(135deg, rgba(199,111,147,0.13) 0%, rgba(172,92,127,0.18) 100%)",
+            border: "1px solid rgba(172,92,127,0.18)",
+            boxShadow: "0 2px 12px rgba(172,92,127,0.10)",
           }}
         >
           {icon ?? (
-            <span className="text-2xl" aria-hidden style={{ color: "#b86b8c" }}>
+            <span className="text-2xl" aria-hidden style={{ color: "#ac5c7f" }}>
               ✦
             </span>
           )}
         </div>
 
-        <h2 className="text-foreground text-lg font-bold tracking-tight">{title}</h2>
+        <h2 className="font-display text-foreground text-lg font-semibold tracking-tight">{title}</h2>
         <p className="text-muted mx-auto mt-3 max-w-xs text-sm leading-7">{body}</p>
 
         {cta && ctaHref && (

@@ -111,7 +111,7 @@ export function MorningReminderCard({ setting, sentThisMonth, lastRun, realSendC
   const saveBtnStyle = {
     background: saved
       ? "linear-gradient(135deg, #3d8b6e 0%, #2d7060 100%)"
-      : "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
+      : "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)",
   };
 
   const previewBubble = (
@@ -252,8 +252,8 @@ export function MorningReminderCard({ setting, sentThisMonth, lastRun, realSendC
                   <div
                     className="rounded-xl px-4 py-3"
                     style={{
-                      background: "rgba(201,120,152,0.06)",
-                      border: "1px solid rgba(201,120,152,0.12)",
+                      background: "rgba(199,111,147,0.06)",
+                      border: "1px solid rgba(199,111,147,0.12)",
                     }}
                   >
                     <p className="text-sm font-medium leading-relaxed" style={{ color: "var(--foreground)" }}>
@@ -278,7 +278,7 @@ export function MorningReminderCard({ setting, sentThisMonth, lastRun, realSendC
                           className="w-full text-right rounded-xl px-4 py-2.5 text-sm font-medium transition-all flex items-center gap-3"
                           style={
                             selectedTiming === option.id
-                              ? { background: "rgba(201,120,152,0.08)", border: "2px solid #c97898", color: "var(--foreground)" }
+                              ? { background: "rgba(199,111,147,0.08)", border: "2px solid #c76f93", color: "var(--foreground)" }
                               : { background: "var(--background-alt)", border: "2px solid transparent", color: "var(--muted)" }
                           }
                         >
@@ -286,7 +286,7 @@ export function MorningReminderCard({ setting, sentThisMonth, lastRun, realSendC
                             className="h-4 w-4 rounded-full border-2 flex-shrink-0"
                             style={
                               selectedTiming === option.id
-                                ? { borderColor: "#c97898", background: "#c97898" }
+                                ? { borderColor: "#c76f93", background: "#c76f93" }
                                 : { borderColor: "var(--border)", background: "transparent" }
                             }
                           />
@@ -330,7 +330,7 @@ export function MorningReminderCard({ setting, sentThisMonth, lastRun, realSendC
                       <div className="mt-3 space-y-4 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
                         {/* requireOptIn toggle */}
                         <div className="flex items-start gap-3">
-                          <ShieldCheck className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#c97898" }} />
+                          <ShieldCheck className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#c76f93" }} />
                           <div className="flex-1">
                             <div className="flex items-center justify-between gap-3">
                               <label className="text-sm font-medium leading-snug" style={{ color: "var(--foreground)" }}>
@@ -398,7 +398,7 @@ export function MorningReminderCard({ setting, sentThisMonth, lastRun, realSendC
                             type="button"
                             onClick={() => setEditingMessage(true)}
                             className="flex items-center gap-1.5 text-xs transition-opacity hover:opacity-70"
-                            style={{ color: "#c97898" }}
+                            style={{ color: "#c76f93" }}
                           >
                             <Pencil className="h-3 w-3" />
                             עריכת נוסח ההודעה

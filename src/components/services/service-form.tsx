@@ -105,9 +105,9 @@ function SectionCard({
       <div className="mb-4 flex items-center gap-2.5">
         <div
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
-          style={{ background: "rgba(184,107,140,0.10)" }}
+          style={{ background: "rgba(172,92,127,0.10)" }}
         >
-          <Icon className="h-4 w-4" style={{ color: "#b86b8c" }} />
+          <Icon className="h-4 w-4" style={{ color: "#ac5c7f" }} />
         </div>
         <div>
           <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
@@ -344,9 +344,9 @@ export function ServiceForm({
           <div className="flex items-center gap-2.5">
             <div
               className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
-              style={{ background: "rgba(184,107,140,0.10)" }}
+              style={{ background: "rgba(172,92,127,0.10)" }}
             >
-              <ToggleLeft className="h-4 w-4" style={{ color: "#b86b8c" }} />
+              <ToggleLeft className="h-4 w-4" style={{ color: "#ac5c7f" }} />
             </div>
             <div>
               <p className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
@@ -389,9 +389,9 @@ export function ServiceForm({
           disabled={isPending}
           className="flex h-11 cursor-pointer items-center gap-2 rounded-xl px-6 text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-60"
           style={{
-            background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
+            background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)",
             color: "#fff",
-            boxShadow: "0 2px 8px rgba(184,107,140,0.30)",
+            boxShadow: "0 2px 8px rgba(172,92,127,0.30)",
           }}
         >
           <Save className="h-4 w-4" />

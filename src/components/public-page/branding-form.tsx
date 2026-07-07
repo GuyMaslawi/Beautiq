@@ -92,20 +92,20 @@ function ImageUploadZone({
         </div>
       ) : (
         <div
-          className="relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-[var(--border)] bg-[var(--surface)] p-8 cursor-pointer hover:border-[#b86b8c]/50 hover:bg-[#b86b8c]/5 transition-colors"
+          className="relative flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-[var(--border)] bg-[var(--surface)] p-8 cursor-pointer hover:border-[#ac5c7f]/50 hover:bg-[#ac5c7f]/5 transition-colors"
           onClick={() => inputRef.current?.click()}
           onDragOver={(e) => e.preventDefault()}
           onDrop={handleDrop}
         >
           {uploading ? (
             <div className="flex flex-col items-center gap-2">
-              <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#b86b8c] border-t-transparent" />
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#ac5c7f] border-t-transparent" />
               <span className="text-sm text-[var(--muted)]">מעלה תמונה…</span>
             </div>
           ) : (
             <>
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#b86b8c]/10">
-                <ImageIcon className="h-6 w-6 text-[#b86b8c]" />
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[#ac5c7f]/10">
+                <ImageIcon className="h-6 w-6 text-[#ac5c7f]" />
               </div>
               <div className="text-center">
                 <p className="text-sm font-medium text-[var(--foreground)]">
@@ -152,7 +152,7 @@ export function BrandingForm({
   const [fields, setFields] = useState({
     logoUrl: initialValues.logoUrl ?? "",
     coverImageUrl: initialValues.coverImageUrl ?? "",
-    brandColor: initialValues.brandColor ?? "#b86b8c",
+    brandColor: initialValues.brandColor ?? "#ac5c7f",
   });
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
@@ -257,7 +257,7 @@ export function BrandingForm({
           <button
             type="button"
             onClick={() =>
-              setFields((prev) => ({ ...prev, brandColor: "#b86b8c" }))
+              setFields((prev) => ({ ...prev, brandColor: "#ac5c7f" }))
             }
             className="text-xs text-[var(--muted)] underline hover:opacity-75"
           >

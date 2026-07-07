@@ -210,8 +210,8 @@ export function WinBackAutomationCard({ setting, lastRun, realSendConfigured = f
                   <div
                     className="rounded-xl px-4 py-3"
                     style={{
-                      background: "rgba(201,120,152,0.06)",
-                      border: "1px solid rgba(201,120,152,0.12)",
+                      background: "rgba(199,111,147,0.06)",
+                      border: "1px solid rgba(199,111,147,0.12)",
                     }}
                   >
                     <p className="text-sm font-medium leading-relaxed" style={{ color: "var(--foreground)" }}>

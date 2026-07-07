@@ -93,9 +93,9 @@ export function ReminderSettingsForm({
                     active
                       ? {
                           background:
-                            "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
+                            "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)",
                           color: "#fff",
-                          boxShadow: "0 2px 8px rgba(184,107,140,0.30)",
+                          boxShadow: "0 2px 8px rgba(172,92,127,0.30)",
                         }
                       : {
                           background: "var(--background-alt)",
@@ -118,9 +118,9 @@ export function ReminderSettingsForm({
                 isCustom
                   ? {
                       background:
-                        "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
+                        "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)",
                       color: "#fff",
-                      boxShadow: "0 2px 8px rgba(184,107,140,0.30)",
+                      boxShadow: "0 2px 8px rgba(172,92,127,0.30)",
                     }
                   : {
                       background: "var(--background-alt)",
@@ -183,9 +183,9 @@ export function ReminderSettingsForm({
                 onClick={() => insertVariable(chip)}
                 className="rounded-full px-2.5 py-0.5 text-xs font-medium transition-opacity hover:opacity-80"
                 style={{
-                  background: "rgba(184,107,140,0.10)",
-                  color: "#b86b8c",
-                  border: "1px solid rgba(184,107,140,0.20)",
+                  background: "rgba(172,92,127,0.10)",
+                  color: "#ac5c7f",
+                  border: "1px solid rgba(172,92,127,0.20)",
                 }}
               >
                 {chip}
@@ -218,8 +218,8 @@ export function ReminderSettingsForm({
             disabled={isPending}
             className="rounded-xl px-5 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
             style={{
-              background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
-              boxShadow: "0 2px 8px rgba(184,107,140,0.28)",
+              background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)",
+              boxShadow: "0 2px 8px rgba(172,92,127,0.28)",
             }}
           >
             {isPending ? c.saving : c.saveButton}

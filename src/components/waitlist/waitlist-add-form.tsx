@@ -58,7 +58,7 @@ export function WaitlistAddForm({
         <button
           onClick={() => setOpen((v) => !v)}
           className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90"
-          style={{ background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)" }}
+          style={{ background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)" }}
         >
           {open ? <X className="h-4 w-4" /> : <Plus className="h-4 w-4" />}
           {open ? WAITLIST.actions.closeMessage : WAITLIST.actions.add}
@@ -169,7 +169,7 @@ export function WaitlistAddForm({
               type="submit"
               disabled={isPending}
               className="inline-flex items-center gap-2 rounded-xl px-6 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-              style={{ background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)" }}
+              style={{ background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)" }}
             >
               <Plus className="h-4 w-4" />
               {isPending ? WAITLIST.form.submitting : WAITLIST.form.submit}

@@ -45,7 +45,7 @@ export function BookingSearchInput({ initialValue, otherParams }: BookingSearchI
           borderColor: "var(--border)",
           background: "var(--surface)",
           color: "var(--foreground)",
-          "--tw-ring-color": "rgba(184,107,140,0.40)",
+          "--tw-ring-color": "rgba(172,92,127,0.40)",
         } as React.CSSProperties}
       />
     </div>

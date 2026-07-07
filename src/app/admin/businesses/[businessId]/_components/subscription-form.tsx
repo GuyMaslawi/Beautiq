@@ -100,10 +100,10 @@ export function SubscriptionForm({ businessId, subscription }: Props) {
   }
 
   const inputClass =
-    "w-full rounded-xl border px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-[#1a1a2e]/15";
-  const inputStyle = { borderColor: "rgba(0,0,0,0.12)", background: "#fff", color: "#1a1a2e" };
-  const labelClass = "block text-xs font-semibold mb-1";
-  const labelStyle = { color: "#555" };
+    "w-full rounded-xl border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-light hover:border-border-strong focus:border-primary focus:ring-2 focus:ring-primary/20";
+  const inputStyle = {};
+  const labelClass = "block text-xs font-semibold mb-1 text-muted";
+  const labelStyle = {};
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
@@ -274,12 +274,18 @@ export function SubscriptionForm({ businessId, subscription }: Props) {
 
       {/* Feedback */}
       {success && (
-        <p className="rounded-xl bg-green-50 px-4 py-2.5 text-sm font-medium text-green-700">
-          ✓ השינויים נשמרו בהצלחה
+        <p
+          className="rounded-xl px-4 py-2.5 text-sm font-medium"
+          style={{ background: "var(--success-light)", color: "var(--success)" }}
+        >
+          השינויים נשמרו בהצלחה
         </p>
       )}
       {error && (
-        <p className="rounded-xl bg-red-50 px-4 py-2.5 text-sm font-medium text-red-700">
+        <p
+          className="rounded-xl px-4 py-2.5 text-sm font-medium"
+          style={{ background: "var(--error-light)", color: "var(--error)" }}
+        >
           {error}
         </p>
       )}
@@ -287,8 +293,7 @@ export function SubscriptionForm({ businessId, subscription }: Props) {
       <button
         type="submit"
         disabled={isPending}
-        className="rounded-xl px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-        style={{ background: "#1a1a2e" }}
+        className="bg-brand-gradient rounded-xl px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60"
       >
         {isPending ? "שומר..." : "שמור שינויים"}
       </button>

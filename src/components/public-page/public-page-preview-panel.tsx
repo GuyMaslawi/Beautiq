@@ -40,8 +40,8 @@ export function PublicPagePreviewPanel({ slug }: PublicPagePreviewPanelProps) {
               onClick={() => setMode("mobile")}
               className="flex h-8 items-center gap-1.5 px-3 text-xs font-medium transition-colors"
               style={{
-                background: mode === "mobile" ? "rgba(184,107,140,0.10)" : "transparent",
-                color: mode === "mobile" ? "#b86b8c" : "var(--foreground-soft)",
+                background: mode === "mobile" ? "rgba(172,92,127,0.10)" : "transparent",
+                color: mode === "mobile" ? "#ac5c7f" : "var(--foreground-soft)",
               }}
             >
               <Smartphone className="h-3.5 w-3.5" />
@@ -52,8 +52,8 @@ export function PublicPagePreviewPanel({ slug }: PublicPagePreviewPanelProps) {
               className="flex h-8 items-center gap-1.5 border-r px-3 text-xs font-medium transition-colors"
               style={{
                 borderColor: "var(--border)",
-                background: mode === "desktop" ? "rgba(184,107,140,0.10)" : "transparent",
-                color: mode === "desktop" ? "#b86b8c" : "var(--foreground-soft)",
+                background: mode === "desktop" ? "rgba(172,92,127,0.10)" : "transparent",
+                color: mode === "desktop" ? "#ac5c7f" : "var(--foreground-soft)",
               }}
             >
               <Monitor className="h-3.5 w-3.5" />
@@ -117,7 +117,7 @@ export function PublicPagePreviewPanel({ slug }: PublicPagePreviewPanelProps) {
                 <div className="h-3 w-3 rounded-full bg-green-400" />
               </div>
               <div
-                className="flex flex-1 items-center justify-center h-6 rounded-md px-3 text-xs font-mono max-w-sm mx-auto"
+                className="mx-auto h-6 min-w-0 max-w-sm flex-1 truncate rounded-md px-3 text-center font-mono text-xs leading-6"
                 style={{
                   background: "rgba(43,37,48,0.06)",
                   color: "var(--muted)",

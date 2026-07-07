@@ -210,7 +210,7 @@ export function BookingActionsMenu({
             style={{
               borderColor: "var(--border)",
               color: "var(--muted)",
-              ["--tw-ring-color" as string]: "#b86b8c",
+              ["--tw-ring-color" as string]: "#ac5c7f",
             }}
           >
             {isCompact ? (

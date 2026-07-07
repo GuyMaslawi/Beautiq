@@ -13,6 +13,8 @@ import type { AdminClientListItem } from "@/server/admin/client-queries";
 
 const CONFIRM_WORD = "מחיקה";
 
+const ERROR_BORDER = "color-mix(in srgb, var(--error) 30%, transparent)";
+
 function formatDate(date: Date): string {
   return new Date(date).toLocaleDateString("he-IL", {
     day: "numeric",
@@ -74,14 +76,18 @@ export function AdminClientsTable({ clients, isTestMode }: Props) {
       {successMessage && (
         <div
           className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm font-medium"
-          style={{ background: "#ecfdf5", color: "#15803d", border: "1px solid #a7f3d0" }}
+          style={{
+            background: "var(--success-light)",
+            color: "var(--success)",
+            border: "1px solid color-mix(in srgb, var(--success) 25%, transparent)",
+          }}
         >
           <span>{successMessage}</span>
           <button
             type="button"
             onClick={() => setSuccessMessage(null)}
             className="rounded-full p-1 transition-opacity hover:opacity-70"
-            style={{ color: "#15803d" }}
+            style={{ color: "var(--success)" }}
           >
             <X className="h-4 w-4" />
           </button>
@@ -92,23 +98,27 @@ export function AdminClientsTable({ clients, isTestMode }: Props) {
       {someSelected && (
         <div
           className="flex flex-wrap items-center justify-between gap-3 rounded-xl px-4 py-3"
-          style={{ background: "#1a1a2e", color: "#fff" }}
+          style={{
+            background:
+              "linear-gradient(135deg, var(--sidebar-bg-from) 0%, var(--sidebar-bg-mid) 55%, var(--sidebar-bg-to) 100%)",
+            color: "var(--sidebar-fg)",
+          }}
         >
           <span className="text-sm font-medium">{selected.size} לקוחות נבחרו</span>
           <div className="flex items-center gap-2">
             <button
               type="button"
               onClick={clearSelection}
-              className="rounded-lg px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-80"
-              style={{ background: "rgba(255,255,255,0.12)", color: "#fff" }}
+              className="rounded-xl px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-80"
+              style={{ background: "var(--sidebar-active-bg)", color: "var(--sidebar-fg)" }}
             >
               ניקוי בחירה
             </button>
             <button
               type="button"
               onClick={() => setConfirmIds([...selected])}
-              className="rounded-lg px-3 py-1.5 text-xs font-semibold transition-opacity hover:opacity-90"
-              style={{ background: "#dc2626", color: "#fff" }}
+              className="rounded-xl px-3 py-1.5 text-xs font-semibold text-white transition-opacity hover:opacity-90"
+              style={{ background: "linear-gradient(135deg, #c85a5a 0%, var(--error) 100%)" }}
             >
               מחיקת לקוחות נבחרים
             </button>
@@ -116,23 +126,11 @@ export function AdminClientsTable({ clients, isTestMode }: Props) {
         </div>
       )}
 
-      <div
-        className="overflow-hidden rounded-2xl border"
-        style={{
-          background: "#fff",
-          borderColor: "rgba(0,0,0,0.07)",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-        }}
-      >
+      <div className="aura-card overflow-hidden rounded-2xl">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
-            <thead>
-              <tr
-                style={{
-                  borderBottom: "1px solid rgba(0,0,0,0.07)",
-                  background: "#f9f9fb",
-                }}
-              >
+            <thead className="[&_tr]:border-b [&_tr]:border-border [&_tr]:bg-primary-light/40">
+              <tr>
                 <th className="px-4 py-3 text-center">
                   <input
                     type="checkbox"
@@ -140,15 +138,14 @@ export function AdminClientsTable({ clients, isTestMode }: Props) {
                     onChange={toggleAll}
                     aria-label="בחירת כל הלקוחות"
                     className="h-4 w-4 cursor-pointer rounded"
-                    style={{ accentColor: "#1a1a2e" }}
+                    style={{ accentColor: "var(--primary)" }}
                   />
                 </th>
                 {["שם לקוחה", "טלפון", "אימייל", "עסק", "WhatsApp", "שיווק", "ביקור אחרון", "הצטרפה", "", "", ""].map(
                   (col, i) => (
                     <th
                       key={`${col}-${i}`}
-                      className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wide whitespace-nowrap"
-                      style={{ color: "#888" }}
+                      className="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider whitespace-nowrap text-muted"
                     >
                       {col}
                     </th>
@@ -162,10 +159,9 @@ export function AdminClientsTable({ clients, isTestMode }: Props) {
                 return (
                   <tr
                     key={client.id}
-                    className="transition-colors hover:bg-gray-50"
+                    className="border-b border-border transition-colors hover:bg-primary-light/50"
                     style={{
-                      borderBottom: "1px solid rgba(0,0,0,0.05)",
-                      background: isChecked ? "rgba(220,38,38,0.04)" : undefined,
+                      background: isChecked ? "var(--error-light)" : undefined,
                     }}
                   >
                     <td className="px-4 py-3 text-center">
@@ -175,31 +171,31 @@ export function AdminClientsTable({ clients, isTestMode }: Props) {
                         onChange={() => toggleOne(client.id)}
                         aria-label={`בחירת ${client.fullName}`}
                         className="h-4 w-4 cursor-pointer rounded"
-                        style={{ accentColor: "#1a1a2e" }}
+                        style={{ accentColor: "var(--primary)" }}
                       />
                     </td>
-                    <td className="px-4 py-3 font-medium whitespace-nowrap" style={{ color: "#1a1a2e" }}>
+                    <td className="px-4 py-3 font-medium whitespace-nowrap text-foreground">
                       {client.fullName}
                       {client.unsubscribedAt && (
                         <span
                           className="mr-2 rounded-full px-1.5 py-0.5 text-xs"
-                          style={{ background: "#fef3c7", color: "#92400e" }}
+                          style={{ background: "var(--warning-light)", color: "var(--warning)" }}
                         >
                           הסירה עצמה
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap" dir="ltr" style={{ color: "#444", textAlign: "left" }}>
+                    <td className="px-4 py-3 whitespace-nowrap text-left text-foreground-soft" dir="ltr">
                       {client.phone}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap" dir="ltr" style={{ color: "#666", textAlign: "left" }}>
-                      {client.email ?? <span style={{ color: "#bbb" }}>—</span>}
+                    <td className="px-4 py-3 whitespace-nowrap text-left text-muted" dir="ltr">
+                      {client.email ?? <span className="text-muted-light">—</span>}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <Link
                         href={`/admin/businesses/${client.businessId}`}
-                        className="hover:underline text-xs font-medium"
-                        style={{ color: "#0284c7" }}
+                        className="text-xs font-medium hover:underline"
+                        style={{ color: "var(--info)" }}
                       >
                         {client.businessName}
                       </Link>
@@ -210,10 +206,10 @@ export function AdminClientsTable({ clients, isTestMode }: Props) {
                     <td className="px-4 py-3 text-center">
                       <OptInDot active={client.marketingOptIn} />
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-xs" style={{ color: "#666" }}>
-                      {client.lastBookingAt ? formatDate(client.lastBookingAt) : <span style={{ color: "#bbb" }}>—</span>}
+                    <td className="px-4 py-3 whitespace-nowrap text-xs text-muted">
+                      {client.lastBookingAt ? formatDate(client.lastBookingAt) : <span className="text-muted-light">—</span>}
                     </td>
-                    <td className="px-4 py-3 whitespace-nowrap text-xs" style={{ color: "#888" }}>
+                    <td className="px-4 py-3 whitespace-nowrap text-xs text-muted">
                       {formatDate(client.createdAt)}
                     </td>
                     <td className="px-4 py-3">
@@ -227,8 +223,12 @@ export function AdminClientsTable({ clients, isTestMode }: Props) {
                         trigger={
                           <button
                             type="button"
-                            className="rounded-lg px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-80 whitespace-nowrap"
-                            style={{ background: "rgba(22,163,74,0.10)", color: "#15803d", border: "1px solid rgba(22,163,74,0.25)" }}
+                            className="whitespace-nowrap rounded-xl px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-80"
+                            style={{
+                              background: "var(--success-light)",
+                              color: "var(--success)",
+                              border: "1px solid color-mix(in srgb, var(--success) 25%, transparent)",
+                            }}
                           >
                             שליחת WhatsApp
                           </button>
@@ -253,8 +253,12 @@ export function AdminClientsTable({ clients, isTestMode }: Props) {
                       <button
                         type="button"
                         onClick={() => setConfirmIds([client.id])}
-                        className="rounded-lg px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-80 whitespace-nowrap"
-                        style={{ background: "rgba(220,38,38,0.08)", color: "#b91c1c", border: "1px solid rgba(220,38,38,0.25)" }}
+                        className="whitespace-nowrap rounded-xl px-3 py-1.5 text-xs font-medium transition-opacity hover:opacity-80"
+                        style={{
+                          background: "var(--error-light)",
+                          color: "var(--error)",
+                          border: `1px solid ${ERROR_BORDER}`,
+                        }}
                       >
                         מחיקה
                       </button>
@@ -265,14 +269,7 @@ export function AdminClientsTable({ clients, isTestMode }: Props) {
             </tbody>
           </table>
         </div>
-        <div
-          className="px-4 py-3 text-xs"
-          style={{
-            borderTop: "1px solid rgba(0,0,0,0.05)",
-            background: "#fafafa",
-            color: "#888",
-          }}
-        >
+        <div className="border-t border-border bg-background-alt/50 px-4 py-3 text-xs text-muted">
           מציג {clients.length} לקוחות
         </div>
       </div>
@@ -324,76 +321,73 @@ function DeleteClientsModal({
     <>
       <div className="fixed inset-0 z-50 bg-black/40" onClick={onClose} />
       <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4">
-        <div
-          className="relative w-full sm:max-w-md flex flex-col rounded-t-2xl sm:rounded-2xl overflow-hidden max-h-[90dvh]"
-          style={{ background: "#fff" }}
-        >
+        <div className="relative flex max-h-[90dvh] w-full flex-col overflow-hidden rounded-t-2xl bg-surface sm:max-w-md sm:rounded-2xl">
           {/* Header */}
-          <div
-            className="flex shrink-0 items-center justify-between px-5 py-4"
-            style={{ borderBottom: "1px solid rgba(0,0,0,0.08)" }}
-          >
-            <h2 className="text-base font-bold" style={{ color: "#b91c1c" }}>
+          <div className="flex shrink-0 items-center justify-between border-b border-border px-5 py-4">
+            <h2 className="text-base font-bold" style={{ color: "var(--error)" }}>
               מחיקת לקוחות
             </h2>
             <button
               type="button"
               onClick={onClose}
-              className="rounded-full p-1.5 transition-opacity hover:opacity-70"
-              style={{ color: "#888" }}
+              className="rounded-full p-1.5 text-muted transition-opacity hover:opacity-70"
             >
               <X className="h-4 w-4" />
             </button>
           </div>
 
           {/* Body */}
-          <div className="flex-1 overflow-y-auto min-h-0 p-5 space-y-4">
-            <p className="text-sm leading-6" style={{ color: "#444" }}>
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-5">
+            <p className="text-sm leading-6 text-foreground-soft">
               הפעולה תמחק את הלקוחות שנבחרו ואת המידע המקושר אליהם. לא ניתן לשחזר פעולה זו.
             </p>
 
             <div
               className="rounded-xl px-4 py-3 text-sm"
-              style={{ background: "#fef2f2", border: "1px solid #fecaca", color: "#7f1d1d" }}
+              style={{
+                background: "var(--error-light)",
+                border: `1px solid ${ERROR_BORDER}`,
+                color: "var(--error)",
+              }}
             >
               <p className="font-semibold">
                 נבחרו {clients.length} לקוחות למחיקה
               </p>
               {!multiBusiness && businessNames[0] && (
-                <p className="mt-1 text-xs" style={{ color: "#9b2c2c" }}>
-                  עסק: {businessNames[0]}
-                </p>
+                <p className="mt-1 text-xs opacity-80">עסק: {businessNames[0]}</p>
               )}
             </div>
 
             {multiBusiness && (
               <div
                 className="rounded-xl px-4 py-3 text-xs font-medium"
-                style={{ background: "#fffbeb", border: "1px solid #fde68a", color: "#92400e" }}
+                style={{
+                  background: "var(--warning-light)",
+                  border: "1px solid color-mix(in srgb, var(--warning) 30%, transparent)",
+                  color: "var(--warning)",
+                }}
               >
                 שימו לב: הלקוחות שנבחרו שייכים למספר עסקים ({businessNames.join(", ")}). המחיקה תתבצע בכל העסקים האלה.
               </div>
             )}
 
             <div className="space-y-1">
-              <p className="text-xs font-semibold" style={{ color: "#555" }}>
-                הלקוחות שיימחקו:
-              </p>
-              <ul className="space-y-0.5 text-xs" style={{ color: "#666" }}>
+              <p className="text-xs font-semibold text-muted">הלקוחות שיימחקו:</p>
+              <ul className="space-y-0.5 text-xs text-muted">
                 {namesPreview.map((c) => (
                   <li key={c.id} className="flex items-center justify-between gap-3">
-                    <span style={{ color: "#1a1a2e" }}>{c.fullName}</span>
-                    <span style={{ color: "#999" }}>{c.businessName}</span>
+                    <span className="text-foreground">{c.fullName}</span>
+                    <span className="text-muted-light">{c.businessName}</span>
                   </li>
                 ))}
                 {remaining > 0 && (
-                  <li style={{ color: "#999" }}>ועוד {remaining} לקוחות…</li>
+                  <li className="text-muted-light">ועוד {remaining} לקוחות…</li>
                 )}
               </ul>
             </div>
 
             <div className="space-y-1.5">
-              <label className="block text-xs font-semibold" style={{ color: "#555" }}>
+              <label className="block text-xs font-semibold text-muted">
                 להמשך, הקלידו את המילה «{CONFIRM_WORD}»
               </label>
               <input
@@ -402,26 +396,26 @@ function DeleteClientsModal({
                 onChange={(e) => setConfirmText(e.target.value)}
                 placeholder={CONFIRM_WORD}
                 autoFocus
-                className="w-full rounded-lg border px-3 py-2 text-sm outline-none transition focus:ring-2"
-                style={{ borderColor: "rgba(0,0,0,0.12)", background: "#f9f9fb", color: "#1a1a2e" }}
+                className="w-full rounded-xl border border-border bg-background-alt px-3 py-2 text-sm text-foreground outline-none transition placeholder:text-muted-light focus:border-primary focus:ring-2 focus:ring-primary/20"
               />
             </div>
 
             {error && (
-              <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-700">{error}</p>
+              <p
+                className="rounded-lg px-3 py-2 text-xs"
+                style={{ background: "var(--error-light)", color: "var(--error)" }}
+              >
+                {error}
+              </p>
             )}
           </div>
 
           {/* Actions */}
-          <div
-            className="flex shrink-0 items-center justify-end gap-3 px-5 py-4"
-            style={{ borderTop: "1px solid rgba(0,0,0,0.08)" }}
-          >
+          <div className="flex shrink-0 items-center justify-end gap-3 border-t border-border px-5 py-4">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-lg px-4 py-2 text-sm font-medium transition-opacity hover:opacity-80"
-              style={{ color: "#555", background: "#f3f4f6", border: "1px solid rgba(0,0,0,0.1)" }}
+              className="rounded-xl border border-border bg-background-alt px-4 py-2 text-sm font-medium text-muted transition-opacity hover:opacity-80"
             >
               ביטול
             </button>
@@ -429,8 +423,11 @@ function DeleteClientsModal({
               type="button"
               onClick={handleConfirm}
               disabled={!canConfirm || isPending}
-              className="rounded-lg px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
-              style={{ background: "#dc2626" }}
+              className="rounded-xl px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+              style={{
+                background: "linear-gradient(135deg, #c85a5a 0%, var(--error) 100%)",
+                boxShadow: "0 1px 4px rgba(190,74,74,0.20)",
+              }}
             >
               {isPending ? "מוחק…" : "כן, למחוק"}
             </button>
@@ -445,7 +442,7 @@ function OptInDot({ active }: { active: boolean }) {
   return (
     <span
       className="inline-block h-2.5 w-2.5 rounded-full"
-      style={{ background: active ? "#16a34a" : "#e5e7eb" }}
+      style={{ background: active ? "var(--success)" : "var(--border-strong)" }}
       title={active ? "כן" : "לא"}
     />
   );

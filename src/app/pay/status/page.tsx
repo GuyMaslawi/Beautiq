@@ -9,6 +9,7 @@
  */
 
 import Link from "next/link";
+import { CheckCircle2, AlertTriangle, Clock } from "lucide-react";
 import { prisma } from "@/server/db/prisma";
 import { PAYMENTS } from "@/lib/constants/he";
 
@@ -58,26 +59,41 @@ export default async function PaymentStatusPage({
       : view === "failure"
         ? copy.failureBody
         : copy.pendingBody;
-  const emoji = view === "success" ? "✅" : view === "failure" ? "⚠️" : "⏳";
+  const StatusIcon =
+    view === "success" ? CheckCircle2 : view === "failure" ? AlertTriangle : Clock;
+  const iconStyles =
+    view === "success"
+      ? { background: "rgba(61,139,110,0.12)", color: "#3d8b6e" }
+      : view === "failure"
+        ? { background: "rgba(217,119,6,0.12)", color: "#b45309" }
+        : {
+            background: "var(--brand-gradient-soft)",
+            color: "var(--primary)",
+          };
   const slug = payment?.business.slug;
 
   return (
     <main
-      className="flex min-h-screen items-center justify-center bg-[var(--background)] p-6"
+      className="app-ambient flex min-h-screen items-center justify-center p-6"
       dir="rtl"
     >
-      <div className="w-full max-w-sm space-y-6 rounded-3xl border border-[var(--border)] bg-white p-8 text-center shadow-sm">
-        <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-[var(--background)] text-4xl">
-          {emoji}
+      <div className="aura-card w-full max-w-sm space-y-6 rounded-[1.75rem] p-8 text-center">
+        <div
+          className="mx-auto flex h-20 w-20 items-center justify-center rounded-full"
+          style={iconStyles}
+        >
+          <StatusIcon className="h-9 w-9" strokeWidth={1.8} />
         </div>
         <div className="space-y-2">
-          <h1 className="text-xl font-bold text-[var(--foreground)]">{title}</h1>
+          <h1 className="font-display text-xl font-semibold tracking-tight text-[var(--foreground)]">
+            {title}
+          </h1>
           <p className="text-sm leading-relaxed text-[var(--muted)]">{body}</p>
         </div>
         {slug && (
           <Link
             href={`/b/${slug}`}
-            className="inline-flex w-full items-center justify-center rounded-2xl border-2 border-[var(--primary)] py-3 text-sm font-bold text-[var(--primary)] transition-all hover:opacity-90"
+            className="inline-flex min-h-[48px] w-full items-center justify-center rounded-2xl border-2 border-[var(--primary)] bg-white py-3 text-sm font-bold text-[var(--primary)] transition-all hover:bg-[var(--primary)] hover:text-white"
           >
             {copy.backToBusiness}
           </Link>

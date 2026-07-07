@@ -248,7 +248,7 @@ export default async function BookingDetailPage({
             <div className="flex items-center justify-end gap-4">
               <span
                 className="rounded-full px-2.5 py-1 text-xs font-medium"
-                style={{ background: "rgba(184,107,140,0.08)", color: "#b86b8c" }}
+                style={{ background: "rgba(172,92,127,0.08)", color: "#ac5c7f" }}
               >
                 {BOOKINGS.detail.sourcePublic}
               </span>

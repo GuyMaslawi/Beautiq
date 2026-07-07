@@ -67,17 +67,17 @@ export default async function PricingPage() {
           className="rounded-2xl px-5 py-4 transition-shadow hover:shadow-md"
           style={{
             background: summary.activeServicesCount > 0 ? "rgba(247,238,243,0.85)" : "rgba(255,255,255,0.90)",
-            border: `1px solid ${summary.activeServicesCount > 0 ? "rgba(184,107,140,0.22)" : "var(--border)"}`,
+            border: `1px solid ${summary.activeServicesCount > 0 ? "rgba(172,92,127,0.22)" : "var(--border)"}`,
             boxShadow: "0 1px 6px rgba(43,37,48,0.06)",
           }}
         >
           <div
             className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl"
-            style={{ background: summary.activeServicesCount > 0 ? "rgba(184,107,140,0.13)" : "rgba(184,107,140,0.08)" }}
+            style={{ background: summary.activeServicesCount > 0 ? "rgba(172,92,127,0.13)" : "rgba(172,92,127,0.08)" }}
           >
-            <Sparkles className="h-4 w-4" style={{ color: "#b86b8c" }} />
+            <Sparkles className="h-4 w-4" style={{ color: "#ac5c7f" }} />
           </div>
-          <p className="text-2xl font-bold tabular-nums" style={{ color: summary.activeServicesCount > 0 ? "#b86b8c" : "#2b2530" }}>
+          <p className="text-2xl font-bold tabular-nums" style={{ color: summary.activeServicesCount > 0 ? "#ac5c7f" : "#2b2530" }}>
             {summary.activeServicesCount}
           </p>
           <p className="mt-1 text-xs font-medium leading-tight" style={{ color: "#8a8190" }}>
@@ -90,17 +90,17 @@ export default async function PricingPage() {
           className="rounded-2xl px-5 py-4 transition-shadow hover:shadow-md"
           style={{
             background: summary.avgPricePerHour > 0 ? "rgba(247,238,243,0.85)" : "rgba(255,255,255,0.90)",
-            border: `1px solid ${summary.avgPricePerHour > 0 ? "rgba(184,107,140,0.22)" : "var(--border)"}`,
+            border: `1px solid ${summary.avgPricePerHour > 0 ? "rgba(172,92,127,0.22)" : "var(--border)"}`,
             boxShadow: "0 1px 6px rgba(43,37,48,0.06)",
           }}
         >
           <div
             className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl"
-            style={{ background: summary.avgPricePerHour > 0 ? "rgba(184,107,140,0.13)" : "rgba(184,107,140,0.08)" }}
+            style={{ background: summary.avgPricePerHour > 0 ? "rgba(172,92,127,0.13)" : "rgba(172,92,127,0.08)" }}
           >
-            <TrendingUp className="h-4 w-4" style={{ color: "#b86b8c" }} />
+            <TrendingUp className="h-4 w-4" style={{ color: "#ac5c7f" }} />
           </div>
-          <p className="text-2xl font-bold tabular-nums" style={{ color: "#b86b8c" }}>
+          <p className="text-2xl font-bold tabular-nums" style={{ color: "#ac5c7f" }}>
             {summary.avgPricePerHour > 0 ? formatILS(summary.avgPricePerHour) : "—"}
           </p>
           <p className="mt-1 text-xs font-medium leading-tight" style={{ color: "#8a8190" }}>
@@ -119,9 +119,9 @@ export default async function PricingPage() {
         >
           <div
             className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl"
-            style={{ background: "rgba(184,107,140,0.08)" }}
+            style={{ background: "rgba(172,92,127,0.08)" }}
           >
-            <Banknote className="h-4 w-4" style={{ color: "#b86b8c" }} />
+            <Banknote className="h-4 w-4" style={{ color: "#ac5c7f" }} />
           </div>
           <p className="text-2xl font-bold tabular-nums" style={{ color: "#2b2530" }}>
             {summary.servicesWithRangeCount}
@@ -140,10 +140,10 @@ export default async function PricingPage() {
               className="flex h-14 w-14 items-center justify-center rounded-full"
               style={{
                 background:
-                  "linear-gradient(135deg, rgba(201,120,152,0.12) 0%, rgba(184,107,140,0.08) 100%)",
+                  "linear-gradient(135deg, rgba(199,111,147,0.12) 0%, rgba(172,92,127,0.08) 100%)",
               }}
             >
-              <Sparkles className="h-6 w-6" style={{ color: "#b86b8c" }} />
+              <Sparkles className="h-6 w-6" style={{ color: "#ac5c7f" }} />
             </div>
           </div>
           <div className="space-y-2">

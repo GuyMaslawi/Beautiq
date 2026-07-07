@@ -1,4 +1,4 @@
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, Flower2 } from "lucide-react";
 import { getPublicBusiness } from "@/server/public-booking/queries";
 import { BookingRequestForm } from "./booking-request-form";
 import { PublicReviewForm } from "./review-form";
@@ -30,18 +30,26 @@ export default async function PublicBusinessPage({
 
   if (!business) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-[var(--background)] p-6">
-        <div className="space-y-3 text-center">
-          <div className="text-5xl">🌸</div>
-          <h1 className="text-xl font-bold text-[var(--foreground)]">
+      <main
+        className="app-ambient flex min-h-screen items-center justify-center p-6"
+        dir="rtl"
+      >
+        <div className="aura-card w-full max-w-sm rounded-[1.75rem] px-8 py-10 text-center">
+          <span className="brand-chip mx-auto flex h-12 w-12 items-center justify-center rounded-2xl">
+            <Flower2 className="h-5 w-5" />
+          </span>
+          <h1 className="font-display mt-5 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
             הקישור לא נמצא
           </h1>
+          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
+            כדאי לבדוק את הקישור שקיבלת מהעסק ולנסות שוב.
+          </p>
         </div>
       </main>
     );
   }
 
-  const brand = business.brandColor ?? "#b86b8c";
+  const brand = business.brandColor ?? "#ac5c7f";
   const brandGrd = `linear-gradient(135deg, ${brand}cc 0%, ${brand} 100%)`;
 
   const avgRating =
@@ -96,7 +104,7 @@ export default async function PublicBusinessPage({
                       filter: "blur(8px)",
                     }}
                   />
-                  <h2 className="relative text-lg font-bold">
+                  <h2 className="font-display relative text-xl font-semibold tracking-tight">
                     {hasBooking ? "קביעת תור" : "פרטי העסק"}
                   </h2>
                   {hasBooking && (
@@ -187,19 +195,10 @@ export default async function PublicBusinessPage({
                       כתבי לנו ביקורת
                     </h2>
                     <p className="mt-0.5 text-sm text-[var(--muted)]">
-                      נשמח לשמוע על החוויה שלך 💬
+                      נשמח לשמוע על החוויה שלך
                     </p>
                   </div>
-                  <div
-                    className="rounded-[1.6rem] p-6 sm:p-7"
-                    style={{
-                      background:
-                        "linear-gradient(165deg, rgba(255,255,255,0.96) 0%, rgba(255,255,255,0.84) 100%)",
-                      border: "1px solid rgba(255,255,255,0.7)",
-                      boxShadow:
-                        "0 16px 40px -20px rgba(124,58,97,0.2), inset 0 1px 0 rgba(255,255,255,0.9)",
-                    }}
-                  >
+                  <div className="aura-card rounded-[1.6rem] p-6 sm:p-7">
                     <PublicReviewForm slug={slug} brandColor={brand} />
                   </div>
                 </div>

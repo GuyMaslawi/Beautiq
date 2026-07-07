@@ -62,7 +62,7 @@ export function AppointmentTimelineCard({
             <span
               aria-hidden
               className="mt-1 w-px flex-1"
-              style={{ background: "linear-gradient(to bottom, rgba(184,107,140,0.3), transparent)" }}
+              style={{ background: "linear-gradient(to bottom, rgba(172,92,127,0.3), transparent)" }}
             />
           </>
         )}
@@ -80,7 +80,7 @@ export function AppointmentTimelineCard({
         <div className="flex items-start gap-3">
           <span
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
-            style={{ background: "linear-gradient(135deg,#c97898,#9d6aa8)" }}
+            style={{ background: "linear-gradient(135deg,#c76f93,#92609f)" }}
           >
             {initials}
           </span>
@@ -122,7 +122,7 @@ export function AppointmentTimelineCard({
           )}
         </div>
         {actions && (
-          <div className="mt-3 flex items-center justify-end gap-2 border-t pt-2.5" style={{ borderColor: "rgba(184,107,140,0.1)" }}>
+          <div className="mt-3 flex items-center justify-end gap-2 border-t pt-2.5" style={{ borderColor: "rgba(172,92,127,0.1)" }}>
             {actions}
           </div>
         )}

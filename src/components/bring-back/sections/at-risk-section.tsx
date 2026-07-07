@@ -54,9 +54,9 @@ export async function AtRiskSection() {
         >
           <div
             className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl"
-            style={{ background: summary.total > 0 ? "rgba(200,60,60,0.12)" : "rgba(184,107,140,0.08)" }}
+            style={{ background: summary.total > 0 ? "rgba(200,60,60,0.12)" : "rgba(172,92,127,0.08)" }}
           >
-            <Users className="h-4 w-4" style={{ color: summary.total > 0 ? "#c03c3c" : "#b86b8c" }} />
+            <Users className="h-4 w-4" style={{ color: summary.total > 0 ? "#c03c3c" : "#ac5c7f" }} />
           </div>
           <p className="text-2xl font-bold tabular-nums" style={{ color: summary.total > 0 ? "#8b2020" : "#2b2530" }}>
             {summary.total}
@@ -77,9 +77,9 @@ export async function AtRiskSection() {
         >
           <div
             className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl"
-            style={{ background: summary.critical > 0 ? "rgba(180,30,30,0.15)" : "rgba(184,107,140,0.08)" }}
+            style={{ background: summary.critical > 0 ? "rgba(180,30,30,0.15)" : "rgba(172,92,127,0.08)" }}
           >
-            <ShieldAlert className="h-4 w-4" style={{ color: summary.critical > 0 ? "#b41e1e" : "#b86b8c" }} />
+            <ShieldAlert className="h-4 w-4" style={{ color: summary.critical > 0 ? "#b41e1e" : "#ac5c7f" }} />
           </div>
           <p className="text-2xl font-bold tabular-nums" style={{ color: summary.critical > 0 ? "#6b1010" : "#2b2530" }}>
             {summary.critical}
@@ -100,9 +100,9 @@ export async function AtRiskSection() {
         >
           <div
             className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl"
-            style={{ background: summary.high > 0 ? "rgba(200,60,60,0.12)" : "rgba(184,107,140,0.08)" }}
+            style={{ background: summary.high > 0 ? "rgba(200,60,60,0.12)" : "rgba(172,92,127,0.08)" }}
           >
-            <AlertTriangle className="h-4 w-4" style={{ color: summary.high > 0 ? "#c03c3c" : "#b86b8c" }} />
+            <AlertTriangle className="h-4 w-4" style={{ color: summary.high > 0 ? "#c03c3c" : "#ac5c7f" }} />
           </div>
           <p className="text-2xl font-bold tabular-nums" style={{ color: summary.high > 0 ? "#8b2020" : "#2b2530" }}>
             {summary.high}
@@ -123,9 +123,9 @@ export async function AtRiskSection() {
         >
           <div
             className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl"
-            style={{ background: summary.medium > 0 ? "rgba(220,120,40,0.12)" : "rgba(184,107,140,0.08)" }}
+            style={{ background: summary.medium > 0 ? "rgba(220,120,40,0.12)" : "rgba(172,92,127,0.08)" }}
           >
-            <Shield className="h-4 w-4" style={{ color: summary.medium > 0 ? "#c07820" : "#b86b8c" }} />
+            <Shield className="h-4 w-4" style={{ color: summary.medium > 0 ? "#c07820" : "#ac5c7f" }} />
           </div>
           <p className="text-2xl font-bold tabular-nums" style={{ color: summary.medium > 0 ? "#8a4a10" : "#2b2530" }}>
             {summary.medium}
@@ -175,10 +175,10 @@ export async function AtRiskSection() {
             <div
               className="flex h-14 w-14 items-center justify-center rounded-full"
               style={{
-                background: "linear-gradient(135deg, rgba(201,120,152,0.12) 0%, rgba(184,107,140,0.08) 100%)",
+                background: "linear-gradient(135deg, rgba(199,111,147,0.12) 0%, rgba(172,92,127,0.08) 100%)",
               }}
             >
-              <Users className="h-6 w-6" style={{ color: "#b86b8c" }} />
+              <Users className="h-6 w-6" style={{ color: "#ac5c7f" }} />
             </div>
           </div>
           <div className="space-y-2">

@@ -50,9 +50,9 @@ export async function RetentionSection() {
         >
           <div
             className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl"
-            style={{ background: summary.notReturnedCount > 0 ? "rgba(184,150,10,0.12)" : "rgba(184,107,140,0.08)" }}
+            style={{ background: summary.notReturnedCount > 0 ? "rgba(184,150,10,0.12)" : "rgba(172,92,127,0.08)" }}
           >
-            <Clock className="h-4 w-4" style={{ color: summary.notReturnedCount > 0 ? "#b87c1e" : "#b86b8c" }} />
+            <Clock className="h-4 w-4" style={{ color: summary.notReturnedCount > 0 ? "#b87c1e" : "#ac5c7f" }} />
           </div>
           <p className="text-2xl font-bold tabular-nums" style={{ color: summary.notReturnedCount > 0 ? "#7a6400" : "#2b2530" }}>
             {summary.notReturnedCount}
@@ -67,17 +67,17 @@ export async function RetentionSection() {
           className="rounded-2xl px-5 py-4 transition-shadow hover:shadow-md"
           style={{
             background: summary.withUpcomingCount > 0 ? "rgba(247,238,243,0.85)" : "rgba(255,255,255,0.90)",
-            border: `1px solid ${summary.withUpcomingCount > 0 ? "rgba(184,107,140,0.22)" : "var(--border)"}`,
+            border: `1px solid ${summary.withUpcomingCount > 0 ? "rgba(172,92,127,0.22)" : "var(--border)"}`,
             boxShadow: "0 1px 6px rgba(43,37,48,0.06)",
           }}
         >
           <div
             className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl"
-            style={{ background: summary.withUpcomingCount > 0 ? "rgba(184,107,140,0.13)" : "rgba(184,107,140,0.08)" }}
+            style={{ background: summary.withUpcomingCount > 0 ? "rgba(172,92,127,0.13)" : "rgba(172,92,127,0.08)" }}
           >
-            <CalendarCheck className="h-4 w-4" style={{ color: "#b86b8c" }} />
+            <CalendarCheck className="h-4 w-4" style={{ color: "#ac5c7f" }} />
           </div>
-          <p className="text-2xl font-bold tabular-nums" style={{ color: summary.withUpcomingCount > 0 ? "#b86b8c" : "#2b2530" }}>
+          <p className="text-2xl font-bold tabular-nums" style={{ color: summary.withUpcomingCount > 0 ? "#ac5c7f" : "#2b2530" }}>
             {summary.withUpcomingCount}
           </p>
           <p className="mt-1 text-xs font-medium leading-tight" style={{ color: "#8a8190" }}>
@@ -96,9 +96,9 @@ export async function RetentionSection() {
         >
           <div
             className="mb-3 flex h-8 w-8 items-center justify-center rounded-xl"
-            style={{ background: "rgba(184,107,140,0.08)" }}
+            style={{ background: "rgba(172,92,127,0.08)" }}
           >
-            <MessageCircle className="h-4 w-4" style={{ color: "#b86b8c" }} />
+            <MessageCircle className="h-4 w-4" style={{ color: "#ac5c7f" }} />
           </div>
           <p className="text-2xl font-bold tabular-nums" style={{ color: "#2b2530" }}>
             {clients.length}
@@ -117,10 +117,10 @@ export async function RetentionSection() {
               className="flex h-14 w-14 items-center justify-center rounded-full"
               style={{
                 background:
-                  "linear-gradient(135deg, rgba(201,120,152,0.12) 0%, rgba(184,107,140,0.08) 100%)",
+                  "linear-gradient(135deg, rgba(199,111,147,0.12) 0%, rgba(172,92,127,0.08) 100%)",
               }}
             >
-              <Users className="h-6 w-6" style={{ color: "#b86b8c" }} />
+              <Users className="h-6 w-6" style={{ color: "#ac5c7f" }} />
             </div>
           </div>
           <div className="space-y-2">

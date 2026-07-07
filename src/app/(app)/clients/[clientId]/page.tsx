@@ -149,13 +149,13 @@ export default async function ClientDetailPage({
         <div
           aria-hidden
           className="pointer-events-none absolute -top-16 h-44 w-44 rounded-full"
-          style={{ insetInlineEnd: "-2rem", background: "radial-gradient(circle, rgba(201,120,152,0.2) 0%, transparent 70%)", filter: "blur(16px)" }}
+          style={{ insetInlineEnd: "-2rem", background: "radial-gradient(circle, rgba(199,111,147,0.2) 0%, transparent 70%)", filter: "blur(16px)" }}
         />
         <div className="relative flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-4">
             <span
               className="ring-soft flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl text-xl font-bold text-white"
-              style={{ background: "linear-gradient(135deg,#c97898,#9d6aa8)", boxShadow: "0 12px 28px -8px rgba(184,107,140,0.6)" }}
+              style={{ background: "linear-gradient(135deg,#c76f93,#92609f)", boxShadow: "0 12px 28px -8px rgba(172,92,127,0.6)" }}
             >
               {initials}
             </span>
@@ -224,7 +224,7 @@ export default async function ClientDetailPage({
       {/* ── Last visit + upcoming ── */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div className="aura-card flex items-center gap-3 rounded-[1.2rem] p-4">
-          <span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "rgba(184,107,140,0.1)", color: "#b86b8c" }}>
+          <span className="flex h-10 w-10 items-center justify-center rounded-xl" style={{ background: "rgba(172,92,127,0.1)", color: "#ac5c7f" }}>
             <History className="h-5 w-5" />
           </span>
           <div>
@@ -258,7 +258,7 @@ export default async function ClientDetailPage({
               <span
                 key={insight}
                 className="rounded-full border px-3 py-1 text-xs"
-                style={{ background: "rgba(247,238,243,0.5)", borderColor: "rgba(184,107,140,0.16)", color: "var(--foreground-soft)" }}
+                style={{ background: "rgba(247,238,243,0.5)", borderColor: "rgba(172,92,127,0.16)", color: "var(--foreground-soft)" }}
               >
                 {insight}
               </span>
@@ -304,8 +304,8 @@ export default async function ClientDetailPage({
             <>
               <div className="border-border border-t" />
               <div className="flex items-center justify-between gap-4 py-2">
-                <span className="text-muted text-sm">{CLIENTS.detail.email}</span>
-                <span className="text-foreground text-sm font-medium" dir="ltr">
+                <span className="text-muted shrink-0 text-sm">{CLIENTS.detail.email}</span>
+                <span className="text-foreground min-w-0 truncate text-sm font-medium" dir="ltr">
                   {client.email}
                 </span>
               </div>

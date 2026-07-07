@@ -78,8 +78,8 @@ export function WinBackClientCard({
         <span
           className="shrink-0 rounded-full border px-2.5 py-0.5 text-xs font-semibold"
           style={{
-            background: "rgba(184,107,140,0.08)",
-            borderColor: "rgba(184,107,140,0.22)",
+            background: "rgba(172,92,127,0.08)",
+            borderColor: "rgba(172,92,127,0.22)",
             color: "#8a4070",
           }}
         >

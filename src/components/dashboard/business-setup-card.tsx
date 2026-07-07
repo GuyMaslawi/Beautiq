@@ -5,6 +5,7 @@ import {
   createBusinessAction,
   type BusinessStepState,
 } from "@/server/business/actions";
+import { Sparkles } from "lucide-react";
 import { DASHBOARD } from "@/lib/constants/he";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/ui/field";
@@ -12,6 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { FadeIn } from "@/components/ui/animate";
+import { PremiumPageShell } from "@/components/premium";
 
 const INITIAL: BusinessStepState = {};
 
@@ -30,34 +32,29 @@ export function BusinessSetupCard() {
   }, [state.created]);
 
   return (
-    <FadeIn className="mx-auto w-full max-w-lg">
-      {/* Welcome heading */}
-      <div className="mb-8 text-center">
-        {/* Jewel mark */}
-        <div
-          className="mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl text-white text-xl font-bold"
-          style={{
-            background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
-            boxShadow: "0 4px 16px rgba(184,107,140,0.30)",
-          }}
-        >
-          B
+    <PremiumPageShell tint="blush" width="narrow">
+      <FadeIn className="mx-auto w-full max-w-lg">
+        {/* Welcome heading */}
+        <div className="mb-8 text-center">
+          {/* Jewel mark */}
+          <div
+            className="ring-soft bg-brand-gradient mx-auto mb-5 flex h-14 w-14 items-center justify-center rounded-2xl text-white"
+            style={{ boxShadow: "var(--brand-shadow)" }}
+          >
+            <Sparkles className="h-6 w-6" />
+          </div>
+          <h1 className="font-display text-foreground text-[1.75rem] font-semibold tracking-tight">
+            {DASHBOARD.setup.title}
+          </h1>
+          <p className="mt-1 font-medium" style={{ color: "var(--primary)" }}>
+            {DASHBOARD.setup.subtitle}
+          </p>
+          <p className="text-muted mx-auto mt-3 max-w-sm text-sm leading-7">
+            {DASHBOARD.setup.body}
+          </p>
         </div>
-        <h1 className="text-foreground text-2xl font-bold tracking-tight">
-          {DASHBOARD.setup.title}
-        </h1>
-        <p
-          className="mt-1 font-medium"
-          style={{ color: "#b86b8c" }}
-        >
-          {DASHBOARD.setup.subtitle}
-        </p>
-        <p className="text-muted mx-auto mt-3 max-w-sm text-sm leading-7">
-          {DASHBOARD.setup.body}
-        </p>
-      </div>
 
-      <Card>
+        <Card>
         <form action={formAction} className="space-y-5" noValidate>
           {state.formError && <Alert>{state.formError}</Alert>}
 
@@ -78,7 +75,8 @@ export function BusinessSetupCard() {
             {isPending ? "יוצרים…" : DASHBOARD.setup.submit}
           </Button>
         </form>
-      </Card>
-    </FadeIn>
+        </Card>
+      </FadeIn>
+    </PremiumPageShell>
   );
 }

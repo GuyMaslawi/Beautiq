@@ -110,7 +110,7 @@ export function ClientCard({
         client.upcomingBooking && (
           <div
             className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium"
-            style={{ background: "rgba(184,107,140,0.09)", color: "#8a3d60", border: "1px solid rgba(184,107,140,0.18)" }}
+            style={{ background: "rgba(172,92,127,0.09)", color: "#8a3d60", border: "1px solid rgba(172,92,127,0.18)" }}
           >
             <CalendarDays className="h-3 w-3 shrink-0" />
             {formatUpcomingDate(client.upcomingBooking.startTime)}
@@ -147,7 +147,7 @@ export function ClientCard({
           <Link
             href={`/bookings/new?clientId=${client.id}`}
             className="ms-auto flex h-8 cursor-pointer items-center rounded-xl px-3 text-xs font-semibold text-white transition-opacity hover:opacity-90"
-            style={{ background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)", boxShadow: "0 1px 4px rgba(184,107,140,0.22)" }}
+            style={{ background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)", boxShadow: "0 1px 4px rgba(172,92,127,0.22)" }}
           >
             {CLIENTS.card.newBookingButton}
           </Link>

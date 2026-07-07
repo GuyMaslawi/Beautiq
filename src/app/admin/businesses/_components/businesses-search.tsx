@@ -25,6 +25,9 @@ interface Props {
   defaultPlan: string;
 }
 
+const fieldClass =
+  "h-9 rounded-xl border border-border bg-surface px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-light hover:border-border-strong focus:border-primary focus:ring-2 focus:ring-primary/20";
+
 export function BusinessesSearch({ defaultQ, defaultStatus, defaultPlan }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -55,20 +58,14 @@ export function BusinessesSearch({ defaultQ, defaultStatus, defaultPlan }: Props
         name="q"
         defaultValue={defaultQ}
         placeholder="חיפוש לפי שם עסק, בעלים, אימייל, טלפון..."
-        className="h-9 min-w-[280px] flex-1 rounded-xl border px-3 text-sm outline-none focus:ring-2 focus:ring-[#1a1a2e]/20"
-        style={{
-          background: "#fff",
-          borderColor: "rgba(0,0,0,0.12)",
-          color: "#1a1a2e",
-        }}
+        className={`${fieldClass} min-w-[280px] flex-1`}
         autoComplete="off"
       />
       <select
         name="status"
         defaultValue={defaultStatus}
         onChange={handleSelectChange}
-        className="h-9 rounded-xl border px-3 text-sm outline-none"
-        style={{ background: "#fff", borderColor: "rgba(0,0,0,0.12)", color: "#1a1a2e" }}
+        className={fieldClass}
       >
         {STATUS_OPTIONS.map((o) => (
           <option key={o.value} value={o.value}>
@@ -80,8 +77,7 @@ export function BusinessesSearch({ defaultQ, defaultStatus, defaultPlan }: Props
         name="plan"
         defaultValue={defaultPlan}
         onChange={handleSelectChange}
-        className="h-9 rounded-xl border px-3 text-sm outline-none"
-        style={{ background: "#fff", borderColor: "rgba(0,0,0,0.12)", color: "#1a1a2e" }}
+        className={fieldClass}
       >
         {PLAN_OPTIONS.map((o) => (
           <option key={o.value} value={o.value}>
@@ -92,8 +88,7 @@ export function BusinessesSearch({ defaultQ, defaultStatus, defaultPlan }: Props
       <button
         type="submit"
         disabled={isPending}
-        className="h-9 rounded-xl px-4 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-        style={{ background: "#1a1a2e" }}
+        className="bg-brand-gradient h-9 rounded-xl px-4 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-60"
       >
         {isPending ? "מחפש..." : "חיפוש"}
       </button>

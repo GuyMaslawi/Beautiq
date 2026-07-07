@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { ArrowRight, ExternalLink, Users2 } from "lucide-react";
 import { requirePlatformAdmin } from "@/server/admin/auth";
 import { getCurrentUser } from "@/server/auth/session";
 import {
@@ -9,6 +10,7 @@ import {
 } from "@/server/admin/queries";
 import { getAdminAutomationInfo } from "@/server/win-back-automation/queries";
 import { getAdminMessageLog } from "@/server/admin/message-log";
+import { Card } from "@/components/ui/card";
 import { AdminMessageLogPanel } from "./_components/message-log";
 import { SubscriptionForm } from "./_components/subscription-form";
 import { RunWinBackButton } from "./_components/run-win-back-button";
@@ -26,13 +28,13 @@ const STATUS_LABELS: Record<SubscriptionStatus, string> = {
   pending_payment: "ממתין לתשלום",
 };
 
-const STATUS_COLORS: Record<SubscriptionStatus, string> = {
-  trial: "#7c3aed",
-  active: "#16a34a",
-  discounted: "#d97706",
-  suspended: "#ea580c",
-  cancelled: "#dc2626",
-  pending_payment: "#ca8a04",
+const STATUS_STYLES: Record<SubscriptionStatus, { color: string; bg: string }> = {
+  trial: { color: "var(--mauve)", bg: "var(--mauve-light)" },
+  active: { color: "var(--success)", bg: "var(--success-light)" },
+  discounted: { color: "var(--accent)", bg: "var(--accent-light)" },
+  suspended: { color: "var(--warning)", bg: "var(--warning-light)" },
+  cancelled: { color: "var(--error)", bg: "var(--error-light)" },
+  pending_payment: { color: "var(--warning)", bg: "var(--warning-light)" },
 };
 
 const PLAN_LABELS: Record<SubscriptionPlan, string> = {
@@ -42,14 +44,23 @@ const PLAN_LABELS: Record<SubscriptionPlan, string> = {
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-start gap-3 py-2.5" style={{ borderBottom: "1px solid rgba(0,0,0,0.05)" }}>
-      <span className="w-32 shrink-0 text-xs font-semibold" style={{ color: "#888" }}>
+    <div className="flex items-start gap-3 border-b border-border/70 py-2.5 last:border-0">
+      <span className="w-32 shrink-0 text-xs font-semibold text-muted">
         {label}
       </span>
-      <span className="text-sm" style={{ color: "#1a1a2e" }}>
-        {value ?? "—"}
-      </span>
+      <span className="text-sm text-foreground">{value ?? "—"}</span>
     </div>
+  );
+}
+
+function OnOffValue({ on, onLabel, offLabel }: { on: boolean; onLabel: string; offLabel: string }) {
+  return (
+    <span
+      className="font-semibold"
+      style={{ color: on ? "var(--success)" : "var(--muted-light)" }}
+    >
+      {on ? onLabel : offLabel}
+    </span>
   );
 }
 
@@ -95,7 +106,7 @@ export default async function AdminBusinessDetailPage({
   const sub = biz.subscription;
   const status: SubscriptionStatus = sub?.status ?? "trial";
   const plan: SubscriptionPlan = sub?.plan ?? "basic";
-  const statusColor = STATUS_COLORS[status];
+  const statusStyle = STATUS_STYLES[status];
 
   return (
     <div className="space-y-6">
@@ -103,53 +114,50 @@ export default async function AdminBusinessDetailPage({
       <div className="flex flex-wrap items-center gap-3">
         <Link
           href="/admin/businesses"
-          className="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
-          style={{ background: "#f3f4f6", color: "#555" }}
+          className="flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:bg-background-alt hover:text-foreground"
         >
-          ← חזרה לרשימה
+          <ArrowRight className="h-3.5 w-3.5" />
+          חזרה לרשימה
         </Link>
         <Link
           href={`/admin/businesses/${biz.id}/clients`}
-          className="rounded-lg px-3 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-80"
-          style={{ background: "#1a1a2e" }}
+          className="bg-brand-gradient flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-medium text-white transition-opacity hover:opacity-90"
         >
+          <Users2 className="h-3.5 w-3.5" />
           לקוחות העסק ({biz._count.clients})
         </Link>
         <a
           href={`/b/${biz.slug}`}
           target="_blank"
           rel="noopener noreferrer"
-          className="rounded-lg px-3 py-1.5 text-sm font-medium transition-colors"
-          style={{ background: "#f3f4f6", color: "#555" }}
+          className="flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium text-muted transition-colors hover:bg-background-alt hover:text-foreground"
         >
-          עמוד ההזמנות ↗
+          עמוד ההזמנות
+          <ExternalLink className="h-3.5 w-3.5" />
         </a>
       </div>
 
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold" style={{ color: "#1a1a2e" }}>
+          <p className="eyebrow text-primary">ניהול עסקים</p>
+          <h1 className="font-display mt-1 text-2xl font-semibold tracking-tight text-foreground">
             {biz.name}
           </h1>
-          <div className="mt-1 flex items-center gap-2">
-            <span className="text-sm" style={{ color: "#888" }}>
-              /{biz.slug}
-            </span>
+          <div className="mt-1.5 flex items-center gap-2">
+            <span className="text-sm text-muted">/{biz.slug}</span>
             <span
               className="inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium"
-              style={{ background: `${statusColor}15`, color: statusColor }}
+              style={{ background: statusStyle.bg, color: statusStyle.color }}
             >
               {STATUS_LABELS[status]}
             </span>
-            <span
-              className="rounded px-1.5 py-0.5 text-xs font-semibold"
-              style={{ background: "#f3f4f6", color: "#444" }}
-            >
+            <span className="rounded bg-background-alt px-1.5 py-0.5 text-xs font-semibold text-foreground-soft">
               {PLAN_LABELS[plan]}
             </span>
           </div>
         </div>
       </div>
+      <div className="editorial-rule" />
 
       {/* Editable business / public page / owner details */}
       <AdminBusinessEditPanel
@@ -182,49 +190,27 @@ export default async function AdminBusinessDetailPage({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Usage metrics */}
-        <div
-          className="rounded-2xl border p-5"
-          style={{
-            background: "#fff",
-            borderColor: "rgba(0,0,0,0.07)",
-            boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-          }}
-        >
-          <h2 className="mb-3 text-sm font-bold" style={{ color: "#1a1a2e" }}>
-            נתוני שימוש
-          </h2>
+        <Card className="p-5">
+          <h2 className="mb-3 text-sm font-bold text-foreground">נתוני שימוש</h2>
           <InfoRow label="לקוחות" value={biz._count.clients} />
           <InfoRow label="תורים סה״כ" value={biz._count.bookings} />
           <InfoRow label="תורים החודש" value={bookingsThisMonth} />
-        </div>
+        </Card>
 
         {/* WhatsApp automation info */}
-        <div
-          className="rounded-2xl border p-5"
-          style={{
-            background: "#fff",
-            borderColor: "rgba(0,0,0,0.07)",
-            boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-          }}
-        >
-          <h2 className="mb-3 text-sm font-bold" style={{ color: "#1a1a2e" }}>
+        <Card className="p-5">
+          <h2 className="mb-3 text-sm font-bold text-foreground">
             אוטומציית WhatsApp
           </h2>
-          <InfoRow
-            label="ספק"
-            value={automationInfo.provider ?? "dev_mock"}
-          />
+          <InfoRow label="ספק" value={automationInfo.provider ?? "dev_mock"} />
           <InfoRow
             label="חיבור WhatsApp"
             value={
-              <span
-                style={{
-                  color: automationInfo.whatsappConnected ? "#16a34a" : "#9ca3af",
-                  fontWeight: 600,
-                }}
-              >
-                {automationInfo.whatsappConnected ? "מחובר" : "לא מחובר"}
-              </span>
+              <OnOffValue
+                on={automationInfo.whatsappConnected}
+                onLabel="מחובר"
+                offLabel="לא מחובר"
+              />
             }
           />
           {automationInfo.phoneNumber && (
@@ -233,38 +219,41 @@ export default async function AdminBusinessDetailPage({
           <InfoRow
             label="שליחה אמיתית"
             value={
-              <span style={{ color: automationInfo.realSendEnabled ? "#16a34a" : "#9ca3af", fontWeight: 600 }}>
-                {automationInfo.realSendEnabled ? "מופעלת" : "כבויה (מצב פיתוח)"}
-              </span>
+              <OnOffValue
+                on={automationInfo.realSendEnabled}
+                onLabel="מופעלת"
+                offLabel="כבויה (מצב פיתוח)"
+              />
             }
           />
           <InfoRow
             label="אישורי Meta"
             value={
-              <span style={{ color: automationInfo.credentialsConfigured ? "#16a34a" : "#9ca3af", fontWeight: 600 }}>
-                {automationInfo.credentialsConfigured ? "מוגדרים" : "לא מוגדרים"}
-              </span>
+              <OnOffValue
+                on={automationInfo.credentialsConfigured}
+                onLabel="מוגדרים"
+                offLabel="לא מוגדרים"
+              />
             }
           />
           <InfoRow
             label="תבנית מאושרת"
             value={
-              <span style={{ color: automationInfo.templateConfigured ? "#16a34a" : "#9ca3af", fontWeight: 600 }}>
-                {automationInfo.templateConfigured ? "מוגדרת" : "לא מוגדרת"}
-              </span>
+              <OnOffValue
+                on={automationInfo.templateConfigured}
+                onLabel="מוגדרת"
+                offLabel="לא מוגדרת"
+              />
             }
           />
           <InfoRow
             label="אוטומציה"
             value={
-              <span
-                style={{
-                  color: automationInfo.automationEnabled ? "#16a34a" : "#9ca3af",
-                  fontWeight: 600,
-                }}
-              >
-                {automationInfo.automationEnabled ? "פעילה" : "כבויה"}
-              </span>
+              <OnOffValue
+                on={automationInfo.automationEnabled}
+                onLabel="פעילה"
+                offLabel="כבויה"
+              />
             }
           />
           <InfoRow label="נשלחו בפועל החודש (אוטומציה)" value={automationInfo.realSentThisMonth} />
@@ -273,7 +262,7 @@ export default async function AdminBusinessDetailPage({
             <InfoRow
               label="הרצות בדיקה החודש"
               value={
-                <span style={{ color: "#7a5800" }}>
+                <span style={{ color: "var(--warning)" }}>
                   {automationInfo.mockRunsThisMonth} (לא נשלח בפועל)
                 </span>
               }
@@ -283,7 +272,7 @@ export default async function AdminBusinessDetailPage({
             <InfoRow
               label="נכשלו החודש"
               value={
-                <span style={{ color: "#dc2626" }}>
+                <span style={{ color: "var(--error)" }}>
                   {automationInfo.failedThisMonth}
                 </span>
               }
@@ -308,7 +297,7 @@ export default async function AdminBusinessDetailPage({
             <InfoRow
               label="סיבת כישלון אחרונה"
               value={
-                <span className="text-xs" style={{ color: "#dc2626" }}>
+                <span className="text-xs" style={{ color: "var(--error)" }}>
                   {automationInfo.lastFailureReason}
                 </span>
               }
@@ -356,21 +345,12 @@ export default async function AdminBusinessDetailPage({
                 : "—"
             }
           />
-        </div>
+        </Card>
 
         {/* Current subscription summary */}
         {sub && (
-          <div
-            className="rounded-2xl border p-5"
-            style={{
-              background: "#fff",
-              borderColor: "rgba(0,0,0,0.07)",
-              boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-            }}
-          >
-            <h2 className="mb-3 text-sm font-bold" style={{ color: "#1a1a2e" }}>
-              מנוי נוכחי
-            </h2>
+          <Card className="p-5">
+            <h2 className="mb-3 text-sm font-bold text-foreground">מנוי נוכחי</h2>
             <InfoRow label="תוכנית" value={`${PLAN_LABELS[plan]} — ₪${Number(sub.monthlyPrice).toLocaleString("he-IL")}/חודש`} />
             <InfoRow label="סטטוס" value={STATUS_LABELS[status]} />
             {sub.discountType !== "none" && (
@@ -401,81 +381,57 @@ export default async function AdminBusinessDetailPage({
               />
             )}
             {sub.adminNotes && (
-              <div className="mt-3 rounded-xl p-3" style={{ background: "#fffbeb", border: "1px solid #fde68a" }}>
-                <p className="text-xs font-semibold" style={{ color: "#92400e" }}>
+              <div
+                className="mt-3 rounded-xl border p-3"
+                style={{
+                  background: "var(--warning-light)",
+                  borderColor: "color-mix(in srgb, var(--warning) 30%, transparent)",
+                }}
+              >
+                <p className="text-xs font-semibold" style={{ color: "var(--warning)" }}>
                   הערות פנימיות
                 </p>
-                <p className="mt-1 text-sm" style={{ color: "#78350f" }}>
-                  {sub.adminNotes}
-                </p>
+                <p className="mt-1 text-sm text-foreground-soft">{sub.adminNotes}</p>
               </div>
             )}
-          </div>
+          </Card>
         )}
       </div>
 
       {/* WhatsApp admin panel — connect + diagnostic */}
-      <div
-        className="rounded-2xl border p-6"
-        style={{
-          background: "#fff",
-          borderColor: "rgba(0,0,0,0.07)",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-        }}
-      >
-        <h2 className="mb-1 text-sm font-bold" style={{ color: "#1a1a2e" }}>
+      <Card className="p-6">
+        <h2 className="mb-1 text-sm font-bold text-foreground">
           ניהול חיבור WhatsApp
         </h2>
         <WhatsAppAdminPanel businessId={biz.id} />
-      </div>
+      </Card>
 
       {/* Full WhatsApp message log — all sources, classified by outcome */}
-      <div
-        className="rounded-2xl border p-6"
-        style={{
-          background: "#fff",
-          borderColor: "rgba(0,0,0,0.07)",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-        }}
-      >
-        <h2 className="mb-1 text-sm font-bold" style={{ color: "#1a1a2e" }}>
+      <Card className="p-6">
+        <h2 className="mb-1 text-sm font-bold text-foreground">
           יומן הודעות WhatsApp
         </h2>
-        <p className="mb-4 text-xs" style={{ color: "#888" }}>
+        <p className="mb-4 text-xs text-muted">
           25 ההודעות האחרונות מכל המקורות (אוטומציה, ידני, ניסיון חוזר) — כולל הודעות
           שנחסמו במצב בדיקה, מספרים לא תקינים, תבניות חסרות ושגיאות ספק.
         </p>
         <AdminMessageLogPanel log={messageLog} />
-      </div>
+      </Card>
 
       {/* Win-back manual trigger */}
-      <div
-        className="rounded-2xl border p-6"
-        style={{
-          background: "#fff",
-          borderColor: "rgba(0,0,0,0.07)",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-        }}
-      >
-        <h2 className="mb-1 text-sm font-bold" style={{ color: "#1a1a2e" }}>
+      <Card className="p-6">
+        <h2 className="mb-1 text-sm font-bold text-foreground">
           הפעלת Win-Back ידנית
         </h2>
-        <p className="mb-4 text-xs" style={{ color: "#888" }}>
+        <p className="mb-4 text-xs text-muted">
           מריץ את אוטומציית החזרת הלקוחות עבור עסק זה עכשיו, ללא המתנה לשעת הקרון. כל שאר ההגנות (cooldown, test mode) פעילות.
         </p>
         <RunWinBackButton businessId={biz.id} />
-      </div>
+      </Card>
 
       {/* Edit subscription form */}
-      <div
-        className="rounded-2xl border p-6"
-        style={{
-          background: "#fff",
-          borderColor: "rgba(0,0,0,0.07)",
-          boxShadow: "0 1px 4px rgba(0,0,0,0.05)",
-        }}
-      >
-        <h2 className="mb-5 text-sm font-bold" style={{ color: "#1a1a2e" }}>
+      <Card className="p-6">
+        <h2 className="mb-5 text-sm font-bold text-foreground">
           עדכון מנוי ופרטים פנימיים
         </h2>
         <SubscriptionForm
@@ -496,7 +452,7 @@ export default async function AdminBusinessDetailPage({
               : null
           }
         />
-      </div>
+      </Card>
 
       {/* Danger zone — delete business / owner account */}
       {deletionSummary && (

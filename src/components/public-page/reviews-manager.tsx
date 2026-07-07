@@ -55,8 +55,8 @@ export function ReviewsManager({
                         <Star
                           key={i}
                           className="h-3.5 w-3.5"
-                          fill={i < review.rating ? "#b86b8c" : "none"}
-                          stroke={i < review.rating ? "#b86b8c" : "#ddd"}
+                          fill={i < review.rating ? "#ac5c7f" : "none"}
+                          stroke={i < review.rating ? "#ac5c7f" : "#ddd"}
                         />
                       ))}
                     </div>

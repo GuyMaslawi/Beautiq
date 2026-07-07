@@ -16,7 +16,7 @@ const variantStyles: Record<CardVariant, { className: string; style?: React.CSSP
     className: "border",
     style: {
       background: "linear-gradient(135deg, rgba(247,238,243,0.85) 0%, rgba(243,238,246,0.65) 100%)",
-      borderColor: "rgba(184,107,140,0.20)",
+      borderColor: "rgba(172,92,127,0.20)",
       boxShadow: "0 2px 10px rgba(124,58,97,0.06)",
     },
   },

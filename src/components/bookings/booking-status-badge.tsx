@@ -9,9 +9,9 @@ const statusStyles: Record<BookingStatus, CSSProperties> = {
     border: "1px solid rgba(184,150,10,0.22)",
   },
   approved: {
-    background: "rgba(184,107,140,0.10)",
+    background: "rgba(172,92,127,0.10)",
     color: "#8a3d60",
-    border: "1px solid rgba(184,107,140,0.22)",
+    border: "1px solid rgba(172,92,127,0.22)",
   },
   completed: {
     background: "rgba(61,139,110,0.10)",

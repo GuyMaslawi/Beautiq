@@ -79,8 +79,8 @@ export function ClientRow({
           <div
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold text-white"
             style={{
-              background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
-              boxShadow: "0 2px 6px rgba(184,107,140,0.25)",
+              background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)",
+              boxShadow: "0 2px 6px rgba(172,92,127,0.25)",
             }}
           >
             {initials}
@@ -232,9 +232,9 @@ export function ClientRow({
             href={`/bookings/new?clientId=${client.id}`}
             className="flex h-7 items-center rounded-lg px-2.5 text-xs font-semibold transition-opacity hover:opacity-90"
             style={{
-              background: "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
+              background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)",
               color: "#fff",
-              boxShadow: "0 1px 4px rgba(184,107,140,0.22)",
+              boxShadow: "0 1px 4px rgba(172,92,127,0.22)",
             }}
           >
             + תור

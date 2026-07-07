@@ -13,6 +13,7 @@ import {
 import { requireCurrentBusiness } from "@/server/auth/session";
 import { getRevenueForecastData } from "@/server/revenue-forecast/queries";
 import { REVENUE_FORECAST } from "@/lib/constants/he";
+import { PremiumPageShell, BeautyPageHero, PremiumEmptyState } from "@/components/premium";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -61,7 +62,7 @@ function HeroCard({
       className="relative overflow-hidden rounded-3xl px-7 py-8"
       style={{
         background: "linear-gradient(145deg, #2b0e1f 0%, #3e1630 55%, #2c1527 100%)",
-        border: "1px solid rgba(184,107,140,0.28)",
+        border: "1px solid rgba(172,92,127,0.28)",
         boxShadow: "0 8px 40px rgba(120,40,80,0.28), 0 2px 8px rgba(0,0,0,0.18)",
       }}
     >
@@ -70,7 +71,7 @@ function HeroCard({
         className="pointer-events-none absolute inset-0"
         style={{
           background:
-            "radial-gradient(ellipse at 80% 10%, rgba(201,120,152,0.22) 0%, transparent 50%), radial-gradient(ellipse at 10% 90%, rgba(212,168,83,0.12) 0%, transparent 50%)",
+            "radial-gradient(ellipse at 80% 10%, rgba(199,111,147,0.22) 0%, transparent 50%), radial-gradient(ellipse at 10% 90%, rgba(212,168,83,0.12) 0%, transparent 50%)",
         }}
       />
 
@@ -173,7 +174,7 @@ function HeroCard({
                     width: `${actualProgressPct}%`,
                     background: isOnTrack
                       ? "linear-gradient(90deg, #3d8b6e 0%, #7ee8b8 100%)"
-                      : "linear-gradient(90deg, #c97898 0%, #b86b8c 100%)",
+                      : "linear-gradient(90deg, #c76f93 0%, #ac5c7f 100%)",
                   }}
                 />
               </div>
@@ -228,10 +229,10 @@ const METRIC_PALETTE: Record<
   },
   rose: {
     bg: "linear-gradient(135deg, #fdf0f7 0%, #f5e8f2 100%)",
-    border: "1px solid rgba(184,107,140,0.22)",
-    iconBg: "rgba(184,107,140,0.14)",
-    iconColor: "#b86b8c",
-    valueColor: "#b86b8c",
+    border: "1px solid rgba(172,92,127,0.22)",
+    iconBg: "rgba(172,92,127,0.14)",
+    iconColor: "var(--primary)",
+    valueColor: "var(--primary)",
   },
   gold: {
     bg: "linear-gradient(135deg, #fdf8ec 0%, #f7f0dc 100%)",
@@ -325,20 +326,13 @@ function RevenueTimeline({
 
   const segments = [
     { pct: completedPct, color: "#3d8b6e", label: REVENUE_FORECAST.timeline.completed, value: completedRevenue },
-    { pct: upcomingPct, color: "#b86b8c", label: REVENUE_FORECAST.timeline.upcoming, value: upcomingRevenue },
+    { pct: upcomingPct, color: "var(--primary)", label: REVENUE_FORECAST.timeline.upcoming, value: upcomingRevenue },
     { pct: gapPct, color: "rgba(43,37,48,0.08)", label: REVENUE_FORECAST.timeline.gap, value: gapToTarget },
   ];
 
   return (
-    <div
-      className="rounded-2xl p-5"
-      style={{
-        background: "rgba(255,255,255,0.97)",
-        border: "1px solid var(--border)",
-        boxShadow: "0 1px 6px rgba(43,37,48,0.06)",
-      }}
-    >
-      <h3 className="mb-4 text-base font-bold" style={{ color: "var(--foreground)" }}>
+    <div className="aura-card rounded-[1.4rem] p-5">
+      <h3 className="font-display mb-4 text-base font-semibold tracking-tight" style={{ color: "var(--foreground)" }}>
         {REVENUE_FORECAST.timeline.title}
       </h3>
 
@@ -464,15 +458,8 @@ const REC_ICONS: Record<ActionRec["color"], React.ElementType> = {
 
 function RecommendationsSection({ recs }: { recs: ActionRec[] }) {
   return (
-    <div
-      className="rounded-2xl p-5"
-      style={{
-        background: "rgba(255,255,255,0.97)",
-        border: "1px solid var(--border)",
-        boxShadow: "0 1px 6px rgba(43,37,48,0.06)",
-      }}
-    >
-      <h3 className="mb-4 text-base font-bold" style={{ color: "var(--foreground)" }}>
+    <div className="aura-card rounded-[1.4rem] p-5">
+      <h3 className="font-display mb-4 text-base font-semibold tracking-tight" style={{ color: "var(--foreground)" }}>
         {REVENUE_FORECAST.recommendations.title}
       </h3>
 
@@ -536,37 +523,21 @@ function TopServicesSection({
 }) {
   if (services.length === 0) {
     return (
-      <div
-        className="rounded-2xl p-5"
-        style={{
-          background: "rgba(255,255,255,0.97)",
-          border: "1px solid var(--border)",
-          boxShadow: "0 1px 6px rgba(43,37,48,0.06)",
-        }}
-      >
-        <h3 className="mb-3 text-base font-bold" style={{ color: "var(--foreground)" }}>
-          {REVENUE_FORECAST.services.title}
-        </h3>
-        <p className="text-sm" style={{ color: "var(--muted)" }}>
-          {REVENUE_FORECAST.services.noServices}
-        </p>
-      </div>
+      <PremiumEmptyState
+        tint="champagne"
+        icon={<BarChart3 className="h-7 w-7" />}
+        title={REVENUE_FORECAST.services.title}
+        body={REVENUE_FORECAST.services.noServices}
+      />
     );
   }
 
   const maxRevenue = services[0].revenue;
 
   return (
-    <div
-      className="overflow-hidden rounded-2xl"
-      style={{
-        background: "rgba(255,255,255,0.97)",
-        border: "1px solid var(--border)",
-        boxShadow: "0 1px 6px rgba(43,37,48,0.06)",
-      }}
-    >
+    <div className="aura-card overflow-hidden rounded-[1.4rem]">
       <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
-        <h3 className="text-base font-bold" style={{ color: "var(--foreground)" }}>
+        <h3 className="font-display text-base font-semibold tracking-tight" style={{ color: "var(--foreground)" }}>
           {REVENUE_FORECAST.services.title}
         </h3>
       </div>
@@ -588,7 +559,7 @@ function TopServicesSection({
                     style={{
                       background: idx === 0
                         ? "linear-gradient(135deg, #d4a853 0%, #c09560 100%)"
-                        : "linear-gradient(135deg, #c97898 0%, #b86b8c 100%)",
+                        : "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)",
                     }}
                   >
                     {idx + 1}
@@ -597,14 +568,14 @@ function TopServicesSection({
                     {svc.name}
                   </span>
                 </div>
-                <span className="shrink-0 text-sm font-bold tabular-nums" style={{ color: "#b86b8c" }}>
+                <span className="shrink-0 text-sm font-bold tabular-nums" style={{ color: "var(--primary)" }}>
                   {formatILS(svc.revenue)}
                 </span>
               </div>
               {/* Revenue bar */}
               <div
                 className="mb-2 h-1.5 overflow-hidden rounded-full"
-                style={{ background: "rgba(184,107,140,0.10)" }}
+                style={{ background: "rgba(172,92,127,0.10)" }}
               >
                 <div
                   className="h-full rounded-full transition-all duration-700"
@@ -612,7 +583,7 @@ function TopServicesSection({
                     width: `${pct}%`,
                     background: idx === 0
                       ? "linear-gradient(90deg, #d4a853 0%, #c09560 100%)"
-                      : "linear-gradient(90deg, #c97898 0%, #b86b8c 100%)",
+                      : "linear-gradient(90deg, #c76f93 0%, #ac5c7f 100%)",
                   }}
                 />
               </div>
@@ -638,15 +609,15 @@ function LowDataBanner() {
       className="rounded-2xl px-5 py-4"
       style={{
         background: "rgba(255,248,253,0.95)",
-        border: "1px solid rgba(184,107,140,0.18)",
+        border: "1px solid rgba(172,92,127,0.18)",
       }}
     >
       <div className="flex items-start gap-3">
         <div
           className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
-          style={{ background: "rgba(184,107,140,0.12)" }}
+          style={{ background: "rgba(172,92,127,0.12)" }}
         >
-          <BarChart3 className="h-4 w-4" style={{ color: "#b86b8c" }} />
+          <BarChart3 className="h-4 w-4" style={{ color: "var(--primary)" }} />
         </div>
         <div>
           <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
@@ -683,38 +654,37 @@ export default async function RevenueForecastPage() {
   const showLowData = !data.hasEnoughData;
 
   return (
-    <div className="mx-auto w-full max-w-3xl space-y-5 pb-10" dir="rtl">
+    <PremiumPageShell tint="champagne" width="narrow" className="pb-10">
       {/* Page header */}
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-2xl font-bold" style={{ color: "var(--foreground)" }}>
-              {REVENUE_FORECAST.pageTitle}
-            </h1>
-            <span
-              className="rounded-full px-2 py-0.5 text-[10px] font-bold"
-              style={{
-                background: "linear-gradient(135deg, rgba(212,168,83,0.18) 0%, rgba(192,149,96,0.12) 100%)",
-                color: "#c09560",
-                border: "1px solid rgba(212,168,83,0.30)",
-              }}
-            >
-              Pro
-            </span>
-          </div>
-          <p className="text-sm leading-5" style={{ color: "var(--muted)" }}>
-            {REVENUE_FORECAST.pageSubtitle}
-          </p>
-        </div>
-        <Link
-          href="/bookings"
-          className="flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium transition-opacity hover:opacity-80"
-          style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted)" }}
-        >
-          <ChevronLeft className="h-3.5 w-3.5" />
-          <span>תורים</span>
-        </Link>
-      </div>
+      <BeautyPageHero
+        icon={TrendingUp}
+        eyebrow="Allura Pro"
+        title={REVENUE_FORECAST.pageTitle}
+        subtitle={REVENUE_FORECAST.pageSubtitle}
+        tint="champagne"
+        action={
+          <Link
+            href="/bookings"
+            className="flex shrink-0 items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-medium transition-opacity hover:opacity-80"
+            style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--muted)" }}
+          >
+            <ChevronLeft className="h-3.5 w-3.5" />
+            <span>תורים</span>
+          </Link>
+        }
+        aside={
+          <span
+            className="self-start rounded-full px-2.5 py-1 text-[10px] font-bold md:self-end"
+            style={{
+              background: "linear-gradient(135deg, rgba(212,168,83,0.18) 0%, rgba(192,149,96,0.12) 100%)",
+              color: "var(--accent)",
+              border: "1px solid rgba(212,168,83,0.30)",
+            }}
+          >
+            Pro
+          </span>
+        }
+      />
 
       {/* Low data banner */}
       {showLowData && <LowDataBanner />}
@@ -808,6 +778,6 @@ export default async function RevenueForecastPage() {
 
       {/* Top services */}
       <TopServicesSection services={data.topServices} />
-    </div>
+    </PremiumPageShell>
   );
 }
