@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/server/db/prisma";
+import {
+  withTransientDbRetry,
+  isTransientDbError,
+  getPrismaErrorCode,
+} from "@/server/db/retry";
 import { runMorningReminderForBusiness } from "@/server/morning-reminder/runner";
 import { logger, captureError } from "@/lib/logger";
 
@@ -27,10 +32,27 @@ export async function GET(request: Request) {
   logger.info("[cron.morning-reminder] starting", { israelHour });
 
   // Fetch all enabled settings. The runner applies the hour filter per-business.
-  const allEnabled = await prisma.automationSetting.findMany({
-    where: { type: "morning_reminder", enabled: true },
-    select: { businessId: true, sendHour: true, thresholdDays: true, messageTemplate: true, requireOptIn: true, templateName: true, templateLanguage: true },
-  });
+  // First DB touch after cold start — retried on transient connection errors (P1001 etc.).
+  const fetchEnabledSettings = () =>
+    prisma.automationSetting.findMany({
+      where: { type: "morning_reminder", enabled: true },
+      select: { businessId: true, sendHour: true, thresholdDays: true, messageTemplate: true, requireOptIn: true, templateName: true, templateLanguage: true },
+    });
+
+  let allEnabled: Awaited<ReturnType<typeof fetchEnabledSettings>>;
+  try {
+    allEnabled = await withTransientDbRetry("cron.morning-reminder", fetchEnabledSettings);
+  } catch (err) {
+    if (isTransientDbError(err)) {
+      logger.error("[cron.morning-reminder] database unreachable after retries", {
+        cron: "cron.morning-reminder",
+        prismaCode: getPrismaErrorCode(err),
+        errMessage: err instanceof Error ? err.message : String(err),
+      });
+      return NextResponse.json({ error: "database_unavailable" }, { status: 503 });
+    }
+    throw err;
+  }
 
   // Pre-filter: for fixed-hour mode only include businesses scheduled this hour.
   // Relative-mode (sendHour < 0) fires every hour and relies on appointment window.

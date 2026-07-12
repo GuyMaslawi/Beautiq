@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/server/db/prisma";
+import {
+  withTransientDbRetry,
+  isTransientDbError,
+  getPrismaErrorCode,
+} from "@/server/db/retry";
 import { runWinBackForBusiness } from "@/server/win-back-automation/runner";
 import { logger, captureError } from "@/lib/logger";
 
@@ -32,14 +37,31 @@ export async function GET(request: Request) {
 
   // Load all businesses that have automation enabled at this hour and have
   // an active WhatsApp connection.
-  const eligibleSettings = await prisma.automationSetting.findMany({
-    where: {
-      type: "win_back",
-      enabled: true,
-      sendHour: israelHour,
-    },
-    select: { businessId: true },
-  });
+  // First DB touch after cold start — retried on transient connection errors (P1001 etc.).
+  const fetchEligibleSettings = () =>
+    prisma.automationSetting.findMany({
+      where: {
+        type: "win_back",
+        enabled: true,
+        sendHour: israelHour,
+      },
+      select: { businessId: true },
+    });
+
+  let eligibleSettings: Awaited<ReturnType<typeof fetchEligibleSettings>>;
+  try {
+    eligibleSettings = await withTransientDbRetry("cron.win-back", fetchEligibleSettings);
+  } catch (err) {
+    if (isTransientDbError(err)) {
+      logger.error("[cron.win-back] database unreachable after retries", {
+        cron: "cron.win-back",
+        prismaCode: getPrismaErrorCode(err),
+        errMessage: err instanceof Error ? err.message : String(err),
+      });
+      return NextResponse.json({ error: "database_unavailable" }, { status: 503 });
+    }
+    throw err;
+  }
 
   if (eligibleSettings.length === 0) {
     logger.info("[cron.win-back] no businesses scheduled this hour", { israelHour });
