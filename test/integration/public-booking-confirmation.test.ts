@@ -147,7 +147,7 @@ describe("sendBookingConfirmation — sending", () => {
       success: false,
       providerMessageId: null,
       failureReason: "Recipient not in allowed list [code 131030 · trace AfbTrace999]",
-      phoneNumberIdUsed: "1170382949488802",
+      phoneNumberIdUsed: "1245832988604563",
       metaError: {
         code: 131030,
         subcode: 2655007,
@@ -166,14 +166,14 @@ describe("sendBookingConfirmation — sending", () => {
     expect(failed.data.errorType).toBe("OAuthException");
     expect(failed.data.errorFbtraceId).toBe("AfbTrace999");
     expect(failed.data.errorRaw).toContain("131030");
-    expect(failed.data.phoneNumberId).toBe("1170382949488802");
+    expect(failed.data.phoneNumberId).toBe("1245832988604563");
   });
 
   it("logs the failure with a masked recipient + Meta diagnostics, never the full phone", async () => {
     send.mockResolvedValue({
       success: false,
       failureReason: "rejected",
-      phoneNumberIdUsed: "1170382949488802",
+      phoneNumberIdUsed: "1245832988604563",
       metaError: { code: 131030, fbtraceId: "AfbTrace999" },
     });
     await sendBookingConfirmation(BASE);
@@ -183,7 +183,7 @@ describe("sendBookingConfirmation — sending", () => {
     expect(logs).not.toContain("972501234567");
     expect(logs).toContain("code=131030");
     expect(logs).toContain("fbtrace=AfbTrace999");
-    expect(logs).toContain("phoneNumberId=1170382949488802");
+    expect(logs).toContain("phoneNumberId=1245832988604563");
   });
 
   it("never throws even if the provider itself throws", async () => {

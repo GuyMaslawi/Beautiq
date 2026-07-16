@@ -92,8 +92,20 @@ export async function resolveWhatsAppConnectionForBusiness(
   });
 
   if (connection?.status === "active") {
-    const phoneNumberId =
-      connection.phoneNumberId ?? process.env.META_WHATSAPP_PHONE_NUMBER_ID;
+    // Mode A (useEnvFallback): env is the source of truth for BOTH the token and
+    // the phone-number id. The DB value is only a snapshot from connect time and
+    // goes stale when Allura's managed number is rotated (e.g. Meta test number →
+    // production number) — pairing a fresh env token with a stale DB phone id is
+    // exactly the bug that kept sends on the old test number.
+    // Mode B (Embedded Signup): the business's own number lives in the DB and wins.
+    const envPhoneNumberId = process.env.META_WHATSAPP_PHONE_NUMBER_ID;
+    const phoneNumberId = connection.useEnvFallback
+      ? (envPhoneNumberId ?? connection.phoneNumberId ?? undefined)
+      : (connection.phoneNumberId ?? envPhoneNumberId);
+    // The stored display phone describes the DB snapshot — hide it when the
+    // resolved id differs, so diagnostics never show the old number's display.
+    const snapshotIsStale =
+      !!connection.phoneNumberId && !!phoneNumberId && connection.phoneNumberId !== phoneNumberId;
     const apiVersion = process.env.META_WHATSAPP_API_VERSION ?? "v19.0";
 
     let accessToken: string | undefined;
@@ -147,8 +159,9 @@ export async function resolveWhatsAppConnectionForBusiness(
         isTestMode,
         phoneNumberId,
         wabaId: connection.wabaId ?? undefined,
-        displayPhoneNumber:
-          connection.displayPhoneNumber ?? connection.phoneNumber ?? undefined,
+        displayPhoneNumber: snapshotIsStale
+          ? undefined
+          : (connection.displayPhoneNumber ?? connection.phoneNumber ?? undefined),
         connectionId: connection.id,
         uiStatus: "ממתין לאישור המספר המחובר",
         uiDetail: "אשרי שזה המספר הנכון בעמוד האוטומציות כדי להתחיל לשלוח",
@@ -170,10 +183,14 @@ export async function resolveWhatsAppConnectionForBusiness(
       isTestMode,
       phoneNumberId,
       wabaId: connection.wabaId ?? undefined,
-      displayPhoneNumber:
-        connection.displayPhoneNumber ?? connection.phoneNumber ?? undefined,
+      displayPhoneNumber: snapshotIsStale
+        ? undefined
+        : (connection.displayPhoneNumber ?? connection.phoneNumber ?? undefined),
       connectionId: connection.id,
       uiStatus: "WhatsApp מחובר",
+      uiDetail: snapshotIsStale
+        ? "המספר נטען מהגדרות המערכת (env) — נתוני החיבור השמורים אינם מעודכנים, מומלץ לחבר מחדש"
+        : undefined,
     };
   }
 
@@ -269,6 +286,13 @@ export async function getWhatsAppDiagnostic(
     realSendEnabled &&
     resolved.provider.name !== "disabled" &&
     resolved.provider.name !== "dev_mock";
+  // A Mode A connection whose stored phone-number-id no longer matches the
+  // resolved (env) id — the snapshot predates a managed-number rotation.
+  const staleSnapshot =
+    isActive &&
+    !!connection?.phoneNumberId &&
+    !!resolved.phoneNumberId &&
+    connection.phoneNumberId !== resolved.phoneNumberId;
 
   details.push({
     label: "חיבור WhatsApp בסיס הנתונים",
@@ -294,8 +318,10 @@ export async function getWhatsAppDiagnostic(
     if (connection.displayPhoneNumber ?? connection.phoneNumber) {
       details.push({
         label: "מספר טלפון",
-        ok: true,
-        value: connection.displayPhoneNumber ?? connection.phoneNumber ?? undefined,
+        ok: !staleSnapshot,
+        value: staleSnapshot
+          ? `${connection.displayPhoneNumber ?? connection.phoneNumber} — לא מעודכן (נתון שמור ישן)`
+          : (connection.displayPhoneNumber ?? connection.phoneNumber ?? undefined),
       });
     }
 
@@ -345,6 +371,19 @@ export async function getWhatsAppDiagnostic(
   });
   details.push({ label: "Access Token מוגדר", ok: hasAccessToken });
   details.push({ label: "Phone Number ID מוגדר", ok: hasPhoneNumberId });
+  // The id sends will ACTUALLY use — mirrors the resolver, not just the DB row.
+  details.push({
+    label: "Phone Number ID בפועל (resolved)",
+    ok: !!resolved.phoneNumberId,
+    value: resolved.phoneNumberId ?? "לא נקבע",
+  });
+  if (staleSnapshot) {
+    details.push({
+      label: "אי-התאמה בין החיבור השמור ל-env",
+      ok: false,
+      value: `שמור: ${connection?.phoneNumberId} · בפועל: ${resolved.phoneNumberId} — יש לחבר מחדש מה-env לעדכון הנתונים`,
+    });
+  }
   details.push({
     label: "מצב בדיקה (WHATSAPP_TEST_MODE)",
     ok: !testModeActive,
@@ -458,22 +497,38 @@ export async function getDecryptedCredentialsForBusiness(
   }
   if (!accessToken) return null;
 
-  const wabaId = connection.wabaId ?? process.env.META_WHATSAPP_WABA_ID ?? undefined;
-  const phoneNumberId =
-    connection.phoneNumberId ?? process.env.META_WHATSAPP_PHONE_NUMBER_ID ?? undefined;
+  // Mode A (env fallback): env ids win — the DB values are stale snapshots from
+  // connect time (see resolveWhatsAppConnectionForBusiness). Mode B: DB ids win.
+  const envWabaId = process.env.META_WHATSAPP_WABA_ID ?? undefined;
+  const envPhoneNumberId = process.env.META_WHATSAPP_PHONE_NUMBER_ID ?? undefined;
+  const pick = (
+    dbValue: string | null | undefined,
+    envValue: string | undefined,
+  ): { value?: string; source: CredentialSource } => {
+    const dbFirst = !connection.useEnvFallback;
+    const value = dbFirst ? (dbValue ?? envValue) : (envValue ?? dbValue ?? undefined);
+    if (!value) return { value: undefined, source: "none" };
+    const source: CredentialSource =
+      value === (dbFirst ? dbValue : envValue)
+        ? dbFirst
+          ? "connection"
+          : "env"
+        : dbFirst
+          ? "env"
+          : "connection";
+    return { value, source };
+  };
+  const waba = pick(connection.wabaId, envWabaId);
+  const phone = pick(connection.phoneNumberId, envPhoneNumberId);
 
   return {
     accessToken,
-    phoneNumberId,
-    wabaId,
+    phoneNumberId: phone.value,
+    wabaId: waba.value,
     apiVersion,
     credentialMode: "per_business",
-    wabaIdSource: connection.wabaId ? "connection" : process.env.META_WHATSAPP_WABA_ID ? "env" : "none",
-    phoneNumberIdSource: connection.phoneNumberId
-      ? "connection"
-      : process.env.META_WHATSAPP_PHONE_NUMBER_ID
-        ? "env"
-        : "none",
+    wabaIdSource: waba.source,
+    phoneNumberIdSource: phone.source,
     envWabaIdPresent,
   };
 }

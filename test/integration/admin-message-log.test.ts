@@ -64,7 +64,7 @@ describe("getAdminMessageLog", () => {
     prisma.automationMessage.findMany.mockResolvedValue([
       row({
         failureReason: "Recipient not allowed [code 131030]",
-        phoneNumberId: "1170382949488802",
+        phoneNumberId: "1245832988604563",
         templateId: "booking_confirmation_he",
         templateLanguage: "he",
         errorCode: 131030,
@@ -79,7 +79,7 @@ describe("getAdminMessageLog", () => {
     const entry = log.entries[0];
     expect(entry.outcome).toBe("failed");
     expect(entry.maskedPhone).toBe("972***567");
-    expect(entry.phoneNumberId).toBe("1170382949488802");
+    expect(entry.phoneNumberId).toBe("1245832988604563");
     expect(entry.templateLanguage).toBe("he");
     expect(entry.metaError).not.toBeNull();
     expect(entry.metaError?.code).toBe(131030);

@@ -21,10 +21,11 @@ import { buildMetaErrorReason } from "@/lib/whatsapp/meta-cloud-api";
 
 const META_GRAPH_BASE = "https://graph.facebook.com";
 
-// The phone-number-id we INTEND to register (current "+1 555-900-1549" number).
-const EXPECTED_PHONE_NUMBER_ID = "1170382949488802";
-// The previous number's id — guard so we never accidentally register the wrong one.
-const OLD_PHONE_NUMBER_ID = "1162151566985002";
+// The phone-number-id we INTEND to register (production "+972 50-603-4514" number).
+const EXPECTED_PHONE_NUMBER_ID = "1245832988604563";
+// Previous numbers' ids — guard so we never accidentally register the wrong one.
+// 1170382949488802 = retired Meta test number "+1 555-900-1549".
+const OLD_PHONE_NUMBER_IDS = ["1162151566985002", "1170382949488802", "1182502871610375"];
 
 interface MetaRegisterResponse {
   success?: boolean;
@@ -58,9 +59,9 @@ async function main() {
   console.log("WHATSAPP_TEST_MODE:", process.env.WHATSAPP_TEST_MODE);
 
   // --- Pre-flight validation -------------------------------------------------
-  if (phoneNumberId === OLD_PHONE_NUMBER_ID) {
+  if (OLD_PHONE_NUMBER_IDS.includes(phoneNumberId)) {
     console.error(
-      "\nRefusing to run: this is the OLD phone-number-id. Set the correct id and retry.",
+      "\nRefusing to run: this is an OLD phone-number-id. Set the correct id and retry.",
     );
     process.exit(1);
   }
