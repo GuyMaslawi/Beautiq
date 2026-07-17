@@ -101,24 +101,13 @@ function buildBodyComponents(
 }
 
 /**
- * Fetches a template's definition from Meta so we can compare it against
- * what we're building in the payload. Call this when debugging 131008 errors.
+ * Opt-in verbose diagnostics. OFF by default so production never dumps full
+ * request payloads or full Meta responses (which are noisy and can echo message
+ * content). Set WHATSAPP_DEBUG_PAYLOADS=true only for a short debugging window.
+ * Even when on, the recipient phone is always masked and the access token — which
+ * lives only in the Authorization header, never in the logged body — is never logged.
  */
-async function fetchTemplateDefinition(
-  config: MetaProviderConfig,
-  templateName: string,
-  wabaId: string,
-): Promise<unknown> {
-  const url = `${META_GRAPH_BASE}/${config.apiVersion}/${wabaId}/message_templates?name=${encodeURIComponent(templateName)}&fields=name,language,components,status`;
-  try {
-    const res = await fetch(url, {
-      headers: { Authorization: `Bearer ${config.accessToken}` },
-    });
-    return await res.json();
-  } catch (e) {
-    return { fetchError: String(e) };
-  }
-}
+const debugPayloadsEnabled = () => process.env.WHATSAPP_DEBUG_PAYLOADS === "true";
 
 export function createMetaCloudApiProvider(
   config: MetaProviderConfig,
@@ -164,14 +153,18 @@ export function createMetaCloudApiProvider(
       const url = `${META_GRAPH_BASE}/${config.apiVersion}/${config.phoneNumberId}/messages`;
       const maskedTo = maskPhone(recipientPhone);
 
+      // Sanitized structured send log — masked recipient, resolved Phone Number ID,
+      // template + language. This is the production diagnostic; it never carries a
+      // credential, full phone or message body.
       console.log(
         `[WhatsApp meta_cloud_api] sending — businessId=${businessId} clientId=${clientId} runId=${automationRunId} to=${maskedTo} phoneNumberId=${config.phoneNumberId} template=${templateId} lang=${templateLanguage ?? "he"}`,
       );
-      // Payload shape for diagnostics, with the recipient masked. The access token
-      // is only ever in the Authorization header, never in the body.
-      console.log(
-        `[WhatsApp meta_cloud_api] REQUEST PAYLOAD:\n${JSON.stringify({ ...payload, to: maskedTo }, null, 2)}`,
-      );
+      // Full payload dump only behind an explicit opt-in debug flag (recipient masked).
+      if (debugPayloadsEnabled()) {
+        console.log(
+          `[WhatsApp meta_cloud_api] REQUEST PAYLOAD:\n${JSON.stringify({ ...payload, to: maskedTo }, null, 2)}`,
+        );
+      }
 
       let response: Response;
       try {
@@ -207,33 +200,21 @@ export function createMetaCloudApiProvider(
         };
       }
 
-      // Always log the full response for diagnostics
-      console.log(
-        `[WhatsApp meta_cloud_api] RESPONSE (HTTP ${response.status}):\n${JSON.stringify(body, null, 2)}`,
-      );
+      // Full Meta response body only behind the explicit debug flag.
+      if (debugPayloadsEnabled()) {
+        console.log(
+          `[WhatsApp meta_cloud_api] RESPONSE (HTTP ${response.status}):\n${JSON.stringify(body, null, 2)}`,
+        );
+      }
 
       if (!response.ok || body.error) {
         const reason = buildMetaErrorReason(body.error, response.status);
         const metaError = buildMetaErrorDetails(body.error);
+        // Sanitized error log — Meta's own diagnostic fields (code/type/subcode/
+        // fbtrace/message), masked recipient, resolved Phone Number ID. No credential.
         console.error(
           `[WhatsApp meta_cloud_api] API error — businessId=${businessId} to=${maskedTo} phoneNumberId=${config.phoneNumberId} template=${templateId} httpStatus=${response.status} code=${body.error?.code} type=${body.error?.type} subcode=${body.error?.error_subcode} fbtrace=${body.error?.fbtrace_id} message=${body.error?.message}`,
         );
-
-        // On "Required parameter is missing" (131008) fetch the template definition
-        // from Meta so we can compare its expected components against what we sent.
-        if (body.error?.code === 131008) {
-          const wabaId = process.env.META_WHATSAPP_WABA_ID ?? "";
-          if (wabaId) {
-            const templateDef = await fetchTemplateDefinition(config, templateId, wabaId);
-            console.error(
-              `[WhatsApp meta_cloud_api] TEMPLATE DEFINITION from Meta (for mismatch debug):\n${JSON.stringify(templateDef, null, 2)}`,
-            );
-          } else {
-            console.error(
-              `[WhatsApp meta_cloud_api] META_WHATSAPP_WABA_ID not set — cannot fetch template definition for debug`,
-            );
-          }
-        }
 
         return {
           success: false,

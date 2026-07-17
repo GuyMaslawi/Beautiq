@@ -21,6 +21,7 @@
 
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
+import type { WhatsAppCampaignRecipientStatus } from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
 import { normalizePhone } from "@/lib/phone";
 
@@ -178,6 +179,10 @@ async function processStatusEvent(statusEvent: MetaStatusEvent): Promise<void> {
     data: connectionUpdate,
   });
 
+  // Mirror the delivery status onto any bulk-campaign recipient that shares this
+  // wamid, so campaign progress reflects sent/delivered/read/failed too.
+  await updateCampaignRecipientStatus(providerMessageId, status, eventTime, errors);
+
   // Safe structured log — providerMessageId, status, event timestamp and the
   // resolved businessId only. Never the recipient phone, message body or token.
   console.log(
@@ -185,6 +190,57 @@ async function processStatusEvent(statusEvent: MetaStatusEvent): Promise<void> {
       `msgId=${message.id} providerMessageId=${providerMessageId} status=${status} ` +
       `eventTime=${eventTime.toISOString()}`,
   );
+}
+
+// ---------------------------------------------------------------------------
+// Mirror delivery status onto a bulk-campaign recipient (if any) by wamid.
+//
+// Guarded so a late lower-ranked event never downgrades a recipient (e.g. a
+// "sent" arriving after "read" is ignored). "failed" applies unless already read.
+// ---------------------------------------------------------------------------
+
+const RECIPIENT_ADVANCE_FROM: Record<string, WhatsAppCampaignRecipientStatus[]> = {
+  sent: ["accepted"],
+  delivered: ["accepted", "sent"],
+  read: ["accepted", "sent", "delivered"],
+  failed: ["queued", "processing", "accepted", "sent", "delivered"],
+};
+
+async function updateCampaignRecipientStatus(
+  metaMessageId: string,
+  status: "sent" | "delivered" | "read" | "failed",
+  eventTime: Date,
+  errors?: MetaStatusError[],
+): Promise<void> {
+  const allowedFrom = RECIPIENT_ADVANCE_FROM[status];
+  if (!allowedFrom) return;
+
+  const data: {
+    status: typeof status;
+    sentAt?: Date;
+    deliveredAt?: Date;
+    readAt?: Date;
+    failedAt?: Date;
+    errorCode?: number;
+    errorMessage?: string;
+  } = { status };
+
+  if (status === "sent") data.sentAt = eventTime;
+  else if (status === "delivered") data.deliveredAt = eventTime;
+  else if (status === "read") data.readAt = eventTime;
+  else if (status === "failed") {
+    data.failedAt = eventTime;
+    const firstError = errors?.[0];
+    if (firstError) {
+      data.errorCode = firstError.code;
+      data.errorMessage = `${firstError.title ?? "שגיאת מסירה"} (קוד: ${firstError.code})`;
+    }
+  }
+
+  await prisma.whatsAppCampaignRecipient.updateMany({
+    where: { metaMessageId, status: { in: allowedFrom } },
+    data,
+  });
 }
 
 // ---------------------------------------------------------------------------

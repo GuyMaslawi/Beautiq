@@ -159,7 +159,12 @@ describe("findOrCreateClient — WhatsApp / marketing consent", () => {
     expect(prisma.client.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: "cli_existing" },
-        data: { whatsappOptIn: true },
+        // Escalation now also records opt-in provenance (timestamp + source).
+        data: expect.objectContaining({
+          whatsappOptIn: true,
+          whatsappOptInAt: expect.any(Date),
+          whatsappOptInSource: "public_booking",
+        }),
       }),
     );
   });

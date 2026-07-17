@@ -164,7 +164,7 @@ describe("sendManualClientWhatsAppAction — validation & tenant safety", () => 
     expect(sendArg.businessId).toBe(BUSINESS_A);
   });
 
-  it("returns a safe error (no provider internals) when the send fails", async () => {
+  it("surfaces the sanitized Meta failure reason and persists structured error fields", async () => {
     prisma.client.findUnique.mockResolvedValue(clientRow());
     prisma.whatsAppConnection.findUnique.mockResolvedValue({ status: "active" });
     prisma.automationSetting.findUnique.mockResolvedValue({
@@ -176,14 +176,34 @@ describe("sendManualClientWhatsAppAction — validation & tenant safety", () => 
     prisma.automationMessage.create.mockResolvedValue({ id: "msg_1" });
     prisma.automationMessage.update.mockResolvedValue({ id: "msg_1" });
     prisma.automationRun.update.mockResolvedValue({ id: "run_1" });
+    // buildMetaErrorReason output — sanitized (only Meta's own fields, never a token).
     send.mockResolvedValue({
       success: false,
-      failureReason: "secret token rejected by meta",
+      failureReason: "Message failed to send [code 131026 · subcode 0]",
+      metaError: {
+        code: 131026,
+        subcode: 0,
+        type: "OAuthException",
+        fbtraceId: "Atrace123",
+        rawSanitized: '{"code":131026}',
+      },
+      phoneNumberIdUsed: "PN_LIVE",
     });
 
     const res = await sendManualClientWhatsAppAction("cli_1", "manual_test");
-    expect(res.error).toBeTruthy();
-    expect(res.error).not.toContain("secret");
+    // Sanitized Meta reason is shown to the owner/admin (Part 2 requirement).
+    expect(res.error).toBe("Message failed to send [code 131026 · subcode 0]");
+    // Structured Meta error fields are persisted on the message log.
+    expect(prisma.automationMessage.update).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({
+          status: "failed",
+          errorCode: 131026,
+          errorFbtraceId: "Atrace123",
+          phoneNumberId: "PN_LIVE",
+        }),
+      }),
+    );
   });
 
   it("errors when test mode is on but WHATSAPP_TEST_PHONE is unset", async () => {

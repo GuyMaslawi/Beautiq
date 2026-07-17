@@ -498,18 +498,21 @@ describe("adminSendManualClientWhatsAppAction — sending", () => {
     );
   });
 
-  it("returns a generic failure error when the provider send fails", async () => {
+  it("surfaces the sanitized Meta failure reason and logs the failure", async () => {
     prisma.automationSetting.findUnique.mockResolvedValue(null);
+    // failureReason here is already the sanitized buildMetaErrorReason output.
     send.mockResolvedValue({
       success: false,
       providerMessageId: null,
-      failureReason: "meta rejected token xyz",
+      failureReason: "Message undeliverable [code 131026]",
+      metaError: { code: 131026 },
     });
     const res = await adminSendManualClientWhatsAppAction("cli_1", "manual_test");
-    expect(res).toEqual({ error: "שליחת ההודעה נכשלה" });
-    expect(JSON.stringify(res)).not.toContain("xyz");
+    expect(res).toEqual({ error: "Message undeliverable [code 131026]" });
     expect(prisma.automationMessage.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ status: "failed" }) }),
+      expect.objectContaining({
+        data: expect.objectContaining({ status: "failed", errorCode: 131026 }),
+      }),
     );
     expect(prisma.automationRun.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ status: "failed", failedCount: 1 }) }),

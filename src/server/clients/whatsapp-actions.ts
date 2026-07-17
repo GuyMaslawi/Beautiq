@@ -332,6 +332,16 @@ export async function sendManualClientWhatsAppAction(
       providerMessageId: providerMessageId ?? undefined,
       failureReason: failureReason ?? undefined,
       sentAt: finalStatus === "sent" ? new Date() : undefined,
+      failedAt: finalStatus === "failed" ? new Date() : undefined,
+      // Persist the resolved Phone Number ID + Meta's own diagnostic fields on
+      // failure so the admin log explains exactly why Meta rejected the send.
+      // These are sanitized (buildMetaErrorDetails) — never a token or credential.
+      phoneNumberId: result.phoneNumberIdUsed ?? undefined,
+      errorCode: result.metaError?.code ?? undefined,
+      errorSubcode: result.metaError?.subcode ?? undefined,
+      errorType: result.metaError?.type ?? undefined,
+      errorFbtraceId: result.metaError?.fbtraceId ?? undefined,
+      errorRaw: result.metaError?.rawSanitized ?? undefined,
     },
   });
 
@@ -358,7 +368,10 @@ export async function sendManualClientWhatsAppAction(
   }
 
   if (!result.success) {
-    return { error: "שליחת ההודעה נכשלה" };
+    // Surface the sanitized Meta failure reason (code/subcode/trace) instead of a
+    // generic message, so the owner/admin sees why the send failed. Never contains
+    // a credential — buildMetaErrorReason keeps only Meta's own error fields.
+    return { error: result.failureReason ?? "שליחת ההודעה נכשלה" };
   }
 
   return { success: true, isTestMode };

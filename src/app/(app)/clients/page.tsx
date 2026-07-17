@@ -2,8 +2,11 @@ import Link from "next/link";
 import { Users2, CalendarCheck, UserX, Clock, Upload } from "lucide-react";
 import { requireCurrentBusiness } from "@/server/auth/session";
 import { getClients, getClientSummary } from "@/server/clients/queries";
+import { getCampaignsForBusiness } from "@/server/whatsapp/campaigns/queries";
 import { ClientRow } from "@/components/clients/client-row";
 import { ClientCard } from "@/components/clients/client-card";
+import { BulkCampaignDrawer } from "@/components/clients/campaigns/bulk-campaign-drawer";
+import { CampaignHistory } from "@/components/clients/campaigns/campaign-history";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CLIENTS } from "@/lib/constants/he";
@@ -23,9 +26,10 @@ export default async function ClientsPage({
   const search = q?.trim() || undefined;
   const isTestMode = process.env.WHATSAPP_TEST_MODE === "true";
 
-  const [clients, summary] = await Promise.all([
+  const [clients, summary, campaigns] = await Promise.all([
     getClients(tenant, { search }),
     getClientSummary(tenant),
+    getCampaignsForBusiness(tenant),
   ]);
 
   return (
@@ -38,12 +42,15 @@ export default async function ClientsPage({
         subtitle="כל הלקוחות שלך, במקום אחד. ניהול קשרים, מעקב פגישות — בקלות."
         tint="rose"
         action={
-          <Link href="/clients/import">
-            <Button variant="secondary" size="sm" className="flex shrink-0 items-center gap-1.5">
-              <Upload className="h-3.5 w-3.5" />
-              ייבוא לקוחות
-            </Button>
-          </Link>
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
+            {summary.total > 0 && <BulkCampaignDrawer />}
+            <Link href="/clients/import">
+              <Button variant="secondary" size="sm" className="flex shrink-0 items-center gap-1.5">
+                <Upload className="h-3.5 w-3.5" />
+                ייבוא לקוחות
+              </Button>
+            </Link>
+          </div>
         }
       />
 
@@ -77,6 +84,9 @@ export default async function ClientsPage({
           icon={<Users2 className="h-4 w-4" />}
         />
       </div>
+
+      {/* WhatsApp campaign history */}
+      {campaigns.length > 0 && <CampaignHistory campaigns={campaigns} />}
 
       {/* Search */}
       <form method="GET" action="/clients" className="flex gap-2">

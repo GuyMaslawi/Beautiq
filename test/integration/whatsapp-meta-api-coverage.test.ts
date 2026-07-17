@@ -4,8 +4,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
  * Additional coverage for meta-cloud-api.ts targeting branches the main suite
  * does not exercise:
  *  - buildMetaErrorReason default message + no-diagnostic-fields path
- *  - the 131008 ("Required parameter missing") template-definition debug fetch,
- *    both with WABA_ID set (second fetch succeeds AND throws) and unset
+ *  - the 131008 ("Required parameter missing") path makes NO extra Graph fetch
+ *    (the temporary template-definition debug round-trip was removed)
  *  - a template with no variables → payload omits the components block
  *  - success response with no messages[] → providerMessageId is null
  */
@@ -101,47 +101,29 @@ describe("meta-cloud-api send() — extra branches", () => {
     expect(res.providerMessageId).toBeNull();
   });
 
-  it("on error 131008 with WABA_ID set, fetches the template definition for debug", async () => {
+  it("on error 131008 returns the safe failure WITHOUT an extra Graph round-trip (even with WABA_ID set)", async () => {
+    // The temporary template-definition debug fetch was removed for production —
+    // a 131008 must not trigger a second Graph API call.
     process.env.META_WHATSAPP_WABA_ID = "waba_debug_1";
-    fetchSpy
-      // 1st call: the send → 131008 error
-      .mockResolvedValueOnce(
-        jsonResponse({ error: { message: "Required parameter missing", code: 131008 } }, 400),
-      )
-      // 2nd call: fetchTemplateDefinition
-      .mockResolvedValueOnce(jsonResponse({ data: [{ name: "tpl_he", components: [] }] }, 200));
+    fetchSpy.mockResolvedValueOnce(
+      jsonResponse({ error: { message: "Required parameter missing", code: 131008 } }, 400),
+    );
 
     const res = await provider.send(baseParams);
     expect(res.success).toBe(false);
     expect(res.failureReason).toContain("code 131008");
-    // The debug definition fetch happened (2 total fetches) and hit the WABA template endpoint.
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
-    expect(String(fetchSpy.mock.calls[1][0])).toContain("waba_debug_1/message_templates");
+    expect(res.metaError?.code).toBe(131008);
+    // Exactly one fetch — only the send itself.
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
-  it("on error 131008 with the debug fetch throwing, still returns the safe failure", async () => {
-    process.env.META_WHATSAPP_WABA_ID = "waba_debug_2";
-    fetchSpy
-      .mockResolvedValueOnce(
-        jsonResponse({ error: { message: "Required parameter missing", code: 131008 } }, 400),
-      )
-      // fetchTemplateDefinition rejects — its internal try/catch swallows it.
-      .mockRejectedValueOnce(new Error("definition fetch failed"));
-
-    const res = await provider.send(baseParams);
-    expect(res.success).toBe(false);
-    expect(res.failureReason).toContain("131008");
-    expect(fetchSpy).toHaveBeenCalledTimes(2);
-  });
-
-  it("on error 131008 without WABA_ID, skips the debug fetch", async () => {
+  it("on error 131008 without WABA_ID also makes only the single send fetch", async () => {
     delete process.env.META_WHATSAPP_WABA_ID;
     fetchSpy.mockResolvedValueOnce(
       jsonResponse({ error: { message: "Required parameter missing", code: 131008 } }, 400),
     );
     const res = await provider.send(baseParams);
     expect(res.success).toBe(false);
-    // Only the original send fetch — no template-definition fetch.
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 

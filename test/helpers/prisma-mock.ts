@@ -46,6 +46,8 @@ const MODELS = [
   "businessPaymentSettings",
   "paymentProviderConnection",
   "bookingPayment",
+  "whatsAppCampaign",
+  "whatsAppCampaignRecipient",
 ] as const;
 
 const DELEGATE_METHODS = [

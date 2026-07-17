@@ -20,7 +20,7 @@
  */
 
 import { createMetaCloudApiProvider } from "./meta-cloud-api";
-import { phonesEqual } from "@/lib/phone";
+import { phonesEqual, maskPhone } from "@/lib/phone";
 
 export interface SendMessageParams {
   businessId: string;
@@ -92,9 +92,10 @@ export const DEV_MOCK_SKIP_REASON =
 export const devMockProvider: WhatsAppProvider = {
   name: "dev_mock",
   async send(params) {
+    // Dev-only mock. Mask the recipient and never log the message body — the same
+    // discipline as the real provider, so a stray dev log can't leak PII/content.
     console.log(
-      `[WhatsApp dev_mock] NOT SENT — businessId=${params.businessId} to=${params.toPhone} runId=${params.automationRunId}\n` +
-        `  text: ${params.fallbackText.slice(0, 120)}…`,
+      `[WhatsApp dev_mock] NOT SENT — businessId=${params.businessId} to=${maskPhone(params.toPhone)} runId=${params.automationRunId}`,
     );
     return {
       success: false,

@@ -22,11 +22,14 @@ export async function findOrCreateClient(
     phone,
     whatsappOptIn,
     marketingOptIn,
+    optInSource = "public_booking",
   }: {
     fullName: string;
     phone: string;
     whatsappOptIn?: boolean;
     marketingOptIn?: boolean;
+    /** Provenance recorded the first time WhatsApp opt-in is granted. */
+    optInSource?: string;
   },
 ) {
   const normalized = normalizePhone(phone);
@@ -41,10 +44,21 @@ export async function findOrCreateClient(
   });
 
   if (existing) {
-    const data: { fullName?: string; whatsappOptIn?: boolean; marketingOptIn?: boolean } = {};
+    const data: {
+      fullName?: string;
+      whatsappOptIn?: boolean;
+      marketingOptIn?: boolean;
+      whatsappOptInAt?: Date;
+      whatsappOptInSource?: string;
+    } = {};
     if (!existing.fullName && fullName) data.fullName = fullName;
     // Escalate consent only — never revoke an existing opt-in.
-    if (whatsappOptIn && !existing.whatsappOptIn) data.whatsappOptIn = true;
+    if (whatsappOptIn && !existing.whatsappOptIn) {
+      data.whatsappOptIn = true;
+      // Record provenance the first time consent is granted.
+      data.whatsappOptInAt = new Date();
+      data.whatsappOptInSource = optInSource;
+    }
     if (marketingOptIn && !existing.marketingOptIn) data.marketingOptIn = true;
 
     if (Object.keys(data).length > 0) {
@@ -61,6 +75,8 @@ export async function findOrCreateClient(
       normalizedPhone: normalized,
       whatsappOptIn: whatsappOptIn ?? false,
       marketingOptIn: marketingOptIn ?? false,
+      whatsappOptInAt: whatsappOptIn ? new Date() : null,
+      whatsappOptInSource: whatsappOptIn ? optInSource : null,
     },
   });
 }

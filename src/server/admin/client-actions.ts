@@ -31,7 +31,7 @@ export async function adminUpdateClientAction(
 
   const existing = await prisma.client.findUnique({
     where: { id: clientId },
-    select: { id: true, businessId: true },
+    select: { id: true, businessId: true, whatsappOptIn: true },
   });
 
   if (!existing) return { formError: "הלקוחה לא נמצאה" };
@@ -75,7 +75,18 @@ export async function adminUpdateClientAction(
   try {
     await prisma.client.update({
       where: { id: clientId },
-      data: { fullName, phone, normalizedPhone, email, notes, whatsappOptIn, marketingOptIn },
+      data: {
+        fullName,
+        phone,
+        normalizedPhone,
+        email,
+        notes,
+        whatsappOptIn,
+        marketingOptIn,
+        ...(whatsappOptIn && !existing.whatsappOptIn
+          ? { whatsappOptInAt: new Date(), whatsappOptInSource: "manual_admin" }
+          : {}),
+      },
     });
   } catch (err: unknown) {
     if (err instanceof Error && err.message.includes("Unique constraint")) {
@@ -334,6 +345,13 @@ export async function adminSendManualClientWhatsAppAction(
       providerMessageId: providerMessageId ?? undefined,
       failureReason: failureReason ?? undefined,
       sentAt: finalStatus === "sent" ? new Date() : undefined,
+      failedAt: finalStatus === "failed" ? new Date() : undefined,
+      phoneNumberId: result.phoneNumberIdUsed ?? undefined,
+      errorCode: result.metaError?.code ?? undefined,
+      errorSubcode: result.metaError?.subcode ?? undefined,
+      errorType: result.metaError?.type ?? undefined,
+      errorFbtraceId: result.metaError?.fbtraceId ?? undefined,
+      errorRaw: result.metaError?.rawSanitized ?? undefined,
     },
   });
 
@@ -358,7 +376,7 @@ export async function adminSendManualClientWhatsAppAction(
   }
 
   if (!result.success) {
-    return { error: "שליחת ההודעה נכשלה" };
+    return { error: result.failureReason ?? "שליחת ההודעה נכשלה" };
   }
 
   return { success: true, isTestMode };

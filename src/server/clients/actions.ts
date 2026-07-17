@@ -56,7 +56,7 @@ export async function updateClientOptInAction(
 
   const client = await prisma.client.findUnique({
     where: { id: clientId },
-    select: { id: true, businessId: true },
+    select: { id: true, businessId: true, whatsappOptIn: true },
   });
 
   if (!client || client.businessId !== tenant.businessId) {
@@ -69,7 +69,14 @@ export async function updateClientOptInAction(
   try {
     await prisma.client.update({
       where: { id: clientId },
-      data: { whatsappOptIn, marketingOptIn },
+      data: {
+        whatsappOptIn,
+        marketingOptIn,
+        // Record provenance only when the owner newly grants WhatsApp consent.
+        ...(whatsappOptIn && !client.whatsappOptIn
+          ? { whatsappOptInAt: new Date(), whatsappOptInSource: "manual_owner" }
+          : {}),
+      },
     });
   } catch {
     return { error: CLIENTS.errors.generic };
@@ -102,7 +109,7 @@ export async function updateClientAction(
 
   const existing = await prisma.client.findUnique({
     where: { id: clientId },
-    select: { id: true, businessId: true },
+    select: { id: true, businessId: true, whatsappOptIn: true },
   });
 
   if (!existing || existing.businessId !== tenant.businessId) {
@@ -156,6 +163,9 @@ export async function updateClientAction(
         notes,
         whatsappOptIn,
         marketingOptIn,
+        ...(whatsappOptIn && !existing.whatsappOptIn
+          ? { whatsappOptInAt: new Date(), whatsappOptInSource: "manual_owner" }
+          : {}),
       },
     });
   } catch (err: unknown) {

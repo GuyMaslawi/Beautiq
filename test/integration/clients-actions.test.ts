@@ -97,10 +97,11 @@ describe("updateClientNotesAction", () => {
 // updateClientOptInAction
 // ---------------------------------------------------------------------------
 describe("updateClientOptInAction", () => {
-  it("updates whatsapp & marketing opt-in for an owned client", async () => {
+  it("updates opt-in and records provenance when newly granting WhatsApp consent", async () => {
     prisma.client.findUnique.mockResolvedValue({
       id: "cli_1",
       businessId: BUSINESS_A,
+      whatsappOptIn: false, // was not opted in → provenance should be recorded
     });
     prisma.client.update.mockResolvedValue(makeClient({ id: "cli_1" }));
 
@@ -113,7 +114,12 @@ describe("updateClientOptInAction", () => {
     expect(prisma.client.update).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { id: "cli_1" },
-        data: { whatsappOptIn: true, marketingOptIn: true },
+        data: expect.objectContaining({
+          whatsappOptIn: true,
+          marketingOptIn: true,
+          whatsappOptInSource: "manual_owner",
+          whatsappOptInAt: expect.any(Date),
+        }),
       }),
     );
   });

@@ -255,6 +255,30 @@ enum AutomationOfferType {
   custom
 }
 
+/// Lifecycle of a bulk WhatsApp campaign (owner-initiated marketing blast).
+enum WhatsAppCampaignStatus {
+  draft
+  queued
+  processing
+  completed
+  completed_with_errors
+  cancelled
+}
+
+/// Per-recipient state within a campaign. Progresses queued → processing →
+/// accepted (Meta returned a wamid) → sent → delivered → read, or → failed,
+/// or → skipped (suppressed at send time). accepted onward is never re-sent.
+enum WhatsAppCampaignRecipientStatus {
+  queued
+  processing
+  accepted
+  sent
+  delivered
+  read
+  failed
+  skipped
+}
+
 // ---------------------------------------------------------------------------
 // Global (non-tenant) models
 // ---------------------------------------------------------------------------
@@ -305,21 +329,21 @@ model Business {
   updatedAt   DateTime @updatedAt
 
   // Public page customisation fields
-  logoUrl              String?
-  coverImageUrl        String?
-  instagramUrl         String?
-  facebookUrl          String?
-  brandColor           String?
-  introMessage         String?
+  logoUrl                String?
+  coverImageUrl          String?
+  instagramUrl           String?
+  facebookUrl            String?
+  brandColor             String?
+  introMessage           String?
   /// Section visibility toggles for the public booking page
-  showServices         Boolean @default(true)
-  showPrices           Boolean @default(true)
-  showHours            Boolean @default(true)
-  showReviews          Boolean @default(false)
-  showGallery          Boolean @default(false)
+  showServices           Boolean @default(true)
+  showPrices             Boolean @default(true)
+  showHours              Boolean @default(true)
+  showReviews            Boolean @default(false)
+  showGallery            Boolean @default(false)
   showCancellationPolicy Boolean @default(true)
-  showPhone            Boolean @default(true)
-  showAddress          Boolean @default(true)
+  showPhone              Boolean @default(true)
+  showAddress            Boolean @default(true)
 
   members                BusinessUser[]
   categories             BusinessCategoryOnBusiness[]
@@ -342,6 +366,8 @@ model Business {
   automationSettings     AutomationSetting[]
   automationRuns         AutomationRun[]
   automationMessages     AutomationMessage[]
+  whatsappCampaigns      WhatsAppCampaign[]
+  campaignRecipients     WhatsAppCampaignRecipient[]
   paymentSettings        BusinessPaymentSettings?
   paymentConnection      PaymentProviderConnection?
   bookingPayments        BookingPayment[]
@@ -414,34 +440,41 @@ model Service {
 /// A client of a business. Phone is stored both as entered and normalized
 /// (e.g. E.164) so lookups and the per-business uniqueness check are reliable.
 model Client {
-  id                String    @id @default(cuid())
-  businessId        String
-  fullName          String
-  phone             String
-  normalizedPhone   String
-  email             String?
-  notes             String?
-  lastVisitAt       DateTime?
-  totalBookings     Int       @default(0)
-  noShowCount       Int       @default(0)
-  cancellationCount Int       @default(0)
-  totalSpent        Decimal   @default(0) @db.Decimal(10, 2)
+  id                  String    @id @default(cuid())
+  businessId          String
+  fullName            String
+  phone               String
+  normalizedPhone     String
+  email               String?
+  notes               String?
+  lastVisitAt         DateTime?
+  totalBookings       Int       @default(0)
+  noShowCount         Int       @default(0)
+  cancellationCount   Int       @default(0)
+  totalSpent          Decimal   @default(0) @db.Decimal(10, 2)
   /// Client has consented to receive WhatsApp messages
-  whatsappOptIn     Boolean   @default(false)
+  whatsappOptIn       Boolean   @default(false)
+  /// When the WhatsApp/marketing opt-in was recorded (provenance for consent).
+  /// Null for historical clients whose consent predates this tracking — such
+  /// clients are excluded from bulk marketing until consent is recorded explicitly.
+  whatsappOptInAt     DateTime?
+  /// How the opt-in was captured: public_booking | manual_owner | manual_admin | import
+  whatsappOptInSource String?
   /// Client has consented to receive marketing messages
-  marketingOptIn    Boolean   @default(false)
+  marketingOptIn      Boolean   @default(false)
   /// Set when client unsubscribes from automated messages
-  unsubscribedAt    DateTime?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  unsubscribedAt      DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
-  business           Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  business           Business                    @relation(fields: [businessId], references: [id], onDelete: Cascade)
   bookings           Booking[]
   payments           Payment[]
   waitlistEntries    WaitlistEntry[]
   recommendations    Recommendation[]
   automationMessages AutomationMessage[]
   bookingPayments    BookingPayment[]
+  campaignRecipients WhatsAppCampaignRecipient[]
 
   @@unique([businessId, normalizedPhone])
   @@index([businessId])
@@ -452,41 +485,41 @@ model Client {
 /// A booking. Price/duration are snapshotted at creation time so that
 /// later changes to the Service do not rewrite history.
 model Booking {
-  id                       String        @id @default(cuid())
-  businessId               String
-  clientId                 String
-  serviceId                String
-  startTime                DateTime
-  endTime                  DateTime
-  status                   BookingStatus @default(pending)
-  source                   BookingSource @default(public)
-  priceSnapshot            Decimal       @db.Decimal(10, 2)
-  durationMinutesSnapshot  Int
-  notes                    String?
-  cancellationReason       String?
-  cancelledAt              DateTime?
-  completedAt              DateTime?
-  noShowAt                 DateTime?
+  id                        String        @id @default(cuid())
+  businessId                String
+  clientId                  String
+  serviceId                 String
+  startTime                 DateTime
+  endTime                   DateTime
+  status                    BookingStatus @default(pending)
+  source                    BookingSource @default(public)
+  priceSnapshot             Decimal       @db.Decimal(10, 2)
+  durationMinutesSnapshot   Int
+  notes                     String?
+  cancellationReason        String?
+  cancelledAt               DateTime?
+  completedAt               DateTime?
+  noShowAt                  DateTime?
   /// "pending" | "paid" — set when a late cancellation fee applies; null when not applicable
   lateCancellationFeeStatus String?
-  rescheduledFromBookingId String?
+  rescheduledFromBookingId  String?
   /// WhatsApp automation tracking — prevent duplicate sends
-  confirmationSentAt       DateTime?
-  reminderSentAt           DateTime?
-  reviewRequestSentAt      DateTime?
+  confirmationSentAt        DateTime?
+  reminderSentAt            DateTime?
+  reviewRequestSentAt       DateTime?
   /// Owner notification tracking — set once the business owner has been alerted
   /// about this (public) booking request, to prevent duplicate notifications.
-  ownerNotifiedAt          DateTime?
-  createdAt                DateTime      @default(now())
-  updatedAt                DateTime      @updatedAt
+  ownerNotifiedAt           DateTime?
+  createdAt                 DateTime      @default(now())
+  updatedAt                 DateTime      @updatedAt
 
-  business           Business           @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  client             Client             @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  service            Service            @relation(fields: [serviceId], references: [id], onDelete: Cascade)
+  business           Business            @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  client             Client              @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  service            Service             @relation(fields: [serviceId], references: [id], onDelete: Cascade)
   // Self-relation: when a booking is rescheduled, the new booking points back
   // at the original one it replaced.
-  rescheduledFrom    Booking?           @relation("BookingReschedule", fields: [rescheduledFromBookingId], references: [id], onDelete: SetNull)
-  rescheduledTo      Booking[]          @relation("BookingReschedule")
+  rescheduledFrom    Booking?            @relation("BookingReschedule", fields: [rescheduledFromBookingId], references: [id], onDelete: SetNull)
+  rescheduledTo      Booking[]           @relation("BookingReschedule")
   payments           Payment[]
   reminders          Reminder[]
   recommendations    Recommendation[]
@@ -570,21 +603,21 @@ model Payment {
 
 /// One cancellation policy per business.
 model CancellationPolicy {
-  id                           String   @id @default(cuid())
-  businessId                   String   @unique
-  enabled                      Boolean  @default(false)
-  policyText                   String?
-  minNoticeHours               Int?
+  id                            String   @id @default(cuid())
+  businessId                    String   @unique
+  enabled                       Boolean  @default(false)
+  policyText                    String?
+  minNoticeHours                Int?
   /// Hours before appointment that mark a cancellation as "late" (6, 12, 24, 48, or custom)
-  lateCancellationHours        Int?
+  lateCancellationHours         Int?
   /// "none" | "fixed" | "percentage"
-  lateCancellationFeeType      String   @default("none")
+  lateCancellationFeeType       String   @default("none")
   /// Fixed fee amount in ILS
-  lateCancellationFeeAmount    Decimal? @db.Decimal(10, 2)
+  lateCancellationFeeAmount     Decimal? @db.Decimal(10, 2)
   /// Percentage of service price (0–100)
   lateCancellationFeePercentage Decimal? @db.Decimal(5, 2)
-  createdAt                    DateTime @default(now())
-  updatedAt                    DateTime @updatedAt
+  createdAt                     DateTime @default(now())
+  updatedAt                     DateTime @updatedAt
 
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 }
@@ -778,93 +811,93 @@ model BusinessSubscription {
 /// Mode B (Embedded Signup, future): useEnvFallback=false, token stored in accessTokenEncrypted.
 /// Future: Meta Embedded Signup will create/update WhatsAppConnection per business via onboarding flow.
 model WhatsAppConnection {
-  id                   String                   @id @default(cuid())
-  businessId           String                   @unique
-  provider             WhatsAppProvider         @default(dev_mock)
-  status               WhatsAppConnectionStatus @default(not_connected)
+  id                    String                   @id @default(cuid())
+  businessId            String                   @unique
+  provider              WhatsAppProvider         @default(dev_mock)
+  status                WhatsAppConnectionStatus @default(not_connected)
   /// Display phone number for owner UI (e.g. +972501234567)
-  phoneNumber          String?
+  phoneNumber           String?
   /// Meta phone number ID used for API calls (e.g. "123456789012345") — different from display number
-  phoneNumberId        String?
+  phoneNumberId         String?
   /// Masked display phone shown in UI (e.g. "+972 50-123-****")
-  displayPhoneNumber   String?
+  displayPhoneNumber    String?
   /// WhatsApp Business Account ID (Meta Cloud API)
-  wabaId               String?
+  wabaId                String?
   /// Encrypted provider access token — never returned to the client
-  accessTokenEncrypted String?
+  accessTokenEncrypted  String?
   /// When true, the access token comes from META_WHATSAPP_ACCESS_TOKEN env var (Mode A / testing).
   /// When false, token must come from accessTokenEncrypted (Mode B / Embedded Signup).
-  useEnvFallback       Boolean                  @default(false)
+  useEnvFallback        Boolean                  @default(false)
   /// When the connection was last verified successfully against the provider API
-  lastVerifiedAt       DateTime?
+  lastVerifiedAt        DateTime?
   /// Last error message — safe to display in admin UI (never contains credentials)
-  lastError            String?
+  lastError             String?
   /// When the connection was established (status changed to active)
-  connectedAt          DateTime?
+  connectedAt           DateTime?
   /// When the connection was last lost (status changed from active)
-  disconnectedAt       DateTime?
+  disconnectedAt        DateTime?
   /// Access token expiry — for future long-lived tokens from Embedded Signup
-  tokenExpiresAt       DateTime?
+  tokenExpiresAt        DateTime?
   /// How the owner chose to onboard this number in Embedded Signup. One of:
   /// "new_number" | "existing_business_app" | "personal" | "unknown".
   /// Reflects the owner's stated intent (Meta does not reliably report the real
   /// path back), and is used only for owner-facing guidance + the confirmation step.
-  connectionSource     String?
+  connectionSource      String?
   /// When the owner/admin explicitly confirmed the connected display number is
   /// correct. While a connection created through the guided flow (connectionSource
   /// set) has this null, real sends are blocked — see the WhatsApp resolver.
-  numberConfirmedAt    DateTime?
+  numberConfirmedAt     DateTime?
   /// Timestamp of the last webhook event received from Meta (any type)
   lastWebhookReceivedAt DateTime?
   /// Timestamp of the last delivery status event received via webhook
-  lastDeliveryEventAt  DateTime?
+  lastDeliveryEventAt   DateTime?
   /// Timestamp of the last read status event received via webhook
-  lastReadEventAt      DateTime?
-  createdAt            DateTime                 @default(now())
-  updatedAt            DateTime                 @updatedAt
+  lastReadEventAt       DateTime?
+  createdAt             DateTime                 @default(now())
+  updatedAt             DateTime                 @updatedAt
 
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 }
 
 /// Per-business, per-type automation configuration.
 model AutomationSetting {
-  id              String              @id @default(cuid())
-  businessId      String
-  type            AutomationType
-  enabled         Boolean             @default(false)
+  id                   String              @id @default(cuid())
+  businessId           String
+  type                 AutomationType
+  enabled              Boolean             @default(false)
   /// Days of inactivity before a client is eligible (30/45/60/90/custom)
-  thresholdDays   Int                 @default(45)
+  thresholdDays        Int                 @default(45)
   /// Hour of day (0–23, local business timezone) to send messages
-  sendHour        Int                 @default(10)
+  sendHour             Int                 @default(10)
   /// Owner-editable message template body with {variables}
-  messageTemplate  String?
+  messageTemplate      String?
   /// Meta-approved WhatsApp template name (required for real Meta Cloud API sends)
-  templateName     String?
+  templateName         String?
   /// BCP 47 language code matching the approved template (default: he)
-  templateLanguage String?             @default("he")
+  templateLanguage     String?             @default("he")
   /// Last known Meta approval status of templateName: approved | pending | rejected | unknown
-  templateStatus   String?
+  templateStatus       String?
   /// When templateStatus was last fetched/synced from Meta
-  templateSyncedAt DateTime?
-  offerType        AutomationOfferType @default(none)
+  templateSyncedAt     DateTime?
+  offerType            AutomationOfferType @default(none)
   /// Free-text offer value for custom offer type
-  offerValue      String?
+  offerValue           String?
   /// Minimum days between two messages to the same client
-  cooldownDays    Int                 @default(30)
+  cooldownDays         Int                 @default(30)
   /// Only send to clients who have given WhatsApp/marketing opt-in
-  requireOptIn    Boolean             @default(true)
+  requireOptIn         Boolean             @default(true)
   /// Test-only timing mode: "days" (production default) or "minutes" (admin/dev testing).
   /// Minute mode is only honored in non-production, by admins, or when
   /// ENABLE_AUTOMATION_MINUTE_TESTING=true — see lib/automation/minute-testing.ts.
-  timingUnit           String         @default("days")
+  timingUnit           String              @default("days")
   /// Inactivity threshold in MINUTES — only used when timingUnit="minutes" (test mode).
   testThresholdMinutes Int?
   /// Cooldown in MINUTES between messages — only used when timingUnit="minutes" (test mode).
   testCooldownMinutes  Int?
   /// Timestamp of the first successful test send — used to track sandbox validation progress
-  testSendPassedAt DateTime?
-  createdAt       DateTime            @default(now())
-  updatedAt       DateTime            @updatedAt
+  testSendPassedAt     DateTime?
+  createdAt            DateTime            @default(now())
+  updatedAt            DateTime            @updatedAt
 
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
 
@@ -874,17 +907,17 @@ model AutomationSetting {
 
 /// A single execution of an automation job (one per business per run).
 model AutomationRun {
-  id             String              @id @default(cuid())
-  businessId     String
-  type           AutomationType
-  status         AutomationRunStatus @default(running)
-  startedAt      DateTime            @default(now())
-  finishedAt     DateTime?
-  eligibleCount  Int                 @default(0)
-  sentCount      Int                 @default(0)
-  failedCount    Int                 @default(0)
-  skippedCount   Int                 @default(0)
-  createdAt      DateTime            @default(now())
+  id            String              @id @default(cuid())
+  businessId    String
+  type          AutomationType
+  status        AutomationRunStatus @default(running)
+  startedAt     DateTime            @default(now())
+  finishedAt    DateTime?
+  eligibleCount Int                 @default(0)
+  sentCount     Int                 @default(0)
+  failedCount   Int                 @default(0)
+  skippedCount  Int                 @default(0)
+  createdAt     DateTime            @default(now())
 
   business Business            @relation(fields: [businessId], references: [id], onDelete: Cascade)
   messages AutomationMessage[]
@@ -934,16 +967,102 @@ model AutomationMessage {
   source            String?
   createdAt         DateTime                @default(now())
 
-  business Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  run      AutomationRun  @relation(fields: [runId], references: [id], onDelete: Cascade)
-  client   Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  booking  Booking?       @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  business Business      @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  run      AutomationRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  client   Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  booking  Booking?      @relation(fields: [bookingId], references: [id], onDelete: SetNull)
 
   @@index([businessId, type])
   @@index([businessId, clientId])
   @@index([runId])
   @@index([status])
   @@index([providerMessageId])
+}
+
+// ---------------------------------------------------------------------------
+// Bulk WhatsApp campaigns (owner-initiated marketing blast)
+//
+// A campaign snapshots its eligible recipients at creation time, then a durable
+// processor sends to them in small batches (via the existing per-business
+// resolver + Meta Cloud API sender). Each recipient's actual send is also logged
+// as an AutomationMessage so it flows through the same webhook status pipeline;
+// campaignRecipient.metaMessageId mirrors the wamid so webhook events update both.
+// ---------------------------------------------------------------------------
+
+/// One bulk WhatsApp campaign. businessId scopes it to a single tenant; the
+/// eligible audience is frozen into WhatsAppCampaignRecipient rows at creation.
+model WhatsAppCampaign {
+  id               String                 @id @default(cuid())
+  businessId       String
+  /// User (owner) who created the campaign — scalar, no navigation needed.
+  createdByUserId  String
+  /// Approved Meta template used for the blast (marketing category).
+  templateName     String
+  templateLanguage String                 @default("he")
+  templateCategory String                 @default("MARKETING")
+  /// Owner-supplied variable values (e.g. offer text) keyed by variable name.
+  /// The fixed template body is NOT stored here and is never owner-editable.
+  variablePayload  Json?
+  /// Human description of the chosen audience (filters) for the history view.
+  audienceSummary  String?
+  status           WhatsAppCampaignStatus @default(draft)
+  totalSelected    Int                    @default(0)
+  totalEligible    Int                    @default(0)
+  /// Idempotency key from the client — prevents a double-click creating two campaigns.
+  idempotencyKey   String?
+  /// Processing lock: set while a worker (cron or owner-driven batch) is sending.
+  /// A stale lock (older than the timeout) can be reclaimed, so a crashed worker
+  /// never wedges the campaign.
+  lockedAt         DateTime?
+  createdAt        DateTime               @default(now())
+  startedAt        DateTime?
+  completedAt      DateTime?
+
+  business   Business                    @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  recipients WhatsAppCampaignRecipient[]
+
+  @@unique([businessId, idempotencyKey])
+  @@index([businessId, status])
+  @@index([businessId, createdAt])
+}
+
+/// A single recipient within a campaign — the frozen send target + its status.
+/// normalizedPhone is snapshotted from the scoped Client at creation; the sender
+/// re-resolves the live client and re-checks suppression before each send.
+model WhatsAppCampaignRecipient {
+  id                  String                          @id @default(cuid())
+  campaignId          String
+  businessId          String
+  clientId            String
+  normalizedPhone     String
+  status              WhatsAppCampaignRecipientStatus @default(queued)
+  /// Hebrew reason when status=skipped (suppressed) — shown in the details view.
+  skipReason          String?
+  /// Links to the AutomationMessage row created for the actual send (audit log).
+  automationMessageId String?
+  /// Meta message id (wamid) once accepted — mirrors AutomationMessage.providerMessageId
+  /// so webhook status events can update this recipient too.
+  metaMessageId       String?
+  /// Sanitized Meta error fields on failure (never a credential).
+  errorCode           Int?
+  errorSubcode        Int?
+  errorMessage        String?
+  acceptedAt          DateTime?
+  sentAt              DateTime?
+  deliveredAt         DateTime?
+  readAt              DateTime?
+  failedAt            DateTime?
+  createdAt           DateTime                        @default(now())
+  updatedAt           DateTime                        @updatedAt
+
+  campaign WhatsAppCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  business Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  client   Client           @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([campaignId, clientId])
+  @@index([campaignId, status])
+  @@index([businessId])
+  @@index([metaMessageId])
 }
 
 // ---------------------------------------------------------------------------
@@ -1003,24 +1122,24 @@ model PaymentProviderConnection {
 model BookingPayment {
   id                    String               @id @default(cuid())
   businessId            String
-  bookingId            String                @unique
-  clientId             String?
-  provider             PaymentProviderKind
-  status               BookingPaymentStatus  @default(pending)
+  bookingId             String               @unique
+  clientId              String?
+  provider              PaymentProviderKind
+  status                BookingPaymentStatus @default(pending)
   /// Amount to collect, in agorot.
-  amountMinor          Int
-  currency             String                @default("ILS")
+  amountMinor           Int
+  currency              String               @default("ILS")
   /// Hosted payment page URL the customer is sent to.
-  paymentUrl           String?
+  paymentUrl            String?
   /// Provider's transaction / page reference — idempotency key for webhooks.
   providerTransactionId String?              @unique
   /// Sanitized provider payload (no PAN, no secrets) for debugging/audit.
-  providerPayloadJson  Json?
-  expiresAt            DateTime?
-  paidAt               DateTime?
-  failedAt             DateTime?
-  createdAt            DateTime              @default(now())
-  updatedAt            DateTime              @updatedAt
+  providerPayloadJson   Json?
+  expiresAt             DateTime?
+  paidAt                DateTime?
+  failedAt              DateTime?
+  createdAt             DateTime             @default(now())
+  updatedAt             DateTime             @updatedAt
 
   business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
   booking  Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
