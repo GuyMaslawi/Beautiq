@@ -156,9 +156,11 @@
   --shadow-lg: var(--shadow-lg);
   --shadow-xl: var(--shadow-xl);
 
-  /* Typography */
-  --font-sans: var(--font-sans), system-ui, sans-serif;
-  --font-display: var(--font-display), var(--font-sans), Georgia, serif;
+  /* Typography — פונט עברי אחיד אחד (Heebo) לכל האתר: גוף וכותרות.
+     שני הטוקנים מפנים לאותה משפחה כדי שכל הרכיבים הקיימים
+     (כולל אלה שמשתמשים ב-font-display) יישארו אחידים לחלוטין. */
+  --font-sans: var(--font-heebo), system-ui, sans-serif;
+  --font-display: var(--font-heebo), system-ui, sans-serif;
 
   /* Radius */
   --radius-sm: 0.5rem;

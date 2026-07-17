@@ -1,22 +1,17 @@
 import type { Metadata } from "next";
-import { Heebo, Frank_Ruhl_Libre } from "next/font/google";
+import { Heebo } from "next/font/google";
 import "./globals.css";
 import { META } from "@/lib/constants/he";
 import { APP_URL } from "@/lib/config";
 
-// פונט עברי נקי ומודרני. נטען עם תת-קבוצת תווים עברית + לטינית
-// כדי לתמוך בעברית ובמספרים/לטינית במקומות הנדרשים.
+// פונט עברי אחיד לכל האתר — כותרות וגוף טקסט כאחד. נטען עם תת-קבוצת
+// תווים עברית + לטינית כדי לתמוך בעברית ובמספרים/לטינית במקומות הנדרשים.
+// חשוב: שם המשתנה ייחודי (‎--font-heebo‎) ולא זהה לטוקן העיצוב (‎--font-sans‎),
+// כדי למנוע הגדרה מעגלית ש-"שוברת" את הפונט ומחזירה פונט מערכת אקראי.
 const heebo = Heebo({
-  variable: "--font-sans",
+  variable: "--font-heebo",
   subsets: ["hebrew", "latin"],
-  display: "swap",
-});
-
-// סריף עברי עריכתי — קול התצוגה של Allura (כותרות בלבד).
-const frankRuhl = Frank_Ruhl_Libre({
-  variable: "--font-display",
-  subsets: ["hebrew", "latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["300", "400", "500", "600", "700", "800"],
   display: "swap",
 });
 
@@ -45,7 +40,7 @@ export default function RootLayout({
     <html
       lang="he"
       dir="rtl"
-      className={`${heebo.variable} ${frankRuhl.variable} h-full antialiased`}
+      className={`${heebo.variable} h-full antialiased`}
     >
       <body className="bg-background text-foreground flex min-h-screen flex-col">
         {children}
