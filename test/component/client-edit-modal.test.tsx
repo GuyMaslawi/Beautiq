@@ -20,8 +20,6 @@ function makeData(overrides: Partial<ClientEditInitialData> = {}): ClientEditIni
     phone: "0501234567",
     email: "noa@example.com",
     notes: "אלרגיה",
-    whatsappOptIn: true,
-    marketingOptIn: false,
     isUnsubscribed: false,
     ...overrides,
   };
@@ -50,10 +48,6 @@ describe("ClientEditModal", () => {
     expect(screen.getByDisplayValue("0501234567")).toBeInTheDocument();
     expect(screen.getByDisplayValue("noa@example.com")).toBeInTheDocument();
     expect(screen.getByDisplayValue("אלרגיה")).toBeInTheDocument();
-
-    const checkboxes = screen.getAllByRole("checkbox");
-    expect(checkboxes[0]).toBeChecked(); // whatsappOptIn = true
-    expect(checkboxes[1]).not.toBeChecked(); // marketingOptIn = false
   });
 
   it("handles null email and notes with empty defaults", async () => {

@@ -31,7 +31,7 @@ export async function adminUpdateClientAction(
 
   const existing = await prisma.client.findUnique({
     where: { id: clientId },
-    select: { id: true, businessId: true, whatsappOptIn: true },
+    select: { id: true, businessId: true },
   });
 
   if (!existing) return { formError: "הלקוחה לא נמצאה" };
@@ -40,8 +40,6 @@ export async function adminUpdateClientAction(
   const phone = String(formData.get("phone") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
-  const whatsappOptIn = formData.getAll("whatsappOptIn").includes("true");
-  const marketingOptIn = formData.getAll("marketingOptIn").includes("true");
 
   const fieldErrors: NonNullable<AdminUpdateClientState["fieldErrors"]> = {};
 
@@ -81,11 +79,6 @@ export async function adminUpdateClientAction(
         normalizedPhone,
         email,
         notes,
-        whatsappOptIn,
-        marketingOptIn,
-        ...(whatsappOptIn && !existing.whatsappOptIn
-          ? { whatsappOptInAt: new Date(), whatsappOptInSource: "manual_admin" }
-          : {}),
       },
     });
   } catch (err: unknown) {
@@ -180,8 +173,6 @@ export async function adminSendManualClientWhatsAppAction(
       phone: true,
       normalizedPhone: true,
       unsubscribedAt: true,
-      whatsappOptIn: true,
-      marketingOptIn: true,
       business: { select: { id: true, name: true, slug: true } },
       bookings: {
         where: { status: "completed" },
@@ -221,19 +212,8 @@ export async function adminSendManualClientWhatsAppAction(
       messageTemplate: true,
       offerType: true,
       offerValue: true,
-      requireOptIn: true,
     },
   });
-
-  // --- Opt-in guards for win_back (marketing message) ---
-  if (messageType === "win_back") {
-    if ((setting?.requireOptIn ?? false) && !client.whatsappOptIn) {
-      return { error: "הלקוחה לא אישרה קבלת הודעות WhatsApp" };
-    }
-    if (!client.marketingOptIn) {
-      return { error: "הלקוחה לא אישרה הודעות שיווקיות" };
-    }
-  }
 
   const realSendEnabled = process.env.ENABLE_REAL_WHATSAPP_SEND === "true";
 

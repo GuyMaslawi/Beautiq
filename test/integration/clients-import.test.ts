@@ -26,7 +26,7 @@ beforeEach(() => {
 describe("importClients", () => {
   it("loads existing normalized phones scoped by businessId", async () => {
     prisma.client.findMany.mockResolvedValue([]);
-    await importClients([], false);
+    await importClients([]);
     expect(prisma.client.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { businessId: BUSINESS_A },
@@ -39,13 +39,10 @@ describe("importClients", () => {
     prisma.client.findMany.mockResolvedValue([]);
     prisma.client.create.mockResolvedValue({ id: "cli_new" });
 
-    const res = await importClients(
-      [
-        { fullName: " דנה ", phone: "0501234567", email: " a@b.com ", notes: " x " },
-        { fullName: "רותם", phone: "0529999999" },
-      ],
-      true,
-    );
+    const res = await importClients([
+      { fullName: " דנה ", phone: "0501234567", email: " a@b.com ", notes: " x " },
+      { fullName: "רותם", phone: "0529999999" },
+    ]);
 
     expect(res).toEqual({ created: 2, duplicates: 0, failed: 0 });
     expect(prisma.client.create).toHaveBeenCalledWith(
@@ -56,7 +53,6 @@ describe("importClients", () => {
           normalizedPhone: "+972501234567",
           email: "a@b.com",
           notes: "x",
-          whatsappOptIn: true,
         }),
       }),
     );
@@ -66,10 +62,9 @@ describe("importClients", () => {
     prisma.client.findMany.mockResolvedValue([
       { normalizedPhone: "+972501234567" },
     ]);
-    const res = await importClients(
-      [{ fullName: "דנה", phone: "050-123-4567" }],
-      false,
-    );
+    const res = await importClients([
+      { fullName: "דנה", phone: "050-123-4567" },
+    ]);
     expect(res).toEqual({ created: 0, duplicates: 1, failed: 0 });
     expect(prisma.client.create).not.toHaveBeenCalled();
   });
@@ -77,13 +72,10 @@ describe("importClients", () => {
   it("deduplicates rows within the same batch", async () => {
     prisma.client.findMany.mockResolvedValue([]);
     prisma.client.create.mockResolvedValue({ id: "cli_new" });
-    const res = await importClients(
-      [
-        { fullName: "דנה", phone: "0501234567" },
-        { fullName: "דנה שוב", phone: "+972501234567" }, // same normalized phone
-      ],
-      false,
-    );
+    const res = await importClients([
+      { fullName: "דנה", phone: "0501234567" },
+      { fullName: "דנה שוב", phone: "+972501234567" }, // same normalized phone
+    ]);
     expect(res).toEqual({ created: 1, duplicates: 1, failed: 0 });
     expect(prisma.client.create).toHaveBeenCalledTimes(1);
   });
@@ -91,10 +83,9 @@ describe("importClients", () => {
   it("counts a row as failed when create throws", async () => {
     prisma.client.findMany.mockResolvedValue([]);
     prisma.client.create.mockRejectedValue(new Error("db error"));
-    const res = await importClients(
-      [{ fullName: "דנה", phone: "0501234567" }],
-      false,
-    );
+    const res = await importClients([
+      { fullName: "דנה", phone: "0501234567" },
+    ]);
     expect(res).toEqual({ created: 0, duplicates: 0, failed: 1 });
   });
 });

@@ -80,8 +80,6 @@ export async function sendManualClientWhatsAppAction(
       phone: true,
       normalizedPhone: true,
       unsubscribedAt: true,
-      whatsappOptIn: true,
-      marketingOptIn: true,
       bookings: {
         where: { businessId, status: "completed" },
         orderBy: { startTime: "desc" },
@@ -133,17 +131,8 @@ export async function sendManualClientWhatsAppAction(
         messageTemplate: true,
         offerType: true,
         offerValue: true,
-        requireOptIn: true,
       },
     });
-
-    // Opt-in guards for win_back (marketing message)
-    if ((setting?.requireOptIn ?? false) && !client.whatsappOptIn) {
-      return { error: "הלקוחה לא אישרה קבלת הודעות WhatsApp" };
-    }
-    if (!client.marketingOptIn) {
-      return { error: "הלקוחה לא אישרה הודעות שיווקיות" };
-    }
 
     if (realSendEnabled && !setting?.templateName) {
       return { error: "תבנית ההודעה עדיין לא מוגדרת — יש להגדיר תבנית WhatsApp מאושרת בהגדרות אוטומציית החזרת הלקוחות" };

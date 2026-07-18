@@ -152,7 +152,9 @@ export function WinBackSettingsForm({
         offerType,
         offerValue: offerType === "custom" ? offerValue : null,
         cooldownDays: setting?.cooldownDays ?? 30,
-        requireOptIn: setting?.requireOptIn ?? true,
+        // Client consent (opt-in) is no longer a gate — win-back targets all
+        // eligible clients except those who replied STOP.
+        requireOptIn: false,
         templateName: setting?.templateName ?? null,
         templateLanguage: setting?.templateLanguage ?? "he",
         timingUnit: minuteModeActive ? "minutes" : "days",

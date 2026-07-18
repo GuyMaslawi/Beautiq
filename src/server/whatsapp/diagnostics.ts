@@ -140,7 +140,6 @@ export async function evaluateWhatsAppSend(params: {
   // is identified by name + language, so this must match an APPROVED Meta template
   // in exactly this language (Hebrew, "he") or the real send fails (error 132001).
   let templateLanguage = "he";
-  let requireOptIn: boolean;
 
   if (settingType) {
     const setting = await prisma.automationSetting.findUnique({
@@ -149,14 +148,11 @@ export async function evaluateWhatsAppSend(params: {
         templateName: true,
         templateStatus: true,
         templateLanguage: true,
-        requireOptIn: true,
       },
     });
     templateName = setting?.templateName ?? null;
     templateStatus = setting?.templateStatus ?? null;
     templateLanguage = setting?.templateLanguage ?? "he";
-    // Booking confirmation is transactional — opt-in defaults to false when unset.
-    requireOptIn = setting?.requireOptIn ?? (messageType === "booking_confirmation" ? false : true);
   } else {
     // manual/test: any approved template qualifies.
     const settings = await prisma.automationSetting.findMany({
@@ -167,7 +163,6 @@ export async function evaluateWhatsAppSend(params: {
     templateName = approved?.templateName ?? null;
     templateStatus = approved ? "approved" : null;
     templateLanguage = approved?.templateLanguage ?? "he";
-    requireOptIn = false;
   }
 
   const templateApproved = !!templateName && templateStatus === "approved";
@@ -208,8 +203,6 @@ export async function evaluateWhatsAppSend(params: {
           phone: true,
           normalizedPhone: true,
           unsubscribedAt: true,
-          whatsappOptIn: true,
-          marketingOptIn: true,
         },
       })
     : null;
@@ -317,23 +310,7 @@ export async function evaluateWhatsAppSend(params: {
       code: "unsubscribed",
     });
 
-    checks.push({
-      key: "opt_in",
-      label: requireOptIn ? "הלקוחה אישרה קבלת הודעות WhatsApp" : "אישור הודעות (לא נדרש)",
-      ok: !requireOptIn || !!client?.whatsappOptIn,
-      code: "missing_opt_in",
-      detail: requireOptIn ? undefined : "הודעה תפעולית — אישור לא נדרש",
-    });
-
     if (MARKETING_TYPES.has(messageType)) {
-      checks.push({
-        key: "marketing_opt_in",
-        label: "הלקוחה אישרה הודעות שיווקיות",
-        ok: !!client?.marketingOptIn,
-        code: "missing_marketing_opt_in",
-        detail: "נדרש להודעות שיווק / החזרת לקוחות",
-      });
-
       // Cooldown — only meaningful for marketing/win-back.
       const setting = await prisma.automationSetting.findUnique({
         where: { businessId_type: { businessId, type: "win_back" } },

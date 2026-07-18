@@ -12,7 +12,6 @@ import { ClientRetentionCard } from "@/components/retention/client-retention-car
 import { ClientReputationCard } from "@/components/reputation/client-reputation-card";
 import { getClientLatestCompletedBooking } from "@/server/reputation/queries";
 import { CLIENTS } from "@/lib/constants/he";
-import { ClientOptInForm } from "@/components/clients/client-opt-in-form";
 import { ClientEditModal } from "@/components/clients/client-edit-modal";
 import { WhatsAppManualSendModal } from "@/components/clients/whatsapp-manual-send-modal";
 import { ArrowRight, CalendarClock, History, ShoppingBag, UserX, XCircle, MessageCircle } from "lucide-react";
@@ -280,8 +279,6 @@ export default async function ClientDetailPage({
               phone: client.phone,
               email: client.email,
               notes: client.notes,
-              whatsappOptIn: client.whatsappOptIn,
-              marketingOptIn: client.marketingOptIn,
               isUnsubscribed: client.unsubscribedAt !== null,
             }}
           />
@@ -321,15 +318,6 @@ export default async function ClientDetailPage({
             </span>
           </div>
         </div>
-      </Card>
-
-      {/* WhatsApp opt-in */}
-      <Card className="p-5">
-        <ClientOptInForm
-          clientId={client.id}
-          whatsappOptIn={client.whatsappOptIn}
-          marketingOptIn={client.marketingOptIn}
-        />
       </Card>
 
       {/* Notes */}

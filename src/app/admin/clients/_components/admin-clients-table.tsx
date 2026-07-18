@@ -141,7 +141,7 @@ export function AdminClientsTable({ clients, isTestMode }: Props) {
                     style={{ accentColor: "var(--primary)" }}
                   />
                 </th>
-                {["שם לקוחה", "טלפון", "אימייל", "עסק", "WhatsApp", "שיווק", "ביקור אחרון", "הצטרפה", "", "", ""].map(
+                {["שם לקוחה", "טלפון", "אימייל", "עסק", "ביקור אחרון", "הצטרפה", "", "", ""].map(
                   (col, i) => (
                     <th
                       key={`${col}-${i}`}
@@ -200,12 +200,6 @@ export function AdminClientsTable({ clients, isTestMode }: Props) {
                         {client.businessName}
                       </Link>
                     </td>
-                    <td className="px-4 py-3 text-center">
-                      <OptInDot active={client.whatsappOptIn} />
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <OptInDot active={client.marketingOptIn} />
-                    </td>
                     <td className="px-4 py-3 whitespace-nowrap text-xs text-muted">
                       {client.lastBookingAt ? formatDate(client.lastBookingAt) : <span className="text-muted-light">—</span>}
                     </td>
@@ -243,8 +237,6 @@ export function AdminClientsTable({ clients, isTestMode }: Props) {
                           phone: client.phone,
                           email: client.email,
                           notes: client.notes,
-                          whatsappOptIn: client.whatsappOptIn,
-                          marketingOptIn: client.marketingOptIn,
                           businessName: client.businessName,
                         }}
                       />
@@ -438,12 +430,3 @@ function DeleteClientsModal({
   );
 }
 
-function OptInDot({ active }: { active: boolean }) {
-  return (
-    <span
-      className="inline-block h-2.5 w-2.5 rounded-full"
-      style={{ background: active ? "var(--success)" : "var(--border-strong)" }}
-      title={active ? "כן" : "לא"}
-    />
-  );
-}

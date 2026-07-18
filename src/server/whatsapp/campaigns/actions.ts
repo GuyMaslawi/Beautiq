@@ -14,7 +14,6 @@ import {
   getMarketingCampaignTemplate,
   buildCampaignVariables,
   renderCampaignPreview,
-  type CampaignTemplateInfo,
 } from "./template";
 import { processCampaignBatch, getCampaignCounts, type CampaignCounts } from "./processor";
 import { getCampaignDetail, type CampaignDetail } from "./queries";
@@ -378,11 +377,17 @@ export async function retryCampaignFailedAction(
   });
 
   if (requeued.count > 0) {
+    // Re-activate the campaign so a worker (owner-driven or cron) actually sends
+    // the re-queued recipients. This MUST include "cancelled": cancelling only
+    // flips still-queued recipients to skipped and leaves already-failed rows as
+    // failed, so a cancelled campaign can still expose the retry action — without
+    // this the recipients would sit in "queued" forever (cron only selects
+    // queued/processing campaigns).
     await prisma.whatsAppCampaign.updateMany({
       where: {
         id: campaignId,
         businessId: business.id,
-        status: { in: ["completed", "completed_with_errors"] },
+        status: { in: ["completed", "completed_with_errors", "cancelled"] },
       },
       data: { status: "queued", completedAt: null, lockedAt: null },
     });
@@ -391,5 +396,3 @@ export async function retryCampaignFailedAction(
   revalidatePath("/clients");
   return { ok: true };
 }
-
-export type { CampaignTemplateInfo };

@@ -39,55 +39,7 @@ export async function updateClientNotesAction(
 }
 
 // ---------------------------------------------------------------------------
-// Opt-in management
-// ---------------------------------------------------------------------------
-
-export interface UpdateClientOptInState {
-  success?: boolean;
-  error?: string;
-}
-
-export async function updateClientOptInAction(
-  clientId: string,
-  _prevState: UpdateClientOptInState,
-  formData: FormData,
-): Promise<UpdateClientOptInState> {
-  const tenant = await requireTenant();
-
-  const client = await prisma.client.findUnique({
-    where: { id: clientId },
-    select: { id: true, businessId: true, whatsappOptIn: true },
-  });
-
-  if (!client || client.businessId !== tenant.businessId) {
-    return { error: CLIENTS.errors.notFound };
-  }
-
-  const whatsappOptIn = formData.getAll("whatsappOptIn").includes("true");
-  const marketingOptIn = formData.getAll("marketingOptIn").includes("true");
-
-  try {
-    await prisma.client.update({
-      where: { id: clientId },
-      data: {
-        whatsappOptIn,
-        marketingOptIn,
-        // Record provenance only when the owner newly grants WhatsApp consent.
-        ...(whatsappOptIn && !client.whatsappOptIn
-          ? { whatsappOptInAt: new Date(), whatsappOptInSource: "manual_owner" }
-          : {}),
-      },
-    });
-  } catch {
-    return { error: CLIENTS.errors.generic };
-  }
-
-  revalidatePath(`/clients/${clientId}`);
-  return { success: true };
-}
-
-// ---------------------------------------------------------------------------
-// Full client edit (name, phone, email, notes, opt-in, unsubscribed)
+// Full client edit (name, phone, email, notes)
 // ---------------------------------------------------------------------------
 
 export interface UpdateClientState {
@@ -109,7 +61,7 @@ export async function updateClientAction(
 
   const existing = await prisma.client.findUnique({
     where: { id: clientId },
-    select: { id: true, businessId: true, whatsappOptIn: true },
+    select: { id: true, businessId: true },
   });
 
   if (!existing || existing.businessId !== tenant.businessId) {
@@ -120,8 +72,6 @@ export async function updateClientAction(
   const phone = String(formData.get("phone") ?? "").trim();
   const email = String(formData.get("email") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "").trim() || null;
-  const whatsappOptIn = formData.getAll("whatsappOptIn").includes("true");
-  const marketingOptIn = formData.getAll("marketingOptIn").includes("true");
 
   const fieldErrors: NonNullable<UpdateClientState["fieldErrors"]> = {};
 
@@ -161,11 +111,6 @@ export async function updateClientAction(
         normalizedPhone,
         email,
         notes,
-        whatsappOptIn,
-        marketingOptIn,
-        ...(whatsappOptIn && !existing.whatsappOptIn
-          ? { whatsappOptInAt: new Date(), whatsappOptInSource: "manual_owner" }
-          : {}),
       },
     });
   } catch (err: unknown) {

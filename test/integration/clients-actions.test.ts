@@ -27,7 +27,6 @@ vi.mock("@/server/clients/queries", () => ({
 
 import {
   updateClientNotesAction,
-  updateClientOptInAction,
   updateClientAction,
 } from "@/server/clients/actions";
 
@@ -94,73 +93,6 @@ describe("updateClientNotesAction", () => {
 });
 
 // ---------------------------------------------------------------------------
-// updateClientOptInAction
-// ---------------------------------------------------------------------------
-describe("updateClientOptInAction", () => {
-  it("updates opt-in and records provenance when newly granting WhatsApp consent", async () => {
-    prisma.client.findUnique.mockResolvedValue({
-      id: "cli_1",
-      businessId: BUSINESS_A,
-      whatsappOptIn: false, // was not opted in → provenance should be recorded
-    });
-    prisma.client.update.mockResolvedValue(makeClient({ id: "cli_1" }));
-
-    const res = await updateClientOptInAction(
-      "cli_1",
-      {},
-      fd({ whatsappOptIn: "true", marketingOptIn: "true" }),
-    );
-    expect(res.success).toBe(true);
-    expect(prisma.client.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        where: { id: "cli_1" },
-        data: expect.objectContaining({
-          whatsappOptIn: true,
-          marketingOptIn: true,
-          whatsappOptInSource: "manual_owner",
-          whatsappOptInAt: expect.any(Date),
-        }),
-      }),
-    );
-  });
-
-  it("sets opt-in false when checkbox values are absent", async () => {
-    prisma.client.findUnique.mockResolvedValue({
-      id: "cli_1",
-      businessId: BUSINESS_A,
-    });
-    prisma.client.update.mockResolvedValue(makeClient({ id: "cli_1" }));
-    await updateClientOptInAction("cli_1", {}, fd({}));
-    expect(prisma.client.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        data: { whatsappOptIn: false, marketingOptIn: false },
-      }),
-    );
-  });
-
-  it("rejects when the client belongs to another business WITHOUT mutating", async () => {
-    prisma.client.findUnique.mockResolvedValue({
-      id: "cli_1",
-      businessId: BUSINESS_B, // foreign tenant
-    });
-    const res = await updateClientOptInAction(
-      "cli_1",
-      {},
-      fd({ whatsappOptIn: "true" }),
-    );
-    expect(res.error).toBeTruthy();
-    expect(prisma.client.update).not.toHaveBeenCalled();
-  });
-
-  it("rejects when the client does not exist", async () => {
-    prisma.client.findUnique.mockResolvedValue(null);
-    const res = await updateClientOptInAction("ghost", {}, fd({}));
-    expect(res.error).toBeTruthy();
-    expect(prisma.client.update).not.toHaveBeenCalled();
-  });
-});
-
-// ---------------------------------------------------------------------------
 // updateClientAction (full edit)
 // ---------------------------------------------------------------------------
 const validEdit = {
@@ -171,17 +103,13 @@ const validEdit = {
 };
 
 describe("updateClientAction", () => {
-  it("updates an owned client, normalizing the phone and persisting opt-in fields", async () => {
+  it("updates an owned client, normalizing the phone", async () => {
     prisma.client.findUnique
       .mockResolvedValueOnce({ id: "cli_1", businessId: BUSINESS_A }) // existence
       .mockResolvedValueOnce(null); // duplicate-phone check
     prisma.client.update.mockResolvedValue(makeClient({ id: "cli_1" }));
 
-    const res = await updateClientAction(
-      "cli_1",
-      {},
-      fd({ ...validEdit, whatsappOptIn: "true", marketingOptIn: "true" }),
-    );
+    const res = await updateClientAction("cli_1", {}, fd(validEdit));
     expect(res.success).toBe(true);
     expect(prisma.client.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -190,8 +118,6 @@ describe("updateClientAction", () => {
           fullName: "עדי כהן",
           phone: "0501234567",
           normalizedPhone: "+972501234567",
-          whatsappOptIn: true,
-          marketingOptIn: true,
         }),
       }),
     );

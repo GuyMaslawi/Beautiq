@@ -179,31 +179,26 @@ async function _send(params: {
     return;
   }
 
-  // Load client opt-in fields + booking_confirmation requireOptIn + template settings in parallel.
-  // Booking confirmation is transactional — requireOptIn defaults to false if no setting exists.
+  // Load client unsubscribe status + booking_confirmation template settings in parallel.
+  // WhatsApp consent (opt-in) is no longer required — only an explicit STOP
+  // (unsubscribedAt) excludes a client.
   const [client, confirmationSetting] = await Promise.all([
     prisma.client.findUnique({
       where: { id: clientId },
-      select: { unsubscribedAt: true, whatsappOptIn: true },
+      select: { unsubscribedAt: true },
     }),
     prisma.automationSetting.findUnique({
       where: { businessId_type: { businessId, type: "booking_confirmation" } },
-      select: { requireOptIn: true, templateName: true, templateLanguage: true },
+      select: { templateName: true, templateLanguage: true },
     }),
   ]);
 
-  const requireOptIn = confirmationSetting?.requireOptIn ?? false;
   const templateName = confirmationSetting?.templateName ?? null;
   const templateLanguage = confirmationSetting?.templateLanguage ?? "he";
   const realSendEnabled = process.env.ENABLE_REAL_WHATSAPP_SEND === "true";
 
   if (client?.unsubscribedAt) {
     await createSkippedRun(businessId, clientId, bookingId, clientPhone, "הלקוחה לא מעוניינת בקבלת הודעות", source).catch(() => {});
-    return;
-  }
-
-  if (requireOptIn && !client?.whatsappOptIn) {
-    await createSkippedRun(businessId, clientId, bookingId, clientPhone, "הלקוחה לא אישרה קבלת הודעות WhatsApp", source).catch(() => {});
     return;
   }
 

@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { X, Lock, ShieldCheck, MessageCircle } from "lucide-react";
-import { Switch } from "@/components/ui/switch";
+import { X, Lock, MessageCircle } from "lucide-react";
 import { saveBookingConfirmationSettingsAction } from "@/server/booking-confirmation/actions";
 import { AutomationLastRunSummary } from "@/components/automations/automation-last-run-summary";
 import { TemplateReadinessBadge } from "@/components/automations/template-readiness-badge";
@@ -28,7 +27,6 @@ export function BookingConfirmationCard({
   locked = false,
 }: Props) {
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [requireOptIn, setRequireOptIn] = useState(setting?.requireOptIn ?? false);
   const [templateName, setTemplateName] = useState(setting?.templateName ?? "");
   const [templateLanguage, setTemplateLanguage] = useState(setting?.templateLanguage ?? "he");
   const [isPending, startTransition] = useTransition();
@@ -40,7 +38,7 @@ export function BookingConfirmationCard({
     setSaved(false);
     startTransition(async () => {
       const result = await saveBookingConfirmationSettingsAction({
-        requireOptIn,
+        requireOptIn: false,
         templateName: templateName.trim() || null,
         templateLanguage: templateLanguage.trim() || "he",
       });
@@ -164,28 +162,6 @@ export function BookingConfirmationCard({
                 <p className="text-xs mt-1 leading-relaxed" style={{ color: "var(--muted)" }}>
                   נשלחת מיד לאחר כל בקשת תור שהתקבלה. ההודעה מאשרת ללקוחה שהבקשה נתקבלה ומצוינת פרטי התור.
                 </p>
-              </div>
-
-              {/* requireOptIn toggle */}
-              <div className="flex items-start gap-3">
-                <ShieldCheck className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#c76f93" }} />
-                <div className="flex-1">
-                  <div className="flex items-center justify-between gap-3">
-                    <label className="text-sm font-medium leading-snug" style={{ color: "var(--foreground)" }}>
-                      שלח רק ללקוחות שאישרו הודעות WhatsApp
-                    </label>
-                    <Switch
-                      checked={requireOptIn}
-                      onCheckedChange={setRequireOptIn}
-                      aria-label="דרישת אישור WhatsApp"
-                    />
-                  </div>
-                  <p className="mt-1 text-xs leading-snug" style={{ color: "var(--muted)" }}>
-                    {requireOptIn
-                      ? "אישורי תור יישלחו רק ללקוחות שנתנו הסכמה מפורשת."
-                      : "מומלץ: אישור תור הוא הודעה עסקית — נשלחת לכל הלקוחות."}
-                  </p>
-                </div>
               </div>
 
               {/* WhatsApp template configuration */}

@@ -7,10 +7,10 @@
  *
  * A marketing campaign send requires ALL of:
  *   1. a valid Israeli WhatsApp number (normalizedPhone)
- *   2. NOT unsubscribed (unsubscribedAt is null)
- *   3. WhatsApp opt-in (whatsappOptIn = true)
- *   4. marketing opt-in (marketingOptIn = true)
- *   5. a unique normalized phone within the campaign (first occurrence wins)
+ *   2. NOT unsubscribed (unsubscribedAt is null — i.e. never replied STOP)
+ *   3. a unique normalized phone within the campaign (first occurrence wins)
+ *
+ * Client consent (opt-in) is no longer required — only an explicit STOP excludes.
  */
 
 import { prisma } from "@/server/db/prisma";
@@ -87,10 +87,6 @@ export function classifyCandidate(
   }
   if (client.unsubscribedAt) {
     return "unsubscribed";
-  }
-  // Marketing requires both WhatsApp opt-in and explicit marketing opt-in.
-  if (!client.whatsappOptIn || !client.marketingOptIn) {
-    return "missing_optin";
   }
   if (seenPhones.has(client.normalizedPhone)) {
     return "duplicate_phone";

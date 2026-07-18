@@ -74,7 +74,6 @@ export async function runMorningReminderForBusiness(params: {
     sendHour,
     thresholdDays,
     messageTemplate,
-    requireOptIn = false,
     bypassHourCheck = false,
     now = new Date(),
     templateName,
@@ -156,7 +155,7 @@ export async function runMorningReminderForBusiness(params: {
       startTime: { gte: startWindow, lte: endWindow },
     },
     include: {
-      client: { select: { fullName: true, normalizedPhone: true, unsubscribedAt: true, whatsappOptIn: true } },
+      client: { select: { fullName: true, normalizedPhone: true, unsubscribedAt: true } },
       service: { select: { name: true } },
     },
   });
@@ -259,25 +258,6 @@ export async function runMorningReminderForBusiness(params: {
           messageText: "",
           status: "skipped",
           failureReason: "הלקוחה לא מעוניינת בקבלת הודעות",
-          source,
-        },
-      });
-      skippedCount++;
-      continue;
-    }
-
-    if (requireOptIn && !booking.client.whatsappOptIn) {
-      await prisma.automationMessage.create({
-        data: {
-          businessId,
-          runId: run.id,
-          clientId: booking.clientId,
-          bookingId: booking.id,
-          type: "morning_reminder",
-          phone,
-          messageText: "",
-          status: "skipped",
-          failureReason: "הלקוחה לא אישרה קבלת הודעות WhatsApp",
           source,
         },
       });

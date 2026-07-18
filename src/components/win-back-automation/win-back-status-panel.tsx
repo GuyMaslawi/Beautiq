@@ -92,7 +92,6 @@ function BreakdownPanel({ breakdown }: { breakdown: EligibilityBreakdown }) {
   const skipReasons: Array<{ label: string; count: number }> = [
     { label: bd.noCompletedBooking, count: breakdown.noCompletedBooking },
     { label: bd.hasFutureBooking, count: breakdown.hasFutureBooking },
-    { label: bd.noOptIn, count: breakdown.noOptIn },
     { label: bd.invalidPhone, count: breakdown.invalidPhone },
     { label: bd.inCooldown, count: breakdown.inCooldown },
   ].filter((r) => r.count > 0);
@@ -359,9 +358,6 @@ export function WinBackStatusPanel(props: Props) {
                   <Info className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "#c09040" }} />
                   <p className="text-sm" style={{ color: "#7a5800" }}>
                     {"אין לקוחות שמחכות להודעה כרגע."}
-                    {setting?.requireOptIn && breakdown.noOptIn > 0
-                      ? " ניתן להוסיף אישור קבלת הודעות בפרופיל הלקוחה."
-                      : ""}
                   </p>
                 </div>
               )}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { createPortal } from "react-dom";
 import { X, ChevronLeft, RotateCw, Ban } from "lucide-react";
 import { WA_CAMPAIGNS } from "@/lib/constants/whatsapp-campaigns";
 import {
@@ -145,10 +146,14 @@ function CampaignDetailDrawer({
   const canRetry = detail.counts.failed > 0;
   const canCancel = ["queued", "processing"].includes(detail.status);
 
-  return (
+  // This drawer only renders after a click (never during SSR), so guarding on
+  // document is enough — no state/effect needed.
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <>
-      <div className="fixed inset-0 z-50 bg-black/40" onClick={onClose} />
-      <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4" dir="rtl">
+      <div className="fixed inset-0 z-[100] bg-black/40" onClick={onClose} />
+      <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center sm:p-4" dir="rtl">
         <div className="relative flex w-full flex-col overflow-hidden rounded-t-2xl sm:max-w-lg sm:rounded-2xl" style={{ background: "var(--surface,#fff)", maxHeight: "92dvh" }}>
           <div className="flex shrink-0 items-center justify-between px-5 py-4" style={{ borderBottom: "1px solid rgba(0,0,0,0.08)" }}>
             <h2 className="text-base font-bold" style={{ color: "var(--foreground,#1a1a2e)" }}>{WA_CAMPAIGNS.progress.viewDetails}</h2>
@@ -214,6 +219,7 @@ function CampaignDetailDrawer({
           </div>
         </div>
       </div>
-    </>
+    </>,
+    document.body,
   );
 }

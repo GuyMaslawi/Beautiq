@@ -779,11 +779,10 @@ function StepPreview({
   isImporting,
 }: {
   rows: PreviewRow[];
-  onImport: (validRows: PreviewRow[], whatsappOptIn: boolean) => void;
+  onImport: (validRows: PreviewRow[]) => void;
   onBack: () => void;
   isImporting: boolean;
 }) {
-  const [whatsappOptIn, setWhatsappOptIn] = useState(false);
   const validRows = rows.filter((r) => r.status === "valid");
   const duplicateRows = rows.filter(
     (r) => r.status === "in_file_duplicate",
@@ -944,40 +943,13 @@ function StepPreview({
         </div>
       )}
 
-      {/* WhatsApp opt-in */}
-      <label
-        className="flex cursor-pointer items-start gap-3 rounded-xl px-4 py-3.5"
-        style={{
-          background: whatsappOptIn
-            ? "rgba(37,211,102,0.06)"
-            : "var(--background-alt)",
-          border: `1px solid ${whatsappOptIn ? "rgba(37,211,102,0.22)" : "var(--border)"}`,
-        }}
-      >
-        <input
-          type="checkbox"
-          checked={whatsappOptIn}
-          onChange={(e) => setWhatsappOptIn(e.target.checked)}
-          className="mt-0.5 h-4 w-4 cursor-pointer rounded"
-          style={{ accentColor: "#16a34a" }}
-        />
-        <div className="min-w-0">
-          <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
-            {CLIENT_IMPORT.preview.optInLabel}
-          </p>
-          <p className="mt-0.5 text-xs leading-5" style={{ color: "var(--muted)" }}>
-            {CLIENT_IMPORT.preview.optInHelper}
-          </p>
-        </div>
-      </label>
-
       {/* Actions */}
       <div className="flex items-center justify-between gap-3">
         <Button variant="ghost" onClick={onBack} size="sm" disabled={isImporting}>
           {CLIENT_IMPORT.preview.backButton}
         </Button>
         <Button
-          onClick={() => onImport(validRows, whatsappOptIn)}
+          onClick={() => onImport(validRows)}
           disabled={validRows.length === 0 || isImporting}
           style={{
             background:
@@ -1186,7 +1158,7 @@ export function ImportWizard() {
     }
   };
 
-  const handleImport = async (validRows: PreviewRow[], whatsappOptIn: boolean) => {
+  const handleImport = async (validRows: PreviewRow[]) => {
     setIsImporting(true);
     try {
       const result = await importClients(
@@ -1196,7 +1168,6 @@ export function ImportWizard() {
           email: r.email || undefined,
           notes: r.notes || undefined,
         })),
-        whatsappOptIn,
       );
       setImportResult(result);
       setStep("result");

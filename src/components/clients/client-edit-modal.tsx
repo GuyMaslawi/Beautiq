@@ -13,8 +13,6 @@ export interface ClientEditInitialData {
   phone: string;
   email: string | null;
   notes: string | null;
-  whatsappOptIn: boolean;
-  marketingOptIn: boolean;
   isUnsubscribed: boolean;
 }
 
@@ -215,25 +213,6 @@ export function ClientEditModal({ clientId, initialData }: Props) {
                     />
                   </div>
 
-                  {/* Checkboxes */}
-                  <div
-                    className="space-y-2 rounded-xl p-3"
-                    style={{ background: "var(--background-alt)" }}
-                  >
-                    <CheckboxRow
-                      name="whatsappOptIn"
-                      label={c.fields.whatsappOptIn}
-                      defaultChecked={initialData.whatsappOptIn}
-                      color="#16a34a"
-                    />
-                    <CheckboxRow
-                      name="marketingOptIn"
-                      label={c.fields.marketingOptIn}
-                      defaultChecked={initialData.marketingOptIn}
-                      color="#3b7ab5"
-                    />
-                  </div>
-
                   {/* Read-only unsubscribe notice */}
                   {initialData.isUnsubscribed && (
                     <p className="rounded-lg bg-orange-50 px-3 py-2 text-xs text-orange-700">
@@ -274,37 +253,5 @@ export function ClientEditModal({ clientId, initialData }: Props) {
         </>
       )}
     </>
-  );
-}
-
-function CheckboxRow({
-  name,
-  label,
-  defaultChecked,
-  color,
-}: {
-  name: string;
-  label: string;
-  defaultChecked: boolean;
-  color: string;
-}) {
-  return (
-    <label className="flex cursor-pointer items-start gap-3">
-      <input type="hidden" name={name} value="false" />
-      <input
-        type="checkbox"
-        name={name}
-        value="true"
-        defaultChecked={defaultChecked}
-        className="mt-0.5 h-4 w-4 cursor-pointer rounded"
-        style={{ accentColor: color }}
-      />
-      <span
-        className="text-sm leading-5"
-        style={{ color: "var(--foreground-soft)" }}
-      >
-        {label}
-      </span>
-    </label>
   );
 }

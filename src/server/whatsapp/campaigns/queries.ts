@@ -49,7 +49,7 @@ const EMPTY_COUNTS: CampaignCounts = {
 
 function accumulate(counts: CampaignCounts, status: string, n: number) {
   counts.total += n;
-  if (status in counts) (counts as unknown as Record<string, number>)[status] = n;
+  if (status in counts) (counts as unknown as Record<string, number>)[status] += n;
 }
 
 export async function getCampaignsForBusiness(

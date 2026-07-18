@@ -10,8 +10,6 @@ interface AdminClientEditInitialData {
   phone: string;
   email: string | null;
   notes: string | null;
-  whatsappOptIn: boolean;
-  marketingOptIn: boolean;
   businessName: string;
 }
 
@@ -178,22 +176,6 @@ export function AdminClientEditModal({ clientId, initialData }: Props) {
                     />
                   </div>
 
-                  {/* Opt-ins */}
-                  <div className="space-y-2 rounded-xl bg-background-alt p-3">
-                    <AdminCheckboxRow
-                      name="whatsappOptIn"
-                      label="מאשרת קבלת הודעות WhatsApp"
-                      defaultChecked={initialData.whatsappOptIn}
-                      color="var(--success)"
-                    />
-                    <AdminCheckboxRow
-                      name="marketingOptIn"
-                      label="מאשרת הודעות שיווקיות"
-                      defaultChecked={initialData.marketingOptIn}
-                      color="var(--info)"
-                    />
-                  </div>
-
                   {/* Actions */}
                   <div className="flex items-center justify-end gap-3 pt-1">
                     <button
@@ -218,32 +200,5 @@ export function AdminClientEditModal({ clientId, initialData }: Props) {
         </>
       )}
     </>
-  );
-}
-
-function AdminCheckboxRow({
-  name,
-  label,
-  defaultChecked,
-  color,
-}: {
-  name: string;
-  label: string;
-  defaultChecked: boolean;
-  color: string;
-}) {
-  return (
-    <label className="flex cursor-pointer items-start gap-3">
-      <input type="hidden" name={name} value="false" />
-      <input
-        type="checkbox"
-        name={name}
-        value="true"
-        defaultChecked={defaultChecked}
-        className="mt-0.5 h-4 w-4 cursor-pointer rounded"
-        style={{ accentColor: color }}
-      />
-      <span className="text-sm leading-5 text-foreground-soft">{label}</span>
-    </label>
   );
 }

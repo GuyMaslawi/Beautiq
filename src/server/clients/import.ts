@@ -19,7 +19,6 @@ export interface ClientImportResult {
 
 export async function importClients(
   rows: ClientImportRow[],
-  whatsappOptIn = false,
 ): Promise<ClientImportResult> {
   const tenant = await requireTenant();
 
@@ -54,7 +53,6 @@ export async function importClients(
           normalizedPhone: normalized,
           email: row.email?.trim() || null,
           notes: row.notes?.trim() || null,
-          whatsappOptIn,
         },
       });
       // Track within this batch to prevent batch-level duplicates

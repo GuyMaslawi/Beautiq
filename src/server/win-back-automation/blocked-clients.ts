@@ -4,13 +4,14 @@
  *
  * Priority (highest → lowest):
  *   1. invalidPhone       — no valid E.164 Israeli number
- *   2. unsubscribed       — unsubscribedAt is set
- *   3. noOptIn            — requireOptIn=true and whatsappOptIn=false
- *   4. noMarketingOptIn   — marketingOptIn=false (win-back is a marketing message)
- *   5. hasFutureBooking   — has a pending/approved booking in the future
- *   6. inCooldown         — messaged by win_back within cooldownDays
- *   7. noCompletedBooking — no completed booking older than thresholdDays
- *   8. eligible           — passes all checks
+ *   2. unsubscribed       — unsubscribedAt is set (replied STOP)
+ *   3. hasFutureBooking   — has a pending/approved booking in the future
+ *   4. inCooldown         — messaged by win_back within cooldownDays
+ *   5. noCompletedBooking — no completed booking older than thresholdDays
+ *   6. eligible           — passes all checks
+ *
+ * Client consent (opt-in) is no longer a gate — the noOptIn / noMarketingOptIn
+ * buckets are kept in the shape for compatibility but are never filled.
  */
 
 import { prisma } from "@/server/db/prisma";
@@ -53,7 +54,7 @@ export async function getBlockedClientsByReason(
   tenant: TenantContext,
   options: BlockedClientsOptions,
 ): Promise<BlockedClientsByReason> {
-  const { thresholdDays, cooldownDays, requireOptIn, ignoreCooldown } = options;
+  const { thresholdDays, cooldownDays, ignoreCooldown } = options;
   const now = new Date();
   const thresholdDate = new Date(
     now.getTime() - thresholdDays * 24 * 60 * 60 * 1000,
@@ -69,8 +70,6 @@ export async function getBlockedClientsByReason(
       fullName: true,
       phone: true,
       normalizedPhone: true,
-      whatsappOptIn: true,
-      marketingOptIn: true,
       unsubscribedAt: true,
       bookings: {
         where: { businessId: tenant.businessId },
@@ -124,10 +123,6 @@ export async function getBlockedClientsByReason(
       reason = "invalidPhone";
     } else if (client.unsubscribedAt !== null) {
       reason = "unsubscribed";
-    } else if (requireOptIn && !client.whatsappOptIn) {
-      reason = "noOptIn";
-    } else if (!client.marketingOptIn) {
-      reason = "noMarketingOptIn";
     } else {
       const hasFutureBook = client.bookings.some(
         (b) =>

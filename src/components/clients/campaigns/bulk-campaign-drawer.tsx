@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition, useRef, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Send, X, AlertTriangle, CheckCircle, Loader2 } from "lucide-react";
 import { WA_CAMPAIGNS } from "@/lib/constants/whatsapp-campaigns";
 import {
@@ -127,20 +128,33 @@ export function BulkCampaignDrawer() {
       // until the campaign is terminal. If another worker holds the lock (busy),
       // just poll read-only progress. Never sends the whole audience in one request.
       let guard = 0;
-      while (guard++ < 1000) {
+      let consecutiveErrors = 0;
+      while (guard++ < 5000) {
         let res: CampaignProgressResult;
         try {
           res = await processCampaignBatchAction(id);
         } catch {
           res = { ok: false };
         }
-        if (res.ok && res.counts) {
-          setCounts(res.counts);
+
+        if (res.ok) {
+          consecutiveErrors = 0;
+          if (res.counts) setCounts(res.counts);
+          if (res.done) {
+            setProgressDone(true);
+            return;
+          }
+        } else {
+          // Don't spin silently on a persistent server/Meta failure — surface it
+          // and stop after a few tries. The campaign is durable; the cron backstop
+          // will finish any remaining recipients in the background.
+          consecutiveErrors++;
+          if (consecutiveErrors >= 5) {
+            setError(WA_CAMPAIGNS.errors.generic);
+            return;
+          }
         }
-        if (res.ok && res.done) {
-          setProgressDone(true);
-          return;
-        }
+
         if (res.busy) {
           // Another worker is sending — poll read-only until it finishes.
           await new Promise((r) => setTimeout(r, 2500));
@@ -153,6 +167,14 @@ export function BulkCampaignDrawer() {
         } else {
           await new Promise((r) => setTimeout(r, 400));
         }
+      }
+
+      // Guard exhausted (a very large audience). Sync the final state read-only so
+      // the UI reflects completion instead of spinning forever.
+      const finalPoll = await getCampaignProgressAction(id);
+      if (finalPoll.ok) {
+        if (finalPoll.counts) setCounts(finalPoll.counts);
+        if (finalPoll.done) setProgressDone(true);
       }
     },
     [],
@@ -193,10 +215,10 @@ export function BulkCampaignDrawer() {
         {WA_CAMPAIGNS.bulkAction}
       </button>
 
-      {open && (
+      {open && typeof document !== "undefined" && createPortal(
         <>
-          <div className="fixed inset-0 z-50 bg-black/40" onClick={handleClose} />
-          <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center sm:p-4" dir="rtl">
+          <div className="fixed inset-0 z-[100] bg-black/40" onClick={handleClose} />
+          <div className="fixed inset-0 z-[100] flex items-end justify-center sm:items-center sm:p-4" dir="rtl">
             <div
               className="relative flex w-full flex-col overflow-hidden rounded-t-2xl sm:max-w-lg sm:rounded-2xl"
               style={{ background: "var(--surface, #fff)", maxHeight: "92dvh" }}
@@ -416,7 +438,8 @@ export function BulkCampaignDrawer() {
               </div>
             </div>
           </div>
-        </>
+        </>,
+        document.body,
       )}
     </>
   );

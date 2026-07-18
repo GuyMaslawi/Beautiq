@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { X, Pencil, ChevronDown, Lock, ShieldCheck } from "lucide-react";
+import { X, Pencil, ChevronDown, Lock } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import {
   toggleMorningReminderAction,
@@ -63,7 +63,6 @@ export function MorningReminderCard({ setting, sentThisMonth, lastRun, realSendC
   const [messageTemplate, setMessageTemplate] = useState(
     setting?.messageTemplate ?? DEFAULT_TEMPLATE,
   );
-  const [requireOptIn, setRequireOptIn] = useState(setting?.requireOptIn ?? false);
   const [templateName, setTemplateName] = useState(setting?.templateName ?? "");
   const [templateLanguage, setTemplateLanguage] = useState(setting?.templateLanguage ?? "he");
   const [editingMessage, setEditingMessage] = useState(false);
@@ -90,7 +89,7 @@ export function MorningReminderCard({ setting, sentThisMonth, lastRun, realSendC
         sendHour: timing.sendHour,
         thresholdDays: timing.thresholdDays,
         messageTemplate: messageTemplate || null,
-        requireOptIn,
+        requireOptIn: false,
         templateName: templateName.trim() || null,
         templateLanguage: templateLanguage.trim() || "he",
       });
@@ -328,28 +327,6 @@ export function MorningReminderCard({ setting, sentThisMonth, lastRun, realSendC
 
                     {advancedOpen && (
                       <div className="mt-3 space-y-4 pt-3" style={{ borderTop: "1px solid var(--border)" }}>
-                        {/* requireOptIn toggle */}
-                        <div className="flex items-start gap-3">
-                          <ShieldCheck className="h-4 w-4 mt-0.5 shrink-0" style={{ color: "#c76f93" }} />
-                          <div className="flex-1">
-                            <div className="flex items-center justify-between gap-3">
-                              <label className="text-sm font-medium leading-snug" style={{ color: "var(--foreground)" }}>
-                                שלח רק ללקוחות שאישרו הודעות WhatsApp
-                              </label>
-                              <Switch
-                                checked={requireOptIn}
-                                onCheckedChange={setRequireOptIn}
-                                aria-label="דרישת אישור WhatsApp"
-                              />
-                            </div>
-                            <p className="mt-1 text-xs leading-snug" style={{ color: "var(--muted)" }}>
-                              {requireOptIn
-                                ? "תזכורות יישלחו רק ללקוחות שנתנו הסכמה מפורשת."
-                                : "תזכורות יישלחו לכל הלקוחות (מומלץ לשירות עסקי)."}
-                            </p>
-                          </div>
-                        </div>
-
                         {/* WhatsApp template fields */}
                         <div className="space-y-3">
                           <div>

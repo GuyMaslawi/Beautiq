@@ -64,6 +64,12 @@ export async function getMarketingCampaignTemplate(
   ]);
 
   const isAlluraManaged = resolved.isAlluraManaged;
+  // Dev / local mode: real sending is off, so the resolver hands back the safe
+  // dev-mock provider. The processor fully supports this path (every recipient is
+  // recorded as a clearly-labeled "dev mode — not actually sent" skip), so the
+  // whole flow must be exercisable end-to-end. Treat it as available so the UI
+  // does not dead-end at the content step in dev/staging.
+  const isDevMock = resolved.provider.name === "dev_mock";
 
   const name = setting?.templateName ?? registry.name;
   const language = setting?.templateLanguage ?? registry.language;
@@ -76,14 +82,15 @@ export async function getMarketingCampaignTemplate(
         ? "pending"
         : rawStatus === "rejected"
           ? "rejected"
-          : isAlluraManaged
-            ? "approved" // central managed template is pre-approved
+          : isAlluraManaged || isDevMock
+            ? "approved" // central managed template (or dev-mock) is pre-approved
             : "unknown";
 
   // A marketing blast requires an approved template. Allura-managed central
-  // templates are pre-approved; otherwise the per-business status must be approved.
+  // templates are pre-approved; the dev-mock path is always sendable (no real
+  // send happens); otherwise the per-business status must be approved.
   const available =
-    resolved.mode !== "disconnected" && (status === "approved" || isAlluraManaged);
+    isDevMock || (resolved.mode !== "disconnected" && (status === "approved" || isAlluraManaged));
 
   return {
     name,

@@ -217,8 +217,6 @@ export async function processCampaignBatch(
         select: {
           fullName: true,
           normalizedPhone: true,
-          whatsappOptIn: true,
-          marketingOptIn: true,
           unsubscribedAt: true,
         },
       });
@@ -241,11 +239,6 @@ export async function processCampaignBatch(
       }
       if (client.unsubscribedAt) {
         await skip(WA_CAMPAIGNS.reasons.unsubscribed);
-        skipped++;
-        continue;
-      }
-      if (!client.whatsappOptIn || !client.marketingOptIn) {
-        await skip(WA_CAMPAIGNS.reasons.missing_optin);
         skipped++;
         continue;
       }

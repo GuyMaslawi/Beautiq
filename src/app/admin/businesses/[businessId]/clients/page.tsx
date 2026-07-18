@@ -150,8 +150,6 @@ export default async function AdminBusinessClientsPage({
                         phone: c.phone,
                         email: c.email,
                         notes: c.notes,
-                        whatsappOptIn: c.whatsappOptIn,
-                        marketingOptIn: c.marketingOptIn,
                         businessName: biz.name,
                       }}
                     />

@@ -116,15 +116,8 @@ export async function getEligibleClients(
   tenant: TenantContext,
   options: EligibilityOptions,
 ): Promise<EligibleClient[]> {
-  const { requireOptIn, ignoreCooldown } = options;
+  const { ignoreCooldown } = options;
   const { now, thresholdDate, cooldownDate } = computeWindows(options);
-
-  const whereOptIn: Prisma.ClientWhereInput = requireOptIn
-    ? { whatsappOptIn: true }
-    : {};
-
-  // Win-back is always a marketing message — marketingOptIn is always required.
-  const whereMarketingOptIn: Prisma.ClientWhereInput = { marketingOptIn: true };
 
   const cooldownFilter: Prisma.ClientWhereInput = ignoreCooldown
     ? {}
@@ -146,8 +139,6 @@ export async function getEligibleClients(
       // Pre-filter to E.164 prefix — rules out empty/malformed phones before
       // doing the expensive booking joins
       normalizedPhone: { startsWith: "+972" },
-      ...whereOptIn,
-      ...whereMarketingOptIn,
       bookings: {
         some: {
           businessId: tenant.businessId,
@@ -221,10 +212,15 @@ export async function getEligibilityBreakdown(
   tenant: TenantContext,
   options: EligibilityOptions,
 ): Promise<EligibilityBreakdown> {
-  const { requireOptIn, ignoreCooldown } = options;
+  const { ignoreCooldown } = options;
   const { now, thresholdDate, cooldownDate } = computeWindows(options);
 
-  const [total, eligible, noOptIn, noMarketingOptIn, invalidPhone] = await Promise.all([
+  // Client consent (opt-in) is no longer a gate — only an explicit STOP
+  // (unsubscribedAt) excludes a client, so the opt-in buckets are always 0.
+  const noOptIn = 0;
+  const noMarketingOptIn = 0;
+
+  const [total, eligible, invalidPhone] = await Promise.all([
     // All active (not unsubscribed) clients
     prisma.client.count({
       where: { businessId: tenant.businessId, unsubscribedAt: null },
@@ -232,26 +228,6 @@ export async function getEligibilityBreakdown(
 
     // Fully eligible — reuse the main query count
     getEligibleClients(tenant, options).then((c) => c.length),
-
-    // Missing WhatsApp opt-in (only relevant when requireOptIn=true)
-    requireOptIn
-      ? prisma.client.count({
-          where: {
-            businessId: tenant.businessId,
-            unsubscribedAt: null,
-            whatsappOptIn: false,
-          },
-        })
-      : Promise.resolve(0),
-
-    // Missing marketing opt-in (always required for win-back)
-    prisma.client.count({
-      where: {
-        businessId: tenant.businessId,
-        unsubscribedAt: null,
-        marketingOptIn: false,
-      },
-    }),
 
     // Invalid phone (does not match E.164 +972 prefix)
     prisma.client.count({
