@@ -154,19 +154,20 @@ describe("adminUpdateClientAction", () => {
     const res = await adminUpdateClientAction(
       "cli_1",
       EMPTY,
-      fd({ fullName: "דנה", phone: "0501234567", whatsappOptIn: "true", marketingOptIn: "true" }),
+      fd({ fullName: "דנה", phone: "0501234567" }),
     );
     expect(res).toEqual({ success: true });
     const updArg = prisma.client.update.mock.calls[0][0] as {
       where: { id: string };
-      data: { whatsappOptIn: boolean; marketingOptIn: boolean; email: string | null };
+      data: { fullName: string; phone: string };
     };
     expect(updArg.where).toEqual({ id: "cli_1" });
-    expect(updArg.data.whatsappOptIn).toBe(true);
-    expect(updArg.data.marketingOptIn).toBe(true);
+    // The admin update writes the editable client fields; opt-in gating was removed.
+    expect(updArg.data.fullName).toBe("דנה");
+    expect(updArg.data.phone).toBe("0501234567");
   });
 
-  it("succeeds with no duplicate; trims email/notes to null when blank and parses opt-ins false", async () => {
+  it("succeeds with no duplicate and trims blank email/notes to null", async () => {
     prisma.client.findUnique
       .mockResolvedValueOnce({ id: "cli_1", businessId: BUSINESS_A })
       .mockResolvedValueOnce(null);
@@ -180,8 +181,9 @@ describe("adminUpdateClientAction", () => {
     const data = (prisma.client.update.mock.calls[0][0] as { data: Record<string, unknown> }).data;
     expect(data.email).toBeNull();
     expect(data.notes).toBeNull();
-    expect(data.whatsappOptIn).toBe(false);
-    expect(data.marketingOptIn).toBe(false);
+    // Opt-in gating was removed; the admin update no longer writes these fields.
+    expect(data.whatsappOptIn).toBeUndefined();
+    expect(data.marketingOptIn).toBeUndefined();
   });
 
   it("maps a unique-constraint DB error to a friendly phone field error", async () => {
@@ -338,26 +340,38 @@ describe("adminSendManualClientWhatsAppAction — guards", () => {
   });
 });
 
-describe("adminSendManualClientWhatsAppAction — win_back opt-in guards", () => {
+describe("adminSendManualClientWhatsAppAction — win_back opt-in gating removed", () => {
   beforeEach(() => {
     prisma.client.findUnique.mockResolvedValue(clientRow());
     prisma.whatsAppConnection.findUnique.mockResolvedValue({ status: "active" });
+    primeAudit();
   });
 
-  it("blocks win_back when requireOptIn is set but client has no whatsappOptIn", async () => {
+  // Opt-in gating was removed: win_back sends regardless of the legacy opt-in
+  // flags. Only an explicit STOP (unsubscribedAt) excludes a client — that guard
+  // is covered in the "guards" describe above.
+  it("sends win_back even when the client lacks the legacy whatsappOptIn flag", async () => {
     prisma.client.findUnique.mockResolvedValue(clientRow({ whatsappOptIn: false }));
-    prisma.automationSetting.findUnique.mockResolvedValue({ requireOptIn: true, templateName: "t" });
+    prisma.automationSetting.findUnique.mockResolvedValue({
+      templateName: "t",
+      templateLanguage: "he",
+    });
+    send.mockResolvedValue(okSendResult());
     const res = await adminSendManualClientWhatsAppAction("cli_1", "win_back");
-    expect(res).toEqual({ error: "הלקוחה לא אישרה קבלת הודעות WhatsApp" });
-    expect(send).not.toHaveBeenCalled();
+    expect(res.success).toBe(true);
+    expect(send).toHaveBeenCalledTimes(1);
   });
 
-  it("blocks win_back when client has not opted into marketing", async () => {
+  it("sends win_back even when the client lacks the legacy marketingOptIn flag", async () => {
     prisma.client.findUnique.mockResolvedValue(clientRow({ marketingOptIn: false }));
-    prisma.automationSetting.findUnique.mockResolvedValue({ requireOptIn: false, templateName: "t" });
+    prisma.automationSetting.findUnique.mockResolvedValue({
+      templateName: "t",
+      templateLanguage: "he",
+    });
+    send.mockResolvedValue(okSendResult());
     const res = await adminSendManualClientWhatsAppAction("cli_1", "win_back");
-    expect(res).toEqual({ error: "הלקוחה לא אישרה הודעות שיווקיות" });
-    expect(send).not.toHaveBeenCalled();
+    expect(res.success).toBe(true);
+    expect(send).toHaveBeenCalledTimes(1);
   });
 
   it("blocks win_back real send when no template is configured", async () => {

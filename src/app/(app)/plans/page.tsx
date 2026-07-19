@@ -313,7 +313,8 @@ export default function PlansPage() {
 
             {/* CTA */}
             <div className="mb-6">
-              <button
+              <Link
+                href="/contact"
                 className="flex w-full items-center justify-center gap-1.5 rounded-xl py-3 text-sm font-bold transition-opacity hover:opacity-90"
                 style={{
                   background: "linear-gradient(135deg, #d4a853 0%, #c09560 100%)",
@@ -323,7 +324,7 @@ export default function PlansPage() {
               >
                 <Sparkles className="h-4 w-4" />
                 עדכני אותי כשיצא
-              </button>
+              </Link>
             </div>
 
             {/* Pro features */}
@@ -504,7 +505,8 @@ export default function PlansPage() {
               </p>
             </div>
           </div>
-          <button
+          <Link
+            href="/contact"
             className="flex shrink-0 items-center gap-1.5 rounded-xl px-6 py-2.5 text-sm font-bold transition-opacity hover:opacity-90"
             style={{
               background: "linear-gradient(135deg, #d4a853 0%, #c09560 100%)",
@@ -514,7 +516,7 @@ export default function PlansPage() {
           >
             <Sparkles className="h-4 w-4" />
             עדכני אותי
-          </button>
+          </Link>
         </div>
       </div>
 

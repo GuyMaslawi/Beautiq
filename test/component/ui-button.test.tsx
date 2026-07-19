@@ -28,8 +28,9 @@ describe("Button", () => {
 
   it("applies gradient inline style for primary/default", () => {
     render(<Button variant="primary">grad</Button>);
+    // primary/default now apply the brand gradient via a CSS custom property.
     expect(screen.getByRole("button").getAttribute("style")).toContain(
-      "linear-gradient",
+      "var(--brand-gradient)",
     );
   });
 

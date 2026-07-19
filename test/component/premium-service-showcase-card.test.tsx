@@ -5,12 +5,13 @@ import userEvent from "@testing-library/user-event";
 import { ServiceShowcaseCard } from "@/components/premium/service-showcase-card";
 
 describe("ServiceShowcaseCard", () => {
-  it("renders name with the default star icon (minimal)", () => {
-    render(<ServiceShowcaseCard name="מניקור" />);
+  it("renders name with the default sparkles icon (minimal)", () => {
+    const { container } = render(<ServiceShowcaseCard name="מניקור" />);
     expect(
       screen.getByRole("heading", { name: "מניקור" }),
     ).toBeInTheDocument();
-    expect(screen.getByText("✦")).toBeInTheDocument();
+    // with no custom icon, the default Sparkles lucide icon renders
+    expect(container.querySelector(".lucide-sparkles")).toBeInTheDocument();
   });
 
   it("renders description, price, priceNote, duration, control, insight, footer and custom icon", () => {

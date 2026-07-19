@@ -127,7 +127,7 @@ export function generateGuidanceItems(
       description: EMPTY_SLOTS.guidance.body,
       priority: "recommended",
       actionLabel: EMPTY_SLOTS.guidance.action,
-      href: "/dashboard#empty-slots",
+      href: "/empty-slots",
     });
   }
 

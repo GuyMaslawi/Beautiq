@@ -135,14 +135,30 @@ describe("evaluateWhatsAppSend — block reasons", () => {
 });
 
 describe("evaluateWhatsAppSend — opt-in policy (transactional vs marketing)", () => {
-  it("win_back requires marketing opt-in", async () => {
+  it("win_back no longer requires a marketing opt-in (only a STOP opt-out blocks it)", async () => {
     enableRealConnection();
-    prisma.automationSetting.findUnique.mockResolvedValue(
-      approvedSetting({ requireOptIn: false }),
+    prisma.automationSetting.findUnique.mockResolvedValue(approvedSetting());
+    prisma.automationMessage.findFirst.mockResolvedValue(null); // outside the cooldown window
+    // Client never opted into marketing but never sent STOP → still eligible under the
+    // neutral-template model (win-back gated by unsubscribedAt, not a marketing opt-in).
+    prisma.client.findFirst.mockResolvedValue(
+      makeClient({ whatsappOptIn: true, marketingOptIn: false, unsubscribedAt: null }),
     );
+    const result = await evaluateWhatsAppSend({
+      businessId: BUSINESS_A,
+      messageType: "win_back",
+      clientId: "cli_1",
+    });
+    expect(result.wouldSend).toBe(true);
+    expect(result.blockReason).toBeUndefined();
+  });
+
+  it("win_back IS blocked when the client sent STOP (unsubscribed)", async () => {
+    enableRealConnection();
+    prisma.automationSetting.findUnique.mockResolvedValue(approvedSetting());
     prisma.automationMessage.findFirst.mockResolvedValue(null);
     prisma.client.findFirst.mockResolvedValue(
-      makeClient({ whatsappOptIn: true, marketingOptIn: false }),
+      makeClient({ unsubscribedAt: new Date("2026-05-01T00:00:00Z") }),
     );
     const result = await evaluateWhatsAppSend({
       businessId: BUSINESS_A,
@@ -150,7 +166,7 @@ describe("evaluateWhatsAppSend — opt-in policy (transactional vs marketing)", 
       clientId: "cli_1",
     });
     expect(result.wouldSend).toBe(false);
-    expect(result.blockReason?.code).toBe("missing_marketing_opt_in");
+    expect(result.blockReason?.code).toBe("unsubscribed");
   });
 
   it("booking_confirmation does NOT require marketing opt-in", async () => {

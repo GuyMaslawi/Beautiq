@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createPrismaMock, resetPrismaMock } from "../helpers/prisma-mock";
 import { BUSINESS_A, BUSINESS_B, makeClient } from "../helpers/factories";
+import type { SendMessageResult } from "@/lib/whatsapp/provider";
 
 vi.mock("@/server/db/prisma", async () => {
   const { createPrismaMock } = await import("../helpers/prisma-mock");
@@ -23,11 +24,10 @@ vi.mock("@/server/auth/session", () => ({
 
 // Provider send is mocked; default success.
 const send = vi.fn(
-  async (): Promise<{
-    success: boolean;
-    providerMessageId?: string;
-    failureReason?: string;
-  }> => ({ success: true, providerMessageId: "wamid.1" }),
+  async (): Promise<SendMessageResult> => ({
+    success: true,
+    providerMessageId: "wamid.1",
+  }),
 );
 vi.mock("@/server/whatsapp/resolver", () => ({
   getWhatsAppProviderForBusiness: vi.fn(async () => ({ send })),
@@ -105,13 +105,15 @@ describe("sendManualClientWhatsAppAction — validation & tenant safety", () => 
     expect(send).not.toHaveBeenCalled();
   });
 
-  it("blocks win_back when marketing opt-in is missing", async () => {
+  // Consent for win_back is enforced via the STOP / opt-out model
+  // (unsubscribedAt) rather than a per-message marketing opt-in flag: a client
+  // who has opted out must never receive a win_back message.
+  it("blocks win_back when the client has opted out (STOP / unsubscribed)", async () => {
     prisma.client.findUnique.mockResolvedValue(
-      clientRow({ marketingOptIn: false }),
+      clientRow({ unsubscribedAt: new Date() }),
     );
     prisma.whatsAppConnection.findUnique.mockResolvedValue({ status: "active" });
     prisma.automationSetting.findUnique.mockResolvedValue({
-      requireOptIn: false,
       offerType: "none",
       offerValue: null,
       messageTemplate: null,
@@ -179,6 +181,7 @@ describe("sendManualClientWhatsAppAction — validation & tenant safety", () => 
     // buildMetaErrorReason output — sanitized (only Meta's own fields, never a token).
     send.mockResolvedValue({
       success: false,
+      providerMessageId: null,
       failureReason: "Message failed to send [code 131026 · subcode 0]",
       metaError: {
         code: 131026,

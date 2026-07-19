@@ -134,13 +134,14 @@ describe("ReviewRequestCard — settings dialog", () => {
     );
   });
 
-  it("toggles requireOptIn helper text and opens the message editor", async () => {
+  // The "דרישת אישור WhatsApp" (requireOptIn) switch was removed from the
+  // advanced section — requireOptIn is now hardcoded false — so its toggle +
+  // helper text are no longer asserted. The message editor still opens here.
+  it("opens the message editor from the advanced section", async () => {
     const user = userEvent.setup();
     render(<ReviewRequestCard setting={makeSetting()} sentThisMonth={0} />);
     await user.click(screen.getByRole("button", { name: "הגדרה" }));
     await user.click(screen.getByRole("button", { name: /עריכה מתקדמת/ }));
-    await user.click(screen.getByRole("switch", { name: "דרישת אישור WhatsApp" }));
-    expect(screen.getByText(/יישלחו רק ללקוחות שנתנו הסכמה/)).toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: /עריכת נוסח ההודעה/ }));
     expect(screen.getByText("נוסח ההודעה")).toBeInTheDocument();

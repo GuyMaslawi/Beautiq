@@ -128,24 +128,14 @@ describe("ImportWizard — preview actions", () => {
     await user.click(screen.getByRole("button", { name: PREV.importButton(1) }));
     await waitFor(() => expect(m.importClients).toHaveBeenCalled());
 
-    // Verify payload shape: array of clients + opt-in boolean.
-    const [rows, optIn] = m.importClients.mock.calls[0];
+    // Verify payload shape: array of clients. Import no longer carries a
+    // per-batch WhatsApp opt-in flag (consent is handled via the STOP/opt-out
+    // model), so importClients is called with the rows only.
+    const [rows] = m.importClients.mock.calls[0];
     expect(rows).toEqual([{ fullName: "נועה כהן", phone: "0501111111" }]);
-    expect(optIn).toBe(false);
 
     expect(await screen.findByText(RES.title)).toBeInTheDocument();
     expect(screen.getByText(RES.created(1))).toBeInTheDocument();
-  });
-
-  it("passes whatsappOptIn=true when the checkbox is ticked", async () => {
-    m.importClients.mockResolvedValue({ created: 1, duplicates: 0, failed: 0 });
-    const user = userEvent.setup();
-    await gotoPreviewWithOneValid(user);
-
-    await user.click(screen.getByRole("checkbox"));
-    await user.click(screen.getByRole("button", { name: PREV.importButton(1) }));
-    await waitFor(() => expect(m.importClients).toHaveBeenCalled());
-    expect(m.importClients.mock.calls[0][1]).toBe(true);
   });
 
   it("disables the import button when there are no valid rows and shows the empty notice", async () => {

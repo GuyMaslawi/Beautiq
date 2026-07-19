@@ -137,17 +137,17 @@ describe("runReviewRequestForBusiness — provider result branches", () => {
     err.mockRestore();
   });
 
-  it("skips a client missing whatsappOptIn when requireOptIn=true", async () => {
+  it("still sends to a client that lacks the legacy whatsappOptIn flag (opt-in gating removed)", async () => {
+    // Review requests are transactional and no longer gate on a marketing opt-in —
+    // requireOptIn is ignored and only an explicit STOP (unsubscribedAt) excludes a client.
     prisma.booking.findMany.mockResolvedValue([
       completedBookingRow({}, { whatsappOptIn: false }),
     ]);
+    send.mockResolvedValue({ success: true, providerMessageId: "wamid.opt" });
     const res = await runReviewRequestForBusiness({ ...BASE, requireOptIn: true });
-    expect(res.skippedCount).toBe(1);
-    expect(res.sentCount).toBe(0);
-    expect(send).not.toHaveBeenCalled();
-    expect(prisma.automationMessage.create).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ failureReason: "הלקוחה לא אישרה קבלת הודעות WhatsApp" }) }),
-    );
+    expect(res.skippedCount).toBe(0);
+    expect(res.sentCount).toBe(1);
+    expect(send).toHaveBeenCalledTimes(1);
   });
 
   it("skips an invalid phone before any provider call", async () => {

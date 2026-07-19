@@ -199,7 +199,9 @@ describe("WinBackStatusPanel — advanced section", () => {
     expect(screen.getByText(/4 הרצות בדיקה החודש/)).toBeInTheDocument();
   });
 
-  it("shows the zero-eligible opt-in note when enabled with no eligible clients", async () => {
+  // The opt-in-specific line ("ניתן להוסיף אישור קבלת הודעות") was removed from
+  // the zero-eligible note; only the neutral "no clients waiting" message remains.
+  it("shows the zero-eligible note when enabled with no eligible clients", async () => {
     const user = userEvent.setup();
     render(
       <WinBackStatusPanel
@@ -212,7 +214,6 @@ describe("WinBackStatusPanel — advanced section", () => {
     );
     await user.click(screen.getByRole("button", { name: /הגדרות מתקדמות/ }));
     expect(screen.getByText(/אין לקוחות שמחכות להודעה כרגע/)).toBeInTheDocument();
-    expect(screen.getByText(/ניתן להוסיף אישור קבלת הודעות/)).toBeInTheDocument();
   });
 
   it("renders last-run details (sent / skipped / failed)", async () => {

@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { headers } from "next/headers";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
@@ -144,7 +145,18 @@ export async function submitPublicBookingAction(
       },
     });
     newBookingId = booking.id;
-  } catch {
+  } catch (err) {
+    // The partial unique index (businessId, startTime) on active bookings is the
+    // atomic backstop for the double-booking race: if another request grabbed
+    // this exact slot first, the INSERT fails with P2002. Surface it as a slot
+    // conflict, not a generic error, so the customer knows to pick another time.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      return {
+        formError: PUBLIC_BOOKING.errors.overlap,
+        slotConflict: true,
+        values: raw,
+      };
+    }
     return { formError: PUBLIC_BOOKING.errors.generic, values: raw };
   }
 
@@ -152,27 +164,36 @@ export async function submitPublicBookingAction(
 
   // Notify the business owner automatically — primary channel is email so the
   // owner learns about the request even without opening the system. Best-effort:
-  // never blocks the response and never fails booking creation.
-  notifyOwnerOfNewBooking({
-    bookingId: newBookingId,
-    businessId: tenant.businessId,
-  }).catch((err) =>
-    console.error("[submitPublicBookingAction] owner notification failed:", err),
-  );
+  // never blocks the response and never fails booking creation. `after()` keeps
+  // the runtime alive past the response on serverless so the work isn't dropped.
+  after(async () => {
+    try {
+      await notifyOwnerOfNewBooking({
+        bookingId: newBookingId,
+        businessId: tenant.businessId,
+      });
+    } catch (err) {
+      console.error("[submitPublicBookingAction] owner notification failed:", err);
+    }
+  });
 
   // Best-effort WhatsApp confirmation to the customer — never blocks the response
-  sendBookingConfirmation({
-    bookingId: newBookingId,
-    businessId: tenant.businessId,
-    businessName: business.name,
-    clientId: client.id,
-    clientPhone: value.phone,
-    clientName: value.clientName,
-    serviceName: service.name,
-    startTime,
-  }).catch((err) =>
-    console.error("[submitPublicBookingAction] WA confirmation failed:", err),
-  );
+  after(async () => {
+    try {
+      await sendBookingConfirmation({
+        bookingId: newBookingId,
+        businessId: tenant.businessId,
+        businessName: business.name,
+        clientId: client.id,
+        clientPhone: value.phone,
+        clientName: value.clientName,
+        serviceName: service.name,
+        startTime,
+      });
+    } catch (err) {
+      console.error("[submitPublicBookingAction] WA confirmation failed:", err);
+    }
+  });
 
   // The booking is created as `pending` and the customer sees the in-form
   // confirmation. No prepayment/deposit is required in this flow.

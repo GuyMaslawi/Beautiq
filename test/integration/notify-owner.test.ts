@@ -185,6 +185,12 @@ describe("notifyOwnerOfNewBooking — owner WhatsApp (flag-gated)", () => {
     process.env.ENABLE_OWNER_WHATSAPP_NOTIFICATION = "true";
     prisma.booking.findFirst.mockResolvedValue(mockBooking());
     prisma.booking.update.mockResolvedValue({});
+    // The owner-notification attempt is now persisted (AutomationRun + AutomationMessage)
+    // before the send, so it shows up in the admin message log — prime those writes.
+    prisma.automationRun.create.mockResolvedValue({ id: "run_owner" });
+    prisma.automationMessage.create.mockResolvedValue({ id: "msg_owner" });
+    prisma.automationMessage.update.mockResolvedValue({ id: "msg_owner" });
+    prisma.automationRun.update.mockResolvedValue({ id: "run_owner" });
 
     await notifyOwnerOfNewBooking({ bookingId: BOOKING_ID, businessId: BUSINESS_A });
 

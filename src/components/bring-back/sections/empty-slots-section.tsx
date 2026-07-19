@@ -231,11 +231,14 @@ export async function EmptySlotsSection() {
                         slot.startMinutes,
                         slot.weekday,
                       );
+                      const waUrl = buildWhatsAppUrl(client.phone, clientWa);
+                      // Skip clients with no valid phone — no dead "#" link
+                      if (!waUrl) return null;
                       return (
                         <a
                           key={client.id}
-                          href={buildWhatsAppUrl(client.phone, clientWa) ?? "#"}
-                          target={buildWhatsAppUrl(client.phone, clientWa) ? "_blank" : undefined}
+                          href={waUrl}
+                          target="_blank"
                           rel="noopener noreferrer"
                           aria-label={`שלחי הזמנה ל-${client.fullName}`}
                           className="flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-opacity hover:opacity-80"

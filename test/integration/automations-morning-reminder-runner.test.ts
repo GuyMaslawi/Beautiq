@@ -105,13 +105,16 @@ describe("runMorningReminderForBusiness — no real send (dev mock counts as sen
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 
-  it("skips a client without whatsappOptIn when requireOptIn=true", async () => {
+  it("still reminds a client that lacks the legacy whatsappOptIn flag (opt-in gating removed)", async () => {
+    // Transactional reminders no longer gate on a marketing opt-in — requireOptIn
+    // is ignored and only an explicit STOP (unsubscribedAt) excludes a client.
     prisma.booking.findMany.mockResolvedValue([
       bookingRow({}, { whatsappOptIn: false }),
     ]);
     const result = await runMorningReminderForBusiness({ ...BASE, requireOptIn: true });
-    expect(result.skippedCount).toBe(1);
-    expect(result.sentCount).toBe(0);
+    expect(result.skippedCount).toBe(0);
+    // dev mock counts as sent; still no real network call
+    expect(result.sentCount).toBe(1);
     expect(fetchSpy).not.toHaveBeenCalled();
   });
 

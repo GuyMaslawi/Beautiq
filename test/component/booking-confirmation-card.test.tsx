@@ -70,7 +70,10 @@ describe("BookingConfirmationCard — settings dialog", () => {
 
     expect(screen.getByText("הגדרות אישור תור")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("booking_confirmation_he")).toBeInTheDocument();
-    expect(screen.getByRole("switch", { name: "דרישת אישור WhatsApp" })).toBeInTheDocument();
+    // The requireOptIn switch was removed; the dialog now exposes the template
+    // name + language config fields.
+    expect(screen.getByText("שם תבנית WhatsApp")).toBeInTheDocument();
+    expect(screen.getByText("שפת התבנית")).toBeInTheDocument();
   });
 
   it("closes the dialog via the X button", async () => {
@@ -84,13 +87,18 @@ describe("BookingConfirmationCard — settings dialog", () => {
     expect(screen.queryByText("הגדרות אישור תור")).not.toBeInTheDocument();
   });
 
-  it("toggles requireOptIn and shows the matching helper text", async () => {
+  // Note: the per-message "דרישת אישור WhatsApp" (requireOptIn) switch and its
+  // helper text were removed from this dialog — confirmation is always a business
+  // message (requireOptIn is now hardcoded false). The former "toggles requireOptIn"
+  // test was tied entirely to that removed control and no longer applies. The
+  // explanatory copy is still asserted below.
+  it("explains that booking confirmation is an automatic business message", async () => {
     const user = userEvent.setup();
     render(<BookingConfirmationCard setting={makeSetting()} />);
     await user.click(screen.getByRole("button", { name: "הגדרה" }));
-    expect(screen.getByText(/אישור תור הוא הודעה עסקית/)).toBeInTheDocument();
-    await user.click(screen.getByRole("switch", { name: "דרישת אישור WhatsApp" }));
-    expect(screen.getByText(/יישלחו רק ללקוחות שנתנו הסכמה/)).toBeInTheDocument();
+    expect(
+      screen.getByText("אישור תור — הודעה עסקית אוטומטית"),
+    ).toBeInTheDocument();
   });
 
   it("shows the admin diagnostic block only for admins", async () => {

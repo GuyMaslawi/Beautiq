@@ -48,7 +48,7 @@ describe("BrandingForm — rendering", () => {
     expect(screen.getAllByText("לחצי להעלאת תמונה")).toHaveLength(2);
 
     const color = document.getElementById("brandColor") as HTMLInputElement;
-    expect(color.value).toBe("#b86b8c");
+    expect(color.value).toBe("#ac5c7f");
   });
 
   it("shows existing images (with remove/replace) when initial urls are provided", () => {
@@ -80,7 +80,7 @@ describe("BrandingForm — brand colour controls", () => {
 
     await userEvent.click(screen.getByText("ברירת מחדל"));
     expect((document.getElementById("brandColor") as HTMLInputElement).value).toBe(
-      "#b86b8c",
+      "#ac5c7f",
     );
   });
 });
@@ -100,7 +100,7 @@ describe("BrandingForm — colour picker & remove", () => {
     renderForm({
       logoUrl: "https://x/logo.png",
       coverImageUrl: "https://x/cover.png",
-      brandColor: "#b86b8c",
+      brandColor: "#ac5c7f",
     });
     expect(document.querySelectorAll("img")).toHaveLength(2);
     // each preview has a remove (X) button titled "הסרת תמונה"

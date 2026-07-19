@@ -30,16 +30,16 @@ describe("AdminNav", () => {
     m.pathname = "/admin";
     render(<AdminNav />);
     const overview = screen.getByText("סקירה");
-    // active state uses white text color
-    expect(overview).toHaveStyle({ color: "#fff" });
+    // active state is applied via the "active" class (styled in CSS)
+    expect(overview).toHaveClass("active");
   });
 
   it("marks a section active when the pathname starts with its href", () => {
     m.pathname = "/admin/businesses/abc";
     render(<AdminNav />);
-    expect(screen.getByText("ניהול עסקים")).toHaveStyle({ color: "#fff" });
+    expect(screen.getByText("ניהול עסקים")).toHaveClass("active");
     // overview is NOT active on a sub-route
-    expect(screen.getByText("סקירה")).not.toHaveStyle({ color: "#fff" });
+    expect(screen.getByText("סקירה")).not.toHaveClass("active");
   });
 });
 

@@ -1538,7 +1538,7 @@ export const REVENUE_FORECAST = {
     emptySlots: (count: number, revenue: number) =>
       `יש לך ${count} חלונות פנויים שיכולים להוסיף כ-₪${Math.round(revenue).toLocaleString("he-IL")}`,
     emptySlotsAction: "מילוי חלונות פנויים",
-    emptySlotsHref: "/dashboard",
+    emptySlotsHref: "/empty-slots",
     atRisk: (count: number) =>
       `יש ${count} לקוחות בסיכון עם פוטנציאל הכנסה שטרם מומש`,
     atRiskAction: "צפייה בלקוחות בסיכון",

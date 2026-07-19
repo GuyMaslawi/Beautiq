@@ -34,11 +34,22 @@ export function validatePublicBooking(
     errors.phone = PUBLIC_BOOKING.errors.phoneInvalid;
   }
 
+  // Both come from client-controlled hidden inputs, so validate the exact
+  // format — otherwise garbage flows into the date parser, produces NaN/rolled-
+  // over times, and silently bypasses the past-time guard in the action.
   const date = (raw.date ?? "").trim();
-  if (!date) errors.date = PUBLIC_BOOKING.errors.dateRequired;
+  if (!date) {
+    errors.date = PUBLIC_BOOKING.errors.dateRequired;
+  } else if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    errors.date = PUBLIC_BOOKING.errors.dateRequired;
+  }
 
   const requestedTime = (raw.requestedTime ?? "").trim();
-  if (!requestedTime) errors.requestedTime = PUBLIC_BOOKING.errors.timeRequired;
+  if (!requestedTime) {
+    errors.requestedTime = PUBLIC_BOOKING.errors.timeRequired;
+  } else if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(requestedTime)) {
+    errors.requestedTime = PUBLIC_BOOKING.errors.timeRequired;
+  }
 
   const note = (raw.note ?? "").trim();
 

@@ -148,7 +148,7 @@ describe("getEligibleClients — timing windows", () => {
     expect(thresholdAgoMs).toBeGreaterThan(44 * 24 * 60 * 60 * 1000);
   });
 
-  it("minute mode keeps ALL other safety filters (opt-in, marketing, unsubscribed, future-booking, cooldown)", async () => {
+  it("minute mode keeps ALL other safety filters (unsubscribed opt-out, future-booking, cooldown)", async () => {
     prisma.client.findMany.mockResolvedValue([]);
     await getEligibleClients(TENANT, {
       ...DAY_OPTIONS,
@@ -159,10 +159,13 @@ describe("getEligibleClients — timing windows", () => {
     const where = getWhere();
 
     expect(where.businessId).toBe(BUSINESS_A);
+    // Opt-out model: only an explicit STOP (unsubscribedAt) excludes a client.
+    // The old per-message opt-in gates were removed, so neither marketingOptIn
+    // nor whatsappOptIn appears in the query — even with requireOptIn=true.
     expect(where.unsubscribedAt).toBeNull();
     expect(where.normalizedPhone).toEqual({ startsWith: "+972" });
-    expect(where.marketingOptIn).toBe(true);
-    expect(where.whatsappOptIn).toBe(true); // requireOptIn respected
+    expect(where.marketingOptIn).toBeUndefined();
+    expect(where.whatsappOptIn).toBeUndefined();
     expect(where.bookings.none).toMatchObject({
       status: { in: ["pending", "approved"] },
     });

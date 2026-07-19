@@ -132,9 +132,9 @@ describe("MorningReminderCard — settings dialog", () => {
     await user.click(screen.getByRole("button", { name: /עריכה מתקדמת/ }));
     expect(screen.getByPlaceholderText("morning_reminder_he")).toBeInTheDocument();
 
-    await user.click(screen.getByRole("switch", { name: "דרישת אישור WhatsApp" }));
-    expect(screen.getByText(/יישלחו רק ללקוחות שנתנו הסכמה/)).toBeInTheDocument();
-
+    // The "דרישת אישור WhatsApp" (requireOptIn) switch was removed from this
+    // section — requireOptIn is now hardcoded false — so its toggle + helper text
+    // are no longer asserted here.
     await user.click(screen.getByRole("button", { name: /עריכת נוסח ההודעה/ }));
     expect(screen.getByText("נוסח ההודעה")).toBeInTheDocument();
   });

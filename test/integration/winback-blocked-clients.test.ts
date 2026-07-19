@@ -64,6 +64,8 @@ describe("getBlockedClientsByReason — priority bucketing", () => {
     prisma.client.findMany.mockResolvedValue([
       row({ id: "invalid", normalizedPhone: "bad" }),
       row({ id: "unsub", unsubscribedAt: new Date() }),
+      // Opt-in flags are no longer a blocking reason (opt-out pivot): these two
+      // rows now fall through all gates and count as eligible.
       row({ id: "nooptin", whatsappOptIn: false }),
       row({ id: "nomarketing", marketingOptIn: false }),
       row({ id: "future", bookings: [OLD_COMPLETED, FUTURE_APPROVED] }),
@@ -76,12 +78,15 @@ describe("getBlockedClientsByReason — priority bucketing", () => {
 
     expect(result.counts.invalidPhone).toBe(1);
     expect(result.counts.unsubscribed).toBe(1);
-    expect(result.counts.noOptIn).toBe(1);
-    expect(result.counts.noMarketingOptIn).toBe(1);
+    // noOptIn / noMarketingOptIn buckets are retained in the shape but never
+    // filled since consent is no longer gated per-client.
+    expect(result.counts.noOptIn).toBe(0);
+    expect(result.counts.noMarketingOptIn).toBe(0);
     expect(result.counts.hasFutureBooking).toBe(1);
     expect(result.counts.inCooldown).toBe(1);
     expect(result.counts.noCompletedBooking).toBe(1);
-    expect(result.counts.eligible).toBe(1);
+    // eligible = the "eligible" row + the two ex-opt-in rows that now pass
+    expect(result.counts.eligible).toBe(3);
     expect(result.counts.total).toBe(8);
 
     // each non-eligible reason has a masked preview

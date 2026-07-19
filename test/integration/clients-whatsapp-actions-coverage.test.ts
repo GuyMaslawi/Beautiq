@@ -68,13 +68,14 @@ beforeEach(() => {
   delete process.env.WHATSAPP_TEST_PHONE;
 });
 
-describe("sendManualClientWhatsAppAction — win_back opt-in guards", () => {
-  it("blocks win_back when requireOptIn is set and whatsappOptIn is false", async () => {
-    prisma.client.findUnique.mockResolvedValue(clientRow({ whatsappOptIn: false }));
+describe("sendManualClientWhatsAppAction — win_back opt-out guards", () => {
+  it("blocks win_back when the client has unsubscribed (STOP opt-out)", async () => {
+    // Consent is no longer gated per-message on whatsappOptIn/marketingOptIn — the only
+    // client-level block is an explicit STOP (unsubscribedAt).
+    prisma.client.findUnique.mockResolvedValue(clientRow({ unsubscribedAt: new Date() }));
     prisma.whatsAppConnection.findUnique.mockResolvedValue({ status: "active" });
-    prisma.automationSetting.findUnique.mockResolvedValue({ requireOptIn: true, offerType: "none", offerValue: null, messageTemplate: null });
     const res = await sendManualClientWhatsAppAction("cli_1", "win_back");
-    expect(res.error).toContain("WhatsApp");
+    expect(res.error).toContain("לא מעוניינת");
     expect(send).not.toHaveBeenCalled();
   });
 

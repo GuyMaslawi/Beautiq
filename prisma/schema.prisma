@@ -530,6 +530,12 @@ model Booking {
   @@index([businessId, status])
   @@index([businessId, clientId])
   @@index([businessId, serviceId])
+  // NOTE: A PARTIAL unique index also exists on (businessId, startTime) limited
+  // to active statuses (pending/approved) as a hard guard against double-booking.
+  // Prisma's schema DSL cannot express partial indexes, so it is maintained
+  // manually in migration 20260719120000_add_booking_active_slot_unique_index.
+  // Do not add a plain @@unique here — it would also block reusing a slot after
+  // a cancellation/no-show.
 }
 
 // ---------------------------------------------------------------------------

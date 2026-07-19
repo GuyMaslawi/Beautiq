@@ -105,7 +105,7 @@ describe("generateGuidanceItems — conditional rules", () => {
     const withSlots = generateGuidanceItems(data(), 5);
     expect(ids(withSlots)).toContain("empty-slots");
     expect(withSlots.find((i) => i.id === "empty-slots")!.href).toBe(
-      "/dashboard#empty-slots",
+      "/empty-slots",
     );
 
     // No empty-slot card when setup is incomplete even if slots > 0.

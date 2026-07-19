@@ -61,9 +61,11 @@ describe("getEligibleClients — query shape & tenant scoping", () => {
     const where = arg.where;
 
     expect(where.businessId).toBe(BUSINESS_A);
+    // Opt-out model: unsubscribedAt is the only consent gate. The old
+    // marketingOptIn/whatsappOptIn opt-in filters were removed in the pivot.
     expect(where.unsubscribedAt).toBeNull();
     expect(where.normalizedPhone).toEqual({ startsWith: "+972" });
-    expect(where.marketingOptIn).toBe(true);
+    expect(where.marketingOptIn).toBeUndefined();
 
     // completed-older-than-threshold + no-future-booking booking filters
     expect(where.bookings.some).toMatchObject({
@@ -81,11 +83,13 @@ describe("getEligibleClients — query shape & tenant scoping", () => {
     expect(arg.include.bookings.where).toEqual({ businessId: BUSINESS_A });
   });
 
-  it("adds whatsappOptIn:true when requireOptIn is enabled", async () => {
+  it("no longer adds a whatsappOptIn filter even when requireOptIn is enabled (opt-out pivot)", async () => {
     prisma.client.findMany.mockResolvedValue([]);
     await getEligibleClients(TENANT, { ...OPTIONS, requireOptIn: true });
     const where = prisma.client.findMany.mock.calls[0][0].where;
-    expect(where.whatsappOptIn).toBe(true);
+    // requireOptIn is now a no-op on the query: consent is enforced via the
+    // approved template + unsubscribedAt (STOP) opt-out, not a per-client gate.
+    expect(where.whatsappOptIn).toBeUndefined();
   });
 
   it("omits whatsappOptIn when requireOptIn is disabled", async () => {

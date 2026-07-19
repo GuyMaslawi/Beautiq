@@ -41,7 +41,8 @@ describe("AppNav", () => {
     const active = screen
       .getAllByRole("link")
       .find((l) => l.getAttribute("aria-current") === "page") as HTMLElement;
-    expect(active.getAttribute("style")).toContain("linear-gradient");
+    // The light-variant active link now uses the soft brand gradient token.
+    expect(active.getAttribute("style")).toContain("var(--brand-gradient-soft)");
   });
 
   it("renders the admin group only when isAdmin", () => {

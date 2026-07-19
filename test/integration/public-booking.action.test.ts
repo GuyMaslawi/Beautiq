@@ -11,6 +11,14 @@ vi.mock("@/server/db/prisma", async () => {
 });
 
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
+// The action schedules owner-notification / customer-confirmation via `after()`.
+// Outside a Next request scope `after` throws, so run the callback inline here
+// (its body is fully try/catch-wrapped, matching production best-effort semantics).
+vi.mock("next/server", () => ({
+  after: (fn: () => unknown) => {
+    void fn();
+  },
+}));
 vi.mock("next/headers", () => ({
   headers: vi.fn(async () => ({ get: () => "203.0.113.1" })),
 }));

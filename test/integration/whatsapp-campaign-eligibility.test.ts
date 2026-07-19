@@ -51,15 +51,16 @@ describe("classifyCandidate", () => {
     ).toBe("unsubscribed");
   });
 
-  it("rejects a client missing WhatsApp opt-in", () => {
+  it("no longer excludes a client for a missing WhatsApp opt-in (opt-in not required)", () => {
+    // Consent is no longer gated per-message — only an explicit STOP (unsubscribedAt) excludes.
     expect(classifyCandidate(candidate({ whatsappOptIn: false }), new Set())).toBe(
-      "missing_optin",
+      "eligible",
     );
   });
 
-  it("rejects a client missing marketing opt-in", () => {
+  it("no longer excludes a client for a missing marketing opt-in (opt-in not required)", () => {
     expect(classifyCandidate(candidate({ marketingOptIn: false }), new Set())).toBe(
-      "missing_optin",
+      "eligible",
     );
   });
 
@@ -77,6 +78,7 @@ describe("buildCampaignAudience", () => {
     prisma.client.findMany.mockResolvedValue([
       candidate({ id: "a", normalizedPhone: "+972500000001" }),
       candidate({ id: "b", normalizedPhone: "+972500000001" }), // duplicate phone
+      // Missing marketing opt-in is NO LONGER an exclusion — this client stays eligible.
       candidate({ id: "c", normalizedPhone: "+972500000002", marketingOptIn: false }),
       candidate({ id: "d", normalizedPhone: "+972500000003", unsubscribedAt: new Date() }),
       candidate({ id: "e", normalizedPhone: "+972500000004" }),
@@ -84,10 +86,10 @@ describe("buildCampaignAudience", () => {
 
     const res = await buildCampaignAudience(tenant, { mode: "all_eligible" });
 
-    expect(res.counts.eligible).toBe(2); // a, e
-    expect(res.counts.excluded).toBe(3); // b (dup), c (optin), d (unsub)
+    expect(res.counts.eligible).toBe(3); // a, c, e
+    expect(res.counts.excluded).toBe(2); // b (dup), d (unsub)
     expect(res.counts.byReason.duplicate_phone).toBe(1);
-    expect(res.counts.byReason.missing_optin).toBe(1);
+    expect(res.counts.byReason.missing_optin).toBe(0); // opt-in no longer excludes anyone
     expect(res.counts.byReason.unsubscribed).toBe(1);
   });
 

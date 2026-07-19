@@ -108,7 +108,13 @@ export async function createBookingAction(
         notes: value.notes || null,
       },
     });
-  } catch {
+  } catch (err) {
+    // Atomic double-booking guard (partial unique index on active bookings):
+    // if the slot was taken between the overlap check and this INSERT, P2002 is
+    // raised — report it on the startTime field rather than as a generic error.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      return { errors: { startTime: BOOKINGS.errors.overlap }, values: raw };
+    }
     return { formError: BOOKINGS.errors.generic, values: raw };
   }
 

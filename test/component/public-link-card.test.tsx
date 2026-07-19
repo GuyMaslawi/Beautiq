@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 
 import { PublicLinkCard } from "@/components/settings/public-link-card";
 import { SETTINGS } from "@/lib/constants/he";
-import { publicBusinessUrl } from "@/lib/config";
+import { publicBusinessUrlClient } from "@/lib/config";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -23,7 +23,7 @@ describe("PublicLinkCard", () => {
     expect(screen.getByText(SETTINGS.publicLink.body)).toBeInTheDocument();
     expect(screen.getByText(SETTINGS.publicLink.slugLabel)).toBeInTheDocument();
     expect(
-      screen.getByText(publicBusinessUrl("studio-yofi")),
+      screen.getByText(publicBusinessUrlClient("studio-yofi")),
     ).toBeInTheDocument();
   });
 
@@ -45,7 +45,7 @@ describe("PublicLinkCard", () => {
     const btn = screen.getByRole("button", { name: SETTINGS.publicLink.copyButton });
     await user.click(btn);
 
-    expect(writeText).toHaveBeenCalledWith(publicBusinessUrl("studio-yofi"));
+    expect(writeText).toHaveBeenCalledWith(publicBusinessUrlClient("studio-yofi"));
     expect(
       await screen.findByRole("button", { name: SETTINGS.publicLink.copied }),
     ).toBeInTheDocument();

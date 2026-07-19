@@ -9,7 +9,8 @@ import { BUSINESS_A } from "../helpers/factories";
  *   - It never sends a real message in tests (provider is mocked; real-send envs
  *     are force-cleared by test/setup.ts).
  *   - Every attempt is scoped to the booking's businessId.
- *   - Opt-out / opt-in / invalid phone are skipped safely with an audit row.
+ *   - Opt-out (STOP) / invalid phone are skipped safely with an audit row.
+ *     A marketing opt-in is no longer required for a transactional confirmation.
  */
 
 vi.mock("@/server/db/prisma", async () => {
@@ -95,7 +96,9 @@ describe("sendBookingConfirmation — safe skips", () => {
     expect(msgArg.data.status).toBe("skipped");
   });
 
-  it("skips when opt-in is required but the client has not opted in", async () => {
+  it("still sends when the client lacks the legacy whatsappOptIn flag (opt-in no longer gates)", async () => {
+    // WhatsApp opt-in is no longer required for a transactional confirmation —
+    // only an explicit STOP (unsubscribedAt) excludes a client.
     prisma.automationSetting.findUnique.mockResolvedValue({
       requireOptIn: true,
       templateName: null,
@@ -103,7 +106,7 @@ describe("sendBookingConfirmation — safe skips", () => {
     });
     prisma.client.findUnique.mockResolvedValue({ unsubscribedAt: null, whatsappOptIn: false });
     await sendBookingConfirmation(BASE);
-    expect(send).not.toHaveBeenCalled();
+    expect(send).toHaveBeenCalledTimes(1);
   });
 });
 

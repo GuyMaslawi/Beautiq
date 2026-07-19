@@ -66,7 +66,7 @@ describe("ReviewsManager", () => {
     ).not.toBeInTheDocument();
 
     // 5 stars per review × 2 reviews = 10 star svgs
-    const filled = document.querySelectorAll('svg[fill="#b86b8c"]');
+    const filled = document.querySelectorAll('svg[fill="#ac5c7f"]');
     expect(filled.length).toBe(8); // 5 (rating 5) + 3 (rating 3)
   });
 
