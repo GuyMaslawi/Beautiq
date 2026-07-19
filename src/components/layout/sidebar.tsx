@@ -27,6 +27,7 @@ export function Sidebar({
       style={{
         background:
           "linear-gradient(170deg, var(--sidebar-bg-from) 0%, var(--sidebar-bg-mid) 48%, var(--sidebar-bg-to) 100%)",
+        borderInlineEnd: "1px solid var(--sidebar-border)",
       }}
     >
       {/* Soft orchid glow at the top for a premium, feminine depth */}
@@ -65,10 +66,9 @@ export function Sidebar({
             <div
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-sm font-bold"
               style={{
-                background:
-                  "linear-gradient(135deg, rgba(199,111,147,0.55) 0%, rgba(172,92,127,0.40) 100%)",
-                color: "#f0c0d4",
-                border: "1px solid rgba(255,255,255,0.18)",
+                background: "var(--brand-gradient)",
+                color: "#ffffff",
+                boxShadow: "0 2px 8px rgba(172,92,127,0.35)",
               }}
             >
               {initials}
