@@ -29,8 +29,17 @@ const send = vi.fn(
     providerMessageId: "wamid.1",
   }),
 );
+// Resolved WhatsApp config — the manual send now routes through the same resolver
+// as every other send flow (managed sender by default; no per-business connection
+// required). Tests flip `resolved.providerName` to "disabled" to simulate an
+// unavailable connection; the default is an active sender.
+const resolved = { providerName: "meta_cloud_api", uiStatus: "WhatsApp מחובר" };
 vi.mock("@/server/whatsapp/resolver", () => ({
   getWhatsAppProviderForBusiness: vi.fn(async () => ({ send })),
+  resolveWhatsAppConnectionForBusiness: vi.fn(async () => ({
+    provider: { name: resolved.providerName, send },
+    uiStatus: resolved.uiStatus,
+  })),
 }));
 
 import { sendManualClientWhatsAppAction } from "@/server/clients/whatsapp-actions";
@@ -56,6 +65,8 @@ beforeEach(() => {
     .mockReset()
     .mockResolvedValue({ id: BUSINESS_A, name: "סטודיו יופי" });
   send.mockReset().mockResolvedValue({ success: true, providerMessageId: "wamid.1" });
+  resolved.providerName = "meta_cloud_api";
+  resolved.uiStatus = "WhatsApp מחובר";
   delete process.env.ENABLE_REAL_WHATSAPP_SEND;
   delete process.env.WHATSAPP_TEST_MODE;
   delete process.env.WHATSAPP_TEST_PHONE;
@@ -97,11 +108,12 @@ describe("sendManualClientWhatsAppAction — validation & tenant safety", () => 
     expect(send).not.toHaveBeenCalled();
   });
 
-  it("rejects when WhatsApp is not connected/active", async () => {
+  it("rejects when the resolved WhatsApp sender is unavailable (disabled)", async () => {
     prisma.client.findUnique.mockResolvedValue(clientRow());
-    prisma.whatsAppConnection.findUnique.mockResolvedValue({ status: "disconnected" });
+    resolved.providerName = "disabled";
+    resolved.uiStatus = "שירות ה-WhatsApp של Allura אינו זמין כרגע";
     const res = await sendManualClientWhatsAppAction("cli_1", "manual_test");
-    expect(res.error).toBeTruthy();
+    expect(res.error).toBe("שירות ה-WhatsApp של Allura אינו זמין כרגע");
     expect(send).not.toHaveBeenCalled();
   });
 

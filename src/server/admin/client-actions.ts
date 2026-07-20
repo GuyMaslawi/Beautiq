@@ -8,7 +8,7 @@ import {
   DEV_MOCK_SKIP_REASON,
   TEST_MODE_BLOCKED_REASON,
 } from "@/lib/whatsapp/provider";
-import { getWhatsAppProviderForBusiness } from "@/server/whatsapp/resolver";
+import { resolveWhatsAppConnectionForBusiness } from "@/server/whatsapp/resolver";
 import { buildWinBackMessage } from "@/server/win-back-automation/message-builder";
 import type { ManualSendMessageType, ManualSendResult } from "@/server/clients/whatsapp-actions";
 
@@ -195,13 +195,14 @@ export async function adminSendManualClientWhatsAppAction(
 
   const businessId = client.businessId;
 
-  const connection = await prisma.whatsAppConnection.findUnique({
-    where: { businessId },
-    select: { status: true },
-  });
-
-  if (!connection || connection.status !== "active") {
-    return { error: "WhatsApp לא מחובר לעסק של הלקוחה הזו" };
+  // Resolve the same way the automations / public booking / campaigns do. The
+  // default MVP model is the Allura-managed sender, so a business normally has NO
+  // per-business WhatsAppConnection — requiring one here would wrongly block the
+  // send. Only a "disabled" resolution (managed credentials missing / broken
+  // connection) blocks; dev_mock is allowed through and recorded as a skip below.
+  const resolved = await resolveWhatsAppConnectionForBusiness(businessId);
+  if (resolved.provider.name === "disabled") {
+    return { error: resolved.uiStatus || "שירות ה-WhatsApp אינו זמין כרגע" };
   }
 
   const setting = await prisma.automationSetting.findUnique({
@@ -279,7 +280,7 @@ export async function adminSendManualClientWhatsAppAction(
     },
   });
 
-  const provider = await getWhatsAppProviderForBusiness(businessId);
+  const provider = resolved.provider;
   // The neutral win-back template carries exactly 2 vars (name + business).
   const templateVariables =
     effectiveTemplateName && effectiveTemplateName !== "hello_world"

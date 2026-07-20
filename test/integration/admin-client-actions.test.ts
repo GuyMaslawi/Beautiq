@@ -31,9 +31,17 @@ vi.mock("@/server/admin/auth", () => ({
 
 const send = vi.fn();
 const getWhatsAppProviderForBusiness = vi.fn(async () => ({ send }));
+// Manual send routes through the resolver (managed sender by default; no
+// per-business connection required). Tests flip `resolved.providerName` to
+// "disabled" to simulate an unavailable connection.
+const resolved = { providerName: "meta_cloud_api", uiStatus: "WhatsApp מחובר" };
 vi.mock("@/server/whatsapp/resolver", () => ({
   getWhatsAppProviderForBusiness: (...a: unknown[]) =>
     getWhatsAppProviderForBusiness(...(a as [])),
+  resolveWhatsAppConnectionForBusiness: vi.fn(async () => ({
+    provider: { name: resolved.providerName, send },
+    uiStatus: resolved.uiStatus,
+  })),
 }));
 
 const buildWinBackMessage = vi.fn(() => "win-back-text");
@@ -79,6 +87,8 @@ beforeEach(() => {
   requirePlatformAdmin.mockReset().mockResolvedValue(undefined);
   getWhatsAppProviderForBusiness.mockClear();
   send.mockReset();
+  resolved.providerName = "meta_cloud_api";
+  resolved.uiStatus = "WhatsApp מחובר";
   buildWinBackMessage.mockClear().mockReturnValue("win-back-text");
   for (const k of ENV_KEYS) {
     savedEnv[k] = process.env[k];
@@ -320,23 +330,22 @@ describe("adminSendManualClientWhatsAppAction — guards", () => {
     expect(res).toEqual({ error: "הלקוחה הסירה עצמה מרשימת ההודעות" });
   });
 
-  it("errors when the business WhatsApp connection is missing", async () => {
+  it("errors when the resolved WhatsApp sender is unavailable (disabled)", async () => {
     prisma.client.findUnique.mockResolvedValue(clientRow());
-    prisma.whatsAppConnection.findUnique.mockResolvedValue(null);
+    resolved.providerName = "disabled";
+    resolved.uiStatus = "שירות ה-WhatsApp של Allura אינו זמין כרגע";
     const res = await adminSendManualClientWhatsAppAction("cli_1", "manual_test");
-    expect(res).toEqual({ error: "WhatsApp לא מחובר לעסק של הלקוחה הזו" });
-    // connection lookup scoped by the client's own businessId
-    expect(prisma.whatsAppConnection.findUnique).toHaveBeenCalledWith({
-      where: { businessId: BUSINESS_A },
-      select: { status: true },
-    });
+    expect(res).toEqual({ error: "שירות ה-WhatsApp של Allura אינו זמין כרגע" });
+    expect(send).not.toHaveBeenCalled();
   });
 
-  it("errors when the connection is not active", async () => {
+  it("falls back to a generic error when the disabled provider has no status label", async () => {
     prisma.client.findUnique.mockResolvedValue(clientRow());
-    prisma.whatsAppConnection.findUnique.mockResolvedValue({ status: "error" });
+    resolved.providerName = "disabled";
+    resolved.uiStatus = "";
     const res = await adminSendManualClientWhatsAppAction("cli_1", "manual_test");
-    expect(res).toEqual({ error: "WhatsApp לא מחובר לעסק של הלקוחה הזו" });
+    expect(res).toEqual({ error: "שירות ה-WhatsApp אינו זמין כרגע" });
+    expect(send).not.toHaveBeenCalled();
   });
 });
 

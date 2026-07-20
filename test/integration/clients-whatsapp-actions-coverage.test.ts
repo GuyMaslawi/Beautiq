@@ -28,8 +28,15 @@ vi.mock("@/server/auth/session", () => ({
 }));
 
 const send = vi.fn();
+// Manual send routes through the resolver (managed sender by default). Tests can
+// flip `resolved.providerName` to "disabled" to simulate an unavailable connection.
+const resolved = { providerName: "meta_cloud_api", uiStatus: "WhatsApp מחובר" };
 vi.mock("@/server/whatsapp/resolver", () => ({
   getWhatsAppProviderForBusiness: vi.fn(async () => ({ name: "stub", send })),
+  resolveWhatsAppConnectionForBusiness: vi.fn(async () => ({
+    provider: { name: resolved.providerName, send },
+    uiStatus: resolved.uiStatus,
+  })),
 }));
 
 import { sendManualClientWhatsAppAction } from "@/server/clients/whatsapp-actions";
@@ -63,6 +70,8 @@ beforeEach(() => {
   resetPrismaMock(prisma);
   requireCurrentBusiness.mockReset().mockResolvedValue({ id: BUSINESS_A, name: "סטודיו יופי" });
   send.mockReset().mockResolvedValue({ success: true, providerMessageId: "wamid.1" });
+  resolved.providerName = "meta_cloud_api";
+  resolved.uiStatus = "WhatsApp מחובר";
   delete process.env.ENABLE_REAL_WHATSAPP_SEND;
   delete process.env.WHATSAPP_TEST_MODE;
   delete process.env.WHATSAPP_TEST_PHONE;
