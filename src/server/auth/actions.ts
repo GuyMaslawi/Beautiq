@@ -25,13 +25,14 @@ export interface SignupState {
 }
 
 /**
- * Create an account, sign the user in, and send them into the app.
+ * Create an account, sign the user in, and send them to choose a plan.
  *
- * The user lands on /dashboard, which shows the full app shell plus a setup card
- * to create their business — no separate onboarding wizard. On validation /
- * duplicate-email failure we return field errors for the form to render. On
- * success, `signIn` issues a redirect (thrown as NEXT_REDIRECT), which must
- * propagate — so we only swallow genuine errors.
+ * Right after signup the user lands on /subscribe, where they pick and pay for a
+ * plan (Premium or Platinum) before the app opens. Only once paid does the app
+ * gate let them into /dashboard. On validation / duplicate-email failure we
+ * return field errors for the form to render. On success, `signIn` issues a
+ * redirect (thrown as NEXT_REDIRECT), which must propagate — so we only swallow
+ * genuine errors.
  */
 export async function signupAction(
   _prevState: SignupState,
@@ -64,11 +65,11 @@ export async function signupAction(
     return { formError: AUTH.errors.generic };
   }
 
-  // Signs the user in and redirects into the app (throws NEXT_REDIRECT).
+  // Signs the user in and redirects to plan selection (throws NEXT_REDIRECT).
   await signIn("credentials", {
     email,
     password,
-    redirectTo: "/dashboard",
+    redirectTo: "/subscribe",
   });
 
   // Unreachable in practice — signIn redirects on success.

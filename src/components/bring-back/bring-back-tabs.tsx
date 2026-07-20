@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BRING_BACK_HUB } from "@/lib/constants/he";
 
@@ -12,11 +13,11 @@ const MAIN_TABS: { key: HubTab; label: string }[] = [
   { key: "messages", label: BRING_BACK_HUB.tabs.messages },
 ];
 
-const SUB_TABS: { key: HubSubTab; label: string }[] = [
+const SUB_TABS: { key: HubSubTab; label: string; platinum?: boolean }[] = [
   { key: "overview", label: BRING_BACK_HUB.subTabs.overview },
   { key: "retention", label: BRING_BACK_HUB.subTabs.retention },
-  { key: "at-risk", label: BRING_BACK_HUB.subTabs.atRisk },
-  { key: "campaigns", label: BRING_BACK_HUB.subTabs.campaigns },
+  { key: "at-risk", label: BRING_BACK_HUB.subTabs.atRisk, platinum: true },
+  { key: "campaigns", label: BRING_BACK_HUB.subTabs.campaigns, platinum: true },
 ];
 
 const ACTIVE_STYLE: React.CSSProperties = {
@@ -32,9 +33,12 @@ const ACTIVE_STYLE: React.CSSProperties = {
 export function BringBackTabs({
   activeTab,
   activeSub,
+  hasPlatinum = true,
 }: {
   activeTab: HubTab;
   activeSub: HubSubTab;
+  /** When false, Platinum-only sub-tabs show a lock badge. */
+  hasPlatinum?: boolean;
 }) {
   return (
     <div className="space-y-2.5" dir="rtl">
@@ -77,13 +81,14 @@ export function BringBackTabs({
         <div className="flex gap-1.5 overflow-x-auto px-1 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {SUB_TABS.map((sub) => {
             const active = sub.key === activeSub;
+            const locked = sub.platinum && !hasPlatinum;
             return (
               <Link
                 key={sub.key}
                 href={`/bring-back?tab=clients&sub=${sub.key}`}
                 aria-current={active ? "page" : undefined}
                 className={cn(
-                  "shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-xs font-medium transition-all duration-150",
+                  "flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-4 py-2 text-xs font-medium transition-all duration-150",
                   !active && "text-muted hover:text-foreground hover:bg-background-alt",
                 )}
                 style={
@@ -97,6 +102,9 @@ export function BringBackTabs({
                 }
               >
                 {sub.label}
+                {locked && (
+                  <Lock className="h-3 w-3" style={{ color: "#c09560" }} aria-label="פלטינום" />
+                )}
               </Link>
             );
           })}

@@ -10,10 +10,11 @@ import {
   BarChart3,
   ArrowLeft,
 } from "lucide-react";
-import { requireCurrentBusiness } from "@/server/auth/session";
+import { requireCurrentBusiness, hasPlatinumAccess } from "@/server/auth/session";
 import { getRevenueForecastData } from "@/server/revenue-forecast/queries";
 import { REVENUE_FORECAST } from "@/lib/constants/he";
 import { PremiumPageShell, BeautyPageHero, PremiumEmptyState } from "@/components/premium";
+import { PlatinumLock } from "@/components/plans/platinum-lock";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -637,6 +638,18 @@ function LowDataBanner() {
 // ---------------------------------------------------------------------------
 
 export default async function RevenueForecastPage() {
+  // פיצ׳ר פלטינום — נעול למנויי פרימיום.
+  if (!(await hasPlatinumAccess())) {
+    return (
+      <PremiumPageShell tint="champagne" width="default">
+        <PlatinumLock
+          feature="תחזית הכנסות חכמה"
+          description="צפי הכנסות חודשי, יעד, פער והמלצות חכמות לסגירת הפער — כדי לתכנן את החודש בביטחון. זמין בתוכנית פלטינום."
+        />
+      </PremiumPageShell>
+    );
+  }
+
   const business = await requireCurrentBusiness();
   const tenant = { businessId: business.id };
 

@@ -99,7 +99,7 @@ describe("signupAction", () => {
     expect(JSON.stringify(arg.data)).not.toContain('"supersecret1"');
     expect(signIn).toHaveBeenCalledWith(
       "credentials",
-      expect.objectContaining({ email: "owner@example.com", redirectTo: "/dashboard" }),
+      expect.objectContaining({ email: "owner@example.com", redirectTo: "/subscribe" }),
     );
   });
 

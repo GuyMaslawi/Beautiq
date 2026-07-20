@@ -83,6 +83,8 @@ describe("getCurrentUser", () => {
       email: true,
       name: true,
       isAdmin: true,
+      plan: true,
+      planActivatedAt: true,
     });
   });
 });

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { AccountPlan } from "@prisma/client";
 import type { Business } from "@prisma/client";
 import { auth } from "@/server/auth/config";
 import { prisma } from "@/server/db/prisma";
@@ -25,6 +26,9 @@ export interface CurrentUser {
   email: string;
   name: string | null;
   isAdmin: boolean;
+  /** The self-serve plan the user paid for at signup — null until paid. */
+  plan: AccountPlan | null;
+  planActivatedAt: Date | null;
 }
 
 /** The current user, or null if unauthenticated. */
@@ -35,8 +39,26 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
   return prisma.user.findUnique({
     where: { id: userId },
-    select: { id: true, email: true, name: true, isAdmin: true },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      isAdmin: true,
+      plan: true,
+      planActivatedAt: true,
+    },
   });
+}
+
+/**
+ * The current user, or redirect: to /login if unauthenticated, or to /subscribe
+ * if they have not chosen & paid for a plan yet. Admins bypass the paywall.
+ * This is the gate the authenticated app shell uses before opening the product.
+ */
+export async function requirePaidUser(): Promise<CurrentUser> {
+  const user = await requireCurrentUser();
+  if (!user.plan && !user.isAdmin) redirect("/subscribe");
+  return user;
 }
 
 /** The current user, or redirect to /login. */
@@ -44,6 +66,18 @@ export async function requireCurrentUser(): Promise<CurrentUser> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   return user;
+}
+
+/**
+ * True when the current user may use Platinum-tier features. Admins always pass;
+ * otherwise the user must be on the `platinum` plan. Used to gate the advanced
+ * growth tools (revenue forecast, at-risk clients, automated campaigns) — see
+ * [[project_subscribe_paywall]].
+ */
+export async function hasPlatinumAccess(): Promise<boolean> {
+  const user = await getCurrentUser();
+  if (!user) return false;
+  return user.isAdmin || user.plan === AccountPlan.platinum;
 }
 
 /**

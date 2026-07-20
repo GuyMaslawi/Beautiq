@@ -193,6 +193,14 @@ enum SubscriptionPlan {
   pro
 }
 
+/// Self-serve account plan chosen by the owner during signup. This gates access
+/// to the app: a user must pick and pay for a plan before the dashboard opens.
+/// Distinct from the admin-managed `SubscriptionPlan` on BusinessSubscription.
+enum AccountPlan {
+  premium
+  platinum
+}
+
 /// Lifecycle status of a business's Allura subscription.
 enum SubscriptionStatus {
   trial
@@ -291,6 +299,10 @@ model User {
   passwordHash String
   name         String?
   isAdmin      Boolean  @default(false)
+  /// The self-serve plan the owner selected & paid for at signup. Null until
+  /// paid — the app gate redirects users with no plan to /subscribe.
+  plan            AccountPlan?
+  planActivatedAt DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
