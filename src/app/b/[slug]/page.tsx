@@ -6,6 +6,7 @@ import { PublicBusinessHeader } from "./_components/business-hero";
 import { PublicReviewsSection } from "./_components/reviews-section";
 import { PublicGallerySection } from "./_components/gallery-section";
 import { PublicBusinessInfo } from "./_components/business-info";
+import { PublicTrustSection } from "./_components/trust-section";
 import { PublicSiteFooter } from "./_components/site-footer";
 import { StickyBookingCta } from "./_components/sticky-cta";
 import { PublicBookingSecondary } from "./_components/booking-secondary";
@@ -156,6 +157,11 @@ export default async function PublicBusinessPage({
 
         {/* 3+ ─ Supporting sections, always below the booking flow */}
         <div className="mt-10 space-y-10 lg:mt-14 lg:space-y-14">
+          {/* Why book with us — always present so the page never feels bare */}
+          <Reveal>
+            <PublicTrustSection brand={brand} />
+          </Reveal>
+
           {/* Business info — hours + contact */}
           <Reveal>
             <PublicBusinessInfo business={business} brand={brand} />
