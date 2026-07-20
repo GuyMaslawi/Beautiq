@@ -507,7 +507,7 @@ export const BOOKINGS = {
   summary: {
     today: "תורים היום",
     week: "תורים השבוע",
-    pending: "ממתינים לאישור",
+    completed: "הושלמו",
     cancelled: "בוטלו / לא הגיעו",
   },
 
@@ -569,7 +569,6 @@ export const BOOKINGS = {
     price: "₪",
     viewEdit: "צפייה / עריכה",
     viewDetails: "פרטים",
-    quickApprove: "אישור",
     quickComplete: "הושלם",
     quickCancel: "ביטול",
     quickNoShow: "לא הגיעה",
@@ -602,18 +601,15 @@ export const BOOKINGS = {
 
   actions: {
     sectionTitle: "פעולות",
-    approve: "אישור תור",
     complete: "סימון כהושלם",
     cancel: "ביטול תור",
     noShow: "הלקוחה לא הגיעה",
-    approving: "מאשר…",
     completing: "מסמן…",
     cancelling: "מבטל…",
     markingNoShow: "מסמן…",
     successComplete: "התור סומן כהושלם",
     successCancel: "התור בוטל",
     successNoShow: "התור סומן כלא הגיעה",
-    successApprove: "התור אושר",
   },
 
   // Row/card action menu — one primary action + a "פעולות" menu, replacing the
@@ -623,7 +619,6 @@ export const BOOKINGS = {
     moreCompact: "פעולות נוספות",
     view: "צפייה בפרטים",
     viewShort: "צפייה",
-    approve: "אישור תור",
     complete: "סימון כהושלם",
     noShow: "סימון כאי־הגעה",
     cancel: "ביטול תור",
@@ -912,11 +907,6 @@ export const GUIDANCE = {
       body: "כדאי לעבור על התורים של היום ולוודא שהכול מוכן.",
       action: "צפייה בתורים",
     },
-    pendingBookings: {
-      title: "יש תורים שממתינים לאישור",
-      body: "כדאי לאשר או לבטל תורים שממתינים כדי לשמור על יומן מסודר.",
-      action: "צפייה בתורים",
-    },
     clientsNotReturned: {
       title: "יש לקוחות שלא חזרו לאחרונה",
       body: "אפשר לשלוח הודעה קצרה ולהציע לקבוע תור נוסף.",
@@ -968,7 +958,7 @@ export const SETTINGS = {
   publicLink: {
     sectionTitle: "קישור הזמנה פשוט",
     active: "קישור פעיל",
-    body: "זה קישור פשוט לבקשת תור. העסק עדיין מאשר כל בקשה ידנית.",
+    body: "זה קישור פשוט לקביעת תור. הלקוחה בוחרת שירות ומועד פנוי, והתור נקבע מיד.",
     slugLabel: "כתובת הקישור",
     copyButton: "העתקת קישור",
     copied: "הקישור הועתק",
@@ -988,7 +978,7 @@ export const PUBLIC_BOOKING = {
 
   page: {
     howItWorks:
-      "אפשר לבחור שירות ולשלוח בקשה לתור. העסק יאשר את הבקשה בהמשך.",
+      "אפשר לבחור שירות ומועד פנוי, והתור נקבע מיד.",
   },
 
   form: {
@@ -1014,15 +1004,15 @@ export const PUBLIC_BOOKING = {
     timeLabel: "שעה מבוקשת",
 
     approvalNote:
-      "הבקשה תישלח לעסק לאישור. התור יאושר רק אחרי שהעסק יאשר אותו.",
+      "התור נקבע מיד עם השליחה. נשמח לראותך!",
     submitButton: "שליחת בקשה לתור",
     submitting: "שולח…",
   },
 
   success: {
-    title: "הבקשה נשלחה בהצלחה",
-    body: "העסק יחזור אליך לאישור התור.",
-    sendAnother: "שליחת בקשה נוספת",
+    title: "התור נקבע בהצלחה",
+    body: "נשמח לראותך! נשלח לך תזכורת לפני המועד.",
+    sendAnother: "קביעת תור נוסף",
   },
 
   errors: {

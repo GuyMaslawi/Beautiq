@@ -9,7 +9,6 @@ export interface GuidanceQueryData {
   activeServicesCount: number;
   activeAvailabilityCount: number;
   todayBookingsCount: number;
-  pendingBookingsCount: number;
   lostClientsCount: number;
   noShowClientsCount: number;
   upcomingBookingsCount: number;
@@ -60,7 +59,6 @@ export async function getGuidanceData(
     activeServicesCount,
     activeAvailabilityCount,
     todayBookingsCount,
-    pendingBookingsCount,
     lostClientsCount,
     noShowClientsCount,
     upcomingBookingsCount,
@@ -80,13 +78,6 @@ export async function getGuidanceData(
         businessId: tenant.businessId,
         startTime: { gte: todayStart, lte: todayEnd },
         status: { in: ["pending", "approved"] },
-      },
-    }),
-
-    prisma.booking.count({
-      where: {
-        businessId: tenant.businessId,
-        status: "pending",
       },
     }),
 
@@ -140,7 +131,6 @@ export async function getGuidanceData(
     activeServicesCount,
     activeAvailabilityCount,
     todayBookingsCount,
-    pendingBookingsCount,
     lostClientsCount,
     noShowClientsCount,
     upcomingBookingsCount,

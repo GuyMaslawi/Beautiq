@@ -80,11 +80,11 @@ describe("BookingRequestForm — primary flow", () => {
     await goToDetails(user);
     await user.type(screen.getByLabelText("שם מלא"), "נועה כהן");
     await user.type(screen.getByLabelText("טלפון"), "0501234567");
-    await user.click(screen.getByRole("button", { name: /שליחת בקשה לתור/ }));
+    await user.click(screen.getByRole("button", { name: /קביעת תור/ }));
 
-    expect(await screen.findByText("בקשת התור נשלחה")).toBeInTheDocument();
+    expect(await screen.findByText("התור נקבע בהצלחה")).toBeInTheDocument();
     expect(
-      screen.getByText(/בעלת העסק תקבל את הבקשה ותאשר את התור/),
+      screen.getByText(/התור שלך נקבע/),
     ).toBeInTheDocument();
     // Booking summary on the success card.
     expect(screen.getByText("מניקור ג'ל")).toBeInTheDocument();
@@ -104,7 +104,7 @@ describe("BookingRequestForm — primary flow", () => {
     await goToDetails(user);
     await user.type(screen.getByLabelText("שם מלא"), "נועה כהן");
     await user.type(screen.getByLabelText("טלפון"), "0501234567");
-    await user.click(screen.getByRole("button", { name: /שליחת בקשה לתור/ }));
+    await user.click(screen.getByRole("button", { name: /קביעת תור/ }));
 
     expect(await screen.findByText("השעה שבחרת כבר נתפסה")).toBeInTheDocument();
     expect(

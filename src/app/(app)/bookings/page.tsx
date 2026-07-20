@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CalendarDays, CalendarRange, Clock, XCircle, Plus, ChevronUp, ChevronDown, ChevronsUpDown, List } from "lucide-react";
+import { CalendarDays, CalendarRange, CheckCircle2, Clock, XCircle, Plus, ChevronUp, ChevronDown, ChevronsUpDown, List } from "lucide-react";
 import { requireTenant } from "@/server/auth/session";
 import { getBookings, getBookingSummary, getCalendarBookings } from "@/server/bookings/queries";
 import { prisma } from "@/server/db/prisma";
@@ -143,7 +143,7 @@ export default async function BookingsPage({
       : "all";
 
   const statusFilter: BookingStatusFilter =
-    rawStatus === "pending" || rawStatus === "active" || rawStatus === "completed" || rawStatus === "cancelled"
+    rawStatus === "active" || rawStatus === "completed" || rawStatus === "cancelled"
       ? rawStatus
       : "all";
 
@@ -309,10 +309,10 @@ export default async function BookingsPage({
             compact
           />
           <PremiumMetricCard
-            label={BOOKINGS.summary.pending}
-            count={summary.pendingCount}
-            icon={<Clock className="h-3.5 w-3.5" />}
-            tone={summary.pendingCount > 0 ? "warning" : "neutral"}
+            label={BOOKINGS.summary.completed}
+            count={summary.completedCount}
+            icon={<CheckCircle2 className="h-3.5 w-3.5" />}
+            tone={summary.completedCount > 0 ? "success" : "neutral"}
             compact
           />
           <PremiumMetricCard
@@ -338,10 +338,10 @@ export default async function BookingsPage({
             tone={summary.todayCount > 0 ? "brand" : "neutral"}
           />
           <PremiumMetricCard
-            label={BOOKINGS.summary.pending}
-            count={summary.pendingCount}
-            icon={<Clock className="h-4 w-4" />}
-            tone={summary.pendingCount > 0 ? "warning" : "neutral"}
+            label={BOOKINGS.summary.completed}
+            count={summary.completedCount}
+            icon={<CheckCircle2 className="h-4 w-4" />}
+            tone={summary.completedCount > 0 ? "success" : "neutral"}
           />
           <PremiumMetricCard
             label={BOOKINGS.summary.cancelled}
@@ -402,10 +402,7 @@ export default async function BookingsPage({
           {bookings.length === 0 && (() => {
             let title: string = BOOKINGS.emptyState.title;
             let body: string = BOOKINGS.emptyState.body;
-            if (statusFilter === "pending") {
-              title = "אין כרגע פגישות שממתינות לאישור";
-              body = "כל הפגישות אושרו. כשתגיע בקשה חדשה, היא תופיע כאן.";
-            } else if (statusFilter === "active") {
+            if (statusFilter === "active") {
               title = "אין פגישות פעילות כרגע";
               body = "לא נמצאו פגישות פעילות התואמות לחיפוש.";
             } else if (statusFilter === "completed") {

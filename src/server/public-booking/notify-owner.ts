@@ -1,9 +1,9 @@
 /**
- * התראה לבעלת העסק על בקשת תור חדשה שנכנסה מעמוד ההזמנות הציבורי.
+ * התראה לבעלת העסק על תור חדש שנקבע מעמוד ההזמנות הציבורי.
  *
- * המטרה: בעלת העסק תדע על הבקשה גם בלי להיכנס למערכת. לכן הערוץ העיקרי
- * הוא אימייל. (התור גם מופיע ממילא כ"ממתין לאישור" בלוח הבקרה — זו שכבה
- * נוספת, לא תחליף.)
+ * לקוחה שקובעת מועד פנוי מקבלת אישור מיידי — אין שלב אישור ידני. המטרה
+ * כאן: בעלת העסק תדע על התור החדש גם בלי להיכנס למערכת. לכן הערוץ העיקרי
+ * הוא אימייל. (התור גם מופיע ממילא בלוח הבקרה — זו שכבה נוספת, לא תחליף.)
  *
  * אופציונלי: התראת WhatsApp לבעלת העסק מאחורי דגל
  * ENABLE_OWNER_WHATSAPP_NOTIFICATION — לעולם לא חובה, לעולם לא חוסם.
@@ -42,7 +42,7 @@ function formatTime(d: Date): string {
   }).format(d);
 }
 
-/** קישור ישיר לעמוד ניהול ההזמנות, שם הבעלים מאשרת את התור. */
+/** קישור ישיר לעמוד ניהול ההזמנות, שם הבעלים מנהלת את התורים. */
 const BOOKINGS_URL = `${APP_URL}/bookings`;
 
 /**
@@ -110,17 +110,17 @@ async function _notify(params: {
   const priceStr = booking.priceSnapshot
     ? `₪${Number(booking.priceSnapshot).toLocaleString("he-IL")}`
     : null;
-  const statusLabel = "ממתין לאישור";
+  const statusLabel = "מאושר";
 
   let notified = false;
 
   // ── ערוץ עיקרי: אימייל לבעלת העסק ──────────────────────────────
   if (ownerEmail) {
-    const subject = "בקשת תור חדשה מ־Allura";
+    const subject = "תור חדש נקבע ב־Allura";
     const lines = [
       `היי ${ownerName},`,
       "",
-      "נכנסה בקשת תור חדשה דרך עמוד ההזמנות שלך ב־Allura.",
+      "נקבע תור חדש דרך עמוד ההזמנות שלך ב־Allura.",
       "",
       `לקוחה: ${booking.client.fullName}`,
       `טלפון: ${booking.client.phone}`,
@@ -130,7 +130,7 @@ async function _notify(params: {
       ...(priceStr ? [`מחיר: ${priceStr}`] : []),
       `סטטוס: ${statusLabel}`,
       "",
-      "ניתן לאשר או לנהל את התור מתוך המערכת:",
+      "לצפייה וניהול התור מתוך המערכת:",
       BOOKINGS_URL,
       "",
       "Allura",
@@ -180,11 +180,11 @@ async function _notify(params: {
       // sends go through the approved business_new_booking_he template below.
       const waText =
         `היי ${ownerName},\n` +
-        `נכנסה בקשת תור חדשה ב־Allura ✨\n\n` +
+        `נקבע תור חדש ב־Allura ✨\n\n` +
         `לקוחה: ${booking.client.fullName}\n` +
         `שירות: ${booking.service.name}\n` +
         `${dateStr} בשעה ${timeStr}\n\n` +
-        `לאישור התור:\n${BOOKINGS_URL}`;
+        `לצפייה בתור:\n${BOOKINGS_URL}`;
 
       // Persist the owner-notification attempt so it is observable in the admin
       // message log exactly like the customer confirmation (source =
@@ -320,8 +320,8 @@ function buildEmailHtml(v: {
   return `<!doctype html><html dir="rtl" lang="he"><body style="margin:0;background:#faf7f8;font-family:'Segoe UI',Arial,sans-serif">
   <div style="max-width:480px;margin:0 auto;padding:24px">
     <div style="background:#fff;border-radius:16px;padding:24px;border:1px solid #efe6ec">
-      <h1 style="font-size:18px;margin:0 0 4px;color:#2b2229">בקשת תור חדשה ✨</h1>
-      <p style="margin:0 0 16px;color:#8a7f86;font-size:14px">היי ${v.ownerName}, נכנסה בקשת תור חדשה דרך עמוד ההזמנות שלך ב־Allura.</p>
+      <h1 style="font-size:18px;margin:0 0 4px;color:#2b2229">תור חדש נקבע ✨</h1>
+      <p style="margin:0 0 16px;color:#8a7f86;font-size:14px">היי ${v.ownerName}, נקבע תור חדש דרך עמוד ההזמנות שלך ב־Allura.</p>
       <table style="font-size:14px;border-collapse:collapse;width:100%">
         ${row("לקוחה", v.clientName)}
         ${row("טלפון", v.clientPhone)}
@@ -331,7 +331,7 @@ function buildEmailHtml(v: {
         ${v.priceStr ? row("מחיר", v.priceStr) : ""}
         ${row("סטטוס", v.statusLabel)}
       </table>
-      <a href="${BOOKINGS_URL}" style="display:inline-block;margin-top:20px;background:#ac5c7f;color:#fff;text-decoration:none;padding:12px 20px;border-radius:12px;font-weight:700;font-size:14px">לאישור וניהול התור</a>
+      <a href="${BOOKINGS_URL}" style="display:inline-block;margin-top:20px;background:#ac5c7f;color:#fff;text-decoration:none;padding:12px 20px;border-radius:12px;font-weight:700;font-size:14px">לצפייה וניהול התור</a>
     </div>
     <p style="text-align:center;color:#b3a8b0;font-size:12px;margin:16px 0 0">Allura</p>
   </div>

@@ -167,7 +167,7 @@ describe("submitPublicBookingAction — validation & tenant safety", () => {
     expect(prisma.booking.create).not.toHaveBeenCalled();
   });
 
-  it("creates a pending public booking on success (no deposit fields)", async () => {
+  it("creates an approved public booking on success (no approval step, no deposit fields)", async () => {
     prisma.business.findUnique.mockResolvedValue(makeBusiness({ id: BUSINESS_A }));
     prisma.service.findFirst.mockResolvedValue(makeService({ id: "svc_1" }));
     prisma.booking.create.mockResolvedValue({ id: "bkg_1" });
@@ -176,7 +176,7 @@ describe("submitPublicBookingAction — validation & tenant safety", () => {
     expect(res.success).toBe(true);
     expect(prisma.booking.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ status: "pending", source: "public" }),
+        data: expect.objectContaining({ status: "approved", source: "public" }),
       }),
     );
     const arg = prisma.booking.create.mock.calls[0][0] as { data: Record<string, unknown> };
@@ -184,7 +184,7 @@ describe("submitPublicBookingAction — validation & tenant safety", () => {
     expect("depositAmountSnapshot" in arg.data).toBe(false);
     expect(syncClientStats).toHaveBeenCalled();
 
-    // The business owner is notified automatically for the new pending booking,
+    // The business owner is notified automatically for the new booking,
     // scoped to the slug-derived business.
     expect(notifyOwnerOfNewBooking).toHaveBeenCalledWith({
       bookingId: "bkg_1",

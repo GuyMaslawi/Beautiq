@@ -52,7 +52,7 @@ export type BookingListItem = Awaited<
 >[number];
 
 export type BookingFilter = "today" | "week" | "all";
-export type BookingStatusFilter = "all" | "pending" | "active" | "completed" | "cancelled";
+export type BookingStatusFilter = "all" | "active" | "completed" | "cancelled";
 export type BookingSortField =
   | "startTime"
   | "price"
@@ -85,11 +85,8 @@ function applySmartSort<T extends { startTime: Date; status: string }>(
   function getGroup(b: T): number {
     const day = ds(b.startTime);
     if (day === todayStr) return 0;
-    const needsAction = b.status === "pending";
-    const isFuture = day > todayStr;
-    if (isFuture && needsAction) return 1;
-    if (isFuture) return 2;
-    return 3; // history
+    if (day > todayStr) return 1; // future
+    return 2; // history
   }
 
   return [...bookings].sort((a, b) => {
@@ -99,13 +96,12 @@ function applySmartSort<T extends { startTime: Date; status: string }>(
     const ta = new Date(a.startTime).getTime();
     const tb = new Date(b.startTime).getTime();
     // history: most recent first; all others: ascending
-    return ga === 3 ? tb - ta : ta - tb;
+    return ga === 2 ? tb - ta : ta - tb;
   });
 }
 
 const STATUS_FILTER_MAP: Record<BookingStatusFilter, BookingStatus[] | undefined> = {
   all: undefined,
-  pending: ["pending"],
   active: ["pending", "approved"],
   completed: ["completed"],
   cancelled: ["cancelled", "no_show"],
@@ -226,7 +222,7 @@ export async function hasBookings(tenant: TenantContext): Promise<boolean> {
 export interface BookingSummary {
   todayCount: number;
   weekCount: number;
-  pendingCount: number;
+  completedCount: number;
   cancelledCount: number;
 }
 
@@ -284,7 +280,7 @@ export async function getBookingSummary(
   const weekStart = todayStart;
   const weekEnd = new Date(todayStart.getTime() + 7 * 86400000 - 1);
 
-  const [todayCount, weekCount, pendingCount, cancelledCount] =
+  const [todayCount, weekCount, completedCount, cancelledCount] =
     await Promise.all([
       prisma.booking.count({
         where: {
@@ -299,7 +295,7 @@ export async function getBookingSummary(
         },
       }),
       prisma.booking.count({
-        where: { businessId: tenant.businessId, status: "pending" },
+        where: { businessId: tenant.businessId, status: "completed" },
       }),
       prisma.booking.count({
         where: {
@@ -309,5 +305,5 @@ export async function getBookingSummary(
       }),
     ]);
 
-  return { todayCount, weekCount, pendingCount, cancelledCount };
+  return { todayCount, weekCount, completedCount, cancelledCount };
 }

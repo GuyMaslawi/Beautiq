@@ -116,7 +116,6 @@ function renderWithAllAttention() {
       setup={setup}
       todayBookings={todayBookings}
       upcomingBookings={[]}
-      pendingApprovalCount={3}
       guidanceItems={[]}
       emptySlots={emptySlots}
       suggestedClients={suggestedClients}

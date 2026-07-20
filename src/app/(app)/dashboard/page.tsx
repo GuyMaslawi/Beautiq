@@ -69,7 +69,6 @@ export default async function DashboardPage() {
       setup={dashboardData.setup}
       todayBookings={dashboardData.todayBookings}
       upcomingBookings={dashboardData.upcomingBookings}
-      pendingApprovalCount={dashboardData.pendingApprovalCount}
       guidanceItems={guidanceItems}
       emptySlots={emptySlotsData.slots}
       suggestedClients={emptySlotsData.suggestedClients}

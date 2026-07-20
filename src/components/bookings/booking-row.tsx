@@ -54,20 +54,10 @@ export function BookingRow({ booking }: { booking: BookingListItem }) {
   const isActive =
     booking.status === "pending" || booking.status === "approved";
 
-  const isPendingApproval = booking.status === "pending";
-
   return (
     <tr
       className="group border-b transition-colors hover:bg-[rgba(247,238,243,0.35)]"
-      style={{
-        borderColor: "var(--border)",
-        ...(isPendingApproval
-          ? {
-              background: "rgba(172,92,127,0.07)",
-              boxShadow: "inset -3px 0 0 #ac5c7f",
-            }
-          : {}),
-      }}
+      style={{ borderColor: "var(--border)" }}
     >
       {/* Client */}
       <td className="px-4 py-3">

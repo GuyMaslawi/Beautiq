@@ -17,19 +17,14 @@ const ALL_STATUSES: BookingStatus[] = [
 ];
 
 describe("getPrimaryBookingAction", () => {
-  it("offers 'אישור תור' as the primary action for pending bookings", () => {
-    const primary = getPrimaryBookingAction("pending");
-    expect(primary.type).toBe("approve");
-    expect(primary.label).toBe(BOOKINGS.rowActions.approve);
-    expect(primary.variant).toBe("primary");
-    expect(primary.kind).toBe("action");
-  });
-
-  it("offers 'סימון כהושלם' as the primary action for approved bookings", () => {
-    const primary = getPrimaryBookingAction("approved");
-    expect(primary.type).toBe("complete");
-    expect(primary.label).toBe(BOOKINGS.rowActions.complete);
-    expect(primary.variant).toBe("primary");
+  it("offers 'סימון כהושלם' as the primary action for pending/approved bookings (no approval step)", () => {
+    for (const status of ["pending", "approved"] as BookingStatus[]) {
+      const primary = getPrimaryBookingAction(status);
+      expect(primary.type).toBe("complete");
+      expect(primary.label).toBe(BOOKINGS.rowActions.complete);
+      expect(primary.variant).toBe("primary");
+      expect(primary.kind).toBe("action");
+    }
   });
 
   it("falls back to a non-destructive 'צפייה' for terminal statuses", () => {
@@ -49,22 +44,18 @@ describe("getPrimaryBookingAction", () => {
 });
 
 describe("getBookingMenuActions", () => {
-  it("includes complete, no-show, cancel and message for a pending booking (not approve — that's primary)", () => {
-    const types = getBookingMenuActions("pending").map((a) => a.type);
-    expect(types).toEqual(["view", "complete", "noShow", "cancel", "message"]);
-    expect(types).not.toContain("approve");
-  });
-
-  it("offers no-show, cancel and message for an approved booking (not complete — that's primary)", () => {
-    const types = getBookingMenuActions("approved").map((a) => a.type);
-    expect(types).toEqual(["view", "noShow", "cancel", "message"]);
-    expect(types).not.toContain("complete");
+  it("offers no-show, cancel and message for pending/approved bookings (complete is primary, no approve step)", () => {
+    for (const status of ["pending", "approved"] as BookingStatus[]) {
+      const types = getBookingMenuActions(status).map((a) => a.type);
+      expect(types).toEqual(["view", "noShow", "cancel", "message"]);
+      expect(types).not.toContain("complete");
+    }
   });
 
   it("offers message + review request for a completed booking, and no status-transition actions", () => {
     const types = getBookingMenuActions("completed").map((a) => a.type);
     expect(types).toEqual(["message", "review"]);
-    for (const invalid of ["approve", "complete", "noShow", "cancel"] as BookingActionType[]) {
+    for (const invalid of ["complete", "noShow", "cancel"] as BookingActionType[]) {
       expect(types).not.toContain(invalid);
     }
   });

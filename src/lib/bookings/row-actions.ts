@@ -15,7 +15,6 @@ import type { BookingStatus } from "@prisma/client";
 
 export type BookingActionType =
   | "view"
-  | "approve"
   | "complete"
   | "noShow"
   | "cancel"
@@ -61,7 +60,6 @@ const noShowConfirm: BookingActionConfirm = {
 const viewItem: BookingAction = { type: "view", label: A.view, kind: "link" };
 const messageItem: BookingAction = { type: "message", label: A.message, kind: "link" };
 const reviewItem: BookingAction = { type: "review", label: A.review, kind: "link" };
-const completeItem: BookingAction = { type: "complete", label: A.complete, kind: "action" };
 const noShowItem: BookingAction = {
   type: "noShow",
   label: A.noShow,
@@ -84,7 +82,6 @@ const cancelItem: BookingAction = {
 export function getPrimaryBookingAction(status: BookingStatus): BookingAction {
   switch (status) {
     case "pending":
-      return { type: "approve", label: A.approve, kind: "action", variant: "primary" };
     case "approved":
       return { type: "complete", label: A.complete, kind: "action", variant: "primary" };
     case "completed":
@@ -105,8 +102,6 @@ export function getPrimaryBookingAction(status: BookingStatus): BookingAction {
 export function getBookingMenuActions(status: BookingStatus): BookingAction[] {
   switch (status) {
     case "pending":
-      // Primary = approve.
-      return [viewItem, completeItem, noShowItem, cancelItem, messageItem];
     case "approved":
       // Primary = complete.
       return [viewItem, noShowItem, cancelItem, messageItem];

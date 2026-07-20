@@ -445,10 +445,10 @@ function SuccessView({
 
       <div className="space-y-1.5">
         <h2 className="font-display text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-          בקשת התור נשלחה
+          התור נקבע בהצלחה
         </h2>
         <p className="mx-auto max-w-xs text-sm leading-6 text-[var(--muted)]">
-          בעלת העסק תקבל את הבקשה ותאשר את התור. נעדכן אותך בהמשך.
+          התור שלך נקבע! נשלח לך תזכורת לפני המועד. נשמח לראותך ❤
         </p>
       </div>
 
@@ -500,7 +500,7 @@ function SuccessView({
         className="min-h-[44px] text-sm underline underline-offset-2 hover:opacity-75 transition-opacity"
         style={{ color: "var(--muted)" }}
       >
-        שליחת בקשה נוספת
+        קביעת תור נוסף
       </button>
     </div>
   );
@@ -895,7 +895,7 @@ export function BookingRequestForm({
           </div>
 
           <p className="text-center text-xs text-[var(--muted)] leading-5">
-            הבקשה תישלח לעסק לאישור. התור יאושר רק אחרי שהעסק יאשר אותו.
+            התור נקבע מיד עם השליחה. נשמח לראותך!
           </p>
 
           <button
@@ -911,7 +911,7 @@ export function BookingRequestForm({
               "שולח…"
             ) : (
               <>
-                שליחת בקשה לתור
+                קביעת תור
                 <Check className="h-4 w-4" strokeWidth={2.5} />
               </>
             )}

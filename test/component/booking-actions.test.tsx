@@ -9,7 +9,6 @@ const A = BOOKINGS.actions;
 
 function makeActions() {
   return {
-    approveAction: vi.fn(async () => {}),
     completeAction: vi.fn(async () => {}),
     cancelAction: vi.fn(async () => {}),
     noShowAction: vi.fn(async () => {}),
@@ -31,37 +30,21 @@ describe("BookingActions — visibility by status", () => {
     },
   );
 
-  it("shows approve + complete + no-show + cancel for a pending booking", () => {
-    render(<BookingActions status="pending" {...makeActions()} />);
-    expect(screen.getByRole("button", { name: A.approve })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: A.complete })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: A.noShow })).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: A.cancel })).toBeInTheDocument();
-    expect(screen.getByText(A.sectionTitle)).toBeInTheDocument();
-  });
-
-  it("hides the approve button for an approved booking (already approved)", () => {
-    render(<BookingActions status="approved" {...makeActions()} />);
-    expect(
-      screen.queryByRole("button", { name: A.approve }),
-    ).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: A.complete })).toBeInTheDocument();
+  it("shows complete + no-show + cancel for pending/approved bookings (no approval step)", () => {
+    for (const status of ["pending", "approved"] as const) {
+      const { unmount } = render(
+        <BookingActions status={status} {...makeActions()} />,
+      );
+      expect(screen.getByRole("button", { name: A.complete })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: A.noShow })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: A.cancel })).toBeInTheDocument();
+      expect(screen.getByText(A.sectionTitle)).toBeInTheDocument();
+      unmount();
+    }
   });
 });
 
 describe("BookingActions — running actions", () => {
-  it("calls approveAction and shows the success message", async () => {
-    const user = userEvent.setup();
-    const actions = makeActions();
-    render(<BookingActions status="pending" {...actions} />);
-
-    await user.click(screen.getByRole("button", { name: A.approve }));
-    expect(actions.approveAction).toHaveBeenCalledTimes(1);
-    await waitFor(() =>
-      expect(screen.getByText(A.successApprove)).toBeInTheDocument(),
-    );
-  });
-
   it("calls completeAction and shows its success message", async () => {
     const user = userEvent.setup();
     const actions = makeActions();

@@ -109,7 +109,7 @@ describe("BookingRequestForm — details step", () => {
     expect(screen.queryByText(/תשלום/)).not.toBeInTheDocument();
 
     // The submit button is enabled immediately — no consent gates it.
-    const submit = screen.getByRole("button", { name: /שליחת בקשה לתור/ });
+    const submit = screen.getByRole("button", { name: /קביעת תור/ });
     expect(submit).toBeEnabled();
   });
 });
@@ -138,7 +138,7 @@ describe("BookingRequestForm — error state", () => {
     await act(async () => { await Promise.resolve(); });
     await userEvent.click(await screen.findByText("09:00"));
     await userEvent.click(screen.getByRole("button", { name: /המשך למילוי פרטים/ }));
-    await userEvent.click(screen.getByRole("button", { name: /שליחת בקשה לתור/ }));
+    await userEvent.click(screen.getByRole("button", { name: /קביעת תור/ }));
 
     expect(await screen.findByText("השעה כבר תפוסה")).toBeInTheDocument();
     expect(screen.getByText("חזרה לבחירת שעה")).toBeInTheDocument();
@@ -167,14 +167,14 @@ describe("BookingRequestForm — success view", () => {
     await userEvent.click(screen.getByRole("button", { name: /המשך למילוי פרטים/ }));
     await userEvent.type(screen.getByLabelText("שם מלא"), "נועה");
     await userEvent.type(screen.getByLabelText("טלפון"), "0501234567");
-    await userEvent.click(screen.getByRole("button", { name: /שליחת בקשה לתור/ }));
+    await userEvent.click(screen.getByRole("button", { name: /קביעת תור/ }));
 
-    expect(await screen.findByText("בקשת התור נשלחה")).toBeInTheDocument();
+    expect(await screen.findByText("התור נקבע בהצלחה")).toBeInTheDocument();
     expect(screen.getByText("מניקור ג'ל")).toBeInTheDocument();
 
     // Subtitle sets the right expectation: the owner approves the request.
     expect(
-      screen.getByText(/בעלת העסק תקבל את הבקשה ותאשר את התור/),
+      screen.getByText(/התור שלך נקבע/),
     ).toBeInTheDocument();
 
     // "הוספה ליומן" stays.
@@ -188,7 +188,7 @@ describe("BookingRequestForm — success view", () => {
       document.querySelector('a[href*="wa.me"]'),
     ).not.toBeInTheDocument();
 
-    // "שליחת בקשה נוספת" remains as a secondary action.
-    expect(screen.getByText("שליחת בקשה נוספת")).toBeInTheDocument();
+    // "קביעת תור נוסף" remains as a secondary action.
+    expect(screen.getByText("קביעת תור נוסף")).toBeInTheDocument();
   });
 });

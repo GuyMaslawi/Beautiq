@@ -49,7 +49,7 @@ describe("BookingAdvancedFilter — trigger + count", () => {
   });
 
   it("shows the active filter count badge when status + service are set", () => {
-    renderFilter({ currentStatus: "pending", currentServiceId: "s1" });
+    renderFilter({ currentStatus: "completed", currentServiceId: "s1" });
     // 2 active filters
     expect(screen.getByText("2")).toBeInTheDocument();
   });
@@ -63,7 +63,7 @@ describe("BookingAdvancedFilter — popover", () => {
 
     expect(screen.getByText("סטטוס תור")).toBeInTheDocument();
     expect(screen.getByText("שירות")).toBeInTheDocument();
-    expect(screen.getByText("ממתינות לאישור")).toBeInTheDocument();
+    expect(screen.getByText("פעילים")).toBeInTheDocument();
     expect(screen.getByText("מניקור")).toBeInTheDocument();
   });
 
@@ -91,7 +91,7 @@ describe("BookingAdvancedFilter — popover", () => {
 
   it("clears all advanced filters via the clear-all button", async () => {
     const user = userEvent.setup();
-    renderFilter({ currentStatus: "pending", currentServiceId: "s1" });
+    renderFilter({ currentStatus: "completed", currentServiceId: "s1" });
     await user.click(screen.getByText("סינון מתקדם"));
     await user.click(screen.getByText("ניקוי כל הפילטרים"));
 

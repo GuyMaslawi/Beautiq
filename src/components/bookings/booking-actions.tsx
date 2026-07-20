@@ -8,7 +8,6 @@ import type { BookingStatus } from "@prisma/client";
 
 interface BookingActionsProps {
   status: BookingStatus;
-  approveAction: () => Promise<void>;
   completeAction: () => Promise<void>;
   cancelAction: () => Promise<void>;
   noShowAction: () => Promise<void>;
@@ -16,7 +15,6 @@ interface BookingActionsProps {
 
 export function BookingActions({
   status,
-  approveAction,
   completeAction,
   cancelAction,
   noShowAction,
@@ -51,16 +49,6 @@ export function BookingActions({
         <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-3 text-sm text-green-800 font-medium">
           {successMsg}
         </div>
-      )}
-
-      {status === "pending" && (
-        <Button
-          className="w-full"
-          disabled={isPending}
-          onClick={() => run(approveAction, BOOKINGS.actions.successApprove)}
-        >
-          {isPending ? BOOKINGS.actions.approving : BOOKINGS.actions.approve}
-        </Button>
       )}
 
       {(status === "pending" || status === "approved") && (

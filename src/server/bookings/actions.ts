@@ -163,27 +163,6 @@ export async function updateBookingNotesAction(
 // Status transition actions (inline status changes, no form needed)
 // ---------------------------------------------------------------------------
 
-export async function approveBookingAction(bookingId: string): Promise<void> {
-  const tenant = await requireTenant();
-  // The status guard makes this idempotent: a second approval (or a
-  // cross-tenant id) matches 0 rows, so the confirmation only fires on the
-  // real pending → approved transition.
-  const { count } = await prisma.booking.updateMany({
-    where: { id: bookingId, businessId: tenant.businessId, status: "pending" },
-    data: { status: "approved" },
-  });
-  if (count > 0) {
-    await sendBookingConfirmationById({
-      bookingId,
-      businessId: tenant.businessId,
-      source: "manual_owner",
-    });
-  }
-  revalidatePath(`/bookings/${bookingId}`);
-  revalidatePath("/bookings");
-  revalidatePath("/dashboard");
-}
-
 export async function completeBookingAction(bookingId: string): Promise<void> {
   const tenant = await requireTenant();
   const booking = await prisma.booking.findFirst({

@@ -52,7 +52,6 @@ vi.mock("@/server/public-booking/send-confirmation", () => ({
 import {
   createBookingAction,
   updateBookingNotesAction,
-  approveBookingAction,
   completeBookingAction,
   cancelBookingAction,
   noShowBookingAction,
@@ -254,31 +253,6 @@ describe("status transition actions", () => {
   beforeEach(() => {
     prisma.booking.updateMany.mockResolvedValue({ count: 1 });
     prisma.booking.findFirst.mockResolvedValue({ clientId: "cli_1" });
-  });
-
-  it("approveBookingAction only transitions from pending", async () => {
-    await approveBookingAction("bkg_1");
-    expect(prisma.booking.updateMany).toHaveBeenCalledWith({
-      where: { id: "bkg_1", businessId: BUSINESS_A, status: "pending" },
-      data: { status: "approved" },
-    });
-  });
-
-  it("approveBookingAction triggers the confirmation once when the transition happens", async () => {
-    prisma.booking.updateMany.mockResolvedValue({ count: 1 });
-    await approveBookingAction("bkg_1");
-    expect(sendBookingConfirmationById).toHaveBeenCalledTimes(1);
-    expect(sendBookingConfirmationById).toHaveBeenCalledWith({
-      bookingId: "bkg_1",
-      businessId: BUSINESS_A,
-      source: "manual_owner",
-    });
-  });
-
-  it("approveBookingAction does NOT trigger the confirmation when nothing changed (re-approve / cross-tenant)", async () => {
-    prisma.booking.updateMany.mockResolvedValue({ count: 0 });
-    await approveBookingAction("bkg_1");
-    expect(sendBookingConfirmationById).not.toHaveBeenCalled();
   });
 
   it("completeBookingAction only transitions from pending/approved and syncs stats", async () => {

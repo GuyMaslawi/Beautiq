@@ -79,17 +79,17 @@
   --shadow-xl: 0 24px 60px rgba(124, 58, 97, 0.15), 0 8px 16px rgba(124, 58, 97, 0.07);
   --shadow-glow: 0 8px 30px rgba(172, 92, 127, 0.18);
 
-  /* ── Sidebar light theme — soft blush white with rose accents ── */
-  --sidebar-bg-from: #ffffff;
-  --sidebar-bg-mid: #fdf4f8;
-  --sidebar-bg-to: #fbe9f1;
+  /* ── Sidebar light theme — warm blush pink with rose accents ── */
+  --sidebar-bg-from: #fdeaf2;
+  --sidebar-bg-mid: #f9dcea;
+  --sidebar-bg-to: #f4cede;
   --sidebar-fg: #2b2530;
-  --sidebar-fg-muted: #8a8190;
+  --sidebar-fg-muted: #8a7883;
   --sidebar-fg-faint: #b7a6b2;
-  --sidebar-border: rgba(172, 92, 127, 0.14);
-  --sidebar-hover: rgba(172, 92, 127, 0.08);
-  --sidebar-active-bg: rgba(172, 92, 127, 0.10);
-  --sidebar-active-border: rgba(172, 92, 127, 0.22);
+  --sidebar-border: rgba(172, 92, 127, 0.20);
+  --sidebar-hover: rgba(172, 92, 127, 0.12);
+  --sidebar-active-bg: rgba(172, 92, 127, 0.16);
+  --sidebar-active-border: rgba(172, 92, 127, 0.30);
   --sidebar-badge: #ac5c7f;
 }
 

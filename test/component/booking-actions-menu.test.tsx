@@ -7,7 +7,6 @@ import { BOOKINGS } from "@/lib/constants/he";
 
 // Hoisted spies for the server actions + router so the module mocks can use them.
 const m = vi.hoisted(() => ({
-  approveBookingAction: vi.fn(() => Promise.resolve()),
   completeBookingAction: vi.fn(() => Promise.resolve()),
   cancelBookingAction: vi.fn(() => Promise.resolve()),
   noShowBookingAction: vi.fn(() => Promise.resolve()),
@@ -15,7 +14,6 @@ const m = vi.hoisted(() => ({
 }));
 
 vi.mock("@/server/bookings/actions", () => ({
-  approveBookingAction: m.approveBookingAction,
   completeBookingAction: m.completeBookingAction,
   cancelBookingAction: m.cancelBookingAction,
   noShowBookingAction: m.noShowBookingAction,
@@ -50,21 +48,21 @@ beforeEach(() => {
 });
 
 describe("BookingActionsMenu — primary action", () => {
-  it("shows 'אישור תור' as the primary button for a pending booking", () => {
-    render(<BookingActionsMenu bookingId="b1" status="pending" />);
-    expect(screen.getByRole("button", { name: A.approve })).toBeInTheDocument();
+  it("shows 'סימון כהושלם' as the primary button for pending/approved bookings (no approval step)", () => {
+    for (const status of ["pending", "approved"] as const) {
+      const { unmount } = render(
+        <BookingActionsMenu bookingId="b1" status={status} />,
+      );
+      expect(screen.getByRole("button", { name: A.complete })).toBeInTheDocument();
+      unmount();
+    }
   });
 
-  it("runs approveBookingAction immediately (no confirm) when the primary is clicked", async () => {
+  it("runs completeBookingAction immediately (no confirm) when the primary is clicked", async () => {
     const user = userEvent.setup();
-    render(<BookingActionsMenu bookingId="b1" status="pending" />);
-    await user.click(screen.getByRole("button", { name: A.approve }));
-    expect(m.approveBookingAction).toHaveBeenCalledWith("b1");
-  });
-
-  it("shows 'סימון כהושלם' as the primary button for an approved booking", () => {
-    render(<BookingActionsMenu bookingId="b2" status="approved" />);
-    expect(screen.getByRole("button", { name: A.complete })).toBeInTheDocument();
+    render(<BookingActionsMenu bookingId="b1" status="approved" />);
+    await user.click(screen.getByRole("button", { name: A.complete }));
+    expect(m.completeBookingAction).toHaveBeenCalledWith("b1");
   });
 
   it("shows a non-destructive 'צפייה' primary for completed bookings and navigates on click", async () => {

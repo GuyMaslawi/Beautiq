@@ -15,7 +15,6 @@ import { ChevronDown, MoreHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import {
-  approveBookingAction,
   completeBookingAction,
   cancelBookingAction,
   noShowBookingAction,
@@ -29,7 +28,7 @@ import {
 import { BOOKINGS } from "@/lib/constants/he";
 import type { BookingStatus } from "@prisma/client";
 
-type ServerActionType = "approve" | "complete" | "noShow" | "cancel";
+type ServerActionType = "complete" | "noShow" | "cancel";
 
 /**
  * Unified booking actions UI: one clear primary button + a "פעולות" menu of
@@ -62,14 +61,13 @@ export function BookingActionsMenu({
   const menuActions = getBookingMenuActions(status);
 
   const serverActions: Record<ServerActionType, () => Promise<void>> = {
-    approve: () => approveBookingAction(bookingId),
     complete: () => completeBookingAction(bookingId),
     noShow: () => noShowBookingAction(bookingId),
     cancel: () => cancelBookingAction(bookingId),
   };
 
   function isServerAction(type: BookingActionType): type is ServerActionType {
-    return type === "approve" || type === "complete" || type === "noShow" || type === "cancel";
+    return type === "complete" || type === "noShow" || type === "cancel";
   }
 
   function runServerAction(type: ServerActionType) {

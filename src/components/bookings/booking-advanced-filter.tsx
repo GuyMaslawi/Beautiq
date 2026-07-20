@@ -10,11 +10,10 @@ interface Service {
   name: string;
 }
 
-type BookingStatusFilter = "all" | "pending" | "active" | "completed" | "cancelled";
+type BookingStatusFilter = "all" | "active" | "completed" | "cancelled";
 
 const STATUS_LABELS: Record<BookingStatusFilter, string> = {
   all: "כל הסטטוסים",
-  pending: "ממתינות לאישור",
   active: "פעילים",
   completed: "הושלמו",
   cancelled: "בוטלו",
@@ -153,7 +152,7 @@ export function BookingAdvancedFilter({
               <div className="space-y-5 p-4">
                 {/* Status */}
                 <FilterSection title="סטטוס תור">
-                  {(["all", "pending", "active", "completed", "cancelled"] as BookingStatusFilter[]).map((s) => (
+                  {(["all", "active", "completed", "cancelled"] as BookingStatusFilter[]).map((s) => (
                     <FilterPill
                       key={s}
                       label={STATUS_LABELS[s]}

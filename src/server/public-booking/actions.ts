@@ -137,7 +137,9 @@ export async function submitPublicBookingAction(
         serviceId: service.id,
         startTime,
         endTime,
-        status: "pending",
+        // A client who booked an available slot is confirmed immediately —
+        // there is no manual owner approval step.
+        status: "approved",
         source: "public",
         priceSnapshot: new Prisma.Decimal(service.price),
         durationMinutesSnapshot: service.durationMinutes,
@@ -195,7 +197,7 @@ export async function submitPublicBookingAction(
     }
   });
 
-  // The booking is created as `pending` and the customer sees the in-form
+  // The booking is confirmed immediately and the customer sees the in-form
   // confirmation. No prepayment/deposit is required in this flow.
   return { success: true };
 }

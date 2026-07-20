@@ -136,11 +136,9 @@ function HeroStat({
 function CommandCenterHero({
   businessName,
   metrics,
-  pendingApprovalCount,
 }: {
   businessName: string;
   metrics: DashboardMetrics;
-  pendingApprovalCount: number;
 }) {
   const todayLabel = new Date().toLocaleDateString("he-IL", {
     timeZone: TZ,
@@ -210,10 +208,10 @@ function CommandCenterHero({
             iconColor="#f0a8c8"
           />
           <HeroStat
-            href="/bookings?status=pending"
-            icon={Clock}
-            value={pendingApprovalCount}
-            label="ממתינות לאישור"
+            href="/services"
+            icon={Sparkles}
+            value={metrics.activeServices}
+            label="שירותים פעילים"
             iconColor="#f5c88a"
           />
           <HeroStat
@@ -740,7 +738,6 @@ export function SetupChecklist({
   setup,
   todayBookings,
   upcomingBookings,
-  pendingApprovalCount,
   guidanceItems = [],
   emptySlots = [],
   suggestedClients = [],
@@ -756,7 +753,6 @@ export function SetupChecklist({
   setup: SetupState;
   todayBookings: UpcomingBookingItem[];
   upcomingBookings: UpcomingBookingItem[];
-  pendingApprovalCount: number;
   guidanceItems?: GuidanceItem[];
   emptySlots?: EmptySlot[];
   suggestedClients?: SuggestedClient[];
@@ -771,13 +767,11 @@ export function SetupChecklist({
   const extraUrgent = guidanceItems.filter(
     (item) =>
       item.priority === "important" &&
-      item.id !== "pending-bookings" &&
       item.id !== "today-bookings" &&
       item.id !== "no-upcoming-bookings",
   );
 
-  const hasTodayAttention =
-    pendingApprovalCount > 0 || extraUrgent.length > 0;
+  const hasTodayAttention = extraUrgent.length > 0;
 
   return (
     <PremiumPageShell
@@ -795,7 +789,6 @@ export function SetupChecklist({
             <CommandCenterHero
               businessName={businessName}
               metrics={metrics}
-              pendingApprovalCount={pendingApprovalCount}
             />
             <DashboardQuickActions />
           </div>
@@ -818,18 +811,6 @@ export function SetupChecklist({
                 דורש את תשומת הלב שלך
               </p>
               <div className="space-y-2.5">
-                {pendingApprovalCount > 0 && (
-                  <AttentionCard
-                    count={pendingApprovalCount}
-                    label="פגישות"
-                    subLabel="עדיין ללא אישור"
-                    action="לאישור עכשיו"
-                    href="/bookings?status=pending"
-                    icon={CalendarDays}
-                    color="warning"
-                    ariaLabel={`${pendingApprovalCount} פגישות ממתינות לאישור — עבור לפגישות ממתינות`}
-                  />
-                )}
                 {extraUrgent.map((item) => (
                   <AttentionCard
                     key={item.id}

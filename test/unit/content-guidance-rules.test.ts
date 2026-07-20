@@ -7,7 +7,6 @@ function data(overrides: Partial<GuidanceQueryData> = {}): GuidanceQueryData {
     activeServicesCount: 1,
     activeAvailabilityCount: 1,
     todayBookingsCount: 0,
-    pendingBookingsCount: 0,
     lostClientsCount: 0,
     noShowClientsCount: 0,
     upcomingBookingsCount: 1,
@@ -45,14 +44,14 @@ describe("generateGuidanceItems — setup blockers (important)", () => {
 describe("generateGuidanceItems — individual rules", () => {
   it("never emits a deposit-related guidance card", () => {
     const items = generateGuidanceItems(
-      data({ pendingBookingsCount: 1, todayBookingsCount: 1 }),
+      data({ todayBookingsCount: 1 }),
       0,
     );
     expect(ids(items)).not.toContain("pending-deposits");
   });
 
-  it("flags pending bookings (E)", () => {
-    expect(ids(generateGuidanceItems(data({ pendingBookingsCount: 1 }), 0))).toContain(
+  it("never emits a booking-approval guidance card (approval step removed)", () => {
+    expect(ids(generateGuidanceItems(data({ todayBookingsCount: 1 }), 0))).not.toContain(
       "pending-bookings",
     );
   });
@@ -124,7 +123,7 @@ describe("generateGuidanceItems — sorting and capping", () => {
   it("sorts important before recommended before info", () => {
     const items = generateGuidanceItems(
       data({
-        pendingBookingsCount: 1, // important
+        activeServicesCount: 0, // important
         todayBookingsCount: 1, // recommended
         noShowClientsCount: 1, // info
       }),
@@ -143,7 +142,6 @@ describe("generateGuidanceItems — sorting and capping", () => {
       data({
         activeServicesCount: 0,
         activeAvailabilityCount: 0,
-        pendingBookingsCount: 1,
         todayBookingsCount: 1,
         lostClientsCount: 1,
         noShowClientsCount: 1,
@@ -160,8 +158,8 @@ describe("generateGuidanceItems — sorting and capping", () => {
       data({
         activeServicesCount: 0, // important
         activeAvailabilityCount: 0, // important
-        pendingBookingsCount: 1, // important
         todayBookingsCount: 1, // recommended
+        lostClientsCount: 1, // recommended
         noShowClientsCount: 1, // info — should be dropped first
         recentCompletedBookingsCount: 1, // recommended
         pricingConcernCount: 1, // info
@@ -169,13 +167,13 @@ describe("generateGuidanceItems — sorting and capping", () => {
       0,
     );
     expect(items.length).toBe(5);
-    // The two info cards (no-show, pricing) should be pushed out by the 4 important + reputation.
+    // The two info cards (no-show, pricing) should be pushed out by the 2 important + 3 recommended.
     expect(items.every((i) => i.priority !== "info")).toBe(true);
   });
 
   it("each item carries Hebrew title, description and action label", () => {
     const items = generateGuidanceItems(
-      data({ activeServicesCount: 0, pendingBookingsCount: 1 }),
+      data({ activeServicesCount: 0, todayBookingsCount: 1 }),
       0,
     );
     for (const item of items) {

@@ -51,18 +51,6 @@ export function generateGuidanceItems(
   }
 
 
-  // E. Bookings awaiting approval
-  if (data.pendingBookingsCount > 0) {
-    items.push({
-      id: "pending-bookings",
-      title: GUIDANCE.rules.pendingBookings.title,
-      description: GUIDANCE.rules.pendingBookings.body,
-      priority: "important",
-      actionLabel: GUIDANCE.rules.pendingBookings.action,
-      href: "/bookings",
-    });
-  }
-
   // D. Bookings scheduled for today
   if (data.todayBookingsCount > 0) {
     items.push({

@@ -3,7 +3,6 @@ import Link from "next/link";
 import { requireCurrentBusiness } from "@/server/auth/session";
 import { getBooking } from "@/server/bookings/queries";
 import {
-  approveBookingAction,
   cancelBookingAction,
   completeBookingAction,
   noShowBookingAction,
@@ -99,7 +98,6 @@ export default async function BookingDetailPage({
 
   if (!booking) notFound();
 
-  const approveAction = approveBookingAction.bind(null, bookingId);
   const completeAction = completeBookingAction.bind(null, bookingId);
   const cancelAction = cancelBookingAction.bind(null, bookingId);
   const noShowAction = noShowBookingAction.bind(null, bookingId);
@@ -174,7 +172,6 @@ export default async function BookingDetailPage({
       {/* Status actions */}
       <BookingActions
         status={booking.status}
-        approveAction={approveAction}
         completeAction={completeAction}
         cancelAction={cancelAction}
         noShowAction={noShowAction}

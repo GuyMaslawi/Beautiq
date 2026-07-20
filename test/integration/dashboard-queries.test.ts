@@ -40,7 +40,6 @@ function setupMocks(overrides: {
   totalBookings?: number;
   todayBookings?: unknown[];
   upcoming?: unknown[];
-  pendingApproval?: number;
 } = {}) {
   prisma.client.count.mockResolvedValue(overrides.clients ?? 0);
   prisma.service.count.mockResolvedValue(overrides.activeServices ?? 0);
@@ -51,10 +50,8 @@ function setupMocks(overrides: {
     overrides.categories ?? 0,
   );
   prisma.availabilityRule.count.mockResolvedValue(overrides.availability ?? 0);
-  // booking.count is called twice: total bookings, then pending approval.
-  prisma.booking.count
-    .mockResolvedValueOnce(overrides.totalBookings ?? 0)
-    .mockResolvedValueOnce(overrides.pendingApproval ?? 0);
+  // booking.count is called once: total bookings (approval step removed).
+  prisma.booking.count.mockResolvedValueOnce(overrides.totalBookings ?? 0);
   // booking.findMany is called twice: today, then upcoming.
   prisma.booking.findMany
     .mockResolvedValueOnce(overrides.todayBookings ?? [])
@@ -72,7 +69,6 @@ function assertScoped() {
     ],
     ["availability.count", prisma.availabilityRule.count.mock.calls[0]?.[0] as never],
     ["booking.count[0]", prisma.booking.count.mock.calls[0]?.[0] as never],
-    ["booking.count[1]", prisma.booking.count.mock.calls[1]?.[0] as never],
     ["booking.findMany[0]", prisma.booking.findMany.mock.calls[0]?.[0] as never],
     ["booking.findMany[1]", prisma.booking.findMany.mock.calls[1]?.[0] as never],
   ];
@@ -98,7 +94,6 @@ describe("getDashboardData", () => {
       categories: 2,
       availability: 1,
       totalBookings: 10,
-      pendingApproval: 4,
       todayBookings: [
         {
           id: "bkg_1",
@@ -134,7 +129,6 @@ describe("getDashboardData", () => {
       hasProfileDetails: false,
       hasAnyBookings: true,
     });
-    expect(data.pendingApprovalCount).toBe(4);
     expect(data.todayBookings[0]).toMatchObject({
       id: "bkg_1",
       clientName: "דנה",
@@ -160,15 +154,5 @@ describe("getDashboardData", () => {
       where: { status: string };
     };
     expect(aggCall.where.status).toBe("completed");
-  });
-
-  it("counts pending approvals as future pending bookings only", async () => {
-    setupMocks();
-    await getDashboardData(tenant, emptyProfile);
-    const pendingCall = prisma.booking.count.mock.calls[1][0] as {
-      where: { status: string; startTime: { gt: Date } };
-    };
-    expect(pendingCall.where.status).toBe("pending");
-    expect(pendingCall.where.startTime.gt).toBeInstanceOf(Date);
   });
 });

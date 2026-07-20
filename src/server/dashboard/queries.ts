@@ -35,8 +35,6 @@ export interface DashboardData {
   todayBookings: UpcomingBookingItem[];
   /** Upcoming bookings from tomorrow onwards — for the week calendar */
   upcomingBookings: UpcomingBookingItem[];
-  /** Accurate count of all future pending bookings (not capped) */
-  pendingApprovalCount: number;
 }
 
 // ---------------------------------------------------------------------------
@@ -118,7 +116,6 @@ export async function getDashboardData(
 ): Promise<DashboardData> {
   const { start: todayStart, end: todayEnd } = getJerusalemTodayBounds();
   const { start: monthStart, end: monthEnd } = getJerusalemMonthBounds();
-  const now = new Date();
 
   const [
     totalClients,
@@ -129,7 +126,6 @@ export async function getDashboardData(
     totalBookingsCount,
     todayBookingsRaw,
     upcomingRaw,
-    pendingApprovalCount,
   ] = await Promise.all([
     // סך לקוחות
     prisma.client.count({
@@ -201,15 +197,6 @@ export async function getDashboardData(
         service: { select: { name: true } },
       },
     }),
-
-    // ספירה מדויקת של תורים ממתינים לאישור (עתידיים)
-    prisma.booking.count({
-      where: {
-        businessId: tenant.businessId,
-        status: "pending",
-        startTime: { gt: now },
-      },
-    }),
   ]);
 
   const monthRevenue = Number(monthRevenueAgg._sum.priceSnapshot ?? 0);
@@ -252,6 +239,5 @@ export async function getDashboardData(
     },
     todayBookings: todayBookingsRaw.map(mapBooking),
     upcomingBookings: upcomingRaw.map(mapBooking),
-    pendingApprovalCount,
   };
 }

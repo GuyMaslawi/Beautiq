@@ -121,7 +121,7 @@ describe("getBookingSummary", () => {
     expect(res).toEqual({
       todayCount: 0,
       weekCount: 0,
-      pendingCount: 0,
+      completedCount: 0,
       cancelledCount: 0,
     });
     for (const call of prisma.booking.count.mock.calls) {

@@ -91,7 +91,7 @@ describe("notifyOwnerOfNewBooking — owner email", () => {
     expect(sendEmail).toHaveBeenCalledTimes(1);
     const arg = sendEmail.mock.calls[0][0];
     expect(arg.to).toBe("owner@example.com");
-    expect(arg.subject).toBe("בקשת תור חדשה מ־Allura");
+    expect(arg.subject).toBe("תור חדש נקבע ב־Allura");
 
     // Body carries every required field.
     expect(arg.text).toContain("נועה כהן"); // customer name
@@ -99,7 +99,7 @@ describe("notifyOwnerOfNewBooking — owner email", () => {
     expect(arg.text).toContain("מניקור ג'ל"); // service
     expect(arg.text).toContain("12:00"); // time (Asia/Jerusalem)
     expect(arg.text).toContain("₪150"); // price
-    expect(arg.text).toContain("ממתין לאישור"); // status
+    expect(arg.text).toContain("מאושר"); // status
     expect(arg.text).toContain("/bookings"); // management link
     expect(arg.text).toContain("בעלת העסק"); // owner greeting
   });
