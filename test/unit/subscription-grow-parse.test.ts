@@ -8,20 +8,19 @@ import { parseCallback, isGrowConfigured } from "@/lib/subscription/grow";
  * exactly for authentication.
  */
 describe("parseCallback", () => {
-  it("returns null when process identifiers are missing", () => {
+  it("returns null when nothing can tie the event to a subscription", () => {
     expect(parseCallback({})).toBeNull();
-    expect(parseCallback({ data: { processToken: "t" } })).toBeNull();
-    expect(parseCallback({ data: { processId: "1" } })).toBeNull();
+    expect(parseCallback({ data: { statusCode: "2" } })).toBeNull();
   });
 
-  it("parses an approved charge (statusCode 2) from a nested data object", () => {
+  it("parses an approved first charge (statusCode 2) from a nested data object", () => {
     const event = parseCallback({
       data: {
         processId: "12345",
         processToken: "ptok",
         cField1: "nonce-abc",
         transactionId: "tx-9",
-        cardToken: "card-tok",
+        directDebitId: "dd-777",
         cardSuffix: "4242",
         sum: "149.00",
         statusCode: "2",
@@ -34,10 +33,30 @@ describe("parseCallback", () => {
       nonce: "nonce-abc",
       paid: true,
       transactionId: "tx-9",
-      cardToken: "card-tok",
+      directDebitId: "dd-777",
       cardSuffix: "4242",
       sumMinor: 14900,
+      isRecurringRun: false,
     });
+  });
+
+  it("flags an automatic monthly direct-debit run", () => {
+    const event = parseCallback({
+      data: {
+        directDebitId: "dd-777",
+        transactionId: "tx-second",
+        paymentSource: "ריצת הוראת קבע",
+        sum: "149.00",
+        statusCode: "2",
+      },
+    });
+    expect(event).toMatchObject({
+      directDebitId: "dd-777",
+      isRecurringRun: true,
+      paid: true,
+    });
+    // No processId on recurring runs — matched by directDebitId instead.
+    expect(event?.processId).toBeUndefined();
   });
 
   it("does NOT mark unapproved statuses as paid", () => {

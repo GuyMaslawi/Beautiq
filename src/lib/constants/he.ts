@@ -974,6 +974,43 @@ export const SETTINGS = {
   },
 } as const;
 
+/** טקסטים לניהול מנוי Allura (בהגדרות) */
+export const SUBSCRIPTION = {
+  sectionTitle: "מנוי Allura",
+  currentPlan: "התוכנית שלך",
+  monthlyPrice: "מחיר חודשי",
+  renewsOn: "התחדשות הבאה",
+  endsOn: "המנוי פעיל עד",
+  card: "כרטיס",
+  perMonth: "לחודש",
+
+  status: {
+    active: "פעיל",
+    past_due: "בעיה בתשלום",
+    cancelled: "בוטל — פעיל עד סוף התקופה",
+    expired: "לא פעיל",
+    pending: "ממתין לתשלום",
+  },
+
+  pastDueNote:
+    "לא הצלחנו לחייב את המנוי בחודש האחרון. כדי לא לאבד גישה, בדקי שפרטי התשלום תקינים.",
+  adminNote: "יש לך גישה מלאה לכל הכלים.",
+
+  upgradeButton: "שדרוג לפלטינום",
+  cancelButton: "ביטול מנוי",
+  cancelling: "מבטל…",
+
+  cancelConfirm: {
+    title: "לבטל את המנוי?",
+    description:
+      "הגישה תישאר פעילה עד סוף התקופה ששולמה, ולאחר מכן החשבון ייסגר. אפשר לחזור ולהצטרף בכל עת.",
+    confirm: "ביטול המנוי",
+    cancel: "השארת המנוי",
+  },
+  cancelSuccess: "המנוי בוטל. הגישה תישאר פעילה עד סוף התקופה.",
+  genericError: "משהו השתבש. יש לנסות שוב בעוד רגע",
+} as const;
+
 /** טקסטים לעמוד ההזמנה הציבורי */
 export const PUBLIC_BOOKING = {
   notFound: "הקישור לא נמצא",

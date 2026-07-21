@@ -1,4 +1,4 @@
-import { Store, Tag, Link2, SlidersHorizontal } from "lucide-react";
+import { Store, Tag, Link2, SlidersHorizontal, CreditCard } from "lucide-react";
 import { PremiumPageShell, BeautyPageHero } from "@/components/premium";
 import { Section } from "@/components/ui/section";
 import { requireCurrentBusiness } from "@/server/auth/session";
@@ -11,19 +11,22 @@ import {
   updateBusinessDetailsAction,
   updateBusinessCategoriesAction,
 } from "@/server/settings/actions";
+import { getSubscriptionOverview } from "@/server/subscription/queries";
 import { BusinessDetailsForm } from "@/components/settings/business-details-form";
 import { BusinessCategoriesForm } from "@/components/settings/business-categories-form";
 import { PublicLinkCard } from "@/components/settings/public-link-card";
-import { SETTINGS } from "@/lib/constants/he";
+import { SubscriptionCard } from "@/components/settings/subscription-card";
+import { SETTINGS, SUBSCRIPTION } from "@/lib/constants/he";
 
 export default async function SettingsPage() {
   const business = await requireCurrentBusiness();
   const tenant = { businessId: business.id };
 
-  const [settings, allCategories, selectedCategoryIds] = await Promise.all([
+  const [settings, allCategories, selectedCategoryIds, subscription] = await Promise.all([
     getBusinessSettings(tenant),
     getAllBusinessCategories(),
     getSelectedCategoryIds(tenant),
+    getSubscriptionOverview(),
   ]);
 
   if (!settings) return null;
@@ -65,6 +68,11 @@ export default async function SettingsPage() {
         {/* Section 3 — Public link (informational, coming soon) */}
         <Section title={SETTINGS.publicLink.sectionTitle} icon={<Link2 className="h-4 w-4" style={{ color: "#ac5c7f" }} />}>
           <PublicLinkCard slug={settings.slug} />
+        </Section>
+
+        {/* Section 4 — Allura subscription */}
+        <Section title={SUBSCRIPTION.sectionTitle} icon={<CreditCard className="h-4 w-4" style={{ color: "#ac5c7f" }} />}>
+          <SubscriptionCard overview={subscription} />
         </Section>
       </div>
     </PremiumPageShell>

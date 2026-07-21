@@ -18,10 +18,8 @@ function setEnv(vars: Record<string, string>) {
     "WHATSAPP_USE_ENV_FALLBACK",
     "WHATSAPP_CREDENTIALS_ENCRYPTION_KEY",
     "WHATSAPP_TEST_MODE",
-    "PAYMENTS_ENABLED",
-    "PAYMENT_PROVIDER",
-    "PAYMENT_WEBHOOK_SECRET",
-    "PAYMENTS_CREDENTIALS_ENCRYPTION_KEY",
+    "SUBSCRIPTIONS_ENABLED",
+    "MAKE_GROW_CREATE_LINK_WEBHOOK_URL",
   ]) {
     vi.stubEnv(k, "");
   }
@@ -72,30 +70,31 @@ describe("checkEnv", () => {
     expect(errors.some((e) => e.includes("META_WEBHOOK_APP_SECRET"))).toBe(true);
   });
 
-  it("requires payment secrets only for a real provider when payments are enabled", () => {
-    // mock provider — no payment secrets required even when enabled
+  it("requires the Make webhook URL only when subscriptions are enabled", () => {
+    // subscriptions off — no Grow/Make config required
     setEnv({
       NODE_ENV: "production",
       DATABASE_URL: "postgres://x",
       AUTH_SECRET: "s",
       CRON_SECRET: "c",
-      PAYMENTS_ENABLED: "true",
-      PAYMENT_PROVIDER: "mock",
+      NEXT_PUBLIC_APP_URL: "https://allura.info",
     });
-    expect(checkEnv().errors.some((e) => e.includes("PAYMENT_WEBHOOK_SECRET"))).toBe(false);
+    expect(
+      checkEnv().errors.some((e) => e.includes("MAKE_GROW_CREATE_LINK_WEBHOOK_URL")),
+    ).toBe(false);
 
-    // real provider — secrets become mandatory
+    // subscriptions on — the Make create-link webhook becomes mandatory
     setEnv({
       NODE_ENV: "production",
       DATABASE_URL: "postgres://x",
       AUTH_SECRET: "s",
       CRON_SECRET: "c",
-      PAYMENTS_ENABLED: "true",
-      PAYMENT_PROVIDER: "payplus",
+      NEXT_PUBLIC_APP_URL: "https://allura.info",
+      SUBSCRIPTIONS_ENABLED: "true",
     });
-    const errors = checkEnv().errors;
-    expect(errors.some((e) => e.includes("PAYMENT_WEBHOOK_SECRET"))).toBe(true);
-    expect(errors.some((e) => e.includes("PAYMENTS_CREDENTIALS_ENCRYPTION_KEY"))).toBe(true);
+    expect(
+      checkEnv().errors.some((e) => e.includes("MAKE_GROW_CREATE_LINK_WEBHOOK_URL")),
+    ).toBe(true);
   });
 
   it("warns (not errors) about WHATSAPP_TEST_MODE in production", () => {

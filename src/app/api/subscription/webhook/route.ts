@@ -4,18 +4,23 @@
  *   POST /api/subscription/webhook
  *
  * This is the SOURCE OF TRUTH for activating a paid plan — never a browser
- * redirect. Flow:
+ * redirect. Grow POSTs here directly (the notifyUrl we passed when the payment
+ * link was created), both for the first charge and for every automatic monthly
+ * direct-debit (הוראת קבע) run. Flow:
  *   1. parse Grow's callback (JSON or form-encoded `data[...]`),
- *   2. locate our pending subscription by processId,
- *   3. authenticate it: the stored processToken AND our secret nonce must match,
- *   4. if the charge is approved, activate the plan (idempotently),
- *   5. acknowledge back to Grow (approveTransaction).
+ *   2. locate our subscription — by processId (first charge) or directDebitId
+ *      (recurring run),
+ *   3. authenticate it (first charge: processToken + our nonce must match),
+ *   4. approved → activate / extend the plan (idempotently); a failed recurring
+ *      run → past_due, then lapse after the grace window,
+ *   5. acknowledge back to Grow (best-effort, via the optional Make approve webhook).
  */
 
 import { NextResponse, type NextRequest } from "next/server";
+import { AccountSubscriptionStatus, type AccountSubscription } from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
 import { parseCallback, approveTransaction } from "@/lib/subscription/grow";
-import { confirmSubscriptionPayment } from "@/server/subscription/service";
+import { confirmSubscriptionPayment, markRenewalFailed } from "@/server/subscription/service";
 import { logger, captureError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -60,48 +65,92 @@ export async function POST(req: NextRequest) {
     return new NextResponse("Bad Request", { status: 400 });
   }
 
-  const subscription = await prisma.accountSubscription.findFirst({
-    where: { processId: event.processId },
-  });
+  // Locate the subscription: first charge carries our processId; automatic
+  // monthly runs carry only the direct-debit id.
+  let subscription: AccountSubscription | null = null;
+  let matchedByProcess = false;
+  if (event.processId) {
+    subscription = await prisma.accountSubscription.findFirst({
+      where: { processId: event.processId },
+    });
+    matchedByProcess = !!subscription;
+  }
+  if (!subscription && event.directDebitId) {
+    subscription = await prisma.accountSubscription.findFirst({
+      where: { directDebitId: event.directDebitId },
+    });
+  }
 
   if (!subscription) {
     // Ack so Grow does not retry a notification we cannot match.
-    logger.warn("[subscription.webhook] no subscription for process", {
+    logger.warn("[subscription.webhook] no subscription for notification", {
       processId: event.processId,
+      directDebitId: event.directDebitId,
     });
     return new NextResponse("OK", { status: 200 });
   }
 
-  // Authenticate: the process token AND our nonce must match what we issued.
-  const tokenOk = safeEqual(subscription.processToken, event.processToken);
-  const nonceOk = !subscription.checkoutNonce || safeEqual(subscription.checkoutNonce, event.nonce);
-  if (!tokenOk || !nonceOk) {
-    logger.warn("[subscription.webhook] authentication failed", {
-      processId: event.processId,
-      tokenOk,
-      nonceOk,
+  // Authenticate the first charge with the process token + our nonce. Recurring
+  // runs (matched by the hard-to-guess directDebitId) carry no process token.
+  if (matchedByProcess) {
+    const tokenOk = safeEqual(subscription.processToken, event.processToken);
+    const nonceOk = !subscription.checkoutNonce || safeEqual(subscription.checkoutNonce, event.nonce);
+    if (!tokenOk || !nonceOk) {
+      logger.warn("[subscription.webhook] authentication failed", {
+        processId: event.processId,
+        tokenOk,
+        nonceOk,
+      });
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+  }
+
+  // A cancelled/expired subscription must never be revived by a late recurring
+  // charge (e.g. Grow ran the standing order once more before it was stopped).
+  if (
+    event.isRecurringRun &&
+    (subscription.status === AccountSubscriptionStatus.cancelled ||
+      subscription.status === AccountSubscriptionStatus.expired)
+  ) {
+    logger.warn("[subscription.webhook] recurring charge on cancelled/expired sub — ignored", {
+      subscriptionId: subscription.id,
+      status: subscription.status,
     });
-    return new NextResponse("Unauthorized", { status: 401 });
+    return new NextResponse("OK", { status: 200 });
   }
 
   if (!event.paid) {
-    logger.info("[subscription.webhook] non-approved status — left pending", {
-      subscriptionId: subscription.id,
-      statusCode: event.statusCode,
-    });
+    // A failed automatic renewal lapses the sub after the grace window; a failed
+    // first charge just leaves it pending (the owner can retry checkout).
+    if (!matchedByProcess || event.isRecurringRun) {
+      const { lapsed } = await markRenewalFailed(
+        subscription,
+        `direct debit not approved (status ${event.statusCode ?? "?"})`,
+      );
+      logger.info("[subscription.webhook] renewal charge failed", {
+        subscriptionId: subscription.id,
+        lapsed,
+      });
+    } else {
+      logger.info("[subscription.webhook] first charge not approved — left pending", {
+        subscriptionId: subscription.id,
+        statusCode: event.statusCode,
+      });
+    }
     return new NextResponse("OK", { status: 200 });
   }
 
   try {
     const { alreadyApplied } = await confirmSubscriptionPayment(subscription, {
       transactionId: event.transactionId,
-      cardToken: event.cardToken,
+      directDebitId: event.directDebitId,
       cardSuffix: event.cardSuffix,
     });
     logger.info("[subscription.webhook] payment confirmed", {
       subscriptionId: subscription.id,
       userId: subscription.userId,
       plan: subscription.plan,
+      recurring: event.isRecurringRun,
       alreadyApplied,
     });
   } catch (err) {
@@ -111,10 +160,11 @@ export async function POST(req: NextRequest) {
   }
 
   // Acknowledge receipt to Grow (best-effort — never blocks activation).
-  if (subscription.processToken) {
+  if (event.processId && subscription.processToken) {
     await approveTransaction({
       processId: event.processId,
       processToken: subscription.processToken,
+      transactionId: event.transactionId,
     });
   }
 

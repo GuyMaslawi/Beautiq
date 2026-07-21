@@ -15,7 +15,6 @@
 
 import { AccountPlan, AccountSubscriptionStatus, type AccountSubscription } from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
-import { encryptSecret } from "@/lib/payments/crypto";
 import { PLAN_PRICES, type PlanId } from "@/lib/plans";
 
 /** Days of continued access after a failed renewal before the account lapses. */
@@ -35,8 +34,8 @@ function addMonths(date: Date, n: number): Date {
 export interface ConfirmedPayment {
   /** Grow transaction id of the successful charge (globally unique). */
   transactionId?: string;
-  /** Reusable Grow card token for future renewals (stored encrypted). */
-  cardToken?: string;
+  /** Grow direct-debit id (הוראת קבע) — links the monthly renewals to this sub. */
+  directDebitId?: string;
   cardSuffix?: string;
 }
 
@@ -81,7 +80,7 @@ export async function confirmSubscriptionPayment(
         lastChargeAt: now,
         lastFailureReason: null,
         ...(payment.transactionId ? { providerTransactionId: payment.transactionId } : {}),
-        ...(payment.cardToken ? { cardTokenEncrypted: encryptSecret(payment.cardToken) } : {}),
+        ...(payment.directDebitId ? { directDebitId: payment.directDebitId } : {}),
         ...(payment.cardSuffix ? { cardSuffix: payment.cardSuffix } : {}),
       },
     }),

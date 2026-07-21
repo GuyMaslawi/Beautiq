@@ -73,8 +73,8 @@ describe("GET /api/health", () => {
     vi.stubEnv("CRON_SECRET", "right-secret");
     vi.stubEnv("ENABLE_REAL_WHATSAPP_SEND", "true");
     vi.stubEnv("WHATSAPP_TEST_MODE", "FALSE");
-    vi.stubEnv("PAYMENTS_ENABLED", "true");
-    vi.stubEnv("PAYMENT_PROVIDER", "mock");
+    vi.stubEnv("SUBSCRIPTIONS_ENABLED", "true");
+    vi.stubEnv("MAKE_GROW_CREATE_LINK_WEBHOOK_URL", "https://hook.make.com/abc");
     vi.stubEnv("META_WEBHOOK_APP_SECRET", "secret-value");
 
     const res = await GET(req("Bearer right-secret"));
@@ -83,20 +83,19 @@ describe("GET /api/health", () => {
     expect(body.config).toBeDefined();
     expect(body.config.realWhatsAppSend).toBe(true);
     expect(body.config.whatsAppTestMode).toBe(false);
-    expect(body.config.paymentsEnabled).toBe(true);
-    expect(body.config.paymentProvider).toBe("mock");
+    expect(body.config.subscriptionsEnabled).toBe(true);
+    expect(body.config.growCreateLinkWebhookSet).toBe(true);
     expect(body.config.webhookAppSecretSet).toBe(true);
     expect(body.config.whatsAppEncryptionKeySet).toBe(false);
     expect(body.env).toEqual({ errors: [], warnings: ["w1"] });
   });
 
-  it("maps an empty PAYMENT_PROVIDER to null in config", async () => {
+  it("reports the Grow/Make webhook as unset when missing", async () => {
     prisma.$queryRaw.mockResolvedValue([1]);
     vi.stubEnv("CRON_SECRET", "right-secret");
-    vi.stubEnv("PAYMENT_PROVIDER", "   ");
 
     const res = await GET(req("Bearer right-secret"));
     const body = await res.json();
-    expect(body.config.paymentProvider).toBeNull();
+    expect(body.config.growCreateLinkWebhookSet).toBe(false);
   });
 });

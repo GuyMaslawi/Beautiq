@@ -72,56 +72,6 @@ enum BookingSource {
   waitlist
 }
 
-/// Status of an individual Payment record.
-enum PaymentStatus {
-  not_required
-  pending
-  paid
-  failed
-  refunded
-}
-
-/// What a payment represents.
-enum PaymentType {
-  full
-  balance
-  refund
-}
-
-/// Online payment / clearing provider for booking payments.
-/// `mock` is the safe dev/test default; real providers are added incrementally.
-enum PaymentProviderKind {
-  mock
-  payplus
-  grow_meshulam
-  tranzila
-  disabled
-}
-
-/// Whether a booking requires upfront online payment.
-enum PaymentRequirement {
-  none
-  full_payment
-}
-
-/// Connection state of a business's payment provider credentials.
-enum PaymentConnectionStatus {
-  not_connected
-  active
-  error
-}
-
-/// Lifecycle of a single hosted-payment-link booking payment.
-enum BookingPaymentStatus {
-  pending
-  payment_link_created
-  paid
-  failed
-  cancelled
-  expired
-  refunded
-}
-
 enum MessageTemplateType {
   booking_confirmation
   booking_reminder
@@ -324,11 +274,17 @@ model User {
 }
 
 /// Self-serve account subscription — the owner's paid Allura plan, billed through
-/// Grow (Meshulam) as a recurring monthly charge. One per user. `User.plan` is the
-/// fast gate flag mirrored from here: it is set only once `status` becomes
-/// `active` (a confirmed payment) and cleared when the subscription lapses, so the
-/// app gate never opens on an unpaid or expired account. NOT tenant-owned — the
-/// subscription belongs to the user, since businesses are created later, inside the app.
+/// Grow (Meshulam) as a recurring monthly direct debit (הוראת קבע). One per user.
+/// `User.plan` is the fast gate flag mirrored from here: it is set only once
+/// `status` becomes `active` (a confirmed payment) and cleared when the
+/// subscription lapses, so the app gate never opens on an unpaid or expired
+/// account. NOT tenant-owned — the subscription belongs to the user, since
+/// businesses are created later, inside the app.
+///
+/// The Grow payment link is created through a Make (Integromat) scenario, so
+/// Allura never holds Grow API credentials. Grow charges the direct debit every
+/// month on its side and POSTs a server notification to our webhook each cycle —
+/// there is no renewal cron and no card token stored here.
 model AccountSubscription {
   id       String                    @id @default(cuid())
   userId   String                    @unique
@@ -341,19 +297,20 @@ model AccountSubscription {
   priceMinor Int
   currency   String @default("ILS")
 
-  /// Grow checkout process identifiers (from createPaymentProcess).
+  /// Grow payment-link process identifiers (returned when the link is created).
   processId    String?
   processToken String?
   /// Secret nonce we pass to Grow as a custom field and match back on the
   /// server-to-server callback — authenticates the notification alongside processToken.
   checkoutNonce String?
 
+  /// Grow direct-debit authorization id (הוראת קבע). Set on the first charge and
+  /// used to match the automatic monthly renewal notifications to this subscription.
+  directDebitId String?
   /// Grow transactionId of the most recent successful charge (globally unique).
   providerTransactionId String? @unique
-  /// Encrypted (AES-256-GCM) Grow card token used to charge the recurring monthly
-  /// renewals server-side. Never stored or logged in plaintext.
-  cardTokenEncrypted String?
-  cardSuffix         String?
+  /// Last 4 digits of the paying card, for display only.
+  cardSuffix String?
 
   currentPeriodStart DateTime?
   currentPeriodEnd   DateTime?
@@ -366,6 +323,7 @@ model AccountSubscription {
   updatedAt DateTime @updatedAt
 
   @@index([status, currentPeriodEnd])
+  @@index([directDebitId])
 }
 
 /// Seeded reference table of beauty/wellness categories. NOT tenant-owned.
@@ -423,7 +381,6 @@ model Business {
   bookings               Booking[]
   availabilityRules      AvailabilityRule[]
   availabilityExceptions AvailabilityException[]
-  payments               Payment[]
   cancellationPolicy     CancellationPolicy?
   messageTemplates       MessageTemplate[]
   reminders              Reminder[]
@@ -439,9 +396,6 @@ model Business {
   automationMessages     AutomationMessage[]
   whatsappCampaigns      WhatsAppCampaign[]
   campaignRecipients     WhatsAppCampaignRecipient[]
-  paymentSettings        BusinessPaymentSettings?
-  paymentConnection      PaymentProviderConnection?
-  bookingPayments        BookingPayment[]
   loyaltyProgram         LoyaltyProgram?
   loyaltyRedemptions     LoyaltyRedemption[]
 }
@@ -542,11 +496,9 @@ model Client {
 
   business           Business                    @relation(fields: [businessId], references: [id], onDelete: Cascade)
   bookings           Booking[]
-  payments           Payment[]
   waitlistEntries    WaitlistEntry[]
   recommendations    Recommendation[]
   automationMessages AutomationMessage[]
-  bookingPayments    BookingPayment[]
   campaignRecipients WhatsAppCampaignRecipient[]
   loyaltyRedemptions LoyaltyRedemption[]
 
@@ -594,11 +546,9 @@ model Booking {
   // at the original one it replaced.
   rescheduledFrom    Booking?            @relation("BookingReschedule", fields: [rescheduledFromBookingId], references: [id], onDelete: SetNull)
   rescheduledTo      Booking[]           @relation("BookingReschedule")
-  payments           Payment[]
   reminders          Reminder[]
   recommendations    Recommendation[]
   automationMessages AutomationMessage[]
-  bookingPayment     BookingPayment?
 
   @@index([businessId, startTime])
   @@index([businessId, status])
@@ -655,31 +605,8 @@ model AvailabilityException {
 }
 
 // ---------------------------------------------------------------------------
-// Payments & policy
+// Policy
 // ---------------------------------------------------------------------------
-
-/// A payment record. V1 is manual tracking only (no real provider).
-model Payment {
-  id           String        @id @default(cuid())
-  businessId   String
-  bookingId    String
-  clientId     String?
-  amount       Decimal       @db.Decimal(10, 2)
-  currency     String        @default("ILS")
-  type         PaymentType
-  status       PaymentStatus @default(pending)
-  method       String        @default("manual")
-  markedPaidAt DateTime?
-  refundedAt   DateTime?
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-
-  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  booking  Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  client   Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
-
-  @@index([businessId, bookingId])
-}
 
 /// One cancellation policy per business.
 model CancellationPolicy {
@@ -1145,89 +1072,6 @@ model WhatsAppCampaignRecipient {
   @@index([metaMessageId])
 }
 
-// ---------------------------------------------------------------------------
-// Booking payments (online clearing)
-//
-// Money is stored in MINOR units (agorot, Int) on these models — payment
-// providers (PayPlus / Grow / Tranzila) all work in agorot. This is distinct
-// from the Decimal(10,2) major-unit amounts used elsewhere (Service.price,
-// Payment.amount); conversion happens at the boundary.
-// ---------------------------------------------------------------------------
-
-/// Per-business payment policy for the public booking page. One row per business.
-/// Owners can configure this freely; real money never moves until a provider
-/// connection is active AND server-side env gating is enabled.
-model BusinessPaymentSettings {
-  id                 String              @id @default(cuid())
-  businessId         String              @unique
-  /// Master switch — show an online payment step on the public booking page.
-  enabled            Boolean             @default(false)
-  provider           PaymentProviderKind @default(mock)
-  requirement        PaymentRequirement  @default(none)
-  /// Allow the customer to choose "I'll pay at the business" instead of paying now.
-  allowPayAtBusiness Boolean             @default(true)
-  /// Optional free-text instructions / cancellation note shown near the pay step.
-  instructions       String?
-  createdAt          DateTime            @default(now())
-  updatedAt          DateTime            @updatedAt
-
-  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-}
-
-/// Encrypted provider credentials + connection state. One row per business.
-/// Mirrors WhatsAppConnection: secrets are AES-256-GCM encrypted and never
-/// returned to the client.
-model PaymentProviderConnection {
-  id                   String                  @id @default(cuid())
-  businessId           String                  @unique
-  provider             PaymentProviderKind     @default(mock)
-  status               PaymentConnectionStatus @default(not_connected)
-  /// Encrypted JSON blob of provider credentials — never returned to the client.
-  credentialsEncrypted String?
-  /// Non-secret public config (e.g. terminal name, page UID) — safe to read.
-  publicConfigJson     Json?
-  lastVerifiedAt       DateTime?
-  /// Last error message — safe to display in admin UI (never contains secrets).
-  lastError            String?
-  createdAt            DateTime                @default(now())
-  updatedAt            DateTime                @updatedAt
-
-  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-}
-
-/// One hosted-payment-link payment per booking. The booking itself stays
-/// `pending` (never auto-confirmed); this record tracks the money. Payment is
-/// only ever confirmed `paid` from a verified provider webhook / server check,
-/// never from a client-side success redirect.
-model BookingPayment {
-  id                    String               @id @default(cuid())
-  businessId            String
-  bookingId             String               @unique
-  clientId              String?
-  provider              PaymentProviderKind
-  status                BookingPaymentStatus @default(pending)
-  /// Amount to collect, in agorot.
-  amountMinor           Int
-  currency              String               @default("ILS")
-  /// Hosted payment page URL the customer is sent to.
-  paymentUrl            String?
-  /// Provider's transaction / page reference — idempotency key for webhooks.
-  providerTransactionId String?              @unique
-  /// Sanitized provider payload (no PAN, no secrets) for debugging/audit.
-  providerPayloadJson   Json?
-  expiresAt             DateTime?
-  paidAt                DateTime?
-  failedAt              DateTime?
-  createdAt             DateTime             @default(now())
-  updatedAt             DateTime             @updatedAt
-
-  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
-  booking  Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  client   Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
-
-  @@index([businessId, status])
-  @@index([businessId, bookingId])
-}
 
 // ---------------------------------------------------------------------------
 // Loyalty (visit-based punch card)

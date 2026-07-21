@@ -101,42 +101,18 @@ export function checkEnv(): EnvCheckResult {
     );
   }
 
-  // ── תשלומים — נבדק רק כשהתשלומים מופעלים ──────────────────────
-  if (isTrue("PAYMENTS_ENABLED")) {
-    const provider = (process.env.PAYMENT_PROVIDER ?? "").trim();
-    const isRealProvider = provider !== "" && provider !== "mock" && provider !== "disabled";
-    if (isRealProvider) {
-      if (!isSet("PAYMENTS_CREDENTIALS_ENCRYPTION_KEY")) {
-        errors.push(
-          "PAYMENTS_CREDENTIALS_ENCRYPTION_KEY חסר — לא ניתן להצפין/לפענח פרטי ספק תשלום.",
-        );
-      }
-      if (isProd && !isSet("PAYMENT_WEBHOOK_SECRET")) {
-        errors.push(
-          "PAYMENT_WEBHOOK_SECRET חסר — Webhook התשלומים יידחה (403) בפרודקשן עבור ספק אמיתי.",
-        );
-      }
-    }
-  }
-
-  // ── מנויים (Grow) — נבדק רק כשחיוב המנויים מופעל ─────────────────────
+  // ── מנויים (Grow דרך Make) — נבדק רק כשחיוב המנויים מופעל ─────────────
   if (isTrue("SUBSCRIPTIONS_ENABLED")) {
-    for (const name of ["GROW_USER_ID", "GROW_PAGE_CODE"]) {
-      if (!isSet(name)) {
-        errors.push(
-          `${name} חסר — SUBSCRIPTIONS_ENABLED=true אך פרטי הסליקה של Grow לא מלאים.`,
-        );
-      }
-    }
-    // נדרש להצפין את טוקן הכרטיס לחיובים החוזרים (הוראת קבע).
-    if (!isSet("PAYMENTS_CREDENTIALS_ENCRYPTION_KEY")) {
+    // יצירת קישור התשלום מתווכת דרך תרחיש Make; פרטי Grow עצמם שמורים ב-Make,
+    // לכן אצלנו נדרש רק כתובת ה-Webhook של התרחיש.
+    if (!isSet("MAKE_GROW_CREATE_LINK_WEBHOOK_URL")) {
       errors.push(
-        "PAYMENTS_CREDENTIALS_ENCRYPTION_KEY חסר — לא ניתן להצפין את טוקן הכרטיס לחידוש המנוי החודשי.",
+        "MAKE_GROW_CREATE_LINK_WEBHOOK_URL חסר — SUBSCRIPTIONS_ENABLED=true אך כתובת ה-Webhook של Make ליצירת קישור התשלום לא מוגדרת.",
       );
     }
-    if (isProd && (process.env.GROW_ENV ?? "").trim().toLowerCase() !== "production") {
-      warnings.push(
-        "GROW_ENV אינו 'production' בעוד המערכת רצה בפרודקשן — חיובי המנויים ינותבו ל-sandbox של Grow.",
+    if (isProd && !isSet("NEXT_PUBLIC_APP_URL")) {
+      errors.push(
+        "NEXT_PUBLIC_APP_URL חסר — נדרש כדי לבנות את כתובת ה-notifyUrl שאליה Grow מדווח על התשלום.",
       );
     }
   }

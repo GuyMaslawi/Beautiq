@@ -144,7 +144,6 @@ async function main() {
   await prisma.recommendation.deleteMany({ where: { businessId: business.id } });
   await prisma.reminder.deleteMany({ where: { businessId: business.id } });
   await prisma.waitlistEntry.deleteMany({ where: { businessId: business.id } });
-  await prisma.payment.deleteMany({ where: { businessId: business.id } });
   // Null out self-referential FK before deleting bookings
   await prisma.booking.updateMany({
     where: { businessId: business.id },

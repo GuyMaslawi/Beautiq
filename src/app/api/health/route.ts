@@ -54,11 +54,10 @@ export async function GET(req: NextRequest) {
       realWhatsAppSend: isTrue("ENABLE_REAL_WHATSAPP_SEND"),
       whatsAppTestMode: isTrue("WHATSAPP_TEST_MODE"),
       whatsAppEnvFallback: isTrue("WHATSAPP_USE_ENV_FALLBACK"),
-      paymentsEnabled: isTrue("PAYMENTS_ENABLED"),
-      paymentProvider: (process.env.PAYMENT_PROVIDER ?? "").trim() || null,
+      subscriptionsEnabled: isTrue("SUBSCRIPTIONS_ENABLED"),
+      growCreateLinkWebhookSet: isSet("MAKE_GROW_CREATE_LINK_WEBHOOK_URL"),
       webhookAppSecretSet: isSet("META_WEBHOOK_APP_SECRET"),
       whatsAppEncryptionKeySet: isSet("WHATSAPP_CREDENTIALS_ENCRYPTION_KEY"),
-      paymentsEncryptionKeySet: isSet("PAYMENTS_CREDENTIALS_ENCRYPTION_KEY"),
     };
     body.env = { errors: env.errors, warnings: env.warnings };
   }
