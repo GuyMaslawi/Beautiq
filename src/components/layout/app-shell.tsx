@@ -2,16 +2,20 @@ import * as React from "react";
 import { Sidebar } from "@/components/layout/sidebar";
 import { Header } from "@/components/layout/header";
 import { ScrollReset } from "@/components/layout/scroll-reset";
+import { AssistantWidget } from "@/components/assistant/assistant-widget";
 
 export function AppShell({
   userName,
   businessName,
   isAdmin = false,
+  assistantEnabled = false,
   children,
 }: {
   userName: string | null;
   businessName: string | null;
   isAdmin?: boolean;
+  /** Show the floating AI assistant chat launcher (platinum/admin only). */
+  assistantEnabled?: boolean;
   children: React.ReactNode;
 }) {
   return (
@@ -27,6 +31,9 @@ export function AppShell({
           {children}
         </main>
       </div>
+
+      {/* Floating AI assistant — platinum/admin only (gated at the layout). */}
+      {assistantEnabled && <AssistantWidget />}
     </div>
   );
 }

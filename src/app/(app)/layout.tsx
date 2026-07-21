@@ -1,4 +1,4 @@
-import { requirePaidUser, getCurrentBusiness } from "@/server/auth/session";
+import { requirePaidUser, getCurrentBusiness, hasPlatinumAccess } from "@/server/auth/session";
 import { AppShell } from "@/components/layout/app-shell";
 
 /**
@@ -15,9 +15,15 @@ export default async function AppLayout({
 }) {
   const user = await requirePaidUser();
   const business = await getCurrentBusiness();
+  const assistantEnabled = await hasPlatinumAccess();
 
   return (
-    <AppShell userName={user.name ?? user.email} businessName={business?.name ?? null} isAdmin={user.isAdmin}>
+    <AppShell
+      userName={user.name ?? user.email}
+      businessName={business?.name ?? null}
+      isAdmin={user.isAdmin}
+      assistantEnabled={assistantEnabled}
+    >
       {children}
     </AppShell>
   );

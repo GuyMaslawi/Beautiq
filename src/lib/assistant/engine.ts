@@ -59,7 +59,8 @@ export type AssistantIntent =
   | "pricing"
   | "loyalty"
   | "clients"
-  | "topServices";
+  | "topServices"
+  | "schedule";
 
 export interface AssistantAction {
   label: string;
@@ -96,7 +97,8 @@ const INTENT_KEYWORDS: { intent: AssistantIntent; keywords: string[] }[] = [
   { intent: "pricing", keywords: ["מחיר", "מחירים", "תמחור", "יקר", "זול", "לתמחר"] },
   { intent: "topServices", keywords: ["שירות", "שירותים", "רווחי", "פופולרי", "הכי טוב", "מכניס"] },
   { intent: "revenue", keywords: ["הכנס", "הכנסתי", "רווח", "כסף", "מחזור", "כמה עשיתי", "הרווחתי", "יעד"] },
-  { intent: "today", keywords: ["היום", "לעשות", "מה כדאי", "פעולה", "המלצ", "טיפ", "עדיפות"] },
+  { intent: "today", keywords: ["לעשות", "מה כדאי", "פעולה", "המלצ", "טיפ", "עדיפות"] },
+  { intent: "schedule", keywords: ["תור", "תורים", "יומן", "פגיש", "לו״ז", "לוז", "מחר", "השבוע", "היום", "קבוע"] },
   { intent: "clients", keywords: ["לקוח", "לקוחות", "כמה אנשים"] },
 ];
 
@@ -265,6 +267,32 @@ function answerTopServices(ctx: AssistantContext): AssistantAnswer {
   };
 }
 
+function answerSchedule(ctx: AssistantContext): AssistantAnswer {
+  const lines: string[] = [];
+  if (ctx.bookingsToday > 0) lines.push(`היום יש לך ${ctx.bookingsToday} תורים ביומן.`);
+  else lines.push("אין לך תורים היום.");
+
+  if (ctx.upcomingBookingsCount > 0) {
+    lines.push(`בסך הכול ${ctx.upcomingBookingsCount} תורים עתידיים קבועים ביומן.`);
+  } else {
+    lines.push("אין תורים עתידיים קבועים כרגע — הזדמנות טובה לפנות ללקוחות ולמלא את היומן.");
+  }
+
+  if (ctx.emptySlotsCount > 0) {
+    lines.push(`יש גם ${ctx.emptySlotsCount} חלונות פנויים השבוע שאפשר למלא.`);
+  }
+
+  return {
+    intent: "schedule",
+    title: "היומן שלך",
+    lines,
+    actions: [
+      { label: "התורים שלי", href: "/bookings" },
+      { label: "חלונות פנויים", href: "/empty-slots" },
+    ],
+  };
+}
+
 const BUILDERS: Record<AssistantIntent, (ctx: AssistantContext) => AssistantAnswer> = {
   revenue: answerRevenue,
   atRisk: answerAtRisk,
@@ -274,6 +302,7 @@ const BUILDERS: Record<AssistantIntent, (ctx: AssistantContext) => AssistantAnsw
   loyalty: answerLoyalty,
   clients: answerClients,
   topServices: answerTopServices,
+  schedule: answerSchedule,
 };
 
 export function answerIntent(ctx: AssistantContext, intent: AssistantIntent): AssistantAnswer {

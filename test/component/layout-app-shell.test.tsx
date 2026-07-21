@@ -5,6 +5,9 @@ import { AppShell } from "@/components/layout/app-shell";
 
 vi.mock("next/navigation", () => ({ usePathname: () => "/dashboard" }));
 vi.mock("@/server/auth/actions", () => ({ signOutAction: vi.fn() }));
+// The floating assistant widget imports a server action (next-auth chain); stub
+// it so the shell test doesn't pull server-only deps into jsdom.
+vi.mock("@/server/assistant/actions", () => ({ loadAssistantContextAction: vi.fn() }));
 vi.mock("motion/react", async () => {
   const React = await import("react");
   const strip = () => React.createElement("div");

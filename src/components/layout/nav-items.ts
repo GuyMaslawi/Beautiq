@@ -13,7 +13,6 @@ export interface NavGroup {
 /** Flat list — kept for any code that iterates all items without grouping. */
 export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/dashboard", label: NAV.dashboard },
-  { href: "/assistant", label: NAV.assistant },
   { href: "/bookings", label: NAV.bookings },
   { href: "/clients", label: NAV.clients },
   { href: "/services", label: NAV.services },
@@ -32,7 +31,6 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     label: "ניהול יומי",
     items: [
       { href: "/dashboard", label: NAV.dashboard },
-      { href: "/assistant", label: NAV.assistant },
       { href: "/bookings", label: NAV.bookings },
       { href: "/clients", label: NAV.clients },
     ],

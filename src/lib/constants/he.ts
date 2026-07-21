@@ -2638,6 +2638,20 @@ export const ASSISTANT = {
   pageSubtitle: "שאלי אותי כל דבר על העסק — אני עונה מתוך הנתונים האמיתיים שלך.",
   eyebrow: "Allura AI",
 
+  // עוזר צף (Floating chat widget)
+  launcherLabel: "עוזר AI",
+  launcherAria: "פתיחת עוזר AI",
+  closeAria: "סגירת עוזר AI",
+  headerTitle: "עוזר Allura",
+  headerSubtitle: "כאן לענות על כל שאלה על העסק",
+  loading: "טוען את הנתונים שלך…",
+  refreshing: "מעדכן נתונים…",
+  errorTitle: "לא הצלחתי לטעון את הנתונים",
+  errorBody: "משהו השתבש בטעינת נתוני העסק. אפשר לנסות שוב.",
+  retry: "נסי שוב",
+  noBusiness: "צריך קודם ליצור עסק כדי שאוכל לעזור. אפשר להתחיל מהמסך הראשי.",
+  greeting: "היי! אני עוזר Allura. שאלי אותי כל דבר על העסק — או בחרי מהשאלות למטה.",
+
   briefingTitle: "הסיכום שלך להיום",
   briefingEmpty: "עוד אין מספיק נתונים לסיכום. ברגע שיתחילו להיכנס תורים — כאן יופיע הסיכום היומי שלך.",
 
