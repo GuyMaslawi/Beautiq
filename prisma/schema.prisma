@@ -211,6 +211,19 @@ enum SubscriptionStatus {
   pending_payment
 }
 
+/// Lifecycle of a self-serve account subscription (the owner paying Allura for
+/// their plan through Grow). `pending` = checkout created, not yet paid;
+/// `active` = paid & within the current billing period; `past_due` = a recurring
+/// charge failed but the grace window is still open; `cancelled`/`expired` =
+/// access closed (the app gate sends the user back to /subscribe).
+enum AccountSubscriptionStatus {
+  pending
+  active
+  past_due
+  cancelled
+  expired
+}
+
 enum DiscountType {
   none
   fixed
@@ -306,7 +319,53 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  memberships BusinessUser[]
+  memberships  BusinessUser[]
+  subscription AccountSubscription?
+}
+
+/// Self-serve account subscription — the owner's paid Allura plan, billed through
+/// Grow (Meshulam) as a recurring monthly charge. One per user. `User.plan` is the
+/// fast gate flag mirrored from here: it is set only once `status` becomes
+/// `active` (a confirmed payment) and cleared when the subscription lapses, so the
+/// app gate never opens on an unpaid or expired account. NOT tenant-owned — the
+/// subscription belongs to the user, since businesses are created later, inside the app.
+model AccountSubscription {
+  id       String                    @id @default(cuid())
+  userId   String                    @unique
+  user     User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan     AccountPlan
+  status   AccountSubscriptionStatus @default(pending)
+  provider String                    @default("grow")
+
+  /// Authoritative price for the recurring charge, in agorot (₪1 = 100).
+  priceMinor Int
+  currency   String @default("ILS")
+
+  /// Grow checkout process identifiers (from createPaymentProcess).
+  processId    String?
+  processToken String?
+  /// Secret nonce we pass to Grow as a custom field and match back on the
+  /// server-to-server callback — authenticates the notification alongside processToken.
+  checkoutNonce String?
+
+  /// Grow transactionId of the most recent successful charge (globally unique).
+  providerTransactionId String? @unique
+  /// Encrypted (AES-256-GCM) Grow card token used to charge the recurring monthly
+  /// renewals server-side. Never stored or logged in plaintext.
+  cardTokenEncrypted String?
+  cardSuffix         String?
+
+  currentPeriodStart DateTime?
+  currentPeriodEnd   DateTime?
+  activatedAt        DateTime?
+  cancelledAt        DateTime?
+  lastChargeAt       DateTime?
+  lastFailureReason  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, currentPeriodEnd])
 }
 
 /// Seeded reference table of beauty/wellness categories. NOT tenant-owned.

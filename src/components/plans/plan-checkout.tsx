@@ -7,83 +7,56 @@ import {
   ArrowLeft,
   ShieldCheck,
   Lock,
-  CreditCard,
   Loader2,
   Gem,
   Flower2,
   Check,
+  CreditCard,
 } from "lucide-react";
+import { startSubscriptionCheckoutAction } from "@/server/subscription/actions";
 import type { PlanInfo } from "@/lib/plans";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
-function formatCardNumber(v: string) {
-  const digits = v.replace(/\D/g, "").slice(0, 16);
-  return digits.replace(/(.{4})/g, "$1 ").trim();
-}
-function formatExpiry(v: string) {
-  const digits = v.replace(/\D/g, "").slice(0, 4);
-  if (digits.length <= 2) return digits;
-  return `${digits.slice(0, 2)}/${digits.slice(2)}`;
-}
-
 /**
- * Mock checkout (V1 has no real payment provider — see CLAUDE.md §13). Renders an
- * order summary + card form and calls `action` on submit; on success it routes
- * to `redirectTo`. Shared by the signup paywall and the Premium→Platinum upgrade.
+ * Subscription checkout summary. Allura never collects card details itself — the
+ * owner pays on Grow's (Meshulam) secure hosted page. This shows the order
+ * summary and a single CTA that opens the checkout: it calls the server action,
+ * then redirects to Grow's hosted page (or, when Grow is not configured in dev,
+ * straight into the app). Shared by the signup paywall and the upgrade flow.
  */
-export function MockPaymentForm({
+export function PlanCheckout({
   plan,
-  action,
-  redirectTo,
   submitLabel,
   onBack,
   backLabel = "חזרה",
 }: {
   plan: PlanInfo;
-  action: (planId: string) => Promise<{ ok: boolean; error?: string }>;
-  redirectTo: string;
   submitLabel?: string;
   onBack?: () => void;
   backLabel?: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [card, setCard] = useState("");
-  const [name, setName] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [cvc, setCvc] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  const cardValid = card.replace(/\s/g, "").length === 16;
-  const expiryValid = /^\d{2}\/\d{2}$/.test(expiry);
-  const cvcValid = /^\d{3,4}$/.test(cvc);
-  const nameValid = name.trim().length >= 2;
-  const formValid = cardValid && expiryValid && cvcValid && nameValid;
-
-  function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function handleContinue() {
     setError(null);
-    if (!formValid) {
-      setError("נא למלא את פרטי התשלום במלואם.");
-      return;
-    }
     startTransition(async () => {
-      const result = await action(plan.id);
-      if (!result.ok) {
+      const result = await startSubscriptionCheckoutAction(plan.id);
+      if (!result.ok || !result.redirectUrl) {
         setError(result.error ?? "אירעה תקלה. נסי שוב.");
         return;
       }
-      router.replace(redirectTo);
-      router.refresh();
+      if (/^https?:\/\//i.test(result.redirectUrl)) {
+        // External (Grow) hosted payment page.
+        window.location.href = result.redirectUrl;
+      } else {
+        router.replace(result.redirectUrl);
+        router.refresh();
+      }
     });
   }
-
-  const fieldStyle: React.CSSProperties = {
-    background: "rgba(255,255,255,0.06)",
-    border: "1px solid rgba(255,255,255,0.14)",
-    color: "#fff",
-  };
 
   return (
     <motion.div
@@ -161,9 +134,8 @@ export function MockPaymentForm({
           </div>
         </div>
 
-        {/* Payment form */}
-        <form
-          onSubmit={handleSubmit}
+        {/* Secure checkout panel */}
+        <div
           className="order-1 flex flex-col rounded-[1.75rem] p-7 md:order-2"
           style={{
             background: "rgba(255,255,255,0.04)",
@@ -172,65 +144,33 @@ export function MockPaymentForm({
             backdropFilter: "blur(10px)",
           }}
         >
-          <div className="mb-5 flex items-center gap-2">
+          <div className="mb-4 flex items-center gap-2">
             <CreditCard className="h-5 w-5" style={{ color: "#e7a9c4" }} />
-            <h3 className="text-lg font-bold text-white">פרטי תשלום</h3>
+            <h3 className="text-lg font-bold text-white">תשלום מאובטח</h3>
           </div>
 
-          <label className="mb-1.5 block text-xs font-medium" style={{ color: "rgba(255,255,255,0.65)" }}>
-            מספר כרטיס
-          </label>
-          <input
-            inputMode="numeric"
-            dir="ltr"
-            placeholder="0000 0000 0000 0000"
-            value={card}
-            onChange={(e) => setCard(formatCardNumber(e.target.value))}
-            className="mb-4 w-full rounded-xl px-4 py-3 text-left text-sm tracking-widest tabular-nums outline-none transition-colors focus:border-[rgba(231,169,196,0.6)]"
-            style={fieldStyle}
-          />
+          <p className="mb-6 text-sm leading-6" style={{ color: "rgba(255,255,255,0.65)" }}>
+            התשלום מתבצע בעמוד סליקה מאובטח של Grow. פרטי הכרטיס שלך נשמרים אצל חברת
+            הסליקה בלבד — Allura לעולם לא רואה או שומרת את מספר הכרטיס. החיוב מתחדש
+            אוטומטית מדי חודש, וניתן לבטל בכל רגע.
+          </p>
 
-          <label className="mb-1.5 block text-xs font-medium" style={{ color: "rgba(255,255,255,0.65)" }}>
-            שם בעל/ת הכרטיס
-          </label>
-          <input
-            type="text"
-            placeholder="השם כפי שמופיע על הכרטיס"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            className="mb-4 w-full rounded-xl px-4 py-3 text-sm outline-none transition-colors focus:border-[rgba(231,169,196,0.6)]"
-            style={fieldStyle}
-          />
-
-          <div className="mb-5 grid grid-cols-2 gap-3">
-            <div>
-              <label className="mb-1.5 block text-xs font-medium" style={{ color: "rgba(255,255,255,0.65)" }}>
-                תוקף
-              </label>
-              <input
-                inputMode="numeric"
-                dir="ltr"
-                placeholder="MM/YY"
-                value={expiry}
-                onChange={(e) => setExpiry(formatExpiry(e.target.value))}
-                className="w-full rounded-xl px-4 py-3 text-left text-sm tabular-nums outline-none transition-colors focus:border-[rgba(231,169,196,0.6)]"
-                style={fieldStyle}
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-xs font-medium" style={{ color: "rgba(255,255,255,0.65)" }}>
-                CVC
-              </label>
-              <input
-                inputMode="numeric"
-                dir="ltr"
-                placeholder="123"
-                value={cvc}
-                onChange={(e) => setCvc(e.target.value.replace(/\D/g, "").slice(0, 4))}
-                className="w-full rounded-xl px-4 py-3 text-left text-sm tabular-nums outline-none transition-colors focus:border-[rgba(231,169,196,0.6)]"
-                style={fieldStyle}
-              />
-            </div>
+          <div className="mb-6 flex flex-col gap-2.5">
+            {[
+              "מעבר לעמוד סליקה מאובטח (SSL)",
+              "חיוב חודשי מתחדש — הוראת קבע",
+              "ביטול בכל רגע, ללא התחייבות",
+            ].map((t) => (
+              <div key={t} className="flex items-center gap-2">
+                <span
+                  className="flex h-4 w-4 shrink-0 items-center justify-center rounded-full"
+                  style={{ background: "rgba(212,168,83,0.18)", border: "1px solid rgba(212,168,83,0.35)" }}
+                >
+                  <Check className="h-2.5 w-2.5" style={{ color: "#e5bd6a" }} />
+                </span>
+                <span className="text-sm" style={{ color: "rgba(255,255,255,0.80)" }}>{t}</span>
+              </div>
+            ))}
           </div>
 
           {error && (
@@ -243,7 +183,8 @@ export function MockPaymentForm({
           )}
 
           <button
-            type="submit"
+            type="button"
+            onClick={handleContinue}
             disabled={isPending}
             className="flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-base font-bold transition-transform duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70 disabled:hover:translate-y-0"
             style={{
@@ -255,21 +196,21 @@ export function MockPaymentForm({
             {isPending ? (
               <>
                 <Loader2 className="h-5 w-5 animate-spin" />
-                מעבד תשלום…
+                מעבר לתשלום…
               </>
             ) : (
               <>
                 <Lock className="h-4 w-4" />
-                {submitLabel ?? `תשלום ₪${plan.price} והתחלה`}
+                {submitLabel ?? `המשך לתשלום מאובטח — ₪${plan.price}/חודש`}
               </>
             )}
           </button>
 
           <p className="mt-3.5 flex items-center justify-center gap-1.5 text-center text-xs" style={{ color: "rgba(255,255,255,0.40)" }}>
             <Lock className="h-3 w-3" />
-            הפרטים שלך מוגנים ומאובטחים
+            הסליקה מאובטחת ומבוצעת על ידי Grow (משולם)
           </p>
-        </form>
+        </div>
       </div>
     </motion.div>
   );

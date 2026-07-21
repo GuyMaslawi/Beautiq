@@ -3,9 +3,8 @@
 import { useRouter } from "next/navigation";
 import { motion } from "motion/react";
 import { Crown, Sparkles, ArrowLeft } from "lucide-react";
-import { upgradeToPlatinumAction } from "@/server/subscription/actions";
 import { PLATINUM_PLAN } from "@/lib/plans";
-import { MockPaymentForm } from "@/components/plans/mock-payment-form";
+import { PlanCheckout } from "@/components/plans/plan-checkout";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -63,10 +62,8 @@ export function UpgradeClient() {
           </p>
         </motion.div>
 
-        <MockPaymentForm
+        <PlanCheckout
           plan={PLATINUM_PLAN}
-          action={upgradeToPlatinumAction}
-          redirectTo="/dashboard"
           submitLabel={`שדרוג עכשיו — ₪${PLATINUM_PLAN.price}/חודש`}
         />
       </div>

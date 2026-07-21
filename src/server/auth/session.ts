@@ -57,9 +57,10 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
  */
 export async function requirePaidUser(): Promise<CurrentUser> {
   const user = await requireCurrentUser();
-  // Paywall temporarily disabled until a real payment provider is connected —
-  // any authenticated user may enter the product. To re-enable the gate, restore:
-  //   if (!user.plan && !user.isAdmin) redirect("/subscribe");
+  // The paywall: `plan` is set only once a payment is CONFIRMED server-side
+  // (the Grow webhook / return route), and cleared when a subscription lapses —
+  // so this gate opens only for a genuinely paid, active account. Admins bypass.
+  if (!user.plan && !user.isAdmin) redirect("/subscribe");
   return user;
 }
 

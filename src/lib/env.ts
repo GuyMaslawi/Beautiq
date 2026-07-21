@@ -119,5 +119,27 @@ export function checkEnv(): EnvCheckResult {
     }
   }
 
+  // ── מנויים (Grow) — נבדק רק כשחיוב המנויים מופעל ─────────────────────
+  if (isTrue("SUBSCRIPTIONS_ENABLED")) {
+    for (const name of ["GROW_USER_ID", "GROW_PAGE_CODE"]) {
+      if (!isSet(name)) {
+        errors.push(
+          `${name} חסר — SUBSCRIPTIONS_ENABLED=true אך פרטי הסליקה של Grow לא מלאים.`,
+        );
+      }
+    }
+    // נדרש להצפין את טוקן הכרטיס לחיובים החוזרים (הוראת קבע).
+    if (!isSet("PAYMENTS_CREDENTIALS_ENCRYPTION_KEY")) {
+      errors.push(
+        "PAYMENTS_CREDENTIALS_ENCRYPTION_KEY חסר — לא ניתן להצפין את טוקן הכרטיס לחידוש המנוי החודשי.",
+      );
+    }
+    if (isProd && (process.env.GROW_ENV ?? "").trim().toLowerCase() !== "production") {
+      warnings.push(
+        "GROW_ENV אינו 'production' בעוד המערכת רצה בפרודקשן — חיובי המנויים ינותבו ל-sandbox של Grow.",
+      );
+    }
+  }
+
   return { errors, warnings };
 }

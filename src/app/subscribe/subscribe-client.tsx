@@ -11,9 +11,8 @@ import {
   Flower2,
   Star,
 } from "lucide-react";
-import { activateSubscriptionAction } from "@/server/subscription/actions";
 import { PREMIUM_PLAN, PLATINUM_PLAN, PLANS, type PlanId, type PlanInfo } from "@/lib/plans";
-import { MockPaymentForm } from "@/components/plans/mock-payment-form";
+import { PlanCheckout } from "@/components/plans/plan-checkout";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -199,10 +198,8 @@ export function SubscribeClient({ userName }: { userName: string | null }) {
             </motion.div>
           ) : (
             <motion.div key="checkout" className="w-full">
-              <MockPaymentForm
+              <PlanCheckout
                 plan={PLANS[selected]}
-                action={activateSubscriptionAction}
-                redirectTo="/dashboard"
                 onBack={() => setSelected(null)}
                 backLabel="חזרה לבחירת תוכנית"
               />
