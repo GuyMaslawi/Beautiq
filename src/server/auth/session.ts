@@ -57,7 +57,9 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
  */
 export async function requirePaidUser(): Promise<CurrentUser> {
   const user = await requireCurrentUser();
-  if (!user.plan && !user.isAdmin) redirect("/subscribe");
+  // Paywall temporarily disabled until a real payment provider is connected —
+  // any authenticated user may enter the product. To re-enable the gate, restore:
+  //   if (!user.plan && !user.isAdmin) redirect("/subscribe");
   return user;
 }
 

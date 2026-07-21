@@ -383,6 +383,8 @@ model Business {
   paymentSettings        BusinessPaymentSettings?
   paymentConnection      PaymentProviderConnection?
   bookingPayments        BookingPayment[]
+  loyaltyProgram         LoyaltyProgram?
+  loyaltyRedemptions     LoyaltyRedemption[]
 }
 
 /// Membership join between a global User and a Business, carrying the role.
@@ -487,6 +489,7 @@ model Client {
   automationMessages AutomationMessage[]
   bookingPayments    BookingPayment[]
   campaignRecipients WhatsAppCampaignRecipient[]
+  loyaltyRedemptions LoyaltyRedemption[]
 
   @@unique([businessId, normalizedPhone])
   @@index([businessId])
@@ -1165,4 +1168,45 @@ model BookingPayment {
 
   @@index([businessId, status])
   @@index([businessId, bookingId])
+}
+
+// ---------------------------------------------------------------------------
+// Loyalty (visit-based punch card)
+// ---------------------------------------------------------------------------
+
+/// Per-business loyalty program configuration (a visit-based "punch card").
+/// One row per business. Progress per client is derived from completed bookings
+/// minus redemptions — no denormalized counter to keep in sync.
+model LoyaltyProgram {
+  id                 String   @id @default(cuid())
+  businessId         String   @unique
+  /// Whether the program is active and shown to the owner.
+  isActive           Boolean  @default(true)
+  /// Completed visits needed to earn one reward (e.g. 10 → "10th visit is free").
+  visitsRequired     Int      @default(10)
+  /// Free-text description of the reward the client earns (Hebrew, owner-defined).
+  rewardDescription  String   @default("")
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+}
+
+/// A single earned-reward redemption, logged when the owner marks a reward as
+/// given to a client. Progress = completedVisits - (redemptions * visitsRequired).
+model LoyaltyRedemption {
+  id                 String   @id @default(cuid())
+  businessId         String
+  clientId           String
+  /// The client's completed-visit count at the moment the reward was redeemed
+  /// (audit / display only — progress math relies on the redemption count).
+  visitsAtRedemption Int
+  note               String?
+  redeemedAt         DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  client   Client   @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@index([businessId])
+  @@index([businessId, clientId])
 }
