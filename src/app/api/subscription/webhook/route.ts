@@ -90,16 +90,19 @@ export async function POST(req: NextRequest) {
     return new NextResponse("OK", { status: 200 });
   }
 
-  // Authenticate the first charge with the process token + our nonce. Recurring
-  // runs (matched by the hard-to-guess directDebitId) carry no process token.
+  // Authenticate the first charge with the process token — a per-transaction
+  // secret Grow returned to us at creation and echoes back here. The optional
+  // nonce (cField1) is a bonus check when present, but the token alone is
+  // sufficient, so a scenario that does not round-trip cField1 still works.
   if (matchedByProcess) {
     const tokenOk = safeEqual(subscription.processToken, event.processToken);
-    const nonceOk = !subscription.checkoutNonce || safeEqual(subscription.checkoutNonce, event.nonce);
-    if (!tokenOk || !nonceOk) {
+    const nonceMismatch =
+      !!subscription.checkoutNonce && !!event.nonce && !safeEqual(subscription.checkoutNonce, event.nonce);
+    if (!tokenOk || nonceMismatch) {
       logger.warn("[subscription.webhook] authentication failed", {
         processId: event.processId,
         tokenOk,
-        nonceOk,
+        nonceMismatch,
       });
       return new NextResponse("Unauthorized", { status: 401 });
     }
