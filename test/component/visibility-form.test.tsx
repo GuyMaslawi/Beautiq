@@ -1,29 +1,14 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-
-// Drive useActionState so the formError/success branches are reachable.
-const h = vi.hoisted(() => ({
-  state: {} as Record<string, unknown>,
-  isPending: false,
-}));
-vi.mock("react", async () => {
-  const actual = await vi.importActual<typeof import("react")>("react");
-  return {
-    ...actual,
-    useActionState: () => [h.state, vi.fn(), h.isPending] as const,
-  };
-});
 
 import { VisibilityForm } from "@/components/public-page/visibility-form";
 import { PUBLIC_PAGE } from "@/lib/constants/he";
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  h.state = {};
-  h.isPending = false;
-});
+// The visibility form auto-saves each toggle the moment it is flipped (no
+// separate save button). `action(field, value)` persists a single field and
+// returns `{ error }` on failure so the client can revert.
 
 const ALL_ON = {
   showServices: true,
@@ -35,7 +20,12 @@ const ALL_ON = {
   showAddress: true,
 };
 
-const action = vi.fn(async () => ({}));
+const action = vi.fn(async () => ({}) as { error?: string });
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  action.mockResolvedValue({});
+});
 
 function renderForm(initialValues = ALL_ON) {
   return render(
@@ -55,19 +45,17 @@ describe("VisibilityForm", () => {
     expect(screen.getByText(PUBLIC_PAGE.visibility.showReviews)).toBeInTheDocument();
   });
 
-  it("reflects the initial values in the hidden inputs", () => {
+  it("reflects the initial values on the switches", () => {
     renderForm({ ...ALL_ON, showPrices: false });
-    const priceInput = document.querySelector(
-      'input[name="showPrices"]',
-    ) as HTMLInputElement;
-    expect(priceInput.value).toBe("false");
-    const servicesInput = document.querySelector(
-      'input[name="showServices"]',
-    ) as HTMLInputElement;
-    expect(servicesInput.value).toBe("true");
+    expect(
+      screen.getByRole("switch", { name: PUBLIC_PAGE.visibility.showPrices }),
+    ).toHaveAttribute("aria-checked", "false");
+    expect(
+      screen.getByRole("switch", { name: PUBLIC_PAGE.visibility.showServices }),
+    ).toHaveAttribute("aria-checked", "true");
   });
 
-  it("toggles a switch and updates its backing hidden input", async () => {
+  it("saves instantly on toggle: calls the action with (field, nextValue) and shows saved", async () => {
     renderForm();
     const priceSwitch = screen.getByRole("switch", {
       name: PUBLIC_PAGE.visibility.showPrices,
@@ -75,39 +63,33 @@ describe("VisibilityForm", () => {
     expect(priceSwitch).toHaveAttribute("aria-checked", "true");
 
     await userEvent.click(priceSwitch);
+
+    // Optimistic flip + persisted with the new value.
     expect(priceSwitch).toHaveAttribute("aria-checked", "false");
-    const priceInput = document.querySelector(
-      'input[name="showPrices"]',
-    ) as HTMLInputElement;
-    expect(priceInput.value).toBe("false");
+    expect(action).toHaveBeenCalledWith("showPrices", false);
+
+    // The per-toggle "saved" indicator appears once the action resolves.
+    expect(await screen.findByText(PUBLIC_PAGE.visibility.saved)).toBeInTheDocument();
   });
 
-  it("renders the save button label, and the saving label while pending", () => {
-    const { unmount } = renderForm();
-    expect(
-      screen.getByRole("button", { name: PUBLIC_PAGE.visibility.saveButton }),
-    ).toBeEnabled();
-    unmount();
-
-    h.isPending = true;
+  it("reverts the switch and shows an error when the save fails", async () => {
+    action.mockResolvedValueOnce({ error: "שגיאה בשמירה" });
     renderForm();
-    const btn = screen.getByRole("button", {
-      name: PUBLIC_PAGE.visibility.saving,
+    const priceSwitch = screen.getByRole("switch", {
+      name: PUBLIC_PAGE.visibility.showPrices,
     });
-    expect(btn).toBeDisabled();
-  });
 
-  it("renders the form error alert", () => {
-    h.state = { formError: "שגיאה בשמירה" };
-    renderForm();
+    await userEvent.click(priceSwitch);
+
+    // On failure the optimistic change is rolled back and the error surfaces.
+    await waitFor(() =>
+      expect(priceSwitch).toHaveAttribute("aria-checked", "true"),
+    );
     expect(screen.getByText("שגיאה בשמירה")).toBeInTheDocument();
   });
 
-  it("renders the success message", () => {
-    h.state = { success: PUBLIC_PAGE.visibility.success };
+  it("renders the auto-save hint", () => {
     renderForm();
-    expect(
-      screen.getByText(PUBLIC_PAGE.visibility.success),
-    ).toBeInTheDocument();
+    expect(screen.getByText(PUBLIC_PAGE.visibility.hint)).toBeInTheDocument();
   });
 });

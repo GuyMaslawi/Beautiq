@@ -9,6 +9,7 @@ import { getBooking, hasOverlap } from "@/server/bookings/queries";
 import { findOrCreateClient } from "@/server/clients/find-or-create";
 import { syncClientStats } from "@/server/clients/stats";
 import { sendBookingConfirmationById } from "@/server/public-booking/send-confirmation";
+import { sendThankYouForCompletedBooking } from "@/server/review-request/on-complete";
 import { notifyOwnerOfClientEvent } from "@/server/notifications/owner-email";
 import { logActivity } from "@/server/activity/log";
 import { validateBooking } from "@/lib/validation/booking";
@@ -202,6 +203,12 @@ export async function completeBookingAction(bookingId: string): Promise<void> {
     await syncClientStats({ businessId: tenant.businessId, clientId: booking.clientId });
   }
   if (updated.count > 0) {
+    // Send the thank-you / review WhatsApp to the client immediately (respects the
+    // review_request toggle; dedupes with the cron via reviewRequestSentAt).
+    await sendThankYouForCompletedBooking({
+      businessId: tenant.businessId,
+      bookingId,
+    });
     await notifyOwnerOfClientEvent({
       businessId: tenant.businessId,
       bookingId,

@@ -40,6 +40,13 @@ vi.mock("next-auth", () => {
   return { AuthError: StubAuthError };
 });
 
+// The actions read the client IP from request headers for rate limiting. Outside
+// a request scope `next/headers` has no context, so we stub it with an empty
+// header bag — getClientIp then falls back to "unknown".
+vi.mock("next/headers", () => ({
+  headers: async () => new Headers(),
+}));
+
 import {
   signupAction,
   loginAction,
@@ -48,10 +55,13 @@ import {
 import { Prisma } from "@prisma/client";
 import { AuthError as StubAuthError } from "next-auth";
 
-beforeEach(() => {
+beforeEach(async () => {
   resetPrismaMock(prisma);
   signIn.mockReset();
   signOut.mockReset();
+  // המגביל שומר מונים בזיכרון בין הבדיקוֹת — מאפסים כדי שכל בדיקה תתחיל נקייה.
+  const { __resetRateLimitForTests } = await import("@/lib/rate-limit");
+  __resetRateLimitForTests();
 });
 
 function fd(fields: Record<string, string>): FormData {

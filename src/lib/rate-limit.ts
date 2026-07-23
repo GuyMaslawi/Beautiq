@@ -42,6 +42,11 @@ export function checkRateLimit(
   return true;
 }
 
+/** מנקה את כל המונים — לשימוש בבדיקוֹת בלבד (בידוד בין test cases). */
+export function __resetRateLimitForTests(): void {
+  store.clear();
+}
+
 /**
  * Extract a best-effort client IP from Next.js request headers.
  * Falls back to "unknown" when no IP header is present (local dev, etc.).

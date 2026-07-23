@@ -374,13 +374,13 @@ function TargetVsActual({ forecast }: { forecast: RevenueForecastData }) {
       <div className="mb-4 grid grid-cols-3 gap-3">
         <div>
           <p className="text-xs" style={{ color: "var(--muted)" }}>יעד החודש</p>
-          <p className="text-lg font-bold tabular-nums" style={{ color: "#b8960a" }}>
+          <p className="text-base font-bold tabular-nums sm:text-lg" style={{ color: "#b8960a" }}>
             {forecast.monthlyTarget > 0 ? formatILS(forecast.monthlyTarget) : "—"}
           </p>
         </div>
         <div>
           <p className="text-xs" style={{ color: "var(--muted)" }}>צפי לסוף החודש</p>
-          <p className="text-lg font-bold tabular-nums" style={{ color: "#ac5c7f" }}>
+          <p className="text-base font-bold tabular-nums sm:text-lg" style={{ color: "#ac5c7f" }}>
             {formatILS(forecast.expectedRevenue)}
           </p>
         </div>
@@ -389,7 +389,7 @@ function TargetVsActual({ forecast }: { forecast: RevenueForecastData }) {
             {gapClosed ? "עמידה ביעד" : "פער ליעד"}
           </p>
           <p
-            className="text-lg font-bold tabular-nums"
+            className="text-base font-bold tabular-nums sm:text-lg"
             style={{ color: gapClosed ? "#3d8b6e" : "#b8960a" }}
           >
             {gapClosed ? "✓ ביעד" : formatILS(forecast.gapToTarget)}

@@ -63,7 +63,7 @@ export async function ReputationSection() {
       <div className="grid grid-cols-3 gap-3">
         {/* הושלמו לאחרונה */}
         <div
-          className="rounded-2xl px-5 py-4 transition-shadow hover:shadow-md"
+          className="rounded-2xl px-3.5 py-3.5 transition-shadow hover:shadow-md sm:px-5 sm:py-4"
           style={{
             background: summary.recentCompletedCount > 0 ? "rgba(247,238,243,0.85)" : "rgba(255,255,255,0.90)",
             border: `1px solid ${summary.recentCompletedCount > 0 ? "rgba(172,92,127,0.22)" : "var(--border)"}`,
@@ -86,7 +86,7 @@ export async function ReputationSection() {
 
         {/* מוכנים להודעת תודה */}
         <div
-          className="rounded-2xl px-5 py-4 transition-shadow hover:shadow-md"
+          className="rounded-2xl px-3.5 py-3.5 transition-shadow hover:shadow-md sm:px-5 sm:py-4"
           style={{
             background: "rgba(255,255,255,0.90)",
             border: "1px solid var(--border)",
@@ -109,7 +109,7 @@ export async function ReputationSection() {
 
         {/* מוכנים לבקשת ביקורת */}
         <div
-          className="rounded-2xl px-5 py-4 transition-shadow hover:shadow-md"
+          className="rounded-2xl px-3.5 py-3.5 transition-shadow hover:shadow-md sm:px-5 sm:py-4"
           style={{
             background: "rgba(255,255,255,0.90)",
             border: "1px solid var(--border)",

@@ -11,6 +11,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "load:test": "k6 run load-test/smoke.js",
+    "load:smoke": "autocannon -c 100 -d 30 ${BASE_URL:-http://localhost:3000}/api/health",
     "postinstall": "prisma generate",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",

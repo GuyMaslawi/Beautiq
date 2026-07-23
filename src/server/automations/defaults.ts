@@ -24,7 +24,12 @@ import { getDefaultTemplateForType } from "@/lib/whatsapp/default-templates";
 
 interface DefaultAutomationSpec {
   type: AutomationType;
-  /** Reminder timing: thresholdDays=1 → remind the evening before. */
+  /**
+   * Reminder timing (morning_reminder runner):
+   *   thresholdDays=0 → same-day reminder, sent at sendHour on the appointment day.
+   *   thresholdDays=1 → remind the evening before.
+   *   sendHour<0      → relative mode, abs(sendHour) hours before the appointment.
+   */
   thresholdDays: number;
   sendHour: number;
 }
@@ -33,9 +38,13 @@ interface DefaultAutomationSpec {
 const DEFAULT_OPERATIONAL_AUTOMATIONS: DefaultAutomationSpec[] = [
   // Sent immediately when a booking is created/approved — sendHour is unused.
   { type: "booking_confirmation", thresholdDays: 1, sendHour: 10 },
-  // Appointment reminder the evening before the appointment.
-  { type: "morning_reminder", thresholdDays: 1, sendHour: 18 },
-  // Review request ~24h after a completed appointment.
+  // Appointment reminder on the MORNING of the appointment day (08:00 local).
+  // Matches the owner-facing reminder settings (which only allow hours 6–12) and
+  // is the timing owners expect — not the night before.
+  { type: "morning_reminder", thresholdDays: 0, sendHour: 8 },
+  // Review request ~24h after a completed appointment (cron backstop). The
+  // primary thank-you now goes out immediately on completion — see
+  // sendThankYouForCompletedBooking.
   { type: "review_request", thresholdDays: 1, sendHour: 24 },
 ];
 

@@ -227,6 +227,7 @@ export const AUTH = {
     passwordsMismatch: "הסיסמאות אינן תואמות",
     emailTaken: "קיים כבר חשבון עם האימייל הזה",
     invalidCredentials: "האימייל או הסיסמה אינם תקינים",
+    tooManyAttempts: "נשלחו יותר מדי ניסיונות. יש לנסות שוב בעוד כמה דקות",
     generic: "משהו השתבש. יש לנסות שוב בעוד רגע",
   },
   success: {

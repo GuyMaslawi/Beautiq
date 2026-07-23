@@ -76,10 +76,8 @@ export function PublicPagePreviewPanel({ slug }: PublicPagePreviewPanelProps) {
           /* Mobile frame */
           <div className="flex justify-center py-6 px-4">
             <div
-              className="relative overflow-hidden rounded-[2.5rem] border-[8px]"
+              className="relative aspect-[375/650] w-full max-w-[340px] overflow-hidden rounded-[2.5rem] border-[8px]"
               style={{
-                width: 375,
-                height: 650,
                 borderColor: "#2b2530",
                 background: "#fff",
                 boxShadow: "0 8px 32px rgba(43,37,48,0.25)",

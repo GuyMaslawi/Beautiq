@@ -30,7 +30,7 @@ export function AdminClientsSearch({ defaultQ }: Props) {
         name="q"
         defaultValue={defaultQ}
         placeholder="חיפוש לפי שם לקוחה, טלפון, או שם עסק..."
-        className="h-9 min-w-[320px] flex-1 rounded-xl border border-border bg-surface px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-light hover:border-border-strong focus:border-primary focus:ring-2 focus:ring-primary/20"
+        className="h-9 w-full flex-1 rounded-xl border border-border bg-surface px-3 text-sm text-foreground outline-none transition-colors placeholder:text-muted-light hover:border-border-strong focus:border-primary focus:ring-2 focus:ring-primary/20 sm:w-auto sm:min-w-[320px]"
         autoComplete="off"
       />
       <button

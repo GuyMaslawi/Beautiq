@@ -87,7 +87,7 @@ export default function PlansPage() {
     <PremiumPageShell tint="champagne" width="default" gap="loose" className="pb-16">
       {/* Hero */}
       <div
-        className="relative overflow-hidden rounded-3xl px-8 py-14 text-center"
+        className="relative overflow-hidden rounded-3xl px-6 py-14 text-center sm:px-8"
         style={{
           background:
             "linear-gradient(135deg, #4c1535 0%, #6b1e48 40%, #3a0e27 100%)",
@@ -464,7 +464,7 @@ export default function PlansPage() {
 
       {/* Pro teaser */}
       <div
-        className="relative overflow-hidden rounded-3xl px-8 py-10"
+        className="relative overflow-hidden rounded-3xl px-6 py-10 sm:px-8"
         style={{
           background: "linear-gradient(135deg, #2e0d20 0%, #4c1535 60%, #3a0e27 100%)",
           border: "1px solid rgba(212,168,83,0.25)",
@@ -563,7 +563,7 @@ export default function PlansPage() {
 
       {/* Final CTA */}
       <div
-        className="relative overflow-hidden rounded-3xl px-8 py-12 text-center"
+        className="relative overflow-hidden rounded-3xl px-6 py-12 text-center sm:px-8"
         style={{
           background:
             "linear-gradient(135deg, rgba(247,238,243,0.95) 0%, rgba(255,248,253,0.95) 100%)",

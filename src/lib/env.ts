@@ -39,6 +39,36 @@ export function checkEnv(): EnvCheckResult {
   if (!isSet("DATABASE_URL")) {
     errors.push("DATABASE_URL חסר — אין חיבור למסד הנתונים.");
   }
+
+  // ── מאגר חיבורים (connection pool) — קריטי לעומס בסביבת serverless ──
+  // ב-Vercel כל בקשה בו-זמנית עשויה להריץ מופע serverless נפרד, וכל מופע
+  // פותח חיבור Postgres משלו. בלי pooler חיצוני (PgBouncer / Neon-pooler),
+  // עומס של עשרות-מאות משתמשות במקביל מגיע לתקרת החיבורים ומחזיר
+  // "too many connections". הבדיקה רצה בפרודקשן האמיתי (process.env אמיתי שם)
+  // ולכן תתפוס תצורה שגויה שלא ניתן לראות מקומית. אזהרה בלבד — לא חוסמת עלייה.
+  if (isProd && isSet("DATABASE_URL")) {
+    const dbUrl = (process.env.DATABASE_URL ?? "").toLowerCase();
+    const looksPooled =
+      /-pooler\./.test(dbUrl) || // Neon/Supabase pooled host
+      /pgbouncer=true/.test(dbUrl) ||
+      /[?&]connection_limit=/.test(dbUrl);
+    if (!looksPooled) {
+      warnings.push(
+        "DATABASE_URL אינו נראה כמו חיבור מפולל (pooler) — בסביבת serverless תחת עומס " +
+          "זה עלול להגיע לתקרת החיבורים. השתמשו ב-endpoint של ה-pooler והוסיפו " +
+          "?pgbouncer=true&connection_limit=1 (Neon/Supabase). ראו load-test/README.md.",
+      );
+    }
+    // DIRECT_URL מוגדר אך schema.prisma חייב להכריז directUrl כדי שמיגרציות
+    // ירוצו בחיבור ישיר בזמן ש-runtime משתמש ב-pooler. אם הוא מוגדר בלי הכרזה,
+    // סביר שהחיווט לא הושלם.
+    if (isSet("DIRECT_URL") && !looksPooled) {
+      warnings.push(
+        "DIRECT_URL מוגדר אך DATABASE_URL אינו מפולל — ודאו ש-schema.prisma מגדיר " +
+          "directUrl = env(\"DIRECT_URL\") ו-DATABASE_URL מצביע ל-pooler.",
+      );
+    }
+  }
   if (!isSet("AUTH_SECRET")) {
     errors.push("AUTH_SECRET חסר — נדרש לחתימת סשנים (openssl rand -base64 32).");
   }

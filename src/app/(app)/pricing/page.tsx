@@ -64,7 +64,7 @@ export default async function PricingPage() {
       <div className="grid grid-cols-3 gap-3">
         {/* שירותים פעילים */}
         <div
-          className="rounded-2xl px-5 py-4 transition-shadow hover:shadow-md"
+          className="rounded-2xl px-3.5 py-3.5 transition-shadow hover:shadow-md sm:px-5 sm:py-4"
           style={{
             background: summary.activeServicesCount > 0 ? "rgba(247,238,243,0.85)" : "rgba(255,255,255,0.90)",
             border: `1px solid ${summary.activeServicesCount > 0 ? "rgba(172,92,127,0.22)" : "var(--border)"}`,
@@ -87,7 +87,7 @@ export default async function PricingPage() {
 
         {/* מחיר ממוצע לשעה */}
         <div
-          className="rounded-2xl px-5 py-4 transition-shadow hover:shadow-md"
+          className="rounded-2xl px-3.5 py-3.5 transition-shadow hover:shadow-md sm:px-5 sm:py-4"
           style={{
             background: summary.avgPricePerHour > 0 ? "rgba(247,238,243,0.85)" : "rgba(255,255,255,0.90)",
             border: `1px solid ${summary.avgPricePerHour > 0 ? "rgba(172,92,127,0.22)" : "var(--border)"}`,
@@ -110,7 +110,7 @@ export default async function PricingPage() {
 
         {/* שירותים עם טווח מחיר */}
         <div
-          className="rounded-2xl px-5 py-4 transition-shadow hover:shadow-md"
+          className="rounded-2xl px-3.5 py-3.5 transition-shadow hover:shadow-md sm:px-5 sm:py-4"
           style={{
             background: "rgba(255,255,255,0.90)",
             border: "1px solid var(--border)",

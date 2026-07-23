@@ -554,7 +554,7 @@ export function BookingsCalendar({
         {/* Scrollable time grid */}
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto overflow-x-hidden"
+          className="flex-1 overflow-y-auto overflow-x-auto"
           style={{
             height: "calc(100vh - 360px)",
             minHeight: 620,
@@ -562,7 +562,7 @@ export function BookingsCalendar({
         >
           {calView === "week" && (
             <div
-              className="sticky top-0 z-30 flex border-b bg-white shrink-0"
+              className="sticky top-0 z-30 flex border-b bg-white shrink-0 min-w-[600px] md:min-w-0"
               style={{ borderColor: "var(--border)" }}
             >
               <div style={{ width: 52 }} className="shrink-0" />
@@ -598,8 +598,9 @@ export function BookingsCalendar({
             </div>
           )}
 
-          {/* Time grid */}
-          <div className="flex relative">
+          {/* Time grid — week view keeps a comfortable min column width on
+              mobile and scrolls horizontally instead of cramming 7 columns. */}
+          <div className={`flex relative ${calView === "week" ? "min-w-[600px] md:min-w-0" : ""}`}>
             <TimeColumn />
 
             {calView === "day" ? (

@@ -2,24 +2,24 @@
   "buildCommand": "npx prisma generate && npx prisma migrate deploy && next build",
   "crons": [
     {
-      "path": "/api/cron/win-back",
-      "schedule": "0 * * * *"
-    },
-    {
       "path": "/api/cron/morning-reminder",
       "schedule": "0 * * * *"
     },
     {
-      "path": "/api/cron/review-request",
-      "schedule": "0 * * * *"
+      "path": "/api/cron/win-back",
+      "schedule": "12 * * * *"
     },
     {
-      "path": "/api/cron/whatsapp-campaigns",
-      "schedule": "*/10 * * * *"
+      "path": "/api/cron/review-request",
+      "schedule": "24 * * * *"
     },
     {
       "path": "/api/cron/loyalty",
-      "schedule": "0 * * * *"
+      "schedule": "36 * * * *"
+    },
+    {
+      "path": "/api/cron/whatsapp-campaigns",
+      "schedule": "5-59/10 * * * *"
     },
     {
       "path": "/api/cron/subscription-sweep",

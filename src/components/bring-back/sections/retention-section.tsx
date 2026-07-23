@@ -41,7 +41,7 @@ export async function RetentionSection() {
       <div className="grid grid-cols-3 gap-3">
         {/* לא חזרו */}
         <div
-          className="rounded-2xl px-5 py-4 transition-shadow hover:shadow-md"
+          className="rounded-2xl px-3.5 py-3.5 transition-shadow hover:shadow-md sm:px-5 sm:py-4"
           style={{
             background: summary.notReturnedCount > 0 ? "rgba(254,246,228,0.80)" : "rgba(255,255,255,0.90)",
             border: `1px solid ${summary.notReturnedCount > 0 ? "rgba(184,150,10,0.22)" : "var(--border)"}`,
@@ -64,7 +64,7 @@ export async function RetentionSection() {
 
         {/* עם תור קרוב */}
         <div
-          className="rounded-2xl px-5 py-4 transition-shadow hover:shadow-md"
+          className="rounded-2xl px-3.5 py-3.5 transition-shadow hover:shadow-md sm:px-5 sm:py-4"
           style={{
             background: summary.withUpcomingCount > 0 ? "rgba(247,238,243,0.85)" : "rgba(255,255,255,0.90)",
             border: `1px solid ${summary.withUpcomingCount > 0 ? "rgba(172,92,127,0.22)" : "var(--border)"}`,
@@ -87,7 +87,7 @@ export async function RetentionSection() {
 
         {/* הודעות לשליחה */}
         <div
-          className="rounded-2xl px-5 py-4 transition-shadow hover:shadow-md"
+          className="rounded-2xl px-3.5 py-3.5 transition-shadow hover:shadow-md sm:px-5 sm:py-4"
           style={{
             background: "rgba(255,255,255,0.90)",
             border: "1px solid var(--border)",

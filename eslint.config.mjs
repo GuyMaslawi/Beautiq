@@ -13,6 +13,9 @@ const eslintConfig = defineConfig([
     "build/**",
     "coverage/**",
     "next-env.d.ts",
+    // סקריפטי k6 לבדיקת עומס — מריצים תחת runtime של k6, לא חלק מקוד האפליקציה.
+    // k6 מחייב default export של פונקציה, שמתנגש עם כללי הלינט של האפליקציה.
+    "load-test/**",
   ]),
 ]);
 

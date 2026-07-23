@@ -1,11 +1,13 @@
 "use server";
 
+import { headers } from "next/headers";
 import { Prisma } from "@prisma/client";
 import { AuthError } from "next-auth";
 import { prisma } from "@/server/db/prisma";
 import { hashPassword } from "@/server/auth/password";
 import { signIn, signOut } from "@/server/auth/config";
 import { logActivity } from "@/server/activity/log";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
 import {
   validateSignup,
   validateLogin,
@@ -13,6 +15,12 @@ import {
   type SignupField,
 } from "@/lib/validation/auth";
 import { AUTH } from "@/lib/constants/he";
+
+// הגבלת קצב על ניסיונות התחברות/הרשמה — הגנת עומק מפני ניחוש סיסמאות (brute-force)
+// והצפת בקשות. best-effort פר-מופע serverless (ראו src/lib/rate-limit.ts).
+const AUTH_RATE_WINDOW_MS = 10 * 60_000; // חלון של 10 דקות
+const LOGIN_RATE_MAX = 10; // עד 10 ניסיונות התחברות לכל IP בחלון
+const SIGNUP_RATE_MAX = 5; // הרשמה נדירה יותר — סף נמוך יותר
 
 /**
  * Server actions for authentication. Centralised here so all auth logic lives in
@@ -39,6 +47,11 @@ export async function signupAction(
   _prevState: SignupState,
   formData: FormData,
 ): Promise<SignupState> {
+  const ip = getClientIp(await headers());
+  if (!checkRateLimit(`signup:${ip}`, SIGNUP_RATE_MAX, AUTH_RATE_WINDOW_MS)) {
+    return { formError: AUTH.errors.tooManyAttempts };
+  }
+
   const parsed = validateSignup({
     name: String(formData.get("name") ?? ""),
     email: String(formData.get("email") ?? ""),
@@ -99,6 +112,11 @@ export async function loginAction(
   _prevState: LoginState,
   formData: FormData,
 ): Promise<LoginState> {
+  const ip = getClientIp(await headers());
+  if (!checkRateLimit(`login:${ip}`, LOGIN_RATE_MAX, AUTH_RATE_WINDOW_MS)) {
+    return { formError: AUTH.errors.tooManyAttempts };
+  }
+
   const parsed = validateLogin({
     email: String(formData.get("email") ?? ""),
     password: String(formData.get("password") ?? ""),

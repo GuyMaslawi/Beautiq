@@ -38,7 +38,7 @@ function StatCard({
   bg: string;
 }) {
   return (
-    <Card className="flex items-center gap-4 p-5">
+    <Card className="flex items-center gap-3 p-4 sm:gap-4 sm:p-5">
       <div
         className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
         style={{ background: bg }}

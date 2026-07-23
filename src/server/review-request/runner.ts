@@ -41,6 +41,16 @@ export async function runReviewRequestForBusiness(params: {
   now?: Date;
   templateName?: string | null;
   templateLanguage?: string | null;
+  /**
+   * When set, target exactly this booking instead of the time-based window.
+   * Used to send the thank-you/review message immediately when the owner marks
+   * a booking as completed (see sendThankYouForCompletedBooking). The booking
+   * must still be `completed` with no prior review request — reviewRequestSentAt
+   * is set on success so the hourly cron never re-sends it.
+   */
+  bookingId?: string | null;
+  /** Overrides the source label stamped on AutomationMessage (default derives from cron/manual). */
+  source?: string;
 }): Promise<ReviewRunResult> {
   const {
     businessId,
@@ -51,7 +61,12 @@ export async function runReviewRequestForBusiness(params: {
     now = new Date(),
     templateName,
     templateLanguage,
+    bookingId = null,
+    source: sourceOverride,
   } = params;
+
+  // Single-booking (immediate) mode targets one booking and ignores the window.
+  const immediateForBooking = Boolean(bookingId);
 
   // hoursAfter: how many hours after completion to send (default 24 for legacy records)
   const hoursAfter = sendHour >= 1 && sendHour <= 6 ? sendHour : 24;
@@ -67,8 +82,9 @@ export async function runReviewRequestForBusiness(params: {
   }
 
   // Idempotency guard: skip if a run already completed in the last 60 min.
-  // Not applied when admin bypasses timing (they explicitly want a fresh run).
-  if (!bypassTiming) {
+  // Not applied when admin bypasses timing, nor in single-booking immediate mode
+  // (each completion is its own event; dedupe is enforced by reviewRequestSentAt).
+  if (!bypassTiming && !immediateForBooking) {
     const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);
     const existingRun = await prisma.automationRun.findFirst({
       where: {
@@ -105,7 +121,10 @@ export async function runReviewRequestForBusiness(params: {
       businessId,
       status: "completed",
       reviewRequestSentAt: null,
-      completedAt: { gte: windowStart, lte: windowEnd },
+      // Single-booking mode targets one id; otherwise use the time window.
+      ...(immediateForBooking
+        ? { id: bookingId! }
+        : { completedAt: { gte: windowStart, lte: windowEnd } }),
     },
     include: {
       client: { select: { fullName: true, normalizedPhone: true, unsubscribedAt: true } },
@@ -132,7 +151,7 @@ export async function runReviewRequestForBusiness(params: {
   const realSendEnabled = process.env.ENABLE_REAL_WHATSAPP_SEND === "true";
   const provider = await getWhatsAppProviderForBusiness(businessId);
   const defaultReviewLink = reviewLink ?? `${publicBusinessUrl(business.slug)}#reviews`;
-  const source = bypassTiming ? "manual_admin" : "cron";
+  const source = sourceOverride ?? (bypassTiming ? "manual_admin" : "cron");
 
   // Create the run record
   const run = await prisma.automationRun.create({
