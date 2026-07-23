@@ -57,21 +57,26 @@ export async function startSubscriptionCheckoutAction(
     return { ok: false, error: "בחירת תוכנית לא תקינה. נסי שוב." };
   }
 
-  // Already on this exact plan — nothing to charge.
-  if (user.plan === plan) {
-    return { ok: true, redirectUrl: "/dashboard" };
-  }
-
-  const priceMinor = planPriceMinor(plan);
-  const nonce = randomUUID();
-
   // Capture the current standing order (if any) before we overwrite the row —
   // switching plans re-authorizes at the NEW price, and Grow can't change a live
   // direct debit's amount, so the old one must be stopped to avoid double billing.
   const previous = await prisma.accountSubscription.findUnique({
     where: { userId: user.id },
-    select: { directDebitId: true },
+    select: { directDebitId: true, status: true },
   });
+
+  // Already on this exact plan AND billing is authorized (active) — nothing to
+  // charge. A `pending` sub on the same plan is a re-authorization (e.g. after an
+  // admin plan change, or an abandoned switch), so it must proceed to checkout.
+  if (
+    user.plan === plan &&
+    previous?.status === AccountSubscriptionStatus.active
+  ) {
+    return { ok: true, redirectUrl: "/dashboard" };
+  }
+
+  const priceMinor = planPriceMinor(plan);
+  const nonce = randomUUID();
 
   // Reset the (single) subscription row to a fresh pending checkout for this plan.
   const subscription = await prisma.accountSubscription.upsert({

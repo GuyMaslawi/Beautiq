@@ -2,12 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeftRight, Gem, Flower2, CreditCard, CalendarClock, AlertCircle } from "lucide-react";
+import { ArrowLeftRight, Gem, Flower2, CreditCard, CalendarClock, AlertCircle, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { ChangePlanDialog } from "@/components/settings/change-plan-dialog";
-import { cancelSubscriptionAction } from "@/server/subscription/actions";
+import { cancelSubscriptionAction, startSubscriptionCheckoutAction } from "@/server/subscription/actions";
 import { PLANS, type PlanId } from "@/lib/plans";
 import { SUBSCRIPTION } from "@/lib/constants/he";
 import type { SubscriptionOverview } from "@/server/subscription/queries";
@@ -51,6 +51,31 @@ export function SubscriptionCard({ overview }: { overview: SubscriptionOverview 
 
   const price = overview.priceMinor != null ? Math.round(overview.priceMinor / 100) : planInfo.price;
   const cancelled = overview.status === "cancelled";
+
+  // The plan the pending re-authorization is for (may differ from the current
+  // access plan if the owner abandoned a self-serve switch).
+  const reauthPlanId = (overview.pendingPlan ?? planId) as PlanId;
+  const reauthPlanInfo = PLANS[reauthPlanId];
+  const reauthPrice =
+    overview.priceMinor != null ? Math.round(overview.priceMinor / 100) : reauthPlanInfo.price;
+
+  function handleReauth() {
+    startTransition(async () => {
+      const result = await startSubscriptionCheckoutAction(reauthPlanId);
+      if (!result.ok) {
+        toast.error(result.error ?? SUBSCRIPTION.genericError);
+        return;
+      }
+      // Production: Grow's secure hosted page to re-authorize the direct debit.
+      if (result.redirectUrl && /^https?:\/\//.test(result.redirectUrl)) {
+        window.location.href = result.redirectUrl;
+        return;
+      }
+      // Dev / mock: applied instantly.
+      toast.success(SUBSCRIPTION.reauth.success);
+      router.refresh();
+    });
+  }
 
   function handleCancel() {
     startTransition(async () => {
@@ -138,7 +163,30 @@ export function SubscriptionCard({ overview }: { overview: SubscriptionOverview 
       )}
 
       {/* Actions */}
-      {overview.isManaged ? (
+      {overview.needsReauth ? (
+        <div
+          className="flex flex-col gap-3 rounded-xl px-3.5 py-3.5"
+          style={{ background: "rgba(172,92,127,0.07)", border: "1px solid rgba(172,92,127,0.28)" }}
+        >
+          <div className="flex items-start gap-2">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "#ac5c7f" }} />
+            <div>
+              <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+                {SUBSCRIPTION.reauth.title}
+              </p>
+              <p className="mt-0.5 text-sm" style={{ color: "var(--muted)" }}>
+                המסלול שלך עודכן ל{reauthPlanInfo.name}. כדי להפעיל את החיוב החודשי החדש (₪{reauthPrice} {SUBSCRIPTION.perMonth}) יש לאשר מחדש את אמצעי התשלום בעמוד המאובטח.
+              </p>
+            </div>
+          </div>
+          <div>
+            <Button size="sm" variant="primary" onClick={handleReauth} disabled={isPending}>
+              <CreditCard className="h-4 w-4" />
+              {isPending ? SUBSCRIPTION.reauth.submitting : SUBSCRIPTION.reauth.button}
+            </Button>
+          </div>
+        </div>
+      ) : overview.isManaged ? (
         <div className="flex flex-wrap items-center gap-2.5 pt-1">
           {!cancelled && (
             <Button

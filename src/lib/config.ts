@@ -8,8 +8,26 @@ const DEFAULT_APP_URL = "https://allura.info";
 /** האם הוגדר דומיין קנוני מפורש דרך משתנה הסביבה (פרודקשן). */
 const ENV_APP_URL = process.env.NEXT_PUBLIC_APP_URL?.trim();
 
-/** כתובת הבסיס המלאה של האפליקציה, ללא נטייה (trailing slash). */
-export const APP_URL = (ENV_APP_URL || DEFAULT_APP_URL).replace(/\/+$/, "");
+/**
+ * מנרמל כתובת בסיס לכדי URL תקין: מסיר trailing slash, ומוסיף פרוטוקול https://
+ * אם חסר — כדי ש-`new URL(APP_URL)` (ב-layout.tsx, metadataBase) לא יקרוס בבנייה
+ * כשמישהו מגדיר NEXT_PUBLIC_APP_URL בלי http(s):// (למשל "allura.info").
+ */
+function normalizeBaseUrl(raw: string): string {
+  const trimmed = raw.trim().replace(/\/+$/, "");
+  if (!trimmed) return DEFAULT_APP_URL;
+  const withProtocol = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+  try {
+    new URL(withProtocol);
+    return withProtocol;
+  } catch {
+    // ערך פגום לחלוטין — נופלים חזרה לדומיין הקנוני במקום להפיל את הבנייה.
+    return DEFAULT_APP_URL;
+  }
+}
+
+/** כתובת הבסיס המלאה של האפליקציה, ללא נטייה (trailing slash), עם פרוטוקול. */
+export const APP_URL = normalizeBaseUrl(ENV_APP_URL || DEFAULT_APP_URL);
 
 /** הדומיין בלבד (ללא פרוטוקול) — לתצוגת קישורים מקוצרים ומוקאפים. */
 export const APP_DOMAIN = APP_URL.replace(/^https?:\/\//, "");

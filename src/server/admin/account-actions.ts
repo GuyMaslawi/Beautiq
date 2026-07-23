@@ -9,7 +9,7 @@ import { getCurrentUser } from "@/server/auth/session";
 import { hashPassword } from "@/server/auth/password";
 import { logActivity } from "@/server/activity/log";
 import { planPriceMinor } from "@/server/subscription/service";
-import { cancelDirectDebit } from "@/lib/subscription/grow";
+import { cancelDirectDebit, isGrowConfigured } from "@/lib/subscription/grow";
 
 // ---------------------------------------------------------------------------
 // "God-mode" account controls — platform-admin only.
@@ -86,24 +86,61 @@ export async function adminSetAccountPlanAction(
 
   // Keep the monthly billing record in sync with the admin's plan change.
   // Only touch an EXISTING subscription row (never fabricate a Grow-managed
-  // sub for a comped/grandfathered override):
-  //   • switching to premium/platinum → mirror the plan + recurring price so the
-  //     owner's "מנוי" card shows the right monthly amount;
-  //   • revoking access ("none") → stop billing and the standing order.
+  // sub for a comped/grandfathered override).
   const existingSub = await prisma.accountSubscription.findUnique({
     where: { userId: owner.id },
-    select: { id: true, status: true, directDebitId: true },
+    select: { id: true, status: true, directDebitId: true, priceMinor: true },
   });
+
+  // True when we stopped a live standing order and the owner must re-authorize
+  // her card at the new price for the recurring charge to resume.
+  let billingReauthRequired = false;
+
   if (existingSub) {
     if (newPlan) {
-      await prisma.accountSubscription.update({
-        where: { id: existingSub.id },
-        data: { plan: newPlan, priceMinor: planPriceMinor(newPlan) },
-      });
+      const newPriceMinor = planPriceMinor(newPlan);
+      // A real, LIVE Grow direct debit is charged automatically each month at a
+      // fixed amount Grow won't let us edit in place. When the admin moves such a
+      // paying customer to a different-priced plan (a permanent change, not a
+      // comped/time-limited grant), we must stop the old standing order so she is
+      // never charged the wrong amount, and have her re-authorize the card at the
+      // new price — the admin never touches card data. Access stays open meanwhile.
+      const hasLiveDirectDebit =
+        isGrowConfigured() &&
+        !!existingSub.directDebitId &&
+        (existingSub.status === AccountSubscriptionStatus.active ||
+          existingSub.status === AccountSubscriptionStatus.past_due);
+      const priceChanges = existingSub.priceMinor !== newPriceMinor;
+
+      if (hasLiveDirectDebit && priceChanges && !expiry) {
+        await prisma.accountSubscription.update({
+          where: { id: existingSub.id },
+          data: {
+            plan: newPlan,
+            priceMinor: newPriceMinor,
+            status: AccountSubscriptionStatus.pending,
+            directDebitId: null,
+            cardSuffix: null,
+            processId: null,
+            processToken: null,
+          },
+        });
+        await cancelDirectDebit(existingSub.directDebitId!);
+        billingReauthRequired = true;
+      } else {
+        // Comped / dev-mock / same-price change: just mirror the plan + recorded
+        // price so the owner's "מנוי" card shows the right monthly amount. With no
+        // live standing order, this recorded price IS the billing.
+        await prisma.accountSubscription.update({
+          where: { id: existingSub.id },
+          data: { plan: newPlan, priceMinor: newPriceMinor },
+        });
+      }
     } else if (
       existingSub.status === AccountSubscriptionStatus.active ||
       existingSub.status === AccountSubscriptionStatus.past_due
     ) {
+      // Revoking access → stop billing and the standing order.
       await prisma.accountSubscription.update({
         where: { id: existingSub.id },
         data: { status: AccountSubscriptionStatus.cancelled, cancelledAt: new Date() },
@@ -130,7 +167,12 @@ export async function adminSetAccountPlanAction(
 
   revalidatePath(`/admin/businesses/${businessId}`);
   revalidatePath("/admin");
-  return { success: true, message: `התוכנית עודכנה ל־${label}${suffix}.` };
+  const message = billingReauthRequired
+    ? `התוכנית עודכנה ל־${label}. הוראת הקבע הישנה בוטלה כדי לא לחייב בסכום שגוי — ` +
+      `בעלת העסק תתבקש לאשר מחדש את אמצעי התשלום בסכום החדש (₪${planPriceMinor(newPlan!) / 100} לחודש) ` +
+      `בעמוד ההגדרות שלה, ואז החיוב יתחדש אוטומטית. הגישה נשמרת בינתיים.`
+    : `התוכנית עודכנה ל־${label}${suffix}.`;
+  return { success: true, message };
 }
 
 // ---------------------------------------------------------------------------

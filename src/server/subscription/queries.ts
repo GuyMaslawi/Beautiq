@@ -24,6 +24,15 @@ export interface SubscriptionOverview {
   isManaged: boolean;
   /** True when the owner can move up to Platinum. */
   canUpgrade: boolean;
+  /**
+   * True when access is open (`plan` set) but the monthly billing is awaiting the
+   * owner's card re-authorization — e.g. after an admin plan change on a live
+   * direct debit (whose amount Grow can't edit in place), or an abandoned self-
+   * serve switch. The owner must re-authorize to resume the charge at the new price.
+   */
+  needsReauth: boolean;
+  /** The plan the pending re-authorization is for (the sub's plan), when any. */
+  pendingPlan: AccountPlan | null;
 }
 
 export async function getSubscriptionOverview(): Promise<SubscriptionOverview> {
@@ -46,6 +55,12 @@ export async function getSubscriptionOverview(): Promise<SubscriptionOverview> {
       sub.status === AccountSubscriptionStatus.past_due ||
       sub.status === AccountSubscriptionStatus.cancelled);
 
+  // Access is granted (plan flag set) but the sub is still `pending` — the
+  // recurring charge is not authorized yet and the owner must re-confirm her
+  // card. (A brand-new signup is `pending` too, but its plan flag is null until
+  // the first payment confirms, so it never trips this.)
+  const needsReauth = !!user.plan && sub?.status === AccountSubscriptionStatus.pending;
+
   return {
     plan: user.plan,
     status: sub?.status ?? null,
@@ -55,5 +70,7 @@ export async function getSubscriptionOverview(): Promise<SubscriptionOverview> {
     cancelledAt: sub?.cancelledAt ?? null,
     isManaged,
     canUpgrade: user.plan === AccountPlan.premium,
+    needsReauth,
+    pendingPlan: needsReauth ? (sub?.plan ?? null) : null,
   };
 }
