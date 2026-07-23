@@ -146,9 +146,12 @@ function AppointmentPanel({
 }) {
   const bg = STATUS_BG[booking.status] ?? STATUS_BG.pending;
   const textColor = STATUS_TEXT[booking.status] ?? STATUS_TEXT.pending;
-  const label =
-    BOOKING_STATUS[booking.status as keyof typeof BOOKING_STATUS] ??
-    booking.status;
+  // Active bookings (pending/approved) show no status label — nothing to approve.
+  const isActive = booking.status === "pending" || booking.status === "approved";
+  const label = isActive
+    ? null
+    : BOOKING_STATUS[booking.status as keyof typeof BOOKING_STATUS] ??
+      booking.status;
 
   return (
     <div
@@ -165,12 +168,14 @@ function AppointmentPanel({
         style={{ borderColor: "var(--border)", background: bg }}
       >
         <div className="flex items-center gap-2 min-w-0">
-          <span
-            className="rounded-full px-2.5 py-0.5 text-xs font-semibold shrink-0"
-            style={{ background: "rgba(255,255,255,0.7)", color: textColor }}
-          >
-            {label}
-          </span>
+          {label && (
+            <span
+              className="rounded-full px-2.5 py-0.5 text-xs font-semibold shrink-0"
+              style={{ background: "rgba(255,255,255,0.7)", color: textColor }}
+            >
+              {label}
+            </span>
+          )}
           <span className="text-sm font-bold truncate" style={{ color: textColor }}>
             {booking.clientName}
           </span>

@@ -7,6 +7,7 @@ import {
   Menu,
   X,
   LogOut,
+  ShieldCheck,
 } from "lucide-react";
 import { signOutAction } from "@/server/auth/actions";
 import { BRAND, DASHBOARD } from "@/lib/constants/he";
@@ -49,16 +50,29 @@ export function Header({ businessName, isAdmin = false, hasPlatinum = false }: {
             </span>
           </Link>
 
-          {/* Hamburger */}
-          <button
-            type="button"
-            onClick={() => setOpen(true)}
-            className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl transition-colors"
-            style={{ color: "var(--sidebar-fg)" }}
-            aria-label="פתח תפריט"
-          >
-            <Menu className="h-5 w-5" />
-          </button>
+          {/* Actions */}
+          <div className="flex items-center gap-1">
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className="flex h-9 w-9 items-center justify-center rounded-xl transition-colors"
+                style={{ color: "var(--sidebar-fg)" }}
+                aria-label="ניהול מערכת"
+              >
+                <ShieldCheck className="h-5 w-5" />
+              </Link>
+            )}
+            {/* Hamburger */}
+            <button
+              type="button"
+              onClick={() => setOpen(true)}
+              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-xl transition-colors"
+              style={{ color: "var(--sidebar-fg)" }}
+              aria-label="פתח תפריט"
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          </div>
         </div>
       </header>
 
@@ -156,7 +170,7 @@ export function Header({ businessName, isAdmin = false, hasPlatinum = false }: {
                 className="flex-1 overflow-y-auto px-3 py-4 scrollbar-hide"
                 onClick={() => setOpen(false)}
               >
-                <AppNav isAdmin={isAdmin} hasPlatinum={hasPlatinum} />
+                <AppNav hasPlatinum={hasPlatinum} />
               </nav>
 
               {/* Footer: sign out */}

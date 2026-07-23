@@ -36,12 +36,25 @@ describe("AppShell", () => {
     expect(screen.getByRole("main")).toBeInTheDocument();
   });
 
-  it("passes isAdmin down to the navigation", () => {
+  it("shows the admin shortcut when isAdmin", () => {
     render(
       <AppShell userName="x" businessName="x" isAdmin>
         <p>c</p>
       </AppShell>,
     );
-    expect(screen.getAllByText("ניהול מערכת").length).toBeGreaterThan(0);
+    // The admin entry is now a compact icon button (sidebar + mobile header),
+    // exposed via its accessible label rather than visible text.
+    const adminLinks = screen.getAllByLabelText("ניהול מערכת");
+    expect(adminLinks.length).toBeGreaterThan(0);
+    adminLinks.forEach((link) => expect(link).toHaveAttribute("href", "/admin"));
+  });
+
+  it("hides the admin shortcut when not admin", () => {
+    render(
+      <AppShell userName="x" businessName="x">
+        <p>c</p>
+      </AppShell>,
+    );
+    expect(screen.queryByLabelText("ניהול מערכת")).not.toBeInTheDocument();
   });
 });

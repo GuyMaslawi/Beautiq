@@ -1,7 +1,8 @@
+import Link from "next/link";
 import { BRAND, DASHBOARD } from "@/lib/constants/he";
 import { AppNav } from "@/components/layout/app-nav";
 import { signOutAction } from "@/server/auth/actions";
-import { LogOut } from "lucide-react";
+import { LogOut, ShieldCheck } from "lucide-react";
 
 function getInitials(name: string | null): string {
   if (!name) return "B";
@@ -56,6 +57,17 @@ export function Sidebar({
         >
           {BRAND.name}
         </span>
+        {isAdmin && (
+          <Link
+            href="/admin"
+            title="ניהול מערכת"
+            aria-label="ניהול מערכת"
+            className="ms-auto flex h-8 w-8 shrink-0 items-center justify-center rounded-xl transition-colors hover:bg-white/10"
+            style={{ color: "var(--sidebar-fg-muted)" }}
+          >
+            <ShieldCheck className="h-4.5 w-4.5" />
+          </Link>
+        )}
       </div>
 
       {/* Business identity */}
@@ -99,7 +111,7 @@ export function Sidebar({
 
       {/* Navigation */}
       <div className="flex-1 overflow-y-auto px-3 py-4 scrollbar-hide">
-        <AppNav isAdmin={isAdmin} hasPlatinum={hasPlatinum} />
+        <AppNav hasPlatinum={hasPlatinum} />
       </div>
 
       {/* Footer: sign out */}

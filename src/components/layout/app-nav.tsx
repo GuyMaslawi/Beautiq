@@ -15,7 +15,6 @@ import {
   Wallet,
   Globe,
   Settings,
-  ShieldCheck,
   type LucideIcon,
 } from "lucide-react";
 
@@ -30,18 +29,16 @@ const ICONS: Record<string, LucideIcon> = {
   "/finance": Wallet,
   "/public-page": Globe,
   "/settings": Settings,
-  "/admin": ShieldCheck,
 };
 
 interface AppNavProps {
   /** When true, renders with light-background styles (e.g. mobile drawer). */
   light?: boolean;
-  isAdmin?: boolean;
   /** When false, Platinum-only items are hidden (Premium users). */
   hasPlatinum?: boolean;
 }
 
-export function AppNav({ light = false, isAdmin = false, hasPlatinum = false }: AppNavProps) {
+export function AppNav({ light = false, hasPlatinum = false }: AppNavProps) {
   const pathname = usePathname();
 
   // Hide Platinum-only items for Premium users; drop any group left empty.
@@ -52,8 +49,6 @@ export function AppNav({ light = false, isAdmin = false, hasPlatinum = false }: 
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
-
-  const adminItem = { href: "/admin", label: "ניהול מערכת" };
 
   function renderLink(item: { href: string; label: string }) {
     const active = isActive(item.href);
@@ -121,20 +116,6 @@ export function AppNav({ light = false, isAdmin = false, hasPlatinum = false }: 
           </div>
         </div>
       ))}
-
-      {isAdmin && (
-        <div>
-          <p
-            className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-widest"
-            style={{ color: light ? "var(--muted-light)" : "var(--sidebar-fg-faint)" }}
-          >
-            אדמין
-          </p>
-          <div className="flex flex-col gap-0.5">
-            {renderLink(adminItem)}
-          </div>
-        </div>
-      )}
     </nav>
   );
 }

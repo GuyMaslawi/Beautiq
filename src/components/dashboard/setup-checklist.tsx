@@ -353,7 +353,11 @@ function TodayAppointmentsPanel({
                 initials={getInitial(booking.clientName)}
                 name={booking.clientName}
                 service={booking.serviceName}
-                statusLabel={BOOKING_STATUS[booking.status]}
+                statusLabel={
+                  booking.status === "pending" || booking.status === "approved"
+                    ? undefined
+                    : BOOKING_STATUS[booking.status]
+                }
                 tone={tone}
                 href={`/bookings/${booking.id}`}
                 last={isLast}
@@ -390,7 +394,7 @@ function TimelineRow({
   initials: string;
   name: string;
   service: string;
-  statusLabel: string;
+  statusLabel?: string;
   tone: ToneKey;
   href: string;
   last: boolean;
@@ -424,12 +428,14 @@ function TimelineRow({
             {service}
           </p>
         </div>
-        <span
-          className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold"
-          style={{ color: c.fg, background: c.bg, border: `1px solid ${c.border}` }}
-        >
-          {statusLabel}
-        </span>
+        {statusLabel && (
+          <span
+            className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+            style={{ color: c.fg, background: c.bg, border: `1px solid ${c.border}` }}
+          >
+            {statusLabel}
+          </span>
+        )}
       </div>
     </Link>
   );

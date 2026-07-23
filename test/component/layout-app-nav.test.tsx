@@ -44,13 +44,4 @@ describe("AppNav", () => {
     // The light-variant active link now uses the soft brand gradient token.
     expect(active.getAttribute("style")).toContain("var(--brand-gradient-soft)");
   });
-
-  it("renders the admin group only when isAdmin", () => {
-    pathRef.value = "/dashboard";
-    const { rerender } = render(<AppNav />);
-    expect(screen.queryByText("ניהול מערכת")).not.toBeInTheDocument();
-    rerender(<AppNav isAdmin />);
-    expect(screen.getByText("ניהול מערכת")).toBeInTheDocument();
-    expect(screen.getByText("אדמין")).toBeInTheDocument();
-  });
 });

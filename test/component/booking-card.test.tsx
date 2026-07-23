@@ -45,13 +45,14 @@ beforeEach(() => {
 });
 
 describe("BookingCard", () => {
-  it("renders client name, service, phone, duration and the status badge", () => {
+  it("renders client name, service, phone and duration without a status badge for an active booking", () => {
     render(<BookingCard booking={makeBooking()} />);
     expect(screen.getByText("נועה כהן")).toBeInTheDocument();
     expect(screen.getByText("מניקור ג'ל")).toBeInTheDocument();
     expect(screen.getByText("0501234567")).toBeInTheDocument();
     expect(screen.getByText("60 דק׳")).toBeInTheDocument();
-    expect(screen.getByText("מאושר")).toBeInTheDocument();
+    // Active bookings carry no status badge — nothing to approve.
+    expect(screen.queryByText("מאושר")).not.toBeInTheDocument();
   });
 
   it("shows the formatted price when the price is positive", () => {

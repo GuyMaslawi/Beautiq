@@ -65,14 +65,15 @@ beforeEach(() => {
 });
 
 describe("BookingRow — core content", () => {
-  it("renders client, service, phone, duration, price and status", () => {
+  it("renders client, service, phone, duration and price", () => {
     renderRow(makeBooking());
     expect(screen.getByText("נועה כהן")).toBeInTheDocument();
     expect(screen.getByText("מניקור ג'ל")).toBeInTheDocument();
     expect(screen.getByText("0501234567")).toBeInTheDocument();
     expect(screen.getByText("דק׳ 60")).toBeInTheDocument();
     expect(screen.getByText("₪180")).toBeInTheDocument();
-    expect(screen.getByText("מאושר")).toBeInTheDocument();
+    // Active bookings carry no status badge — nothing to approve.
+    expect(screen.queryByText("מאושר")).not.toBeInTheDocument();
   });
 
   it("links the client cell to the booking detail page", () => {
@@ -117,8 +118,9 @@ describe("BookingRow — date labels", () => {
     expect(screen.getByText("מחר")).toBeInTheDocument();
   });
 
-  it("highlights a pending booking row (pending-approval styling branch)", () => {
+  it("shows no status badge for an active (pending/approved) booking row", () => {
     renderRow(makeBooking({ status: "pending" } as never));
-    expect(screen.getByText("ממתין לאישור")).toBeInTheDocument();
+    expect(screen.queryByText("ממתין לאישור")).not.toBeInTheDocument();
+    expect(screen.queryByText("מאושר")).not.toBeInTheDocument();
   });
 });

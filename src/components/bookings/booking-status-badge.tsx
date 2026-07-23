@@ -3,16 +3,10 @@ import { BOOKING_STATUS } from "@/lib/constants/he";
 import type { BookingStatus } from "@prisma/client";
 
 const statusStyles: Record<BookingStatus, CSSProperties> = {
-  pending: {
-    background: "rgba(184,150,10,0.10)",
-    color: "#7a6400",
-    border: "1px solid rgba(184,150,10,0.22)",
-  },
-  approved: {
-    background: "rgba(172,92,127,0.10)",
-    color: "#8a3d60",
-    border: "1px solid rgba(172,92,127,0.22)",
-  },
+  // Active bookings (pending/approved) are shown without a badge — a client who
+  // grabbed an available slot is simply booked; there is nothing to approve.
+  pending: {},
+  approved: {},
   completed: {
     background: "rgba(61,139,110,0.10)",
     color: "#2e6b52",
@@ -36,6 +30,9 @@ const statusStyles: Record<BookingStatus, CSSProperties> = {
 };
 
 export function BookingStatusBadge({ status }: { status: BookingStatus }) {
+  // Active bookings carry no meaningful status to display — skip the badge.
+  if (status === "pending" || status === "approved") return null;
+
   return (
     <span
       className="inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium"
