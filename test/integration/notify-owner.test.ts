@@ -101,7 +101,9 @@ describe("notifyOwnerOfNewBooking — owner email", () => {
     expect(arg.text).toContain("מניקור ג'ל"); // service
     expect(arg.text).toContain("12:00"); // time (Asia/Jerusalem)
     expect(arg.text).toContain("₪150"); // price
-    expect(arg.text).toContain("מאושר"); // status
+    // No booking status line — a client who grabbed a free slot is simply
+    // booked; there is nothing to approve.
+    expect(arg.text).not.toContain("סטטוס");
     expect(arg.text).toContain("/bookings"); // management link
     expect(arg.text).toContain("בעלת העסק"); // owner greeting
   });

@@ -111,7 +111,6 @@ async function _notify(params: {
   const priceStr = booking.priceSnapshot
     ? `₪${Number(booking.priceSnapshot).toLocaleString("he-IL")}`
     : null;
-  const statusLabel = "מאושר";
 
   let notified = false;
 
@@ -130,7 +129,6 @@ async function _notify(params: {
       `תאריך: ${dateStr}`,
       `שעה: ${timeStr}`,
       ...(priceStr ? [`מחיר: ${priceStr}`] : []),
-      `סטטוס: ${statusLabel}`,
       "",
       "לצפייה וניהול התור מתוך המערכת:",
       BOOKINGS_URL,
@@ -146,7 +144,6 @@ async function _notify(params: {
       dateStr,
       timeStr,
       priceStr,
-      statusLabel,
     });
 
     const result = await sendEmail({ to: ownerEmail, subject, text, html });
@@ -314,7 +311,6 @@ function buildEmailHtml(v: {
   dateStr: string;
   timeStr: string;
   priceStr: string | null;
-  statusLabel: string;
 }): string {
   const row = (label: string, value: string) =>
     `<tr><td style="padding:4px 12px 4px 0;color:#8a7f86;white-space:nowrap">${label}</td>` +
@@ -331,7 +327,6 @@ function buildEmailHtml(v: {
         ${row("תאריך", v.dateStr)}
         ${row("שעה", v.timeStr)}
         ${v.priceStr ? row("מחיר", v.priceStr) : ""}
-        ${row("סטטוס", v.statusLabel)}
       </table>
       <a href="${BOOKINGS_URL}" style="display:inline-block;margin-top:20px;background:#ac5c7f;color:#fff;text-decoration:none;padding:12px 20px;border-radius:12px;font-weight:700;font-size:14px">לצפייה וניהול התור</a>
     </div>
