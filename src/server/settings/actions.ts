@@ -68,19 +68,14 @@ export async function updateBusinessDetailsAction(
 // Notification preferences
 // ---------------------------------------------------------------------------
 
-export interface NotificationPrefsFormState {
-  formError?: string;
-  success?: string;
-}
-
-export async function updateNotificationPrefsAction(
-  _prevState: NotificationPrefsFormState,
-  formData: FormData,
-): Promise<NotificationPrefsFormState> {
+/**
+ * Instant single-toggle save — flipping the switch persists immediately,
+ * no separate save button. Returns an error so the client can revert on failure.
+ */
+export async function setEmailNotificationsAction(
+  enabled: boolean,
+): Promise<{ error?: string }> {
   const tenant = await requireTenant();
-
-  // A checkbox is present in the form only when checked.
-  const enabled = formData.get("emailNotificationsEnabled") != null;
 
   try {
     await prisma.business.update({
@@ -88,11 +83,11 @@ export async function updateNotificationPrefsAction(
       data: { emailNotificationsEnabled: enabled },
     });
   } catch {
-    return { formError: SETTINGS.errors.generic };
+    return { error: SETTINGS.errors.generic };
   }
 
   revalidatePath("/settings");
-  return { success: SETTINGS.notifications.success };
+  return {};
 }
 
 // ---------------------------------------------------------------------------

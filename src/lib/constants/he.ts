@@ -962,6 +962,7 @@ export const SETTINGS = {
     off: "כבוי",
     saveButton: "שמירת העדפות",
     saving: "שומר…",
+    saved: "נשמר",
     success: "העדפות ההתראות נשמרו",
   },
 
@@ -996,8 +997,23 @@ export const SUBSCRIPTION = {
   adminNote: "יש לך גישה מלאה לכל הכלים.",
 
   upgradeButton: "שדרוג לפלטינום",
+  changePlanButton: "שינוי מסלול",
   cancelButton: "ביטול מנוי",
   cancelling: "מבטל…",
+
+  changePlan: {
+    title: "בחירת מסלול",
+    description: "אפשר לעבור בין המסלולים בכל עת. החיוב החודשי יתעדכן בהתאם.",
+    currentBadge: "המסלול שלך",
+    switchTo: "מעבר למסלול הזה",
+    upgradeTo: "שדרוג למסלול הזה",
+    downgradeTo: "מעבר למסלול הזה",
+    perMonth: "לחודש",
+    switching: "מעבירים…",
+    successToPlatinum: "המסלול עודכן לפלטינום. כל כלי הצמיחה נפתחו.",
+    successToPremium: "המסלול עודכן לפרימיום. החיוב החודשי עודכן בהתאם.",
+    note: "המחיר החדש נכנס לתוקף מיד. אפשר לשנות שוב בכל עת.",
+  },
 
   cancelConfirm: {
     title: "לבטל את המנוי?",
@@ -1882,6 +1898,8 @@ export const PUBLIC_PAGE = {
     showAddress: "הצגת כתובת",
     saveButton: "שמירת הגדרות",
     saving: "שומר…",
+    saved: "נשמר",
+    hint: "השינויים נשמרים אוטומטית",
     success: "ההגדרות נשמרו בהצלחה",
   },
 

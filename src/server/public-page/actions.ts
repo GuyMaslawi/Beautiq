@@ -107,38 +107,44 @@ export async function updateBrandingAction(
 // Section visibility toggles
 // ---------------------------------------------------------------------------
 
-export interface VisibilityFormState {
-  formError?: string;
-  success?: string;
-}
+const VISIBILITY_FIELDS = [
+  "showServices",
+  "showPrices",
+  "showHours",
+  "showReviews",
+  "showGallery",
+  "showPhone",
+  "showAddress",
+] as const;
 
-export async function updateVisibilityAction(
-  _prev: VisibilityFormState,
-  formData: FormData,
-): Promise<VisibilityFormState> {
+export type VisibilityField = (typeof VISIBILITY_FIELDS)[number];
+
+/**
+ * Instant single-toggle save — flipping a visibility switch persists
+ * immediately, no separate save button. Returns an error so the client can
+ * revert on failure.
+ */
+export async function setVisibilityFieldAction(
+  field: VisibilityField,
+  value: boolean,
+): Promise<{ error?: string }> {
   const tenant = await requireTenant();
 
-  const bool = (key: string) => formData.get(key) === "true";
+  if (!VISIBILITY_FIELDS.includes(field)) {
+    return { error: PUBLIC_PAGE.errors.generic };
+  }
 
   try {
     await prisma.business.update({
       where: { id: tenant.businessId },
-      data: {
-        showServices: bool("showServices"),
-        showPrices: bool("showPrices"),
-        showHours: bool("showHours"),
-        showReviews: bool("showReviews"),
-        showGallery: bool("showGallery"),
-        showPhone: bool("showPhone"),
-        showAddress: bool("showAddress"),
-      },
+      data: { [field]: value },
     });
   } catch {
-    return { formError: PUBLIC_PAGE.errors.generic };
+    return { error: PUBLIC_PAGE.errors.generic };
   }
 
   revalidatePath("/public-page");
-  return { success: PUBLIC_PAGE.visibility.success };
+  return {};
 }
 
 // ---------------------------------------------------------------------------

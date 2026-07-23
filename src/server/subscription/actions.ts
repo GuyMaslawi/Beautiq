@@ -65,6 +65,14 @@ export async function startSubscriptionCheckoutAction(
   const priceMinor = planPriceMinor(plan);
   const nonce = randomUUID();
 
+  // Capture the current standing order (if any) before we overwrite the row —
+  // switching plans re-authorizes at the NEW price, and Grow can't change a live
+  // direct debit's amount, so the old one must be stopped to avoid double billing.
+  const previous = await prisma.accountSubscription.findUnique({
+    where: { userId: user.id },
+    select: { directDebitId: true },
+  });
+
   // Reset the (single) subscription row to a fresh pending checkout for this plan.
   const subscription = await prisma.accountSubscription.upsert({
     where: { userId: user.id },
@@ -93,6 +101,16 @@ export async function startSubscriptionCheckoutAction(
 
   // ── Real Grow hosted checkout (payment link brokered via Make) ─────────────
   try {
+    // Stop the previous monthly standing order (best-effort) — the new plan is
+    // charged on a fresh direct debit at its own price.
+    if (previous?.directDebitId) {
+      const stopped = await cancelDirectDebit(previous.directDebitId);
+      logger.info("[subscription.checkout] previous direct debit stop requested", {
+        userId: user.id,
+        stopped,
+      });
+    }
+
     const base = appBaseUrl();
     const { paymentUrl, processId, processToken } = await createPaymentLink({
       amountMinor: priceMinor,

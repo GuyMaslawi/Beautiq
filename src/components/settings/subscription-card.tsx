@@ -2,11 +2,11 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import { Crown, Gem, Flower2, CreditCard, CalendarClock, AlertCircle } from "lucide-react";
+import { ArrowLeftRight, Gem, Flower2, CreditCard, CalendarClock, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+import { ChangePlanDialog } from "@/components/settings/change-plan-dialog";
 import { cancelSubscriptionAction } from "@/server/subscription/actions";
 import { PLANS, type PlanId } from "@/lib/plans";
 import { SUBSCRIPTION } from "@/lib/constants/he";
@@ -39,6 +39,7 @@ export function SubscriptionCard({ overview }: { overview: SubscriptionOverview 
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [changeOpen, setChangeOpen] = useState(false);
 
   const planId = (overview.plan ?? "premium") as PlanId;
   const planInfo = PLANS[planId];
@@ -139,13 +140,16 @@ export function SubscriptionCard({ overview }: { overview: SubscriptionOverview 
       {/* Actions */}
       {overview.isManaged ? (
         <div className="flex flex-wrap items-center gap-2.5 pt-1">
-          {overview.canUpgrade && !cancelled && (
-            <Link href="/upgrade">
-              <Button size="sm" variant="primary">
-                <Crown className="h-4 w-4" />
-                {SUBSCRIPTION.upgradeButton}
-              </Button>
-            </Link>
+          {!cancelled && (
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() => setChangeOpen(true)}
+              disabled={isPending}
+            >
+              <ArrowLeftRight className="h-4 w-4" />
+              {SUBSCRIPTION.changePlanButton}
+            </Button>
           )}
           {!cancelled && (
             <Button
@@ -162,6 +166,8 @@ export function SubscriptionCard({ overview }: { overview: SubscriptionOverview 
       ) : (
         <p className="text-sm" style={{ color: "var(--muted)" }}>{SUBSCRIPTION.adminNote}</p>
       )}
+
+      <ChangePlanDialog open={changeOpen} onOpenChange={setChangeOpen} currentPlan={planId} />
 
       <ConfirmDialog
         open={confirmOpen}

@@ -31,7 +31,7 @@ import { resetPrismaMock } from "../helpers/prisma-mock";
 import {
   updatePublicProfileAction,
   updateBrandingAction,
-  updateVisibilityAction,
+  setVisibilityFieldAction,
   addGalleryImageAction,
   deleteGalleryImageAction,
   deleteClientReviewAction,
@@ -94,17 +94,32 @@ describe("updateBrandingAction", () => {
   });
 });
 
-describe("updateVisibilityAction", () => {
-  it("writes the boolean toggles scoped to the tenant", async () => {
-    const res = await updateVisibilityAction(
-      {},
-      fd({ showServices: "true", showPrices: "false" }),
-    );
-    expect(res.success).toBeTruthy();
+describe("setVisibilityFieldAction", () => {
+  it("writes a single toggle scoped to the tenant (instant save)", async () => {
+    const res = await setVisibilityFieldAction("showServices", true);
+    expect(res.error).toBeUndefined();
     const arg = prisma.business.update.mock.calls[0][0];
     expect(arg.where).toEqual({ id: BUSINESS_A });
     expect(arg.data.showServices).toBe(true);
-    expect(arg.data.showPrices).toBe(false);
+  });
+
+  it("persists a false value too", async () => {
+    const res = await setVisibilityFieldAction("showPrices", false);
+    expect(res.error).toBeUndefined();
+    expect(prisma.business.update.mock.calls[0][0].data.showPrices).toBe(false);
+  });
+
+  it("rejects an unknown field without touching the database", async () => {
+    // @ts-expect-error — intentionally passing an invalid field
+    const res = await setVisibilityFieldAction("dropTable", true);
+    expect(res.error).toBeTruthy();
+    expect(prisma.business.update).not.toHaveBeenCalled();
+  });
+
+  it("returns a generic error when the update throws (no leak of internals)", async () => {
+    prisma.business.update.mockRejectedValue(new Error("db down"));
+    const res = await setVisibilityFieldAction("showHours", true);
+    expect(res.error).toBeTruthy();
   });
 });
 

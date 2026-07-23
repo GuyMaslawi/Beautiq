@@ -2,12 +2,14 @@
 
 import { revalidatePath } from "next/cache";
 import { randomBytes } from "crypto";
-import { AccountPlan } from "@prisma/client";
+import { AccountPlan, AccountSubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
 import { requirePlatformAdmin } from "./auth";
 import { getCurrentUser } from "@/server/auth/session";
 import { hashPassword } from "@/server/auth/password";
 import { logActivity } from "@/server/activity/log";
+import { planPriceMinor } from "@/server/subscription/service";
+import { cancelDirectDebit } from "@/lib/subscription/grow";
 
 // ---------------------------------------------------------------------------
 // "God-mode" account controls — platform-admin only.
@@ -81,6 +83,36 @@ export async function adminSetAccountPlanAction(
       planExpiresAt: expiry,
     },
   });
+
+  // Keep the monthly billing record in sync with the admin's plan change.
+  // Only touch an EXISTING subscription row (never fabricate a Grow-managed
+  // sub for a comped/grandfathered override):
+  //   • switching to premium/platinum → mirror the plan + recurring price so the
+  //     owner's "מנוי" card shows the right monthly amount;
+  //   • revoking access ("none") → stop billing and the standing order.
+  const existingSub = await prisma.accountSubscription.findUnique({
+    where: { userId: owner.id },
+    select: { id: true, status: true, directDebitId: true },
+  });
+  if (existingSub) {
+    if (newPlan) {
+      await prisma.accountSubscription.update({
+        where: { id: existingSub.id },
+        data: { plan: newPlan, priceMinor: planPriceMinor(newPlan) },
+      });
+    } else if (
+      existingSub.status === AccountSubscriptionStatus.active ||
+      existingSub.status === AccountSubscriptionStatus.past_due
+    ) {
+      await prisma.accountSubscription.update({
+        where: { id: existingSub.id },
+        data: { status: AccountSubscriptionStatus.cancelled, cancelledAt: new Date() },
+      });
+      if (existingSub.directDebitId) {
+        await cancelDirectDebit(existingSub.directDebitId);
+      }
+    }
+  }
 
   const label =
     plan === "none" ? "ללא גישה" : plan === "platinum" ? "פלטינום" : "פרימיום";

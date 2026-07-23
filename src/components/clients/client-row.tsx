@@ -4,7 +4,6 @@ import type { ClientListItem } from "@/server/clients/queries";
 import type { ClientLoyaltyBadge } from "@/server/loyalty/queries";
 import { CLIENTS, ACTIONS, LOYALTY } from "@/lib/constants/he";
 import { WhatsAppManualSendModal } from "@/components/clients/whatsapp-manual-send-modal";
-import { PlanIcon } from "@/components/plans/plan-icon";
 
 /** Small loyalty progress / eligibility pill shown next to a client's name. */
 export function LoyaltyPill({ loyalty }: { loyalty: ClientLoyaltyBadge }) {
@@ -71,14 +70,11 @@ export function ClientRow({
   client,
   businessName,
   isTestMode,
-  ownerPlan = null,
   loyalty = null,
 }: {
   client: ClientListItem;
   businessName: string;
   isTestMode: boolean;
-  /** The account owner's plan — shows a tier icon next to the name. */
-  ownerPlan?: string | null;
   /** Loyalty progress for this client, when the program is active. */
   loyalty?: ClientLoyaltyBadge | null;
 }) {
@@ -117,7 +113,6 @@ export function ClientRow({
               <p className="text-foreground text-sm font-semibold leading-tight truncate">
                 {client.fullName}
               </p>
-              <PlanIcon plan={ownerPlan} />
               {isNew && (
                 <span
                   className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"

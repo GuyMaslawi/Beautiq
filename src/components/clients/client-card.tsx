@@ -5,7 +5,6 @@ import type { ClientLoyaltyBadge } from "@/server/loyalty/queries";
 import { CLIENTS } from "@/lib/constants/he";
 import { WhatsAppManualSendModal } from "@/components/clients/whatsapp-manual-send-modal";
 import { ClientAuraCard } from "@/components/premium/client-aura-card";
-import { PlanIcon } from "@/components/plans/plan-icon";
 import { LoyaltyPill } from "@/components/clients/client-row";
 
 function formatLastVisit(date: Date): string {
@@ -53,14 +52,11 @@ export function ClientCard({
   client,
   businessName,
   isTestMode = false,
-  ownerPlan = null,
   loyalty = null,
 }: {
   client: ClientListItem;
   businessName?: string;
   isTestMode?: boolean;
-  /** The account owner's plan — shows a tier icon next to the name. */
-  ownerPlan?: string | null;
   /** Loyalty progress for this client, when the program is active. */
   loyalty?: ClientLoyaltyBadge | null;
 }) {
@@ -76,7 +72,6 @@ export function ClientCard({
   return (
     <ClientAuraCard
       name={client.fullName}
-      nameIcon={<PlanIcon plan={ownerPlan} />}
       contact={client.phone}
       initials={initials}
       statusTone={client.upcomingBooking ? "success" : client.noShowCount > 0 ? "danger" : "brand"}

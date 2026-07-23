@@ -10,7 +10,7 @@ import {
 import {
   updateBusinessDetailsAction,
   updateBusinessCategoriesAction,
-  updateNotificationPrefsAction,
+  setEmailNotificationsAction,
 } from "@/server/settings/actions";
 import { getSubscriptionOverview } from "@/server/subscription/queries";
 import { BusinessDetailsForm } from "@/components/settings/business-details-form";
@@ -75,7 +75,7 @@ export default async function SettingsPage() {
         {/* Section 4 — Notification preferences */}
         <Section title={SETTINGS.notifications.sectionTitle} icon={<Bell className="h-4 w-4" style={{ color: "#ac5c7f" }} />}>
           <NotificationsForm
-            action={updateNotificationPrefsAction}
+            action={setEmailNotificationsAction}
             initialEnabled={settings.emailNotificationsEnabled}
           />
         </Section>

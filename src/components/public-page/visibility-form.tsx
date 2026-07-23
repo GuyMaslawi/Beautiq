@@ -1,27 +1,16 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useState, useTransition } from "react";
+import { Check } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Alert } from "@/components/ui/alert";
 import { PUBLIC_PAGE } from "@/lib/constants/he";
 import type {
-  updateVisibilityAction,
-  VisibilityFormState,
+  setVisibilityFieldAction,
+  VisibilityField,
 } from "@/server/public-page/actions";
 
-const INITIAL: VisibilityFormState = {};
-
-type VisibilityKeys =
-  | "showServices"
-  | "showPrices"
-  | "showHours"
-  | "showReviews"
-  | "showGallery"
-  | "showPhone"
-  | "showAddress";
-
-const TOGGLES: { key: VisibilityKeys; label: string }[] = [
+const TOGGLES: { key: VisibilityField; label: string }[] = [
   { key: "showServices", label: PUBLIC_PAGE.visibility.showServices },
   { key: "showPrices", label: PUBLIC_PAGE.visibility.showPrices },
   { key: "showHours", label: PUBLIC_PAGE.visibility.showHours },
@@ -35,43 +24,61 @@ export function VisibilityForm({
   action,
   initialValues,
 }: {
-  action: typeof updateVisibilityAction;
-  initialValues: Record<VisibilityKeys, boolean>;
+  action: typeof setVisibilityFieldAction;
+  initialValues: Record<VisibilityField, boolean>;
 }) {
-  const [state, formAction, isPending] = useActionState(action, INITIAL);
-  const [values, setValues] = useState<Record<VisibilityKeys, boolean>>(initialValues);
+  const [values, setValues] = useState<Record<VisibilityField, boolean>>(initialValues);
+  const [pendingKey, setPendingKey] = useState<VisibilityField | null>(null);
+  const [savedKey, setSavedKey] = useState<VisibilityField | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
 
-  const toggle = (key: VisibilityKeys) =>
-    setValues((prev) => ({ ...prev, [key]: !prev[key] }));
+  // Flipping a switch saves that setting instantly — no separate save button.
+  const handleToggle = (key: VisibilityField) => {
+    const next = !values[key];
+    setValues((prev) => ({ ...prev, [key]: next }));
+    setPendingKey(key);
+    setSavedKey(null);
+    setError(null);
+    startTransition(async () => {
+      const result = await action(key, next);
+      setPendingKey(null);
+      if (result.error) {
+        setValues((prev) => ({ ...prev, [key]: !next })); // revert on failure
+        setError(result.error);
+      } else {
+        setSavedKey(key);
+      }
+    });
+  };
 
   return (
-    <form action={formAction} className="space-y-5" noValidate>
-      {state.formError && <Alert>{state.formError}</Alert>}
-      {state.success && (
-        <div className="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">
-          {state.success}
-        </div>
-      )}
+    <div className="space-y-4">
+      {error && <Alert>{error}</Alert>}
 
       <div className="space-y-3">
         {TOGGLES.map(({ key, label }) => (
           <div key={key} className="flex items-center justify-between gap-4">
-            <input type="hidden" name={key} value={values[key] ? "true" : "false"} />
-            <span className="text-sm text-[var(--foreground)]">{label}</span>
+            <span className="flex items-center gap-2 text-sm text-[var(--foreground)]">
+              {label}
+              {savedKey === key && pendingKey !== key && (
+                <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600">
+                  <Check className="h-3.5 w-3.5" />
+                  {PUBLIC_PAGE.visibility.saved}
+                </span>
+              )}
+            </span>
             <Switch
               checked={values[key]}
-              onCheckedChange={() => toggle(key)}
+              onCheckedChange={() => handleToggle(key)}
+              disabled={pendingKey === key}
               aria-label={label}
             />
           </div>
         ))}
       </div>
 
-      <Button type="submit" disabled={isPending} className="w-full">
-        {isPending
-          ? PUBLIC_PAGE.visibility.saving
-          : PUBLIC_PAGE.visibility.saveButton}
-      </Button>
-    </form>
+      <p className="text-muted text-xs">{PUBLIC_PAGE.visibility.hint}</p>
+    </div>
   );
 }

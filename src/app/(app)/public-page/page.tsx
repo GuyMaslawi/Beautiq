@@ -10,7 +10,7 @@ import {
 import {
   updatePublicProfileAction,
   updateBrandingAction,
-  updateVisibilityAction,
+  setVisibilityFieldAction,
   addGalleryImageAction,
   deleteGalleryImageAction,
   deleteClientReviewAction,
@@ -102,7 +102,7 @@ export default async function PublicPageSettingsPage() {
         icon={<Eye className="h-4 w-4" style={{ color: "#ac5c7f" }} />}
       >
         <VisibilityForm
-          action={updateVisibilityAction}
+          action={setVisibilityFieldAction}
           initialValues={{
             showServices: settings.showServices,
             showPrices: settings.showPrices,

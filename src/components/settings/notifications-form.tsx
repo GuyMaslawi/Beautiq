@@ -1,39 +1,43 @@
 "use client";
 
-import { useActionState, useState } from "react";
-import { Button } from "@/components/ui/button";
+import { useState, useTransition } from "react";
+import { Check } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
 import { Alert } from "@/components/ui/alert";
 import { SETTINGS } from "@/lib/constants/he";
-import type {
-  NotificationPrefsFormState,
-  updateNotificationPrefsAction,
-} from "@/server/settings/actions";
-
-const INITIAL: NotificationPrefsFormState = {};
+import type { setEmailNotificationsAction } from "@/server/settings/actions";
 
 export function NotificationsForm({
   action,
   initialEnabled,
 }: {
-  action: typeof updateNotificationPrefsAction;
+  action: typeof setEmailNotificationsAction;
   initialEnabled: boolean;
 }) {
-  const [state, formAction, isPending] = useActionState(action, INITIAL);
   const [enabled, setEnabled] = useState(initialEnabled);
+  const [isPending, startTransition] = useTransition();
+  const [justSaved, setJustSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Flipping the switch saves instantly — no separate save button.
+  const handleToggle = (next: boolean) => {
+    setEnabled(next);
+    setError(null);
+    setJustSaved(false);
+    startTransition(async () => {
+      const result = await action(next);
+      if (result.error) {
+        setEnabled(!next); // revert on failure
+        setError(result.error);
+      } else {
+        setJustSaved(true);
+      }
+    });
+  };
 
   return (
-    <form action={formAction} className="space-y-5" noValidate>
-      {state.formError && <Alert>{state.formError}</Alert>}
-      {state.success && (
-        <div className="rounded-xl bg-green-50 px-4 py-3 text-sm text-green-700">
-          {state.success}
-        </div>
-      )}
-
-      {/* Hidden input carries the value; a checkbox is only submitted when checked. */}
-      {enabled && (
-        <input type="hidden" name="emailNotificationsEnabled" value="1" />
-      )}
+    <div className="space-y-4">
+      {error && <Alert>{error}</Alert>}
 
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
@@ -45,35 +49,29 @@ export function NotificationsForm({
           </p>
         </div>
 
-        <button
-          type="button"
-          role="switch"
-          aria-checked={enabled}
-          onClick={() => setEnabled((v) => !v)}
-          className="relative mt-0.5 inline-block h-6 w-11 shrink-0 cursor-pointer rounded-full transition-colors"
-          style={{ background: enabled ? "var(--primary)" : "var(--border)" }}
-        >
-          <span className="sr-only">{SETTINGS.notifications.toggleLabel}</span>
-          <span
-            className="absolute h-5 w-5 rounded-full bg-white shadow transition-all"
-            style={{
-              top: "0.125rem",
-              insetInlineStart: enabled ? "calc(100% - 1.375rem)" : "0.125rem",
-            }}
-          />
-        </button>
+        <Switch
+          checked={enabled}
+          onCheckedChange={handleToggle}
+          disabled={isPending}
+          aria-label={SETTINGS.notifications.toggleLabel}
+          className="mt-0.5"
+        />
       </div>
 
-      <div className="flex items-center gap-3">
-        <Button type="submit" className="w-full sm:w-auto" disabled={isPending}>
-          {isPending
-            ? SETTINGS.notifications.saving
-            : SETTINGS.notifications.saveButton}
-        </Button>
-        <span className="text-muted text-xs font-medium">
+      <div className="flex items-center gap-2 text-xs font-medium">
+        <span className="text-muted">
           {enabled ? SETTINGS.notifications.on : SETTINGS.notifications.off}
         </span>
+        {isPending && (
+          <span className="text-muted">· {SETTINGS.notifications.saving}</span>
+        )}
+        {justSaved && !isPending && (
+          <span className="inline-flex items-center gap-1 text-green-600">
+            <Check className="h-3.5 w-3.5" />
+            {SETTINGS.notifications.saved}
+          </span>
+        )}
       </div>
-    </form>
+    </div>
   );
 }
