@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/server/db/prisma";
 import { requireTenant } from "@/server/auth/session";
 import { getClientDetail } from "@/server/clients/queries";
+import { logActivity } from "@/server/activity/log";
 import { normalizePhone, isValidIsraeliPhone } from "@/lib/phone";
 import { CLIENTS } from "@/lib/constants/he";
 
@@ -103,8 +104,10 @@ export async function updateClientAction(
   }
 
   try {
-    await prisma.client.update({
-      where: { id: clientId },
+    // Scope the write by businessId at the DB layer (not only the read guard
+    // above) — matches the tenant-isolation pattern used across the codebase.
+    await prisma.client.updateMany({
+      where: { id: clientId, businessId: tenant.businessId },
       data: {
         fullName,
         phone,
@@ -119,6 +122,14 @@ export async function updateClientAction(
     }
     return { formError: CLIENTS.errors.generic };
   }
+
+  await logActivity({
+    businessId: tenant.businessId,
+    category: "client",
+    action: "client.update",
+    summary: `עודכנו פרטי הלקוחה ${fullName}`,
+    metadata: { clientId },
+  });
 
   revalidatePath(`/clients/${clientId}`);
   revalidatePath("/clients");

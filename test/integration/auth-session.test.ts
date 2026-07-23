@@ -85,6 +85,9 @@ describe("getCurrentUser", () => {
       isAdmin: true,
       plan: true,
       planActivatedAt: true,
+      planExpiresAt: true,
+      suspendedUntil: true,
+      lastSeenAt: true,
     });
   });
 });

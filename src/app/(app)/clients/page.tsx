@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { Users2, CalendarCheck, UserX, Clock, Upload } from "lucide-react";
-import { requireCurrentBusiness } from "@/server/auth/session";
+import { requireCurrentBusiness, getCurrentUser } from "@/server/auth/session";
 import { getClients, getClientSummary } from "@/server/clients/queries";
+import { getClientsLoyaltyBadges } from "@/server/loyalty/queries";
 import { getCampaignsForBusiness } from "@/server/whatsapp/campaigns/queries";
 import { ClientRow } from "@/components/clients/client-row";
 import { ClientCard } from "@/components/clients/client-card";
@@ -25,12 +26,19 @@ export default async function ClientsPage({
   const { q } = await searchParams;
   const search = q?.trim() || undefined;
   const isTestMode = process.env.WHATSAPP_TEST_MODE === "true";
+  const ownerPlan = (await getCurrentUser())?.plan ?? null;
 
   const [clients, summary, campaigns] = await Promise.all([
     getClients(tenant, { search }),
     getClientSummary(tenant),
     getCampaignsForBusiness(tenant),
   ]);
+
+  // Loyalty progress badges for the visible clients (empty when program is off).
+  const loyaltyBadges = await getClientsLoyaltyBadges(
+    tenant,
+    clients.map((c) => c.id),
+  );
 
   return (
     <PremiumPageShell tint="rose" width="wide">
@@ -145,6 +153,8 @@ export default async function ClientsPage({
               client={client}
               businessName={business.name}
               isTestMode={isTestMode}
+              ownerPlan={ownerPlan}
+              loyalty={loyaltyBadges.get(client.id) ?? null}
             />
           ))}
         </div>
@@ -177,7 +187,7 @@ export default async function ClientsPage({
               </thead>
               <tbody>
                 {clients.map((client) => (
-                  <ClientRow key={client.id} client={client} businessName={business.name} isTestMode={isTestMode} />
+                  <ClientRow key={client.id} client={client} businessName={business.name} isTestMode={isTestMode} ownerPlan={ownerPlan} loyalty={loyaltyBadges.get(client.id) ?? null} />
                 ))}
               </tbody>
             </table>

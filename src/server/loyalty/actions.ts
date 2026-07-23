@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/server/db/prisma";
 import { requireTenant } from "@/server/auth/session";
-import { LOYALTY_BOUNDS, LOYALTY_DEFAULTS } from "@/lib/loyalty/constants";
+import { LOYALTY_BOUNDS } from "@/lib/loyalty/constants";
 import { LOYALTY } from "@/lib/constants/he";
 
 export interface LoyaltyFormState {
@@ -44,18 +44,33 @@ export async function saveLoyaltyProgramAction(
     errors.rewardDescription = LOYALTY.errors.rewardTooLong;
   }
 
+  const autoSendEnabled = String(formData.get("autoSendEnabled") ?? "") === "on";
+
+  const almostThereMessage = String(formData.get("almostThereMessage") ?? "").trim();
+  if (almostThereMessage.length > LOYALTY_BOUNDS.maxMessageLength) {
+    errors.almostThereMessage = LOYALTY.errors.messageTooLong;
+  }
+  const rewardMessage = String(formData.get("rewardMessage") ?? "").trim();
+  if (rewardMessage.length > LOYALTY_BOUNDS.maxMessageLength) {
+    errors.rewardMessage = LOYALTY.errors.messageTooLong;
+  }
+
   if (Object.keys(errors).length > 0) return { errors };
+
+  const data = {
+    isActive,
+    visitsRequired,
+    rewardDescription,
+    autoSendEnabled,
+    almostThereMessage,
+    rewardMessage,
+  };
 
   try {
     await prisma.loyaltyProgram.upsert({
       where: { businessId: tenant.businessId },
-      create: {
-        businessId: tenant.businessId,
-        isActive,
-        visitsRequired,
-        rewardDescription,
-      },
-      update: { isActive, visitsRequired, rewardDescription },
+      create: { businessId: tenant.businessId, ...data },
+      update: data,
     });
   } catch {
     return { formError: LOYALTY.errors.generic };
@@ -85,7 +100,7 @@ export async function redeemLoyaltyRewardAction(
           id: true,
           _count: {
             select: {
-              bookings: { where: { status: "completed" } },
+              bookings: { where: { status: "completed", businessId: tenant.businessId } },
               loyaltyRedemptions: true,
             },
           },
@@ -144,5 +159,3 @@ export async function undoLoyaltyRedemptionAction(
   revalidatePath("/loyalty");
   return { success: LOYALTY.redemptionUndone };
 }
-
-export { LOYALTY_DEFAULTS };

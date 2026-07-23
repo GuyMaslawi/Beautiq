@@ -19,7 +19,6 @@ import { isValidIsraeliPhone } from "@/lib/phone";
 
 export type ExclusionReason =
   | "invalid_phone"
-  | "missing_optin"
   | "unsubscribed"
   | "duplicate_phone"
   | "missing_template_data"
@@ -201,7 +200,6 @@ export async function buildCampaignAudience(
 
   const byReason: Record<ExclusionReason, number> = {
     invalid_phone: 0,
-    missing_optin: 0,
     unsubscribed: 0,
     duplicate_phone: 0,
     missing_template_data: 0,

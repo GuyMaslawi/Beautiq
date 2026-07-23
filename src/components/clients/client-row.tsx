@@ -1,8 +1,29 @@
 import Link from "next/link";
 import { AlertTriangle } from "lucide-react";
 import type { ClientListItem } from "@/server/clients/queries";
-import { CLIENTS, ACTIONS } from "@/lib/constants/he";
+import type { ClientLoyaltyBadge } from "@/server/loyalty/queries";
+import { CLIENTS, ACTIONS, LOYALTY } from "@/lib/constants/he";
 import { WhatsAppManualSendModal } from "@/components/clients/whatsapp-manual-send-modal";
+import { PlanIcon } from "@/components/plans/plan-icon";
+
+/** Small loyalty progress / eligibility pill shown next to a client's name. */
+export function LoyaltyPill({ loyalty }: { loyalty: ClientLoyaltyBadge }) {
+  const eligible = loyalty.pendingRewards > 0;
+  return (
+    <span
+      className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
+      style={
+        eligible
+          ? { background: "rgba(172,92,127,0.14)", color: "#ac5c7f" }
+          : { background: "rgba(172,92,127,0.07)", color: "#8a5a72" }
+      }
+    >
+      {eligible
+        ? LOYALTY.badge.eligible
+        : LOYALTY.badge.progress(loyalty.visitsInCurrentCard, loyalty.visitsRequired)}
+    </span>
+  );
+}
 
 function formatLastVisit(date: Date): string {
   const d = new Date(date);
@@ -50,10 +71,16 @@ export function ClientRow({
   client,
   businessName,
   isTestMode,
+  ownerPlan = null,
+  loyalty = null,
 }: {
   client: ClientListItem;
   businessName: string;
   isTestMode: boolean;
+  /** The account owner's plan — shows a tier icon next to the name. */
+  ownerPlan?: string | null;
+  /** Loyalty progress for this client, when the program is active. */
+  loyalty?: ClientLoyaltyBadge | null;
 }) {
   const initials = client.fullName
     .split(" ")
@@ -90,6 +117,7 @@ export function ClientRow({
               <p className="text-foreground text-sm font-semibold leading-tight truncate">
                 {client.fullName}
               </p>
+              <PlanIcon plan={ownerPlan} />
               {isNew && (
                 <span
                   className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-semibold"
@@ -98,6 +126,7 @@ export function ClientRow({
                   חדש
                 </span>
               )}
+              {loyalty && <LoyaltyPill loyalty={loyalty} />}
             </div>
             <p className="text-xs mt-0.5" dir="ltr" style={{ color: "var(--muted)", textAlign: "right" }}>
               {client.phone}

@@ -50,6 +50,8 @@ function mockBooking(overrides: Record<string, unknown> = {}) {
     business: {
       name: "סטודיו יופי",
       phone: "+972501234567",
+      // Owner opted in to email notifications (the gate for the owner email).
+      emailNotificationsEnabled: true,
       members: [{ user: { email: "owner@example.com", name: "בעלת העסק" } }],
     },
     ...overrides,
@@ -139,6 +141,25 @@ describe("notifyOwnerOfNewBooking — owner email", () => {
     expect(prisma.booking.update).not.toHaveBeenCalled();
   });
 
+  it("does NOT email when the owner disabled email notifications (opt-out)", async () => {
+    prisma.booking.findFirst.mockResolvedValue(
+      mockBooking({
+        business: {
+          name: "סטודיו יופי",
+          phone: "+972501234567",
+          emailNotificationsEnabled: false,
+          members: [{ user: { email: "owner@example.com", name: "בעלת העסק" } }],
+        },
+      }),
+    );
+
+    await notifyOwnerOfNewBooking({ bookingId: BOOKING_ID, businessId: BUSINESS_A });
+
+    expect(sendEmail).not.toHaveBeenCalled();
+    // Nothing was sent, so the booking stays un-notified (a later retry can still fire).
+    expect(prisma.booking.update).not.toHaveBeenCalled();
+  });
+
   it("skips the email but never throws when no owner email is on file", async () => {
     prisma.booking.findFirst.mockResolvedValue(
       mockBooking({ business: { name: "סטודיו יופי", phone: null, members: [] } }),
@@ -216,6 +237,7 @@ describe("notifyOwnerOfNewBooking — owner WhatsApp (flag-gated)", () => {
         business: {
           name: "סטודיו יופי",
           phone: null,
+          emailNotificationsEnabled: true,
           members: [{ user: { email: "owner@example.com", name: "בעלת העסק" } }],
         },
       }),
@@ -236,6 +258,7 @@ describe("notifyOwnerOfNewBooking — owner WhatsApp (flag-gated)", () => {
         business: {
           name: "סטודיו יופי",
           phone: "12", // not a valid Israeli number
+          emailNotificationsEnabled: true,
           members: [{ user: { email: "owner@example.com", name: "בעלת העסק" } }],
         },
       }),

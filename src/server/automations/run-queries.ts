@@ -20,8 +20,6 @@ function toOwnerLabel(reason: string | null): string {
   if (!reason) return "לא נשלח";
   if (reason.includes("מספר טלפון")) return "אין מספר טלפון";
   if (reason.includes("הסירה") || reason.includes("unsubscrib") || reason.includes("מעוניינת בקבלת הודעות")) return "ביקשה להסיר מרשימה";
-  if (reason.includes("שיווקי")) return "לא אישרה שיווקיות";
-  if (reason.includes("לא אישרה קבלת הודעות")) return "לא אישרה הודעות";
   if (reason.includes("תור עתידי")) return "יש תור עתידי";
   if (reason.includes("נשלחה הודעה לאחרונה") || reason.includes("cooldown") || reason.includes("המתנה")) return "נשלחה הודעה לאחרונה";
   if (reason.includes("פיתוח") || reason.toLowerCase().includes("mock")) return "מצב פיתוח";

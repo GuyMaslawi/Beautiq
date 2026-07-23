@@ -471,6 +471,77 @@ function StepSection({
   );
 }
 
+// ── How it works ───────────────────────────────────────────────────────────────
+const HOW_STEP_ICONS = [Megaphone, Gift, Send, CheckCircle2] as const;
+
+function HowCampaignsWork() {
+  return (
+    <div
+      className="rounded-2xl p-5"
+      style={{
+        background: "linear-gradient(135deg, #f7edf3 0%, #f3eef7 100%)",
+        border: "1px solid rgba(172,92,127,0.18)",
+      }}
+    >
+      <div className="mb-4 flex items-start gap-2.5">
+        <span
+          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
+          style={{ background: "rgba(172,92,127,0.14)" }}
+        >
+          <Info className="h-4 w-4" style={{ color: "#ac5c7f" }} />
+        </span>
+        <div>
+          <h2 className="font-semibold text-base tracking-tight" style={{ color: "#2b2530" }}>
+            {WIN_BACK.how.title}
+          </h2>
+          <p className="mt-0.5 text-xs leading-5" style={{ color: "#8a8190" }}>
+            {WIN_BACK.how.intro}
+          </p>
+        </div>
+      </div>
+
+      <ol className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {WIN_BACK.how.steps.map((step, i) => {
+          const Icon = HOW_STEP_ICONS[i] ?? Megaphone;
+          return (
+            <li
+              key={step.title}
+              className="rounded-xl p-3.5"
+              style={{ background: "rgba(255,255,255,0.75)", border: "1px solid rgba(172,92,127,0.12)" }}
+            >
+              <div className="mb-2 flex items-center gap-2">
+                <span
+                  className="flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-bold"
+                  style={{ background: "rgba(172,92,127,0.14)", color: "#ac5c7f" }}
+                >
+                  {i + 1}
+                </span>
+                <Icon className="h-3.5 w-3.5" style={{ color: "#ac5c7f" }} />
+                <span className="text-sm font-semibold" style={{ color: "#2b2530" }}>
+                  {step.title}
+                </span>
+              </div>
+              <p className="text-xs leading-5" style={{ color: "#8a8190" }}>
+                {step.body}
+              </p>
+            </li>
+          );
+        })}
+      </ol>
+
+      <div
+        className="mt-4 flex items-start gap-2 rounded-xl px-3.5 py-2.5"
+        style={{ background: "rgba(37,211,102,0.08)", border: "1px solid rgba(37,211,102,0.20)" }}
+      >
+        <MessageCircle className="mt-0.5 h-3.5 w-3.5 shrink-0" style={{ color: "#1a9e4e" }} />
+        <p className="text-xs leading-5" style={{ color: "#2b2530" }}>
+          {WIN_BACK.how.note}
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export function CampaignView({
@@ -1352,6 +1423,9 @@ export function CampaignView({
   // ── Campaign selector (default view) ────────────────────────────────────────
   return (
     <div className="space-y-6">
+      {/* Plain-language explainer — what a campaign is and how you send it */}
+      <HowCampaignsWork />
+
       {/* Overview metrics */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div

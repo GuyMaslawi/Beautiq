@@ -11,6 +11,8 @@ import { ClientSmartMessagesCard } from "@/components/messages/client-smart-mess
 import { ClientRetentionCard } from "@/components/retention/client-retention-card";
 import { ClientReputationCard } from "@/components/reputation/client-reputation-card";
 import { getClientLatestCompletedBooking } from "@/server/reputation/queries";
+import { getClientLoyaltyStatus } from "@/server/loyalty/queries";
+import { ClientLoyaltyCard } from "@/components/loyalty/client-loyalty-card";
 import { CLIENTS } from "@/lib/constants/he";
 import { ClientEditModal } from "@/components/clients/client-edit-modal";
 import { WhatsAppManualSendModal } from "@/components/clients/whatsapp-manual-send-modal";
@@ -91,9 +93,10 @@ export default async function ClientDetailPage({
   const { clientId } = await params;
   const business = await requireCurrentBusiness();
   const tenant = { businessId: business.id };
-  const [client, recentReputationBooking] = await Promise.all([
+  const [client, recentReputationBooking, loyaltyStatus] = await Promise.all([
     getClientDetail(tenant, clientId),
     getClientLatestCompletedBooking(tenant, clientId),
+    getClientLoyaltyStatus(tenant, clientId),
   ]);
 
   if (!client) notFound();
@@ -245,6 +248,9 @@ export default async function ClientDetailPage({
           </div>
         </div>
       </div>
+
+      {/* Loyalty progress — shown when the program is active & client has visits */}
+      {loyaltyStatus?.isActive && <ClientLoyaltyCard status={loyaltyStatus} />}
 
       {/* Client insights */}
       {insights.length > 0 && (

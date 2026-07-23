@@ -9,6 +9,8 @@ import { getBooking, hasOverlap } from "@/server/bookings/queries";
 import { findOrCreateClient } from "@/server/clients/find-or-create";
 import { syncClientStats } from "@/server/clients/stats";
 import { sendBookingConfirmationById } from "@/server/public-booking/send-confirmation";
+import { notifyOwnerOfClientEvent } from "@/server/notifications/owner-email";
+import { logActivity } from "@/server/activity/log";
 import { validateBooking } from "@/lib/validation/booking";
 import { parseIsraelDateTime } from "@/lib/time";
 import { BOOKINGS } from "@/lib/constants/he";
@@ -120,6 +122,18 @@ export async function createBookingAction(
 
   await syncClientStats({ businessId: tenant.businessId, clientId: client.id });
 
+  await logActivity({
+    businessId: tenant.businessId,
+    category: "booking",
+    action: "booking.create",
+    summary: `נקבע תור חדש ל${value.clientName} — ${service.name}`,
+    metadata: {
+      bookingId: created.id,
+      clientName: value.clientName,
+      serviceName: service.name,
+    },
+  });
+
   // An owner-created booking is approved immediately — send the WhatsApp
   // confirmation (subject to all existing safety guards). Awaited so it runs
   // before the redirect below terminates this request; it never throws.
@@ -127,6 +141,13 @@ export async function createBookingAction(
     bookingId: created.id,
     businessId: tenant.businessId,
     source: "manual_owner",
+  });
+
+  // התראת אימייל לבעלת העסק (רק אם הפעילה בהגדרות) — best-effort.
+  await notifyOwnerOfClientEvent({
+    businessId: tenant.businessId,
+    bookingId: created.id,
+    event: "booking_created",
   });
 
   revalidatePath("/bookings");
@@ -169,7 +190,7 @@ export async function completeBookingAction(bookingId: string): Promise<void> {
     where: { id: bookingId, businessId: tenant.businessId },
     select: { clientId: true },
   });
-  await prisma.booking.updateMany({
+  const updated = await prisma.booking.updateMany({
     where: {
       id: bookingId,
       businessId: tenant.businessId,
@@ -179,6 +200,20 @@ export async function completeBookingAction(bookingId: string): Promise<void> {
   });
   if (booking) {
     await syncClientStats({ businessId: tenant.businessId, clientId: booking.clientId });
+  }
+  if (updated.count > 0) {
+    await notifyOwnerOfClientEvent({
+      businessId: tenant.businessId,
+      bookingId,
+      event: "booking_completed",
+    });
+    await logActivity({
+      businessId: tenant.businessId,
+      category: "booking",
+      action: "booking.complete",
+      summary: "תור סומן כהושלם",
+      metadata: { bookingId },
+    });
   }
   revalidatePath(`/bookings/${bookingId}`);
   revalidatePath("/bookings");
@@ -191,7 +226,7 @@ export async function cancelBookingAction(bookingId: string): Promise<void> {
     where: { id: bookingId, businessId: tenant.businessId },
     select: { clientId: true },
   });
-  await prisma.booking.updateMany({
+  const updated = await prisma.booking.updateMany({
     where: {
       id: bookingId,
       businessId: tenant.businessId,
@@ -201,6 +236,20 @@ export async function cancelBookingAction(bookingId: string): Promise<void> {
   });
   if (booking) {
     await syncClientStats({ businessId: tenant.businessId, clientId: booking.clientId });
+  }
+  if (updated.count > 0) {
+    await notifyOwnerOfClientEvent({
+      businessId: tenant.businessId,
+      bookingId,
+      event: "booking_cancelled",
+    });
+    await logActivity({
+      businessId: tenant.businessId,
+      category: "booking",
+      action: "booking.cancel",
+      summary: "תור בוטל",
+      metadata: { bookingId },
+    });
   }
   revalidatePath(`/bookings/${bookingId}`);
   revalidatePath("/bookings");
@@ -213,7 +262,7 @@ export async function noShowBookingAction(bookingId: string): Promise<void> {
     where: { id: bookingId, businessId: tenant.businessId },
     select: { clientId: true },
   });
-  await prisma.booking.updateMany({
+  const updated = await prisma.booking.updateMany({
     where: {
       id: bookingId,
       businessId: tenant.businessId,
@@ -223,6 +272,20 @@ export async function noShowBookingAction(bookingId: string): Promise<void> {
   });
   if (booking) {
     await syncClientStats({ businessId: tenant.businessId, clientId: booking.clientId });
+  }
+  if (updated.count > 0) {
+    await notifyOwnerOfClientEvent({
+      businessId: tenant.businessId,
+      bookingId,
+      event: "booking_no_show",
+    });
+    await logActivity({
+      businessId: tenant.businessId,
+      category: "booking",
+      action: "booking.no_show",
+      summary: "לקוחה סומנה כלא הגיעה",
+      metadata: { bookingId },
+    });
   }
   revalidatePath(`/bookings/${bookingId}`);
   revalidatePath("/bookings");

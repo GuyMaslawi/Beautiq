@@ -3,6 +3,8 @@ import { NAV } from "@/lib/constants/he";
 export interface NavItem {
   href: string;
   label: string;
+  /** When true, this item is hidden from Premium users (Platinum-only feature). */
+  platinum?: boolean;
 }
 
 export interface NavGroup {
@@ -19,7 +21,8 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/availability", label: NAV.availability },
   { href: "/bring-back", label: NAV.bringBack },
   { href: "/waitlist", label: NAV.waitlist },
-  { href: "/loyalty", label: NAV.loyalty },
+  { href: "/loyalty", label: NAV.loyalty, platinum: true },
+  { href: "/revenue-forecast", label: NAV.revenueForecast, platinum: true },
   { href: "/finance", label: NAV.finance },
   { href: "/public-page", label: NAV.publicPage },
   { href: "/settings", label: NAV.settings },
@@ -48,7 +51,8 @@ export const NAV_GROUPS: readonly NavGroup[] = [
     items: [
       { href: "/bring-back", label: NAV.bringBack },
       { href: "/waitlist", label: NAV.waitlist },
-      { href: "/loyalty", label: NAV.loyalty },
+      { href: "/loyalty", label: NAV.loyalty, platinum: true },
+      { href: "/revenue-forecast", label: NAV.revenueForecast, platinum: true },
       { href: "/finance", label: NAV.finance },
     ],
   },

@@ -8,9 +8,21 @@ import {
   CalendarDays,
   Users2,
   ArrowLeft,
+  Gem,
+  Crown,
+  AlertTriangle,
 } from "lucide-react";
-import { getAdminOverviewStats } from "@/server/admin/queries";
+import {
+  getAdminOverviewStats,
+  getAccountSubscriptionRevenue,
+} from "@/server/admin/queries";
+import {
+  getPlatformAnalytics,
+  getRecentPlatformActivity,
+} from "@/server/admin/platform-analytics";
 import { Card } from "@/components/ui/card";
+import { PlatformAnalyticsSection } from "./_components/platform-analytics-section";
+import { PlatformActivityFeed } from "./_components/platform-activity-feed";
 
 function StatCard({
   label,
@@ -43,8 +55,17 @@ function StatCard({
   );
 }
 
+function formatILS(amount: number): string {
+  return `₪${amount.toLocaleString("he-IL")}`;
+}
+
 export default async function AdminPage() {
-  const stats = await getAdminOverviewStats();
+  const [stats, revenue, platform, activity] = await Promise.all([
+    getAdminOverviewStats(),
+    getAccountSubscriptionRevenue(),
+    getPlatformAnalytics(),
+    getRecentPlatformActivity(25),
+  ]);
 
   return (
     <div className="space-y-8">
@@ -109,6 +130,76 @@ export default async function AdminPage() {
           bg="var(--primary-light)"
         />
       </div>
+
+      {/* Cross-tenant platform analytics — GMV, leaderboards, engagement */}
+      <PlatformAnalyticsSection data={platform} />
+
+      {/* Subscription revenue (owner→Allura billing) */}
+      <div>
+        <div className="mb-3 flex items-baseline justify-between gap-3">
+          <h2 className="font-display text-lg font-semibold tracking-tight text-foreground">
+            הכנסות ממנויים
+          </h2>
+          <span className="text-xs text-muted">הכנסה חוזרת מהמנויים הפעילים</span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {/* MRR — the headline number */}
+          <Card className="p-5" style={{ gridColumn: "span 2" }}>
+            <p className="text-xs font-medium text-muted">הכנסה חודשית חוזרת (MRR)</p>
+            <p className="display-num mt-1 text-3xl font-bold tabular-nums text-foreground">
+              {formatILS(revenue.mrr)}
+              <span className="mr-1 text-sm font-medium text-muted"> / חודש</span>
+            </p>
+            <p className="mt-1 text-xs text-muted">
+              קצב שנתי משוער: {formatILS(revenue.arr)}
+            </p>
+          </Card>
+
+          <StatCard
+            label="מנויים פעילים"
+            value={revenue.activeCount}
+            icon={<CheckCircle2 className="h-5 w-5" />}
+            color="var(--success)"
+            bg="var(--success-light)"
+          />
+          <StatCard
+            label="בעיה בתשלום"
+            value={revenue.pastDueCount}
+            icon={<AlertTriangle className="h-5 w-5" />}
+            color="var(--error)"
+            bg="var(--error-light)"
+          />
+          <StatCard
+            label="פרימיום"
+            value={revenue.premiumCount}
+            icon={<Gem className="h-5 w-5" />}
+            color="var(--primary)"
+            bg="var(--primary-light)"
+          />
+          <StatCard
+            label="פלטינום"
+            value={revenue.platinumCount}
+            icon={<Crown className="h-5 w-5" />}
+            color="var(--accent)"
+            bg="var(--accent-light)"
+          />
+          <StatCard
+            label="ביטולים (פעילים עד סוף התקופה)"
+            value={revenue.cancelledCount}
+            icon={<XCircle className="h-5 w-5" />}
+            color="var(--mauve)"
+            bg="var(--mauve-light)"
+          />
+        </div>
+
+        <p className="mt-2 text-xs text-muted">
+          המספרים משקפים הכנסה חוזרת מהמנויים הפעילים כרגע — לא סך הגבייה ההיסטורי.
+        </p>
+      </div>
+
+      {/* Live platform-wide activity feed */}
+      <PlatformActivityFeed rows={activity} />
 
       {/* Quick link */}
       <Card className="flex items-center justify-between gap-4 p-5">

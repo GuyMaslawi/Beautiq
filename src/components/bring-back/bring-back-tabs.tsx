@@ -1,5 +1,4 @@
 import Link from "next/link";
-import { Lock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { BRING_BACK_HUB } from "@/lib/constants/he";
 
@@ -37,7 +36,7 @@ export function BringBackTabs({
 }: {
   activeTab: HubTab;
   activeSub: HubSubTab;
-  /** When false, Platinum-only sub-tabs show a lock badge. */
+  /** When false, Platinum-only sub-tabs are hidden (Premium users). */
   hasPlatinum?: boolean;
 }) {
   return (
@@ -79,9 +78,8 @@ export function BringBackTabs({
       {/* Sub tabs — only for the "clients" tab; also a scrollable single row */}
       {activeTab === "clients" && (
         <div className="flex gap-1.5 overflow-x-auto px-1 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {SUB_TABS.map((sub) => {
+          {SUB_TABS.filter((sub) => hasPlatinum || !sub.platinum).map((sub) => {
             const active = sub.key === activeSub;
-            const locked = sub.platinum && !hasPlatinum;
             return (
               <Link
                 key={sub.key}
@@ -102,9 +100,6 @@ export function BringBackTabs({
                 }
               >
                 {sub.label}
-                {locked && (
-                  <Lock className="h-3 w-3" style={{ color: "#c09560" }} aria-label="פלטינום" />
-                )}
               </Link>
             );
           })}

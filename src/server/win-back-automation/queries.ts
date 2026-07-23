@@ -14,6 +14,7 @@ import {
   isTestModeActive,
   isTestPhoneConfigured,
 } from "@/lib/whatsapp/provider";
+import { resolveWhatsAppConnectionForBusiness } from "@/server/whatsapp/resolver";
 
 export type { AutomationSetting, WhatsAppConnection, EligibilityBreakdown };
 
@@ -326,9 +327,10 @@ export async function getAdminAutomationInfo(
   businessId: string,
 ): Promise<AdminAutomationInfo> {
   const tenant = { businessId };
-  const [connection, setting, stats, lastRun, lastFailedMsg, manualSentThisMonth, lastManualSends] =
+  const [connection, resolved, setting, stats, lastRun, lastFailedMsg, manualSentThisMonth, lastManualSends] =
     await Promise.all([
       getWhatsAppConnection(tenant),
+      resolveWhatsAppConnectionForBusiness(businessId),
       getWinBackAutomationSetting(tenant),
       getWinBackStatsThisMonth(tenant),
       getLastWinBackRun(tenant),
@@ -341,10 +343,14 @@ export async function getAdminAutomationInfo(
       getAdminLastManualSends(businessId, 5),
     ]);
 
+  // Under the Allura-managed model no per-business connection row exists, yet
+  // sends work through the resolver. Report "connected" for managed mode too so
+  // the admin/owner panels don't falsely show WhatsApp as disconnected.
   return {
-    whatsappConnected: connection?.status === "active",
-    provider: connection?.provider ?? null,
-    phoneNumber: connection?.phoneNumber ?? null,
+    whatsappConnected: connection?.status === "active" || resolved.isAlluraManaged,
+    provider:
+      connection?.provider ?? (resolved.isAlluraManaged ? "meta_cloud_api" : null),
+    phoneNumber: connection?.phoneNumber ?? resolved.displayPhoneNumber ?? null,
     automationEnabled: setting?.enabled ?? false,
     realSendEnabled: process.env.ENABLE_REAL_WHATSAPP_SEND === "true",
     credentialsConfigured: isRealSendConfigured(),

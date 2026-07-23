@@ -6,10 +6,8 @@
  *   2. Has at least one completed booking older than thresholdDays
  *   3. Has no upcoming booking (pending/approved in the future)
  *   4. Has a valid E.164 phone (normalizedPhone matches +972XXXXXXXXX)
- *   5. Has not been unsubscribed
- *   6. Has whatsappOptIn=true when requireOptIn is enabled
- *   7. Has marketingOptIn=true (win-back is a marketing message)
- *   8. Was not already contacted by this automation within cooldownDays
+ *   5. Has not been unsubscribed (replied STOP)
+ *   6. Was not already contacted by this automation within cooldownDays
  */
 
 import { prisma } from "@/server/db/prisma";

@@ -47,6 +47,27 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         );
         if (!valid) return null;
 
+        // Record the login + refresh last-seen (best-effort — written inline
+        // rather than via logActivity() to avoid an auth-module import cycle).
+        // Fully guarded: telemetry must never block or fail a valid login.
+        try {
+          await prisma.activityLog.create({
+            data: {
+              userId: user.id,
+              actorType: user.isAdmin ? "admin" : "owner",
+              category: "auth",
+              action: "auth.login",
+              summary: `התחברות למערכת (${user.email})`,
+            },
+          });
+          await prisma.user.update({
+            where: { id: user.id },
+            data: { lastSeenAt: new Date() },
+          });
+        } catch {
+          // ignore — best-effort
+        }
+
         // Only public-safe fields — passwordHash never leaves the server.
         return { id: user.id, email: user.email, name: user.name };
       },

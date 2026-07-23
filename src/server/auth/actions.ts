@@ -5,6 +5,7 @@ import { AuthError } from "next-auth";
 import { prisma } from "@/server/db/prisma";
 import { hashPassword } from "@/server/auth/password";
 import { signIn, signOut } from "@/server/auth/config";
+import { logActivity } from "@/server/activity/log";
 import {
   validateSignup,
   validateLogin,
@@ -53,7 +54,15 @@ export async function signupAction(
 
   try {
     const passwordHash = await hashPassword(password);
-    await prisma.user.create({ data: { name, email, passwordHash } });
+    const newUser = await prisma.user.create({ data: { name, email, passwordHash } });
+    await logActivity({
+      category: "auth",
+      action: "auth.signup",
+      summary: `נרשם משתמש חדש: ${email}`,
+      userId: newUser.id,
+      actorType: "owner",
+      businessId: null,
+    });
   } catch (error) {
     // Unique-constraint race: another request registered the same email.
     if (

@@ -10,6 +10,7 @@ export interface BusinessSettingsData {
   area: string | null;
   description: string | null;
   addressNote: string | null;
+  emailNotificationsEnabled: boolean;
 }
 
 export interface BusinessCategoryData {
@@ -32,6 +33,7 @@ export async function getBusinessSettings(
       area: true,
       description: true,
       addressNote: true,
+      emailNotificationsEnabled: true,
     },
   });
 }

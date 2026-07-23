@@ -1,5 +1,11 @@
-import { requirePaidUser, getCurrentBusiness, hasPlatinumAccess } from "@/server/auth/session";
+import {
+  requirePaidUser,
+  getCurrentBusiness,
+  hasPlatinumAccess,
+  getImpersonationState,
+} from "@/server/auth/session";
 import { AppShell } from "@/components/layout/app-shell";
+import { ImpersonationBanner } from "@/components/layout/impersonation-banner";
 
 /**
  * Guard + shell for the authenticated area. Every route inside this group
@@ -15,16 +21,21 @@ export default async function AppLayout({
 }) {
   const user = await requirePaidUser();
   const business = await getCurrentBusiness();
-  const assistantEnabled = await hasPlatinumAccess();
+  const hasPlatinum = await hasPlatinumAccess();
+  const impersonation = await getImpersonationState();
 
   return (
-    <AppShell
-      userName={user.name ?? user.email}
-      businessName={business?.name ?? null}
-      isAdmin={user.isAdmin}
-      assistantEnabled={assistantEnabled}
-    >
-      {children}
-    </AppShell>
+    <>
+      <AppShell
+        userName={user.name ?? user.email}
+        businessName={business?.name ?? null}
+        isAdmin={user.isAdmin}
+        hasPlatinum={hasPlatinum}
+        assistantEnabled={hasPlatinum}
+      >
+        {children}
+      </AppShell>
+      {impersonation && <ImpersonationBanner ownerName={impersonation.ownerName} />}
+    </>
   );
 }

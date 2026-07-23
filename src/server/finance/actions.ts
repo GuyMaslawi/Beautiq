@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/server/db/prisma";
 import { requireTenant } from "@/server/auth/session";
+import { logActivity } from "@/server/activity/log";
 import type { ExpenseCategory } from "@prisma/client";
 import { FINANCE } from "@/lib/constants/he";
 
@@ -115,6 +116,14 @@ export async function addExpenseAction(
   } catch {
     return { formError: FINANCE.errors.generic };
   }
+
+  await logActivity({
+    businessId: tenant.businessId,
+    category: "finance",
+    action: "expense.create",
+    summary: `נוספה הוצאה: ${value.description} — ₪${value.amount.toLocaleString("he-IL")}`,
+    metadata: { amount: value.amount, category: value.category },
+  });
 
   revalidatePath("/finance");
   revalidatePath("/dashboard");

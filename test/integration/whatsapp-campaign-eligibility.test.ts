@@ -89,7 +89,6 @@ describe("buildCampaignAudience", () => {
     expect(res.counts.eligible).toBe(3); // a, c, e
     expect(res.counts.excluded).toBe(2); // b (dup), d (unsub)
     expect(res.counts.byReason.duplicate_phone).toBe(1);
-    expect(res.counts.byReason.missing_optin).toBe(0); // opt-in no longer excludes anyone
     expect(res.counts.byReason.unsubscribed).toBe(1);
   });
 

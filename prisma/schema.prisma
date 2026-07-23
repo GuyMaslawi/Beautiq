@@ -266,11 +266,23 @@ model User {
   /// paid — the app gate redirects users with no plan to /subscribe.
   plan            AccountPlan?
   planActivatedAt DateTime?
+  /// Optional expiry for a comped / time-limited plan granted by an admin. When
+  /// set and passed, the effective plan is treated as lapsed (→ /subscribe) until
+  /// re-granted. Null = the plan does not expire.
+  planExpiresAt   DateTime?
+  /// When set and in the future, the account is temporarily suspended by an
+  /// admin — the app gate blocks access until this moment. Null = not suspended.
+  suspendedUntil  DateTime?
+  /// Last time this user was seen on an authenticated request. Throttled to at
+  /// most one write per few minutes (see server/activity/last-seen.ts) so it is
+  /// a cheap "last active" signal, not a per-request write.
+  lastSeenAt   DateTime?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   memberships  BusinessUser[]
   subscription AccountSubscription?
+  activityLogs ActivityLog[]
 }
 
 /// Self-serve account subscription — the owner's paid Allura plan, billed through
@@ -364,6 +376,11 @@ model Business {
   facebookUrl            String?
   brandColor             String?
   introMessage           String?
+  /// When true, the business owner is emailed on every client-related action
+  /// (new booking, cancellation, no-show, completion). Off by default — the
+  /// owner opts in from Settings. Requires the email service to be configured.
+  emailNotificationsEnabled Boolean @default(false)
+
   /// Section visibility toggles for the public booking page
   showServices           Boolean @default(true)
   showPrices             Boolean @default(true)
@@ -397,7 +414,9 @@ model Business {
   whatsappCampaigns      WhatsAppCampaign[]
   campaignRecipients     WhatsAppCampaignRecipient[]
   loyaltyProgram         LoyaltyProgram?
+  activityLogs           ActivityLog[]
   loyaltyRedemptions     LoyaltyRedemption[]
+  loyaltyMessages        LoyaltyMessage[]
 }
 
 /// Membership join between a global User and a Business, carrying the role.
@@ -501,6 +520,7 @@ model Client {
   automationMessages AutomationMessage[]
   campaignRecipients WhatsAppCampaignRecipient[]
   loyaltyRedemptions LoyaltyRedemption[]
+  loyaltyMessages    LoyaltyMessage[]
 
   @@unique([businessId, normalizedPhone])
   @@index([businessId])
@@ -1089,10 +1109,65 @@ model LoyaltyProgram {
   visitsRequired     Int      @default(10)
   /// Free-text description of the reward the client earns (Hebrew, owner-defined).
   rewardDescription  String   @default("")
+
+  // ── Automatic milestone messaging (see server/loyalty/runner.ts) ──
+  /// When true, the system auto-sends the milestone WhatsApp messages below
+  /// (needs an approved template + the Allura-managed sender, like win-back).
+  autoSendEnabled    Boolean  @default(false)
+  /// Owner-defined message sent when a client is ONE visit away from the reward.
+  almostThereMessage String   @default("")
+  /// Owner-defined message sent when a client EARNS the reward.
+  rewardMessage      String   @default("")
+  /// Only auto-send to clients who gave WhatsApp/marketing opt-in.
+  requireOptIn       Boolean  @default(true)
+  /// Meta-approved WhatsApp template name (required for real Meta Cloud API sends).
+  templateName       String?
+  /// BCP 47 language code matching the approved template (default: he).
+  templateLanguage   String?  @default("he")
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  business Business @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  business Business         @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  messages LoyaltyMessage[]
+}
+
+/// Which loyalty milestone an auto-message announces.
+enum LoyaltyMessageType {
+  /// One completed visit away from earning the reward.
+  almost_there
+  /// The reward was just earned (card completed).
+  reward_earned
+}
+
+/// One outbound loyalty milestone message. The (business, client, type, milestone)
+/// unique constraint is the dedup guarantee — a client is messaged at most once per
+/// milestone per type, even if the cron fires repeatedly.
+model LoyaltyMessage {
+  id                String             @id @default(cuid())
+  businessId        String
+  programId         String
+  clientId          String
+  type              LoyaltyMessageType
+  /// The milestone index this message refers to. For almost_there: the 0-based card
+  /// currently being filled. For reward_earned: the 1-based reward number just earned.
+  milestone         Int
+  phone             String
+  messageText       String
+  /// sent | failed | skipped | queued
+  status            String             @default("queued")
+  providerMessageId String?
+  failureReason     String?
+  sentAt            DateTime?
+  createdAt         DateTime           @default(now())
+
+  program  LoyaltyProgram @relation(fields: [programId], references: [id], onDelete: Cascade)
+  business Business       @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  client   Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@unique([businessId, clientId, type, milestone])
+  @@index([businessId])
+  @@index([businessId, clientId])
+  @@index([businessId, createdAt])
 }
 
 /// A single earned-reward redemption, logged when the owner marks a reward as
@@ -1112,4 +1187,64 @@ model LoyaltyRedemption {
 
   @@index([businessId])
   @@index([businessId, clientId])
+}
+
+// ---------------------------------------------------------------------------
+// Activity log — platform-wide audit trail (see server/activity/*)
+// ---------------------------------------------------------------------------
+
+/// Who performed a logged action. `owner` = a business owner in their own app,
+/// `admin` = a platform admin (incl. actions taken while impersonating), `system`
+/// = automated jobs (cron, webhooks), `client` = a public-booking end customer.
+enum ActivityActorType {
+  owner
+  admin
+  system
+  client
+}
+
+/// Coarse grouping for an activity, used for filtering and iconography.
+enum ActivityCategory {
+  auth
+  booking
+  client
+  service
+  availability
+  settings
+  finance
+  automation
+  campaign
+  loyalty
+  subscription
+  admin
+  other
+}
+
+/// Append-only record of a meaningful action, powering the admin activity feed
+/// and per-business "every action documented" timeline. Best-effort: writes go
+/// through logActivity() and never block or fail the originating request.
+model ActivityLog {
+  id         String            @id @default(cuid())
+  /// The tenant the action belongs to. Null for account/platform-level actions
+  /// (e.g. login, subscription) that are not scoped to one business.
+  businessId String?
+  /// The acting user, when known. Null for anonymous/public/system actions.
+  userId     String?
+  actorType  ActivityActorType @default(owner)
+  category   ActivityCategory
+  /// Stable machine key, e.g. "booking.create", "client.update".
+  action     String
+  /// Human-readable Hebrew summary shown in the admin feed.
+  summary    String
+  /// Optional structured context (ids, before/after, amounts).
+  metadata   Json?
+  createdAt  DateTime          @default(now())
+
+  business Business? @relation(fields: [businessId], references: [id], onDelete: Cascade)
+  user     User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([businessId, createdAt])
+  @@index([userId, createdAt])
+  @@index([category, createdAt])
+  @@index([createdAt])
 }

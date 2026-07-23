@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
 import { requireTenant } from "@/server/auth/session";
 import { getService } from "@/server/services/queries";
+import { logActivity } from "@/server/activity/log";
 import { validateService } from "@/lib/validation/service";
 import { SERVICES } from "@/lib/constants/he";
 
@@ -59,6 +60,14 @@ export async function createServiceAction(
     return { formError: SERVICES.errors.generic, values: raw };
   }
 
+  await logActivity({
+    businessId: tenant.businessId,
+    category: "service",
+    action: "service.create",
+    summary: `נוסף שירות חדש: ${value.name}`,
+    metadata: { serviceName: value.name, price: value.price },
+  });
+
   revalidatePath("/services");
   revalidatePath("/dashboard");
   redirect("/services");
@@ -103,6 +112,14 @@ export async function updateServiceAction(
   } catch {
     return { formError: SERVICES.errors.generic, values: raw };
   }
+
+  await logActivity({
+    businessId: tenant.businessId,
+    category: "service",
+    action: "service.update",
+    summary: `עודכן שירות: ${value.name}`,
+    metadata: { serviceId, serviceName: value.name },
+  });
 
   revalidatePath("/services");
   revalidatePath(`/services/${serviceId}`);

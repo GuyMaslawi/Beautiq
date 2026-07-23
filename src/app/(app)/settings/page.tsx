@@ -1,4 +1,4 @@
-import { Store, Tag, Link2, SlidersHorizontal, CreditCard } from "lucide-react";
+import { Store, Tag, Link2, SlidersHorizontal, CreditCard, Bell } from "lucide-react";
 import { PremiumPageShell, BeautyPageHero } from "@/components/premium";
 import { Section } from "@/components/ui/section";
 import { requireCurrentBusiness } from "@/server/auth/session";
@@ -10,11 +10,13 @@ import {
 import {
   updateBusinessDetailsAction,
   updateBusinessCategoriesAction,
+  updateNotificationPrefsAction,
 } from "@/server/settings/actions";
 import { getSubscriptionOverview } from "@/server/subscription/queries";
 import { BusinessDetailsForm } from "@/components/settings/business-details-form";
 import { BusinessCategoriesForm } from "@/components/settings/business-categories-form";
 import { PublicLinkCard } from "@/components/settings/public-link-card";
+import { NotificationsForm } from "@/components/settings/notifications-form";
 import { SubscriptionCard } from "@/components/settings/subscription-card";
 import { SETTINGS, SUBSCRIPTION } from "@/lib/constants/he";
 
@@ -70,7 +72,15 @@ export default async function SettingsPage() {
           <PublicLinkCard slug={settings.slug} />
         </Section>
 
-        {/* Section 4 — Allura subscription */}
+        {/* Section 4 — Notification preferences */}
+        <Section title={SETTINGS.notifications.sectionTitle} icon={<Bell className="h-4 w-4" style={{ color: "#ac5c7f" }} />}>
+          <NotificationsForm
+            action={updateNotificationPrefsAction}
+            initialEnabled={settings.emailNotificationsEnabled}
+          />
+        </Section>
+
+        {/* Section 5 — Allura subscription */}
         <Section title={SUBSCRIPTION.sectionTitle} icon={<CreditCard className="h-4 w-4" style={{ color: "#ac5c7f" }} />}>
           <SubscriptionCard overview={subscription} />
         </Section>

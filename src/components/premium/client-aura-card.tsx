@@ -17,6 +17,8 @@ export interface AuraStat {
  */
 interface ClientAuraCardProps {
   name: string;
+  /** Optional small icon rendered right after the name (e.g. plan tier). */
+  nameIcon?: React.ReactNode;
   contact?: string;
   initials: string;
   href?: string;
@@ -33,6 +35,7 @@ interface ClientAuraCardProps {
 
 export function ClientAuraCard({
   name,
+  nameIcon,
   contact,
   initials,
   href,
@@ -48,7 +51,10 @@ export function ClientAuraCard({
   const c = toneMap[statusTone];
   const titleInner = (
     <>
-      <p className="text-foreground truncate text-[15px] font-bold">{name}</p>
+      <div className="flex items-center gap-1.5">
+        <p className="text-foreground truncate text-[15px] font-bold">{name}</p>
+        {nameIcon}
+      </div>
       {contact && (
         <p className="truncate text-xs" style={{ color: "var(--muted)" }} dir="ltr">
           {contact}

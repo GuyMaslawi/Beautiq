@@ -2,13 +2,16 @@
 
 import { useActionState, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Gift, Sparkles, Users, Award, Check, RotateCcw, MessageCircle, Star } from "lucide-react";
+import { Gift, Sparkles, Users, Award, Check, RotateCcw, MessageCircle, Star, Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Alert } from "@/components/ui/alert";
 import { LOYALTY } from "@/lib/constants/he";
 import { buildWhatsAppUrl } from "@/lib/whatsapp";
+import { renderLoyaltyMessage } from "@/lib/loyalty/messages";
+import { LOYALTY_MESSAGE_VARIABLES } from "@/lib/loyalty/constants";
 import {
   saveLoyaltyProgramAction,
   redeemLoyaltyRewardAction,
@@ -25,10 +28,20 @@ function ConfigForm({ config }: { config: LoyaltyOverview["config"] }) {
   const [isActive, setIsActive] = useState(config.isActive);
   const [visits, setVisits] = useState(String(config.visitsRequired));
   const [reward, setReward] = useState(config.rewardDescription);
+  const [autoSend, setAutoSend] = useState(config.autoSendEnabled);
+  const [almostMsg, setAlmostMsg] = useState(config.almostThereMessage);
+  const [rewardMsg, setRewardMsg] = useState(config.rewardMessage);
+
+  const previewVars = {
+    clientName: "מיכל",
+    businessName: "העסק שלך",
+    reward: reward || "הטבה",
+    completedVisits: Math.max(1, (Number(visits) || 10) - 1),
+  };
 
   return (
     <form action={formAction} className="aura-card rounded-[1.4rem] p-5" noValidate>
-      <div className="mb-4 flex items-center gap-2.5">
+      <div className="mb-2.5 flex items-center gap-2.5">
         <span
           className="flex h-8 w-8 items-center justify-center rounded-xl"
           style={{ background: "rgba(172,92,127,0.12)" }}
@@ -39,6 +52,7 @@ function ConfigForm({ config }: { config: LoyaltyOverview["config"] }) {
           {LOYALTY.config.title}
         </h3>
       </div>
+      <p className="mb-4 text-xs leading-5" style={{ color: "var(--muted)" }}>{LOYALTY.config.intro}</p>
 
       {state.formError && <Alert className="mb-4">{state.formError}</Alert>}
       {state.success && (
@@ -108,10 +122,167 @@ function ConfigForm({ config }: { config: LoyaltyOverview["config"] }) {
         </div>
       </div>
 
+      {/* ── Automatic messages ─────────────────────────────────────────── */}
+      <div className="mb-5 mt-6 border-t pt-5" style={{ borderColor: "var(--border)" }}>
+        <div className="mb-1 flex items-center gap-2">
+          <Bell className="h-4 w-4" style={{ color: "var(--primary)" }} />
+          <h4 className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+            {LOYALTY.messages.title}
+          </h4>
+        </div>
+        <p className="mb-4 text-xs leading-4" style={{ color: "var(--muted)" }}>{LOYALTY.messages.subtitle}</p>
+
+        {/* Auto-send toggle */}
+        <div className="mb-3 flex items-start justify-between gap-4 rounded-xl p-3.5" style={{ background: "rgba(172,92,127,0.05)" }}>
+          <div>
+            <p className="text-sm font-medium" style={{ color: "var(--foreground)" }}>{LOYALTY.messages.autoSendLabel}</p>
+            <p className="mt-0.5 text-xs leading-4" style={{ color: "var(--muted)" }}>{LOYALTY.messages.autoSendHint}</p>
+          </div>
+          <input type="hidden" name="autoSendEnabled" value={autoSend ? "on" : "off"} />
+          <Switch checked={autoSend} onCheckedChange={setAutoSend} aria-label={LOYALTY.messages.autoSendLabel} />
+        </div>
+
+        {/* Almost-there message */}
+        <MessageField
+          icon={Bell}
+          title={LOYALTY.messages.almostThereTitle}
+          desc={LOYALTY.messages.almostThereDesc}
+          name="almostThereMessage"
+          value={almostMsg}
+          onChange={setAlmostMsg}
+          preview={renderLoyaltyMessage(almostMsg, previewVars)}
+          error={state.errors?.almostThereMessage}
+        />
+
+        {/* Reward-earned message */}
+        <MessageField
+          icon={Gift}
+          title={LOYALTY.messages.rewardTitle}
+          desc={LOYALTY.messages.rewardDesc}
+          name="rewardMessage"
+          value={rewardMsg}
+          onChange={setRewardMsg}
+          preview={renderLoyaltyMessage(rewardMsg, { ...previewVars, completedVisits: Number(visits) || 10 })}
+          error={state.errors?.rewardMessage}
+        />
+
+        {autoSend && (
+          <p className="mt-1 rounded-xl px-3.5 py-2.5 text-xs leading-5" style={{ background: "rgba(184,124,30,0.08)", color: "#7a6400" }}>
+            {LOYALTY.messages.autoNote}
+          </p>
+        )}
+      </div>
+
       <Button type="submit" disabled={isPending} className="w-full">
         {isPending ? LOYALTY.config.saving : LOYALTY.config.save}
       </Button>
     </form>
+  );
+}
+
+/* ── Editable auto-message field (label + textarea + variables + preview) ──── */
+function MessageField({
+  icon: Icon,
+  title,
+  desc,
+  name,
+  value,
+  onChange,
+  preview,
+  error,
+}: {
+  icon: React.ElementType;
+  title: string;
+  desc: string;
+  name: string;
+  value: string;
+  onChange: (v: string) => void;
+  preview: string;
+  error?: string;
+}) {
+  return (
+    <div className="mb-4 rounded-xl p-3.5" style={{ background: "rgba(255,255,255,0.6)", border: "1px solid var(--border)" }}>
+      <div className="mb-1 flex items-center gap-1.5">
+        <Icon className="h-3.5 w-3.5" style={{ color: "var(--primary)" }} />
+        <span className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>{title}</span>
+      </div>
+      <p className="mb-2 text-xs leading-4" style={{ color: "var(--muted)" }}>{desc}</p>
+      <Textarea
+        name={name}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        rows={3}
+        maxLength={500}
+        className="text-sm"
+      />
+      <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+        <span className="text-[11px]" style={{ color: "var(--muted)" }}>{LOYALTY.messages.variablesTitle}</span>
+        {LOYALTY_MESSAGE_VARIABLES.map((v) => (
+          <span
+            key={v}
+            className="rounded-md px-1.5 py-0.5 text-[10px] font-medium"
+            style={{ background: "rgba(172,92,127,0.10)", color: "var(--primary)" }}
+          >
+            {v}
+          </span>
+        ))}
+      </div>
+      {preview.trim() && (
+        <div className="mt-2 rounded-lg px-3 py-2" style={{ background: "rgba(37,211,102,0.06)", border: "1px solid rgba(37,211,102,0.15)" }}>
+          <p className="text-[10px] font-medium" style={{ color: "var(--muted)" }}>{LOYALTY.messages.previewTitle}</p>
+          <p className="mt-0.5 text-xs leading-5" style={{ color: "var(--foreground)" }}>{preview}</p>
+        </div>
+      )}
+      {error && <p className="mt-1 text-xs" style={{ color: "#be4a4a" }}>{error}</p>}
+    </div>
+  );
+}
+
+/* ── How it works ────────────────────────────────────────────────────────── */
+function HowItWorks() {
+  return (
+    <div
+      className="rounded-[1.4rem] p-5"
+      style={{
+        background: "linear-gradient(135deg, #fdf0f7 0%, #f9f2e6 100%)",
+        border: "1px solid rgba(172,92,127,0.16)",
+      }}
+    >
+      <div className="mb-4 flex items-center gap-2.5">
+        <span className="flex h-8 w-8 items-center justify-center rounded-xl" style={{ background: "rgba(172,92,127,0.14)" }}>
+          <Sparkles className="h-4 w-4" style={{ color: "var(--primary)" }} />
+        </span>
+        <div>
+          <h2 className="font-display text-base font-semibold tracking-tight" style={{ color: "var(--foreground)" }}>
+            {LOYALTY.how.title}
+          </h2>
+          <p className="mt-0.5 text-xs leading-4" style={{ color: "var(--muted)" }}>{LOYALTY.how.intro}</p>
+        </div>
+      </div>
+
+      <ol className="grid gap-3 sm:grid-cols-3">
+        {LOYALTY.how.steps.map((step, i) => (
+          <li
+            key={step.title}
+            className="rounded-2xl p-3.5"
+            style={{ background: "rgba(255,255,255,0.75)", border: "1px solid rgba(172,92,127,0.12)" }}
+          >
+            <div className="mb-2 flex items-center gap-2">
+              <span
+                className="flex h-6 w-6 items-center justify-center rounded-full text-[12px] font-bold"
+                style={{ background: "rgba(172,92,127,0.14)", color: "var(--primary)" }}
+              >
+                {i + 1}
+              </span>
+              <span className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>{step.title}</span>
+            </div>
+            <p className="text-xs leading-5" style={{ color: "var(--muted)" }}>{step.body}</p>
+          </li>
+        ))}
+      </ol>
+
+      <p className="mt-4 text-xs font-medium leading-5" style={{ color: "var(--primary)" }}>{LOYALTY.how.why}</p>
+    </div>
   );
 }
 
@@ -245,11 +416,15 @@ function ProgressDots({ done, total }: { done: number; total: number }) {
 export function LoyaltyClient({ overview, businessName }: { overview: LoyaltyOverview; businessName: string }) {
   const router = useRouter();
   const refresh = () => router.refresh();
-  const { config, eligibleClients, closeClients, totalRewardsGiven, totalMembers } = overview;
+  const { config, eligibleClients, closeClients, members, totalRewardsGiven, totalMembers } = overview;
   const reward = config.rewardDescription;
 
   return (
-    <div className="grid gap-5 lg:grid-cols-[minmax(0,340px)_1fr] lg:items-start">
+    <div className="space-y-5">
+      {/* Plain-language explainer — what this is, how it runs, why it pays off */}
+      <HowItWorks />
+
+      <div className="grid gap-5 lg:grid-cols-[minmax(0,340px)_1fr] lg:items-start">
       {/* Left: config */}
       <ConfigForm config={config} />
 
@@ -313,7 +488,65 @@ export function LoyaltyClient({ overview, businessName }: { overview: LoyaltyOve
             </ul>
           )}
         </div>
+
+        {/* All members — visit counts + progress for every client */}
+        <div className="aura-card overflow-hidden rounded-[1.4rem]">
+          <div className="px-5 py-4" style={{ borderBottom: "1px solid var(--border)" }}>
+            <h3 className="font-display text-base font-semibold tracking-tight" style={{ color: "var(--foreground)" }}>
+              {LOYALTY.members.title}
+            </h3>
+            <p className="mt-0.5 text-xs" style={{ color: "var(--muted)" }}>{LOYALTY.members.subtitle}</p>
+          </div>
+          {members.length === 0 ? (
+            <p className="px-5 py-8 text-center text-sm" style={{ color: "var(--muted)" }}>{LOYALTY.members.empty}</p>
+          ) : (
+            <ul>
+              {members.map((c) => (
+                <MemberRow key={c.clientId} client={c} visitsRequired={config.visitsRequired} />
+              ))}
+            </ul>
+          )}
+        </div>
+      </div>
       </div>
     </div>
+  );
+}
+
+/* ── Member row (all-members list) ───────────────────────────────────────── */
+function MemberRow({ client, visitsRequired }: { client: LoyaltyClientProgress; visitsRequired: number }) {
+  const eligible = client.pendingRewards > 0;
+  const almost = !eligible && visitsRequired - client.visitsInCurrentCard === 1;
+  const tag = eligible ? LOYALTY.members.eligibleTag : almost ? LOYALTY.members.almostTag : null;
+  return (
+    <li className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5" style={{ borderBottom: "1px solid var(--border)" }}>
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="truncate text-sm font-semibold" style={{ color: "var(--foreground)" }}>{client.fullName}</span>
+          {tag && (
+            <span
+              className="shrink-0 rounded-full px-2 py-0.5 text-[10px] font-bold"
+              style={
+                eligible
+                  ? { background: "rgba(172,92,127,0.14)", color: "var(--primary)" }
+                  : { background: "rgba(184,124,30,0.12)", color: "#7a6400" }
+              }
+            >
+              {tag}
+            </span>
+          )}
+        </div>
+        <p className="mt-0.5 text-xs" style={{ color: "var(--muted)" }}>
+          {LOYALTY.members.visits(client.completedVisits)}
+          {client.redeemedRewards > 0 && <> · {LOYALTY.members.rewardsGiven(client.redeemedRewards)}</>}
+        </p>
+      </div>
+      <div className="flex items-center gap-3">
+        <ProgressDots done={client.visitsInCurrentCard} total={visitsRequired} />
+        <span className="text-xs tabular-nums" style={{ color: "var(--muted)" }}>
+          {LOYALTY.members.progress(client.visitsInCurrentCard, visitsRequired)}
+        </span>
+      </div>
+    </li>
   );
 }

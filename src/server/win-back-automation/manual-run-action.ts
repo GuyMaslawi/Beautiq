@@ -6,6 +6,7 @@ import { getEligibleClients, getEligibilityBreakdown } from "./eligibility";
 import { getBlockedClientsByReason } from "./blocked-clients";
 import { runWinBackForBusiness } from "./runner";
 import { isRealSendConfigured, isTestModeActive } from "@/lib/whatsapp/provider";
+import { resolveWhatsAppConnectionForBusiness } from "@/server/whatsapp/resolver";
 import { isMinuteTestingAllowed, resolveTimingUnit } from "@/lib/automation/minute-testing";
 import { revalidatePath } from "next/cache";
 import type {
@@ -43,22 +44,26 @@ export async function checkWinBackEligibilityAction(
 
     const tenant = { businessId: business.id };
 
-    const [setting, connection] = await Promise.all([
+    const [setting, connection, resolved] = await Promise.all([
       prisma.automationSetting.findUnique({
         where: { businessId_type: { businessId: business.id, type: "win_back" } },
       }),
       prisma.whatsAppConnection.findUnique({
         where: { businessId: business.id },
       }),
+      resolveWhatsAppConnectionForBusiness(business.id),
     ]);
 
     const testModeActive = isTestModeActive();
+    // Managed mode has no connection row but sends work — count it as connected.
+    const whatsappConnected =
+      connection?.status === "active" || resolved.isAlluraManaged;
 
     if (!setting) {
       return {
         success: true,
         automationEnabled: false,
-        whatsappConnected: connection?.status === "active",
+        whatsappConnected,
         realSendConfigured: isRealSendConfigured(),
         testModeActive,
         minuteModeActive: false,

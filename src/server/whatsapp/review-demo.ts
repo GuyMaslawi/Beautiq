@@ -29,6 +29,7 @@ import { prisma } from "@/server/db/prisma";
 import {
   getWhatsAppReadiness,
   getWhatsAppProviderForBusiness,
+  resolveWhatsAppConnectionForBusiness,
 } from "@/server/whatsapp/resolver";
 import { getDefaultTemplateForType } from "@/lib/whatsapp/default-templates";
 import {
@@ -134,8 +135,9 @@ export async function getReviewDemoStatus(
   const testPhone = process.env.WHATSAPP_TEST_PHONE;
   const testRecipientConfigured = !!testPhone;
 
-  const [readiness, approvedTemplate, sampleClient] = await Promise.all([
+  const [readiness, resolved, approvedTemplate, sampleClient] = await Promise.all([
     getWhatsAppReadiness(businessId),
+    resolveWhatsAppConnectionForBusiness(businessId),
     resolveApprovedDemoTemplate(businessId),
     prisma.client.findFirst({
       where: { businessId },
@@ -144,7 +146,15 @@ export async function getReviewDemoStatus(
     }),
   ]);
 
-  const hasActiveConnection = readiness.state === "active";
+  // In the Allura-managed model no per-business WhatsAppConnection row is ever
+  // created, so readiness alone reports "not connected". A resolved managed mode
+  // already implies the kill-switch is on and global creds exist — treat it as a
+  // valid, active connection so the demo test-send isn't falsely blocked.
+  const isManaged = resolved.mode === "allura_managed";
+  const hasActiveConnection = readiness.state === "active" || isManaged;
+  const connectionStatusLabel = isManaged
+    ? "מחובר (ניהול Allura)"
+    : readiness.statusLabel;
   const templatesApproved = !!approvedTemplate;
   const hasSampleClient = !!sampleClient;
 
@@ -160,7 +170,7 @@ export async function getReviewDemoStatus(
     {
       label: "חיבור WhatsApp פעיל לעסק",
       ok: hasActiveConnection,
-      value: readiness.statusLabel,
+      value: connectionStatusLabel,
     },
     {
       label: "תבנית הודעה מאושרת זמינה",

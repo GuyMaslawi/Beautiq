@@ -5,9 +5,10 @@ import { requirePlatformAdmin } from "@/server/admin/auth";
 import { getCurrentUser } from "@/server/auth/session";
 import {
   getAdminBusiness,
-  getAdminBusinessBookingsThisMonth,
   getAdminBusinessDeletionSummary,
 } from "@/server/admin/queries";
+import { getAdminBusinessProfile } from "@/server/admin/business-profile";
+import { BusinessDossier } from "./_components/business-dossier";
 import { getAdminAutomationInfo } from "@/server/win-back-automation/queries";
 import { getAdminMessageLog } from "@/server/admin/message-log";
 import { Card } from "@/components/ui/card";
@@ -17,6 +18,8 @@ import { RunWinBackButton } from "./_components/run-win-back-button";
 import { WhatsAppAdminPanel } from "./_components/whatsapp-admin-panel";
 import { BusinessDangerZone } from "./_components/business-danger-zone";
 import { AdminBusinessEditPanel } from "./_components/business-edit-panel";
+import { ImpersonateButton } from "./_components/impersonate-button";
+import { GodControls } from "./_components/god-controls";
 import type { SubscriptionStatus, SubscriptionPlan } from "@prisma/client";
 
 const STATUS_LABELS: Record<SubscriptionStatus, string> = {
@@ -72,10 +75,10 @@ export default async function AdminBusinessDetailPage({
   await requirePlatformAdmin();
   const { businessId } = await params;
 
-  const [biz, bookingsThisMonth, automationInfo, messageLog, deletionSummary, admin] =
+  const [biz, profile, automationInfo, messageLog, deletionSummary, admin] =
     await Promise.all([
       getAdminBusiness(businessId),
-      getAdminBusinessBookingsThisMonth(businessId),
+      getAdminBusinessProfile(businessId),
       getAdminAutomationInfo(businessId),
       getAdminMessageLog(businessId, 25),
       getAdminBusinessDeletionSummary(businessId),
@@ -135,6 +138,12 @@ export default async function AdminBusinessDetailPage({
           עמוד ההזמנות
           <ExternalLink className="h-3.5 w-3.5" />
         </a>
+        {owner && owner.id !== admin?.id && !deletionSummary?.ownerIsAdmin && (
+          <ImpersonateButton
+            userId={owner.id}
+            ownerLabel={owner.name ?? owner.email}
+          />
+        )}
       </div>
 
       <div className="flex items-start justify-between gap-4">
@@ -158,6 +167,9 @@ export default async function AdminBusinessDetailPage({
         </div>
       </div>
       <div className="editorial-rule" />
+
+      {/* 360° business dossier — revenue, forecast, usage, activity */}
+      {profile && <BusinessDossier profile={profile} />}
 
       {/* Editable business / public page / owner details */}
       <AdminBusinessEditPanel
@@ -189,14 +201,6 @@ export default async function AdminBusinessDetailPage({
       />
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Usage metrics */}
-        <Card className="p-5">
-          <h2 className="mb-3 text-sm font-bold text-foreground">נתוני שימוש</h2>
-          <InfoRow label="לקוחות" value={biz._count.clients} />
-          <InfoRow label="תורים סה״כ" value={biz._count.bookings} />
-          <InfoRow label="תורים החודש" value={bookingsThisMonth} />
-        </Card>
-
         {/* WhatsApp automation info */}
         <Card className="p-5">
           <h2 className="mb-3 text-sm font-bold text-foreground">
@@ -453,6 +457,23 @@ export default async function AdminBusinessDetailPage({
           }
         />
       </Card>
+
+      {/* God-mode controls — plan/access override, password reset, admin role */}
+      {owner && (
+        <GodControls
+          businessId={biz.id}
+          owner={{
+            id: owner.id,
+            name: owner.name,
+            email: owner.email,
+            plan: owner.plan,
+            isAdmin: owner.isAdmin,
+            planExpiresAt: owner.planExpiresAt?.toISOString() ?? null,
+            suspendedUntil: owner.suspendedUntil?.toISOString() ?? null,
+          }}
+          isSelf={owner.id === admin?.id}
+        />
+      )}
 
       {/* Danger zone — delete business / owner account */}
       {deletionSummary && (

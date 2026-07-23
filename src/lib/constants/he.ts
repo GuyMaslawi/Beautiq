@@ -747,16 +747,6 @@ export const CLIENTS = {
     insightHasNoShow: "הלקוחה לא הגיעה בעבר",
     insightHasCancellations: "הלקוחה ביטלה תורים בעבר",
     insightNotReturned: "הלקוחה לא חזרה לאחרונה",
-
-    optInSection: "הסכמה לקבלת הודעות",
-    optInHelper:
-      "הודעות WhatsApp נשלחות רק ללקוחות שאישרו זאת. הודעות שיווקיות (כמו הודעות החזרת לקוחה) דורשות הסכמה נפרדת.",
-    whatsappOptInLabel: "אישרה קבלת הודעות WhatsApp",
-    marketingOptInLabel: "אישרה קבלת הודעות שיווקיות (החזרת לקוחה, מבצעים)",
-    optInSave: "שמירה",
-    optInSaving: "שומר…",
-    optInSaved: "העדפות ההודעות עודכנו",
-    optInError: "שמירה נכשלה",
   },
 
   edit: {
@@ -775,8 +765,6 @@ export const CLIENTS = {
       emailPlaceholder: "example@email.com",
       notes: "הערות פנימיות",
       notesPlaceholder: "הערות על הלקוחה — אלרגיות, העדפות, מידע חשוב",
-      whatsappOptIn: "מאשרת קבלת הודעות WhatsApp",
-      marketingOptIn: "מאשרת הודעות שיווקיות (החזרת לקוחה, מבצעים)",
       unsubscribedNotice: "הלקוחה הסירה את עצמה מהודעות אוטומטיות",
     },
 
@@ -964,6 +952,17 @@ export const SETTINGS = {
     slugLabel: "כתובת הקישור",
     copyButton: "העתקת קישור",
     copied: "הקישור הועתק",
+  },
+
+  notifications: {
+    sectionTitle: "התראות במייל",
+    toggleLabel: "שליחת מייל על כל פעולה מול לקוחה",
+    hint: "כשמופעל, יישלח אליך מייל על כל פעולה בתור — תור חדש, ביטול, אי-הגעה או תור שהושלם. כבוי כברירת מחדל.",
+    on: "מופעל",
+    off: "כבוי",
+    saveButton: "שמירת העדפות",
+    saving: "שומר…",
+    success: "העדפות ההתראות נשמרו",
   },
 
   errors: {
@@ -1376,6 +1375,32 @@ export const WIN_BACK = {
 
   proBadge: "Pro",
 
+  // הסבר קצר — מה זה קמפיין ואיך שולחים אותו
+  how: {
+    title: "איך עובד קמפיין החזרה",
+    intro:
+      "קמפיין הוא רשימת לקוחות שלא הגיעו זמן־מה, עם הודעה מוכנה לכל אחת. המערכת מוצאת אותן וכותבת את ההודעה — את עוברת ושולחת בוואטסאפ.",
+    steps: [
+      {
+        title: "בוחרים קמפיין",
+        body: "כל קמפיין הוא קבוצת לקוחות לפי כמה זמן לא הגיעו — 30, 60 או 90 יום, או לקוחות VIP.",
+      },
+      {
+        title: "בוחרים הטבה וסגנון",
+        body: "המערכת כותבת לכל לקוחה הודעה אישית עם השם והשירות האחרון שלה. אפשר לערוך את הנוסח.",
+      },
+      {
+        title: "שולחים בוואטסאפ",
+        body: "לוחצים ״שליחה בוואטסאפ״ ליד כל לקוחה — ההודעה נפתחת מוכנה, רק לאשר ולשלוח.",
+      },
+      {
+        title: "עוקבים אחרי התגובות",
+        body: "מסמנים מי נשלחה, מי ענתה ומי קבעה תור — כדי לדעת מה עבד ולמי לחזור.",
+      },
+    ],
+    note: "השליחה נעשית ידנית מהוואטסאפ שלך — כך ההודעה נשלחת ממך אישית, מגיעה כמו הודעה רגילה ולא נחסמת כספאם.",
+  },
+
   metrics: {
     totalRecoverable: "לקוחות להחזרה",
     revenuePotential: "פוטנציאל הכנסה",
@@ -1767,10 +1792,6 @@ export const CLIENT_IMPORT = {
 
     noValidRows: "אין שורות תקינות לייבוא. אנא בדקי את הקובץ.",
 
-    optInLabel: "אישרו קבלת הודעות WhatsApp",
-    optInHelper:
-      "סמני אם הלקוחות שמייבאת אישרו לקבל הודעות ממך בוואטסאפ. ניתן לשנות את ההסכמה בפרופיל כל לקוחה בנפרד.",
-
     importButton: (n: number) => `ייבוא ${n} לקוחות`,
     importingButton: "מייבא…",
     backButton: "חזרה",
@@ -1798,79 +1819,6 @@ export const CLIENT_IMPORT = {
 export const AUTOMATIONS = {
   pageTitle: "אוטומציות",
   pageSubtitle: "תזכורות והודעות שנשלחות אוטומטית כדי לחסוך זמן ולהחזיר לקוחות.",
-
-  reminders: {
-    sectionTitle: "תזכורות תורים",
-    sectionSubtitle:
-      "הגדירי מתי לקוחות יקבלו תזכורת לפני התור והכיני הודעות לשליחה בוואטסאפ.",
-
-    manualModeBanner:
-      "כרגע התזכורות מוכנות לשליחה ידנית דרך וואטסאפ. שליחה אוטומטית תתווסף בהמשך.",
-    manualModeLabel: "שליחה ידנית בוואטסאפ",
-    autoModeLabel: "שליחה אוטומטית — בקרוב",
-
-    settings: {
-      sectionTitle: "הגדרות תזכורת",
-      timingLabel: "מתי לשלוח תזכורת לפני תור?",
-      timingHelper:
-        "תורים שיגיע הזמן להזכיר לגביהם יופיעו כאן לשליחה ידנית בוואטסאפ.",
-      timing24: "24 שעות לפני התור",
-      timing12: "12 שעות לפני התור",
-      timing3: "3 שעות לפני התור",
-      timing1: "שעה לפני התור",
-      timingCustom: "זמן מותאם אישית",
-      customHoursLabel: "מספר שעות לפני התור",
-      customHoursPlaceholder: "לדוגמה: 6",
-
-      templateLabel: "תבנית הודעת תזכורת",
-      templatePlaceholder: "כתבי כאן את תבנית ההודעה…",
-      templateDefault:
-        "היי {שם}, מזכירה לך שיש לך תור ל{שירות} אצל {שם העסק} בתאריך {תאריך} בשעה {שעה}. מחכה לראותך 💕",
-      availableVariables: "משתנים זמינים:",
-      variableChips: [
-        "{שם}",
-        "{שם העסק}",
-        "{שירות}",
-        "{תאריך}",
-        "{שעה}",
-        "{קישור להזמנה}",
-      ],
-
-      saveButton: "שמירת הגדרות",
-      saving: "שומר…",
-      saved: "ההגדרות נשמרו בהצלחה",
-    },
-
-    dueList: {
-      sectionTitle: "תזכורות שצריך לשלוח",
-      sectionSubtitle: "תורים שמגיע הזמן לשלוח להם תזכורת לפי ההגדרה שבחרת",
-      emptyTitle: "כרגע אין תזכורות שצריך לשלוח",
-      emptyBody:
-        "כשתור יתקרב לפי הזמן שהגדרת, הוא יופיע כאן.",
-
-      columnClient: "לקוחה",
-      columnService: "שירות",
-      columnDate: "תאריך ושעה",
-      columnStatus: "סטטוס",
-
-      status: {
-        pending: "ממתינה לשליחה",
-        sent: "נשלחה ידנית",
-        cancelled: "תור בוטל",
-        failed: "לא נשלחה",
-        none: "ממתינה לשליחה",
-      } as Record<string, string>,
-
-      actionWhatsApp: "שלחי תזכורת בוואטסאפ",
-      actionCopy: "העתקת הודעה",
-      actionMarkSent: "סימון כנשלחה",
-      actionMarkPending: "סימון כממתינה",
-      actionViewBooking: "צפייה בתור",
-      messageCopied: "ההודעה הועתקה",
-
-      reminderIn: (hours: number) => `תזכורת ${hours} שעות לפני`,
-    },
-  },
 
   dashboard: {
     attentionTitle: "תזכורות לשליחה",
@@ -2236,10 +2184,6 @@ export const WIN_BACK_AUTOMATION = {
     cooldownUnit: "ימים",
     cooldownHelper: "מונע שליחת הודעות כפולות ותחושת ספאם.",
 
-    requireOptInLabel: "שלחי רק ללקוחות שאישרו קבלת הודעות WhatsApp",
-    requireOptInHelper:
-      "מומלץ. ניתן לעדכן הסכמה בפרופיל הלקוחה.",
-
     // Phase 2A — Meta template configuration
     templateSection: "תבנית Meta מאושרת (לשליחה אמיתית)",
     templateSectionNote:
@@ -2363,7 +2307,6 @@ export const WIN_BACK_AUTOMATION = {
     skippedHeader: "דולגו:",
     noCompletedBooking: "אין ביקור קודם שהושלם",
     hasFutureBooking: "יש תור עתידי",
-    noOptIn: "אין אישור WhatsApp",
     invalidPhone: "מספר טלפון לא תקין",
     inCooldown: "כבר קיבלו הודעה לאחרונה",
   },
@@ -2372,10 +2315,6 @@ export const WIN_BACK_AUTOMATION = {
 
   zeroEligible: {
     title: "אין לקוחות מתאימות לשליחה אוטומטית",
-    noOptInReason:
-      "אין לקוחות מתאימות לשליחה אוטומטית כי לא סומן אישור לקבלת הודעות WhatsApp.",
-    noOptInHelper:
-      "ניתן להפעיל מצב ידני או לעדכן אישור בפרופיל הלקוחה.",
     manualLink: "מעבר לשליחה ידנית",
   },
 
@@ -2387,11 +2326,6 @@ export const WIN_BACK_AUTOMATION = {
     failed: "נכשל",
     skipped: "דולג",
   },
-
-  // ── הצהרת ציות ────────────────────────────────────────────────────────────
-
-  complianceNote:
-    "שליחה אוטומטית תישלח רק ללקוחות שאישרו קבלת הודעות WhatsApp מהעסק.",
 
   // ── רשימת תצורה (Phase 2A) ────────────────────────────────────────────────
 
@@ -2589,9 +2523,32 @@ export const LOYALTY = {
   pageSubtitle: "כרטיסיית ביקורים ללקוחות — כל כמה ביקורים הן מקבלות הטבה, ואת מחליטה מתי לממש.",
   eyebrow: "שימור לקוחות",
 
+  // הסבר קצר — איך זה עובד ולמה זה משתלם
+  how: {
+    title: "איך מועדון הנאמנות עובד",
+    intro:
+      "זו כרטיסיית ביקורים דיגיטלית. את קובעת פעם אחת כמה ביקורים שווים הטבה — והמערכת עושה את כל השאר אוטומטית.",
+    steps: [
+      {
+        title: "מגדירים את הכרטיסייה",
+        body: "בוחרים כמה ביקורים צריך כדי לזכות בהטבה, ומה ההטבה (טיפול במתנה, הנחה וכו׳).",
+      },
+      {
+        title: "הספירה אוטומטית",
+        body: "כל תור שאת מסמנת כ״הושלם״ נספר ללקוחה לבד — אין מה למלא או לעדכן ידנית.",
+      },
+      {
+        title: "מזהים ומעניקים",
+        body: "כשלקוחה משלימה את הכרטיסייה היא תופיע כאן כ״זכאית להטבה״ — שולחים לה הודעה ומסמנים שההטבה ניתנה.",
+      },
+    ],
+    why: "למה זה משתלם: כשלקוחה יודעת שמחכה לה הטבה, יש לה סיבה לחזור אלייך ולא למתחרים.",
+  },
+
   // כרטיס הגדרות התוכנית
   config: {
     title: "הגדרת התוכנית",
+    intro: "כאן מגדירים את הכרטיסייה. אחרי שמירה, הלקוחות מתחילות לצבור ביקורים אוטומטית.",
     activeLabel: "התוכנית פעילה",
     activeHint: "כשהתוכנית כבויה, לא נציג לקוחות זכאיות עד שתפעילי אותה מחדש.",
     visitsLabel: "כמה ביקורים להטבה?",
@@ -2605,6 +2562,49 @@ export const LOYALTY = {
     previewTitle: "תצוגה מקדימה",
     preview: (visits: number, reward: string) =>
       `כל ${visits} ביקורים — ${reward || "הטבה שתגדירי"}`,
+  },
+
+  // הודעות אוטומטיות (עוד ביקור אחד / הרווחת הטבה)
+  messages: {
+    title: "הודעות אוטומטיות ללקוחות",
+    subtitle:
+      "המערכת שולחת את ההודעות האלה לבד ב-WhatsApp ברגע הנכון — בלי שתצטרכי לעקוב.",
+    autoSendLabel: "שליחה אוטומטית",
+    autoSendHint:
+      "כשמופעל, המערכת שולחת את ההודעות למטה אוטומטית. כשכבוי — נראה לך מי כמעט שם ומי זכאית, ותשלחי בלחיצה.",
+    almostThereTitle: "עוד ביקור אחד להטבה",
+    almostThereDesc: "נשלחת ללקוחה כשנשאר לה ביקור אחד כדי לזכות בהטבה.",
+    rewardTitle: "הרווחת הטבה!",
+    rewardDesc: "נשלחת ללקוחה ברגע שהשלימה את הכרטיסייה וזכאית להטבה.",
+    messageLabel: "נוסח ההודעה",
+    variablesTitle: "אפשר לשלב:",
+    previewTitle: "תצוגה מקדימה",
+    autoNote:
+      "שליחה אוטומטית ב-WhatsApp דורשת תבנית הודעה מאושרת. עד שתאושר, ההודעות מוכנות לשליחה בלחיצה מהרשימות למטה.",
+  },
+
+  // רשימת כל החברות במועדון (עם מונה ביקורים והתקדמות)
+  members: {
+    title: "כל הלקוחות במועדון",
+    subtitle: "כמה פעמים כל לקוחה הגיעה וכמה נשאר לה עד ההטבה הבאה.",
+    empty: "עדיין אין לקוחות עם ביקור שהושלם. ברגע שתסמני תור כ״הושלם״ — הלקוחה תופיע כאן.",
+    visits: (n: number) => `${n} ביקורים`,
+    progress: (done: number, total: number) => `${done}/${total} להטבה`,
+    rewardsGiven: (n: number) => (n === 1 ? "הטבה אחת מומשה" : `${n} הטבות מומשו`),
+    eligibleTag: "זכאית עכשיו",
+    almostTag: "עוד ביקור אחד",
+  },
+
+  // תג התקדמות (כרטיס לקוחה / רשימת לקוחות)
+  badge: {
+    progress: (done: number, total: number) => `נאמנות: ${done}/${total}`,
+    eligible: "זכאית להטבה 🎁",
+    almost: "עוד ביקור אחד להטבה",
+    cardTitle: "מועדון נאמנות",
+    cardVisits: (done: number, total: number) => `ביקור ${done} מתוך ${total} להטבה`,
+    cardReward: (reward: string) => `ההטבה: ${reward}`,
+    cardRewardsGiven: (n: number) => `הטבות שמומשו: ${n}`,
+    cardInactive: "מועדון הנאמנות כבוי",
   },
 
   // מדדים
@@ -2657,6 +2657,7 @@ export const LOYALTY = {
     visitsRange: "מספר הביקורים צריך להיות בין 2 ל-50",
     rewardRequired: "יש לתאר את ההטבה",
     rewardTooLong: "תיאור ההטבה ארוך מדי",
+    messageTooLong: "נוסח ההודעה ארוך מדי",
     notConfigured: "תחילה יש להגדיר את תוכנית הנאמנות",
     clientNotFound: "הלקוחה לא נמצאה",
     noPendingReward: "ללקוחה זו אין הטבה ממתינה למימוש",

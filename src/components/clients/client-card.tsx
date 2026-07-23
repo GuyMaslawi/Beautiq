@@ -1,9 +1,12 @@
 import Link from "next/link";
 import { CalendarDays, AlertTriangle } from "lucide-react";
 import type { ClientListItem } from "@/server/clients/queries";
+import type { ClientLoyaltyBadge } from "@/server/loyalty/queries";
 import { CLIENTS } from "@/lib/constants/he";
 import { WhatsAppManualSendModal } from "@/components/clients/whatsapp-manual-send-modal";
 import { ClientAuraCard } from "@/components/premium/client-aura-card";
+import { PlanIcon } from "@/components/plans/plan-icon";
+import { LoyaltyPill } from "@/components/clients/client-row";
 
 function formatLastVisit(date: Date): string {
   const d = new Date(date);
@@ -50,10 +53,16 @@ export function ClientCard({
   client,
   businessName,
   isTestMode = false,
+  ownerPlan = null,
+  loyalty = null,
 }: {
   client: ClientListItem;
   businessName?: string;
   isTestMode?: boolean;
+  /** The account owner's plan — shows a tier icon next to the name. */
+  ownerPlan?: string | null;
+  /** Loyalty progress for this client, when the program is active. */
+  loyalty?: ClientLoyaltyBadge | null;
 }) {
   const initials = client.fullName
     .split(" ")
@@ -67,14 +76,16 @@ export function ClientCard({
   return (
     <ClientAuraCard
       name={client.fullName}
+      nameIcon={<PlanIcon plan={ownerPlan} />}
       contact={client.phone}
       initials={initials}
       statusTone={client.upcomingBooking ? "success" : client.noShowCount > 0 ? "danger" : "brand"}
       statusLabel={client.upcomingBooking ? "תור קרוב" : client.noShowCount > 0 ? "לא הגיעה" : undefined}
       statusDot={!!client.upcomingBooking}
       badges={
-        (client.noShowCount > 0 || client.cancellationCount > 0) && (
+        (client.noShowCount > 0 || client.cancellationCount > 0 || loyalty) && (
           <>
+            {loyalty && <LoyaltyPill loyalty={loyalty} />}
             {client.noShowCount > 0 && (
               <span
                 className="flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium"

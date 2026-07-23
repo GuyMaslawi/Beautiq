@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { createPrismaMock, resetPrismaMock } from "../helpers/prisma-mock";
-import { BUSINESS_A, BUSINESS_B, makeClient } from "../helpers/factories";
+import { BUSINESS_A, BUSINESS_B } from "../helpers/factories";
 
 vi.mock("@/server/db/prisma", async () => {
   const { createPrismaMock } = await import("../helpers/prisma-mock");
@@ -107,13 +107,13 @@ describe("updateClientAction", () => {
     prisma.client.findUnique
       .mockResolvedValueOnce({ id: "cli_1", businessId: BUSINESS_A }) // existence
       .mockResolvedValueOnce(null); // duplicate-phone check
-    prisma.client.update.mockResolvedValue(makeClient({ id: "cli_1" }));
+    prisma.client.updateMany.mockResolvedValue({ count: 1 });
 
     const res = await updateClientAction("cli_1", {}, fd(validEdit));
     expect(res.success).toBe(true);
-    expect(prisma.client.update).toHaveBeenCalledWith(
+    expect(prisma.client.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
-        where: { id: "cli_1" },
+        where: { id: "cli_1", businessId: BUSINESS_A },
         data: expect.objectContaining({
           fullName: "עדי כהן",
           phone: "0501234567",
@@ -130,7 +130,7 @@ describe("updateClientAction", () => {
     });
     const res = await updateClientAction("cli_1", {}, fd(validEdit));
     expect(res.formError).toBeTruthy();
-    expect(prisma.client.update).not.toHaveBeenCalled();
+    expect(prisma.client.updateMany).not.toHaveBeenCalled();
   });
 
   it("returns field errors (and no write) when name is missing", async () => {
@@ -144,7 +144,7 @@ describe("updateClientAction", () => {
       fd({ ...validEdit, fullName: "" }),
     );
     expect(res.fieldErrors?.fullName).toBeTruthy();
-    expect(prisma.client.update).not.toHaveBeenCalled();
+    expect(prisma.client.updateMany).not.toHaveBeenCalled();
   });
 
   it("returns a phone error for an invalid phone", async () => {
@@ -158,7 +158,7 @@ describe("updateClientAction", () => {
       fd({ ...validEdit, phone: "123" }),
     );
     expect(res.fieldErrors?.phone).toBeTruthy();
-    expect(prisma.client.update).not.toHaveBeenCalled();
+    expect(prisma.client.updateMany).not.toHaveBeenCalled();
   });
 
   it("rejects a duplicate phone that belongs to a DIFFERENT client in the same business", async () => {
@@ -167,7 +167,7 @@ describe("updateClientAction", () => {
       .mockResolvedValueOnce({ id: "cli_2" }); // duplicate owned by another client
     const res = await updateClientAction("cli_1", {}, fd(validEdit));
     expect(res.fieldErrors?.phone).toBeTruthy();
-    expect(prisma.client.update).not.toHaveBeenCalled();
+    expect(prisma.client.updateMany).not.toHaveBeenCalled();
     // duplicate check is scoped to the business via the compound unique key
     const dupCall = prisma.client.findUnique.mock.calls[1][0] as {
       where: { businessId_normalizedPhone: { businessId: string } };
@@ -179,17 +179,17 @@ describe("updateClientAction", () => {
     prisma.client.findUnique
       .mockResolvedValueOnce({ id: "cli_1", businessId: BUSINESS_A })
       .mockResolvedValueOnce({ id: "cli_1" }); // duplicate is self -> allowed
-    prisma.client.update.mockResolvedValue(makeClient({ id: "cli_1" }));
+    prisma.client.updateMany.mockResolvedValue({ count: 1 });
     const res = await updateClientAction("cli_1", {}, fd(validEdit));
     expect(res.success).toBe(true);
-    expect(prisma.client.update).toHaveBeenCalled();
+    expect(prisma.client.updateMany).toHaveBeenCalled();
   });
 
   it("maps a Prisma unique-constraint violation to a phone duplicate error", async () => {
     prisma.client.findUnique
       .mockResolvedValueOnce({ id: "cli_1", businessId: BUSINESS_A })
       .mockResolvedValueOnce(null);
-    prisma.client.update.mockRejectedValue(
+    prisma.client.updateMany.mockRejectedValue(
       new Error("Unique constraint failed on the fields"),
     );
     const res = await updateClientAction("cli_1", {}, fd(validEdit));
@@ -200,7 +200,7 @@ describe("updateClientAction", () => {
     prisma.client.findUnique
       .mockResolvedValueOnce({ id: "cli_1", businessId: BUSINESS_A })
       .mockResolvedValueOnce(null);
-    prisma.client.update.mockRejectedValue(new Error("secret db meltdown"));
+    prisma.client.updateMany.mockRejectedValue(new Error("secret db meltdown"));
     const res = await updateClientAction("cli_1", {}, fd(validEdit));
     expect(res.formError).toBeTruthy();
     expect(res.formError).not.toContain("secret");

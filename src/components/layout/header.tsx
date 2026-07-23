@@ -19,7 +19,7 @@ function getInitials(name: string | null): string {
   return name[0].toUpperCase();
 }
 
-export function Header({ businessName, isAdmin = false }: { businessName: string | null; isAdmin?: boolean }) {
+export function Header({ businessName, isAdmin = false, hasPlatinum = false }: { businessName: string | null; isAdmin?: boolean; hasPlatinum?: boolean }) {
   const [open, setOpen] = useState(false);
   const initials = getInitials(businessName);
 
@@ -156,7 +156,7 @@ export function Header({ businessName, isAdmin = false }: { businessName: string
                 className="flex-1 overflow-y-auto px-3 py-4 scrollbar-hide"
                 onClick={() => setOpen(false)}
               >
-                <AppNav isAdmin={isAdmin} />
+                <AppNav isAdmin={isAdmin} hasPlatinum={hasPlatinum} />
               </nav>
 
               {/* Footer: sign out */}

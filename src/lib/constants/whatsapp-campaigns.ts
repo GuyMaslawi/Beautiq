@@ -40,7 +40,6 @@ export const WA_CAMPAIGNS = {
   // Exclusion reasons (owner-facing)
   reasons: {
     invalid_phone: "חסר מספר טלפון תקין",
-    missing_optin: "חסר אישור לקבלת הודעות WhatsApp",
     unsubscribed: "הלקוחה הסירה את עצמה מהודעות",
     duplicate_phone: "המספר מופיע יותר מפעם אחת",
     missing_template_data: "חסרים נתונים לתבנית ההודעה",

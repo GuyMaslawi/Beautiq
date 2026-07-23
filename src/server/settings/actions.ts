@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/server/db/prisma";
 import { requireTenant } from "@/server/auth/session";
+import { logActivity } from "@/server/activity/log";
 import { validateBusinessDetails } from "@/lib/validation/settings";
 import { SETTINGS } from "@/lib/constants/he";
 
@@ -51,9 +52,47 @@ export async function updateBusinessDetailsAction(
     return { formError: SETTINGS.errors.generic, values: raw };
   }
 
+  await logActivity({
+    businessId: tenant.businessId,
+    category: "settings",
+    action: "settings.business_details",
+    summary: "עודכנו פרטי העסק",
+  });
+
   revalidatePath("/settings");
   revalidatePath("/dashboard");
   return { success: SETTINGS.businessDetails.success };
+}
+
+// ---------------------------------------------------------------------------
+// Notification preferences
+// ---------------------------------------------------------------------------
+
+export interface NotificationPrefsFormState {
+  formError?: string;
+  success?: string;
+}
+
+export async function updateNotificationPrefsAction(
+  _prevState: NotificationPrefsFormState,
+  formData: FormData,
+): Promise<NotificationPrefsFormState> {
+  const tenant = await requireTenant();
+
+  // A checkbox is present in the form only when checked.
+  const enabled = formData.get("emailNotificationsEnabled") != null;
+
+  try {
+    await prisma.business.update({
+      where: { id: tenant.businessId },
+      data: { emailNotificationsEnabled: enabled },
+    });
+  } catch {
+    return { formError: SETTINGS.errors.generic };
+  }
+
+  revalidatePath("/settings");
+  return { success: SETTINGS.notifications.success };
 }
 
 // ---------------------------------------------------------------------------

@@ -84,6 +84,7 @@ async function _notify(params: {
         select: {
           name: true,
           phone: true,
+          emailNotificationsEnabled: true,
           members: {
             where: { role: "owner" },
             orderBy: { createdAt: "asc" },
@@ -115,7 +116,8 @@ async function _notify(params: {
   let notified = false;
 
   // ── ערוץ עיקרי: אימייל לבעלת העסק ──────────────────────────────
-  if (ownerEmail) {
+  // רק אם בעלת העסק הפעילה התראות אימייל בהגדרות (opt-in, כבוי כברירת מחדל).
+  if (ownerEmail && booking.business.emailNotificationsEnabled) {
     const subject = "תור חדש נקבע ב־Allura";
     const lines = [
       `היי ${ownerName},`,
@@ -156,7 +158,7 @@ async function _notify(params: {
         reason: result.reason,
       });
     }
-  } else {
+  } else if (booking.business.emailNotificationsEnabled && !ownerEmail) {
     logger.warn("[notifyOwner] no owner email on file", { bookingId, businessId });
   }
 

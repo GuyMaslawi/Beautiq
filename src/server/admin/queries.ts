@@ -48,6 +48,56 @@ export async function getAdminOverviewStats() {
   };
 }
 
+export interface AccountSubscriptionRevenue {
+  /** Monthly recurring revenue from active subscriptions, in shekels. */
+  mrr: number;
+  /** MRR × 12 — annualised run-rate, in shekels. */
+  arr: number;
+  activeCount: number;
+  premiumCount: number;
+  platinumCount: number;
+  pastDueCount: number;
+  cancelledCount: number;
+}
+
+/**
+ * Self-serve subscription revenue across all owners (owner→Allura billing).
+ *
+ * NOTE: this is the RECURRING run-rate (MRR/ARR) from currently-active
+ * subscriptions — not lifetime cash collected. There is no per-charge ledger
+ * (renewals only extend the period), so historical totals aren't derivable
+ * from the schema; MRR is the meaningful "how much am I making" figure.
+ */
+export async function getAccountSubscriptionRevenue(): Promise<AccountSubscriptionRevenue> {
+  const [activeSubs, pastDueCount, cancelledCount] = await Promise.all([
+    prisma.accountSubscription.findMany({
+      where: { status: "active" },
+      select: { plan: true, priceMinor: true },
+    }),
+    prisma.accountSubscription.count({ where: { status: "past_due" } }),
+    prisma.accountSubscription.count({ where: { status: "cancelled" } }),
+  ]);
+
+  let mrrMinor = 0;
+  let premiumCount = 0;
+  let platinumCount = 0;
+  for (const s of activeSubs) {
+    mrrMinor += s.priceMinor;
+    if (s.plan === "platinum") platinumCount++;
+    else premiumCount++;
+  }
+
+  return {
+    mrr: mrrMinor / 100,
+    arr: (mrrMinor * 12) / 100,
+    activeCount: activeSubs.length,
+    premiumCount,
+    platinumCount,
+    pastDueCount,
+    cancelledCount,
+  };
+}
+
 /** All businesses with owner info, subscription, and usage counts. */
 export async function getAdminBusinesses(filters: AdminBusinessFilters = {}) {
   const { q, status, plan } = filters;
@@ -111,7 +161,19 @@ export async function getAdminBusiness(businessId: string) {
       subscription: true,
       members: {
         where: { role: "owner" },
-        include: { user: { select: { id: true, name: true, email: true } } },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              plan: true,
+              isAdmin: true,
+              planExpiresAt: true,
+              suspendedUntil: true,
+            },
+          },
+        },
         take: 1,
         orderBy: { createdAt: "asc" },
       },
