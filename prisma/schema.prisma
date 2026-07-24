@@ -259,7 +259,9 @@ enum WhatsAppCampaignRecipientStatus {
 model User {
   id              String       @id @default(cuid())
   email           String       @unique
-  passwordHash    String
+  /// Null for accounts created via a social provider (e.g. Google) that have
+  /// never set a password. Email+password login is rejected when this is null.
+  passwordHash    String?
   name            String?
   isAdmin         Boolean      @default(false)
   /// The self-serve plan the owner selected & paid for at signup. Null until

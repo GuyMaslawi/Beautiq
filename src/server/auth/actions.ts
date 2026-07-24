@@ -141,6 +141,17 @@ export async function loginAction(
   return {};
 }
 
+/**
+ * Start the "Sign in with Google" flow. Redirects to Google's consent screen
+ * (throws NEXT_REDIRECT); on return, the Google callback resolves/creates our
+ * own User row (see config.ts) and lands the user on /dashboard. New accounts
+ * have no plan yet, so the app gate bounces them to /subscribe — same as a fresh
+ * email signup. Used by both the login and signup pages.
+ */
+export async function googleSignInAction(): Promise<void> {
+  await signIn("google", { redirectTo: "/dashboard" });
+}
+
 /** Sign the current user out and return to the home page. */
 export async function signOutAction(): Promise<void> {
   await signOut({ redirectTo: "/login" });

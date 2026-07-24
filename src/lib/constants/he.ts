@@ -215,6 +215,12 @@ export const AUTH = {
     noAccount: "אין לך עדיין חשבון?",
     signupLink: "ליצירת חשבון",
   },
+  /** התחברות/הרשמה עם ספק חיצוני (Google) */
+  social: {
+    divider: "או",
+    googleLogin: "התחברות עם Google",
+    googleSignup: "הרשמה עם Google",
+  },
   /** הודעות שגיאה והצלחה (אימות) */
   errors: {
     required: "יש למלא אימייל וסיסמה",
