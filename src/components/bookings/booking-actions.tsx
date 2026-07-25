@@ -8,6 +8,8 @@ import type { BookingStatus } from "@prisma/client";
 
 interface BookingActionsProps {
   status: BookingStatus;
+  /** Whether the appointment's start time has passed — gates outcome actions. */
+  hasStarted: boolean;
   completeAction: () => Promise<void>;
   cancelAction: () => Promise<void>;
   noShowAction: () => Promise<void>;
@@ -15,6 +17,7 @@ interface BookingActionsProps {
 
 export function BookingActions({
   status,
+  hasStarted,
   completeAction,
   cancelAction,
   noShowAction,
@@ -53,26 +56,37 @@ export function BookingActions({
 
       {(status === "pending" || status === "approved") && (
         <>
-          <Button
-            variant="secondary"
-            className="w-full"
-            disabled={isPending}
-            onClick={() => run(completeAction, BOOKINGS.actions.successComplete)}
-          >
-            {isPending
-              ? BOOKINGS.actions.completing
-              : BOOKINGS.actions.complete}
-          </Button>
-          <Button
-            variant="secondary"
-            className="w-full"
-            disabled={isPending}
-            onClick={() => run(noShowAction, BOOKINGS.actions.successNoShow)}
-          >
-            {isPending
-              ? BOOKINGS.actions.markingNoShow
-              : BOOKINGS.actions.noShow}
-          </Button>
+          {/* Outcome actions describe what happened at the appointment — shown
+              only once its start time has passed. */}
+          {hasStarted && (
+            <>
+              <Button
+                variant="secondary"
+                className="w-full"
+                disabled={isPending}
+                onClick={() => run(completeAction, BOOKINGS.actions.successComplete)}
+              >
+                {isPending
+                  ? BOOKINGS.actions.completing
+                  : BOOKINGS.actions.complete}
+              </Button>
+              <Button
+                variant="secondary"
+                className="w-full"
+                disabled={isPending}
+                onClick={() => run(noShowAction, BOOKINGS.actions.successNoShow)}
+              >
+                {isPending
+                  ? BOOKINGS.actions.markingNoShow
+                  : BOOKINGS.actions.noShow}
+              </Button>
+            </>
+          )}
+          {!hasStarted && (
+            <p className="text-muted text-xs leading-relaxed">
+              {BOOKINGS.actions.futureHint}
+            </p>
+          )}
           <Button
             variant="ghost"
             className="w-full text-red-600 hover:bg-red-50"

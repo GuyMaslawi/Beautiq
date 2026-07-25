@@ -1,6 +1,18 @@
 const TZ = "Asia/Jerusalem";
 
 /**
+ * Whether an appointment's start time has already arrived (relative to now).
+ *
+ * Outcome actions on a booking ("הושלם" / "לא הגיעה") only make sense once the
+ * appointment has started, so both the UI and the server gate them on this.
+ * Wrapping the `new Date()` read here keeps the impurity out of component render
+ * bodies (react-hooks/purity).
+ */
+export function bookingHasStarted(startTime: Date): boolean {
+  return startTime.getTime() <= new Date().getTime();
+}
+
+/**
  * Converts minutes since midnight (0–1439) to a HH:MM string (24-hour).
  * Example: 540 → "09:00", 1020 → "17:00"
  */

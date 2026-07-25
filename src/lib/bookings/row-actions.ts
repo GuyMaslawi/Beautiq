@@ -78,12 +78,24 @@ const cancelItem: BookingAction = {
 /**
  * The single most relevant action for a booking, rendered as a prominent button.
  * Never returns a destructive action (those live in the menu behind a confirm).
+ *
+ * `hasStarted` = the appointment's start time has already arrived. Outcome actions
+ * ("הושלם" / "לא הגיעה") describe what happened at the appointment, so they only
+ * make sense once it has started. For a still-future booking the primary action
+ * falls back to a calm "צפייה"; the owner can still cancel or message from the menu.
  */
-export function getPrimaryBookingAction(status: BookingStatus): BookingAction {
+export function getPrimaryBookingAction(
+  status: BookingStatus,
+  hasStarted: boolean,
+): BookingAction {
   switch (status) {
     case "pending":
     case "approved":
-      return { type: "complete", label: A.complete, kind: "action", variant: "primary" };
+      if (hasStarted) {
+        return { type: "complete", label: A.complete, kind: "action", variant: "primary" };
+      }
+      // Future booking: no outcome yet — offer a calm "צפייה" instead of "הושלם".
+      return { type: "view", label: A.viewShort, kind: "link", variant: "secondary" };
     case "completed":
     case "cancelled":
     case "no_show":
@@ -98,13 +110,24 @@ export function getPrimaryBookingAction(status: BookingStatus): BookingAction {
  * The secondary actions shown inside the "פעולות" menu. Only valid actions for
  * the given status are returned — invalid actions are omitted, never disabled.
  * The primary action is never duplicated here.
+ *
+ * See `getPrimaryBookingAction` for `hasStarted`: before the appointment starts,
+ * outcome actions ("לא הגיעה") are hidden and only cancel + message remain.
  */
-export function getBookingMenuActions(status: BookingStatus): BookingAction[] {
+export function getBookingMenuActions(
+  status: BookingStatus,
+  hasStarted: boolean,
+): BookingAction[] {
   switch (status) {
     case "pending":
     case "approved":
-      // Primary = complete.
-      return [viewItem, noShowItem, cancelItem, messageItem];
+      if (hasStarted) {
+        // Primary = complete. Full outcome + management menu.
+        return [viewItem, noShowItem, cancelItem, messageItem];
+      }
+      // Future booking: primary = view. Outcome actions are hidden until the
+      // appointment starts; only cancelling and messaging remain valid.
+      return [cancelItem, messageItem];
     case "completed":
       // Primary = view. Offer follow-up messaging + a review request.
       return [messageItem, reviewItem];

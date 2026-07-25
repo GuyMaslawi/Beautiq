@@ -67,11 +67,18 @@ export interface AssistantAction {
   href: string;
 }
 
+export interface AssistantFollowUp {
+  intent: AssistantIntent;
+  label: string;
+}
+
 export interface AssistantAnswer {
   intent: AssistantIntent | "fallback";
   title: string;
   lines: string[];
   actions: AssistantAction[];
+  /** Contextual next questions, rendered as tappable chips under the answer. */
+  followUps?: AssistantFollowUp[];
 }
 
 export const SUGGESTED_QUESTIONS: { intent: AssistantIntent; label: string }[] = [
@@ -89,26 +96,112 @@ export function formatILS(amount: number): string {
   return `₪${Math.round(amount).toLocaleString("he-IL")}`;
 }
 
-// Ordered most-specific → least, so "כמה לקוחות בסיכון" matches atRisk before clients.
+// Normalize Hebrew free text so matching is robust to niqqud, final-letter
+// forms (ך→כ, ם→מ …), quotes/geresh and stray punctuation. Both the user's
+// input and every keyword pass through this, so "כַּמָּה הִכְנַסְתִּי?" and
+// "כמה הכנסתי" compare equal.
+const FINAL_LETTERS: Record<string, string> = { ך: "כ", ם: "מ", ן: "נ", ף: "פ", ץ: "צ" };
+function norm(s: string): string {
+  return s
+    .toLowerCase()
+    .replace(/[֑-ׇ]/g, "") // niqqud & cantillation
+    .replace(/["'׳״`]/g, "") // quotes, geresh, gershayim
+    .replace(/[ךםןףץ]/g, (c) => FINAL_LETTERS[c])
+    .replace(/[^֐-׿0-9a-z\s]/g, " ") // drop remaining punctuation
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Keywords are stored already-normalized (roots, no final letters), ordered
+// most-specific → least so equal scores tie-break toward the sharper intent
+// (e.g. "כמה לקוחות בסיכון" → atRisk, not clients). A keyword containing a
+// space is a phrase and scores double — a stronger signal than a lone word.
 const INTENT_KEYWORDS: { intent: AssistantIntent; keywords: string[] }[] = [
-  { intent: "atRisk", keywords: ["סיכון", "נטוש", "נוטש", "ננטש", "לא חזר", "לא חוזר", "איבד", "עזב", "ברח"] },
-  { intent: "loyalty", keywords: ["נאמנות", "הטבה", "הטבת", "כרטיסי", "מועדון", "punch"] },
-  { intent: "emptySlots", keywords: ["חלון", "חלונות", "פנוי", "פנויים", "ריק", "זמין", "פנוייה"] },
-  { intent: "pricing", keywords: ["מחיר", "מחירים", "תמחור", "יקר", "זול", "לתמחר"] },
-  { intent: "topServices", keywords: ["שירות", "שירותים", "רווחי", "פופולרי", "הכי טוב", "מכניס"] },
-  { intent: "revenue", keywords: ["הכנס", "הכנסתי", "רווח", "כסף", "מחזור", "כמה עשיתי", "הרווחתי", "יעד"] },
-  { intent: "today", keywords: ["לעשות", "מה כדאי", "פעולה", "המלצ", "טיפ", "עדיפות"] },
-  { intent: "schedule", keywords: ["תור", "תורים", "יומן", "פגיש", "לו״ז", "לוז", "מחר", "השבוע", "היום", "קבוע"] },
-  { intent: "clients", keywords: ["לקוח", "לקוחות", "כמה אנשים"] },
+  { intent: "atRisk", keywords: ["לקוחות בסיכון", "סיכון", "נטש", "נוטש", "לא חזר", "לא חוזר", "מתגעגע", "לא הגיע", "לא באה", "עזב", "ברח", "איבד", "מזמן לא"] },
+  { intent: "loyalty", keywords: ["נאמנות", "מועדון", "כרטיסי", "הטבה", "הטבת", "תגמול", "מתנה", "נקודות", "punch"] },
+  { intent: "emptySlots", keywords: ["חלון", "פנוי", "ריק", "זמין", "חור ביומן", "מקום פנוי", "שעות פנויות"] },
+  { intent: "pricing", keywords: ["מחיר", "תמחור", "לתמחר", "יקר", "זול", "כמה לגבות", "כמה לקחת", "להעלות מחיר", "טווח שוק"] },
+  { intent: "topServices", keywords: ["שירות", "טיפול", "רווחי", "פופולרי", "הכי טוב", "מכניס", "הכי מבוקש", "נמכר", "מוביל"] },
+  { intent: "revenue", keywords: ["הכנס", "רווח", "כסף", "מחזור", "מכירות", "כמה עשיתי", "הרווחתי", "השתכרתי", "יעד", "כמה נכנס", "תזרים"] },
+  { intent: "today", keywords: ["לעשות", "מה כדאי", "פעולה", "המלצ", "טיפ", "עדיפות", "משימ", "להתמקד", "מה חשוב", "עצה"] },
+  { intent: "schedule", keywords: ["תור", "יומן", "פגיש", "לוז", "מחר", "השבוע", "היום", "מתי", "לוח זמנים", "תזמון", "כמה תורים"] },
+  { intent: "clients", keywords: ["לקוח", "אנשים", "מאגר", "רשימת לקוחות", "כמה אנשים"] },
 ];
 
+/** Score every intent by keyword hits and return them best-first (may be empty). */
+export function detectIntents(text: string): AssistantIntent[] {
+  const t = norm(text);
+  if (!t) return [];
+  return INTENT_KEYWORDS.map(({ intent, keywords }) => {
+    let score = 0;
+    for (const k of keywords) if (t.includes(k)) score += k.includes(" ") ? 2 : 1;
+    return { intent, score };
+  })
+    .filter((s) => s.score > 0)
+    .sort((a, b) => b.score - a.score) // stable sort keeps array order on ties
+    .map((s) => s.intent);
+}
+
+/** Best-matching business intent, or null. Kept for callers wanting a single hit. */
 export function detectIntent(text: string): AssistantIntent | null {
-  const t = text.trim();
+  return detectIntents(text)[0] ?? null;
+}
+
+// Light conversational layer — greetings, thanks, "who are you", "help" — so the
+// assistant feels responsive to chit-chat instead of dead-ending on a fallback.
+// Only consulted when no business intent matched, so "כמה הכנסתי? תודה" still
+// answers the revenue question.
+type SmallTalk = "thanks" | "identity" | "help" | "greeting";
+const SMALLTALK_KEYWORDS: { kind: SmallTalk; keywords: string[] }[] = [
+  { kind: "thanks", keywords: ["תודה", "יופי", "מעולה", "מדהים", "אחלה", "סבבה", "כל הכבוד"] },
+  { kind: "identity", keywords: ["מי את", "מי אתה", "מה את יודע", "מה אתה יודע", "מה את יכול", "מה אתה יכול", "מה זה עוזר", "מי זה"] },
+  { kind: "help", keywords: ["עזרה", "עזור", "תעזר", "לא יודע", "מה לשאול", "אפשרויות", "מה אפשר", "מה יש"] },
+  { kind: "greeting", keywords: ["שלום", "היי", "הלו", "אהלן", "בוקר טוב", "צהריים טובים", "ערב טוב", "מה נשמע", "מה קורה", "מה שלומ"] },
+];
+function detectSmallTalk(text: string): SmallTalk | null {
+  const t = norm(text);
   if (!t) return null;
-  for (const { intent, keywords } of INTENT_KEYWORDS) {
-    if (keywords.some((k) => t.includes(k))) return intent;
-  }
+  for (const { kind, keywords } of SMALLTALK_KEYWORDS) if (keywords.some((k) => t.includes(k))) return kind;
   return null;
+}
+
+// Canonical question phrasing per intent — used as the user-bubble text when a
+// follow-up chip is tapped, so the chip reads naturally as something they asked.
+const INTENT_QUESTION: Record<AssistantIntent, string> = {
+  revenue: "כמה הכנסתי החודש?",
+  atRisk: "מי הלקוחות שבסיכון לנטוש?",
+  emptySlots: "איפה יש לי חלונות פנויים?",
+  today: "מה כדאי לי לעשות היום?",
+  pricing: "האם המחירים שלי בסדר?",
+  loyalty: "מי זכאית להטבת נאמנות?",
+  clients: "כמה לקוחות יש לי?",
+  topServices: "מה השירותים הכי רווחיים שלי?",
+  schedule: "מה יש לי ביומן?",
+};
+
+// Which topics naturally come next after each answer.
+const RELATED_INTENTS: Record<AssistantIntent, AssistantIntent[]> = {
+  revenue: ["topServices", "today"],
+  atRisk: ["emptySlots", "loyalty"],
+  emptySlots: ["atRisk", "schedule"],
+  today: ["revenue", "atRisk"],
+  pricing: ["topServices", "revenue"],
+  loyalty: ["atRisk", "clients"],
+  clients: ["atRisk", "loyalty"],
+  topServices: ["revenue", "pricing"],
+  schedule: ["emptySlots", "today"],
+};
+
+function toFollowUps(intents: AssistantIntent[]): AssistantFollowUp[] {
+  const seen = new Set<AssistantIntent>();
+  const out: AssistantFollowUp[] = [];
+  for (const i of intents) {
+    if (seen.has(i)) continue;
+    seen.add(i);
+    out.push({ intent: i, label: INTENT_QUESTION[i] });
+    if (out.length === 3) break;
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -306,18 +399,46 @@ const BUILDERS: Record<AssistantIntent, (ctx: AssistantContext) => AssistantAnsw
 };
 
 export function answerIntent(ctx: AssistantContext, intent: AssistantIntent): AssistantAnswer {
-  return BUILDERS[intent](ctx);
+  return { ...BUILDERS[intent](ctx), followUps: toFollowUps(RELATED_INTENTS[intent]) };
 }
 
-/** Answer free-text input: detect intent, else return a helpful fallback. */
+// Warm conversational replies for chit-chat, each nudging back toward the data.
+function smallTalkAnswer(kind: SmallTalk): AssistantAnswer {
+  const st = ASSISTANT.smallTalk;
+  const copy: Record<SmallTalk, { title: string; body: string; topics: AssistantIntent[] }> = {
+    greeting: { title: st.greetingTitle, body: st.greetingBody, topics: ["today", "revenue", "atRisk"] },
+    thanks: { title: st.thanksTitle, body: st.thanksBody, topics: ["today", "emptySlots"] },
+    help: { title: st.helpTitle, body: st.helpBody, topics: ["revenue", "atRisk", "emptySlots"] },
+    identity: { title: st.identityTitle, body: st.identityBody, topics: ["revenue", "atRisk", "today"] },
+  };
+  const c = copy[kind];
+  return { intent: "fallback", title: c.title, lines: [c.body], actions: [], followUps: toFollowUps(c.topics) };
+}
+
+/**
+ * Answer free-text input. Business questions win first (so "כמה הכנסתי? תודה"
+ * still answers revenue); a secondary detected topic becomes the lead follow-up.
+ * Otherwise fall back to a friendly small-talk reply, then to a helpful default —
+ * both offering tappable chips rather than a dead end.
+ */
 export function answerText(ctx: AssistantContext, text: string): AssistantAnswer {
-  const intent = detectIntent(text);
-  if (intent) return BUILDERS[intent](ctx);
+  const intents = detectIntents(text);
+  if (intents.length > 0) {
+    const primary = intents[0];
+    // Lead with any *other* topic the owner mentioned, then topical suggestions.
+    const followUps = toFollowUps([...intents.slice(1), ...RELATED_INTENTS[primary]]);
+    return { ...BUILDERS[primary](ctx), followUps };
+  }
+
+  const smallTalk = detectSmallTalk(text);
+  if (smallTalk) return smallTalkAnswer(smallTalk);
+
   return {
     intent: "fallback",
     title: ASSISTANT.answers.fallbackTitle,
-    lines: [ASSISTANT.answers.fallbackBody, ...SUGGESTED_QUESTIONS.map((q) => `• ${q.label}`)],
+    lines: [ASSISTANT.answers.fallbackBody],
     actions: [],
+    followUps: toFollowUps(["today", "revenue", "atRisk", "emptySlots"]),
   };
 }
 

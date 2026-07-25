@@ -41,10 +41,13 @@ type ServerActionType = "complete" | "noShow" | "cancel";
 export function BookingActionsMenu({
   bookingId,
   status,
+  hasStarted,
   layout = "row",
 }: {
   bookingId: string;
   status: BookingStatus;
+  /** Whether the appointment's start time has passed — gates outcome actions. */
+  hasStarted: boolean;
   layout?: "row" | "card";
 }) {
   const router = useRouter();
@@ -57,8 +60,8 @@ export function BookingActionsMenu({
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  const primary = getPrimaryBookingAction(status);
-  const menuActions = getBookingMenuActions(status);
+  const primary = getPrimaryBookingAction(status, hasStarted);
+  const menuActions = getBookingMenuActions(status, hasStarted);
 
   const serverActions: Record<ServerActionType, () => Promise<void>> = {
     complete: () => completeBookingAction(bookingId),

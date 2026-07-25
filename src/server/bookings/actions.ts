@@ -196,6 +196,9 @@ export async function completeBookingAction(bookingId: string): Promise<void> {
       id: bookingId,
       businessId: tenant.businessId,
       status: { in: ["pending", "approved"] },
+      // A booking can only be completed once it has actually started — never a
+      // future appointment. Matches 0 rows (silent no-op) for a future booking.
+      startTime: { lte: new Date() },
     },
     data: { status: "completed", completedAt: new Date() },
   });
@@ -274,6 +277,9 @@ export async function noShowBookingAction(bookingId: string): Promise<void> {
       id: bookingId,
       businessId: tenant.businessId,
       status: { in: ["pending", "approved"] },
+      // "No-show" is an outcome of a passed appointment — never markable for a
+      // future booking. Matches 0 rows (silent no-op) for a future booking.
+      startTime: { lte: new Date() },
     },
     data: { status: "no_show", noShowAt: new Date() },
   });

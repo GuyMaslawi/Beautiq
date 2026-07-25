@@ -30,7 +30,15 @@ type LoadState =
   | { status: "error" };
 
 /* ── Answer bubble ───────────────────────────────────────────────────────── */
-function AnswerBubble({ answer, onClose }: { answer: AssistantAnswer; onClose: () => void }) {
+function AnswerBubble({
+  answer,
+  onClose,
+  onFollowUp,
+}: {
+  answer: AssistantAnswer;
+  onClose: () => void;
+  onFollowUp: (intent: AssistantIntent, label: string) => void;
+}) {
   return (
     <div className="flex items-start gap-2">
       <span
@@ -70,15 +78,33 @@ function AnswerBubble({ answer, onClose }: { answer: AssistantAnswer; onClose: (
             ))}
           </div>
         )}
+        {answer.followUps && answer.followUps.length > 0 && (
+          <div
+            className="mt-2.5 flex flex-wrap gap-1.5 border-t pt-2.5"
+            style={{ borderColor: "var(--border)" }}
+          >
+            {answer.followUps.map((f) => (
+              <button
+                key={f.intent}
+                type="button"
+                onClick={() => onFollowUp(f.intent, f.label)}
+                className="rounded-full px-3 py-1.5 text-xs font-medium transition-all duration-200 hover:-translate-y-0.5"
+                style={{ background: "var(--surface)", border: "1px solid var(--border)", color: "var(--foreground)" }}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
 /* ── User bubble ─────────────────────────────────────────────────────────── */
-function UserBubble({ text }: { text: string }) {
+function UserBubble({ text, anchorRef }: { text: string; anchorRef?: React.Ref<HTMLDivElement> }) {
   return (
-    <div className="flex items-start justify-end gap-2">
+    <div ref={anchorRef} className="flex scroll-mt-4 items-start justify-end gap-2">
       <div
         className="max-w-[80%] rounded-2xl rounded-tl-sm px-3.5 py-2 text-[13px] leading-6 text-white"
         style={{ background: "linear-gradient(135deg,#c76f93,#ac5c7f)" }}
@@ -105,6 +131,7 @@ export function AssistantWidget() {
   const nextId = useRef(1);
   const inFlight = useRef(false);
   const endRef = useRef<HTMLDivElement>(null);
+  const lastUserRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   function applyResult(res: Awaited<ReturnType<typeof loadAssistantContextAction>>) {
@@ -161,7 +188,16 @@ export function AssistantWidget() {
   }
 
   useEffect(() => {
-    if (open) endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    if (!open) return;
+    // Pin the latest question to the top of the panel so the owner sees the
+    // message they just picked and reads its answer below it — rather than the
+    // window jumping to the bottom of the conversation. Before any question is
+    // asked, fall back to the bottom so the suggestion chips stay in view.
+    if (lastUserRef.current) {
+      lastUserRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
   }, [messages, open, load.status]);
 
   // Close on Escape.
@@ -176,6 +212,11 @@ export function AssistantWidget() {
 
   const context = load.status === "ready" ? load.context : null;
   const briefing = context ? buildBriefing(context) : [];
+  // Id of the most recent question — the bubble we anchor to the top of the panel.
+  const lastUserId = messages.reduce<number | null>(
+    (acc, m) => (m.role === "user" ? m.id : acc),
+    null,
+  );
 
   function ask(userText: string, answer: AssistantAnswer) {
     setMessages((prev) => [
@@ -368,9 +409,13 @@ export function AssistantWidget() {
                 {/* Conversation */}
                 {messages.map((m) =>
                   m.role === "user" ? (
-                    <UserBubble key={m.id} text={m.text ?? ""} />
+                    <UserBubble
+                      key={m.id}
+                      text={m.text ?? ""}
+                      anchorRef={m.id === lastUserId ? lastUserRef : undefined}
+                    />
                   ) : (
-                    <AnswerBubble key={m.id} answer={m.answer!} onClose={close} />
+                    <AnswerBubble key={m.id} answer={m.answer!} onClose={close} onFollowUp={handleChip} />
                   ),
                 )}
 

@@ -17,6 +17,7 @@ import { BookingNotesForm } from "@/components/bookings/booking-notes-form";
 import { BookingActions } from "@/components/bookings/booking-actions";
 import { BookingSmartMessagesCard } from "@/components/messages/booking-smart-messages-card";
 import { BookingReputationCard } from "@/components/reputation/booking-reputation-card";
+import { bookingHasStarted } from "@/lib/time";
 import { BOOKINGS } from "@/lib/constants/he";
 
 const TZ = "Asia/Jerusalem";
@@ -172,6 +173,7 @@ export default async function BookingDetailPage({
       {/* Status actions */}
       <BookingActions
         status={booking.status}
+        hasStarted={bookingHasStarted(booking.startTime)}
         completeAction={completeAction}
         cancelAction={cancelAction}
         noShowAction={noShowAction}

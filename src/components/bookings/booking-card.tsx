@@ -1,6 +1,7 @@
 import { Phone, Clock, Banknote, CalendarDays } from "lucide-react";
 import { BookingStatusBadge } from "@/components/bookings/booking-status-badge";
 import { BookingActionsMenu } from "@/components/bookings/booking-actions-menu";
+import { bookingHasStarted } from "@/lib/time";
 import type { BookingListItem } from "@/server/bookings/queries";
 
 const TZ = "Asia/Jerusalem";
@@ -148,7 +149,12 @@ export function BookingCard({ booking }: { booking: BookingListItem }) {
       </div>
 
       {/* Quick actions */}
-      <BookingActionsMenu bookingId={booking.id} status={booking.status} layout="card" />
+      <BookingActionsMenu
+        bookingId={booking.id}
+        status={booking.status}
+        hasStarted={bookingHasStarted(booking.startTime)}
+        layout="card"
+      />
     </div>
   );
 }

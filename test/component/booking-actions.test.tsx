@@ -24,21 +24,34 @@ describe("BookingActions — visibility by status", () => {
     "renders nothing for a %s booking",
     (status) => {
       const { container } = render(
-        <BookingActions status={status} {...makeActions()} />,
+        <BookingActions status={status} hasStarted={true} {...makeActions()} />,
       );
       expect(container).toBeEmptyDOMElement();
     },
   );
 
-  it("shows complete + no-show + cancel for pending/approved bookings (no approval step)", () => {
+  it("shows complete + no-show + cancel for a started pending/approved booking", () => {
     for (const status of ["pending", "approved"] as const) {
       const { unmount } = render(
-        <BookingActions status={status} {...makeActions()} />,
+        <BookingActions status={status} hasStarted={true} {...makeActions()} />,
       );
       expect(screen.getByRole("button", { name: A.complete })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: A.noShow })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: A.cancel })).toBeInTheDocument();
       expect(screen.getByText(A.sectionTitle)).toBeInTheDocument();
+      unmount();
+    }
+  });
+
+  it("hides complete + no-show for a future booking, keeps cancel and shows a hint", () => {
+    for (const status of ["pending", "approved"] as const) {
+      const { unmount } = render(
+        <BookingActions status={status} hasStarted={false} {...makeActions()} />,
+      );
+      expect(screen.queryByRole("button", { name: A.complete })).toBeNull();
+      expect(screen.queryByRole("button", { name: A.noShow })).toBeNull();
+      expect(screen.getByRole("button", { name: A.cancel })).toBeInTheDocument();
+      expect(screen.getByText(A.futureHint)).toBeInTheDocument();
       unmount();
     }
   });
@@ -48,7 +61,7 @@ describe("BookingActions — running actions", () => {
   it("calls completeAction and shows its success message", async () => {
     const user = userEvent.setup();
     const actions = makeActions();
-    render(<BookingActions status="approved" {...actions} />);
+    render(<BookingActions status="approved" hasStarted={true} {...actions} />);
 
     await user.click(screen.getByRole("button", { name: A.complete }));
     expect(actions.completeAction).toHaveBeenCalledTimes(1);
@@ -60,7 +73,7 @@ describe("BookingActions — running actions", () => {
   it("calls noShowAction with its success message", async () => {
     const user = userEvent.setup();
     const actions = makeActions();
-    render(<BookingActions status="approved" {...actions} />);
+    render(<BookingActions status="approved" hasStarted={true} {...actions} />);
 
     await user.click(screen.getByRole("button", { name: A.noShow }));
     expect(actions.noShowAction).toHaveBeenCalledTimes(1);
@@ -72,7 +85,7 @@ describe("BookingActions — running actions", () => {
   it("calls cancelAction with its success message", async () => {
     const user = userEvent.setup();
     const actions = makeActions();
-    render(<BookingActions status="pending" {...actions} />);
+    render(<BookingActions status="pending" hasStarted={true} {...actions} />);
 
     await user.click(screen.getByRole("button", { name: A.cancel }));
     expect(actions.cancelAction).toHaveBeenCalledTimes(1);

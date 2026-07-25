@@ -48,26 +48,39 @@ beforeEach(() => {
 });
 
 describe("BookingActionsMenu — primary action", () => {
-  it("shows 'סימון כהושלם' as the primary button for pending/approved bookings (no approval step)", () => {
+  it("shows 'סימון כהושלם' as the primary button for a started pending/approved booking", () => {
     for (const status of ["pending", "approved"] as const) {
       const { unmount } = render(
-        <BookingActionsMenu bookingId="b1" status={status} />,
+        <BookingActionsMenu bookingId="b1" status={status} hasStarted={true} />,
       );
       expect(screen.getByRole("button", { name: A.complete })).toBeInTheDocument();
       unmount();
     }
   });
 
+  it("hides 'סימון כהושלם' for a future booking — shows a 'צפייה' primary instead", async () => {
+    const user = userEvent.setup();
+    for (const status of ["pending", "approved"] as const) {
+      const { unmount } = render(
+        <BookingActionsMenu bookingId="b9" status={status} hasStarted={false} />,
+      );
+      expect(screen.queryByRole("button", { name: A.complete })).toBeNull();
+      await user.click(screen.getByRole("button", { name: A.viewShort }));
+      expect(m.push).toHaveBeenCalledWith("/bookings/b9");
+      unmount();
+    }
+  });
+
   it("runs completeBookingAction immediately (no confirm) when the primary is clicked", async () => {
     const user = userEvent.setup();
-    render(<BookingActionsMenu bookingId="b1" status="approved" />);
+    render(<BookingActionsMenu bookingId="b1" status="approved" hasStarted={true} />);
     await user.click(screen.getByRole("button", { name: A.complete }));
     expect(m.completeBookingAction).toHaveBeenCalledWith("b1");
   });
 
   it("shows a non-destructive 'צפייה' primary for completed bookings and navigates on click", async () => {
     const user = userEvent.setup();
-    render(<BookingActionsMenu bookingId="b3" status="completed" />);
+    render(<BookingActionsMenu bookingId="b3" status="completed" hasStarted={true} />);
     await user.click(screen.getByRole("button", { name: A.viewShort }));
     expect(m.push).toHaveBeenCalledWith("/bookings/b3");
   });
@@ -76,7 +89,7 @@ describe("BookingActionsMenu — primary action", () => {
 describe("BookingActionsMenu — menu", () => {
   it("opens a menu of text-labeled actions (no icon-only items)", async () => {
     const user = userEvent.setup();
-    render(<BookingActionsMenu bookingId="b1" status="pending" />);
+    render(<BookingActionsMenu bookingId="b1" status="pending" hasStarted={true} />);
 
     await user.click(screen.getByRole("button", { name: A.more }));
     const menu = screen.getByRole("menu");
@@ -90,9 +103,20 @@ describe("BookingActionsMenu — menu", () => {
     expect(within(menu).getByRole("menuitem", { name: A.noShow })).toBeInTheDocument();
   });
 
+  it("hides the no-show outcome action for a future booking — keeps cancel + message", async () => {
+    const user = userEvent.setup();
+    render(<BookingActionsMenu bookingId="b9" status="approved" hasStarted={false} />);
+
+    await user.click(screen.getByRole("button", { name: A.more }));
+    const menu = screen.getByRole("menu");
+    expect(within(menu).queryByRole("menuitem", { name: A.noShow })).toBeNull();
+    expect(within(menu).getByRole("menuitem", { name: A.cancel })).toBeInTheDocument();
+    expect(within(menu).getByRole("menuitem", { name: A.message })).toBeInTheDocument();
+  });
+
   it("does not expose invalid status-transition actions for a completed booking", async () => {
     const user = userEvent.setup();
-    render(<BookingActionsMenu bookingId="b3" status="completed" />);
+    render(<BookingActionsMenu bookingId="b3" status="completed" hasStarted={true} />);
 
     await user.click(screen.getByRole("button", { name: A.more }));
     const menu = screen.getByRole("menu");
@@ -105,7 +129,7 @@ describe("BookingActionsMenu — menu", () => {
 describe("BookingActionsMenu — destructive confirmation", () => {
   it("requires confirmation before cancelling and only then calls the server action", async () => {
     const user = userEvent.setup();
-    render(<BookingActionsMenu bookingId="b1" status="approved" />);
+    render(<BookingActionsMenu bookingId="b1" status="approved" hasStarted={true} />);
 
     await user.click(screen.getByRole("button", { name: A.more }));
     await user.click(screen.getByRole("menuitem", { name: A.cancel }));
@@ -121,7 +145,7 @@ describe("BookingActionsMenu — destructive confirmation", () => {
 
   it("does not cancel when the confirmation is dismissed", async () => {
     const user = userEvent.setup();
-    render(<BookingActionsMenu bookingId="b1" status="approved" />);
+    render(<BookingActionsMenu bookingId="b1" status="approved" hasStarted={true} />);
 
     await user.click(screen.getByRole("button", { name: A.more }));
     await user.click(screen.getByRole("menuitem", { name: A.cancel }));
@@ -135,7 +159,7 @@ describe("BookingActionsMenu — destructive confirmation", () => {
 
   it("requires confirmation before marking no-show", async () => {
     const user = userEvent.setup();
-    render(<BookingActionsMenu bookingId="b1" status="approved" />);
+    render(<BookingActionsMenu bookingId="b1" status="approved" hasStarted={true} />);
 
     await user.click(screen.getByRole("button", { name: A.more }));
     await user.click(screen.getByRole("menuitem", { name: A.noShow }));
@@ -150,7 +174,7 @@ describe("BookingActionsMenu — destructive confirmation", () => {
 describe("BookingActionsMenu — portal escapes the table overflow (Bug fix)", () => {
   it("renders the menu in a portal outside the component subtree so it is not clipped", async () => {
     const user = userEvent.setup();
-    const { container } = render(<BookingActionsMenu bookingId="b1" status="pending" />);
+    const { container } = render(<BookingActionsMenu bookingId="b1" status="pending" hasStarted={true} />);
 
     await user.click(screen.getByRole("button", { name: A.more }));
 
@@ -164,7 +188,7 @@ describe("BookingActionsMenu — portal escapes the table overflow (Bug fix)", (
 
   it("positions the menu with fixed positioning so it floats above the table", async () => {
     const user = userEvent.setup();
-    render(<BookingActionsMenu bookingId="b1" status="pending" />);
+    render(<BookingActionsMenu bookingId="b1" status="pending" hasStarted={true} />);
 
     await user.click(screen.getByRole("button", { name: A.more }));
     const menu = screen.getByRole("menu");
@@ -177,7 +201,7 @@ describe("BookingActionsMenu — portal escapes the table overflow (Bug fix)", (
 
   it("closes the menu on outside click", async () => {
     const user = userEvent.setup();
-    render(<BookingActionsMenu bookingId="b1" status="pending" />);
+    render(<BookingActionsMenu bookingId="b1" status="pending" hasStarted={true} />);
 
     await user.click(screen.getByRole("button", { name: A.more }));
     expect(screen.getByRole("menu")).toBeInTheDocument();
@@ -189,13 +213,13 @@ describe("BookingActionsMenu — portal escapes the table overflow (Bug fix)", (
 
 describe("BookingActionsMenu — accessibility & layout", () => {
   it("gives the row menu trigger a visible text label and aria-haspopup", () => {
-    render(<BookingActionsMenu bookingId="b1" status="pending" />);
+    render(<BookingActionsMenu bookingId="b1" status="pending" hasStarted={true} />);
     const trigger = screen.getByRole("button", { name: A.more });
     expect(trigger).toHaveAttribute("aria-haspopup", "menu");
   });
 
   it("uses an icon-only trigger with an accessible label in the compact card layout", () => {
-    render(<BookingActionsMenu bookingId="b1" status="pending" layout="card" />);
+    render(<BookingActionsMenu bookingId="b1" status="pending" layout="card" hasStarted={true} />);
     const trigger = screen.getByRole("button", { name: A.moreCompact });
     expect(trigger).toHaveAttribute("aria-haspopup", "menu");
     expect(trigger).toHaveAttribute("aria-label", A.moreCompact);
@@ -203,7 +227,7 @@ describe("BookingActionsMenu — accessibility & layout", () => {
 
   it("closes the menu on Escape", async () => {
     const user = userEvent.setup();
-    render(<BookingActionsMenu bookingId="b1" status="pending" />);
+    render(<BookingActionsMenu bookingId="b1" status="pending" hasStarted={true} />);
 
     await user.click(screen.getByRole("button", { name: A.more }));
     expect(screen.getByRole("menu")).toBeInTheDocument();

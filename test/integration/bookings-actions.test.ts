@@ -255,7 +255,7 @@ describe("status transition actions", () => {
     prisma.booking.findFirst.mockResolvedValue({ clientId: "cli_1" });
   });
 
-  it("completeBookingAction only transitions from pending/approved and syncs stats", async () => {
+  it("completeBookingAction only transitions from a started pending/approved booking and syncs stats", async () => {
     await completeBookingAction("bkg_1");
     expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -263,6 +263,7 @@ describe("status transition actions", () => {
           id: "bkg_1",
           businessId: BUSINESS_A,
           status: { in: ["pending", "approved"] },
+          startTime: { lte: expect.any(Date) },
         },
         data: expect.objectContaining({ status: "completed" }),
       }),
@@ -286,7 +287,7 @@ describe("status transition actions", () => {
     );
   });
 
-  it("noShowBookingAction only transitions from pending/approved", async () => {
+  it("noShowBookingAction only transitions from a started pending/approved booking", async () => {
     await noShowBookingAction("bkg_1");
     expect(prisma.booking.updateMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -294,6 +295,7 @@ describe("status transition actions", () => {
           id: "bkg_1",
           businessId: BUSINESS_A,
           status: { in: ["pending", "approved"] },
+          startTime: { lte: expect.any(Date) },
         },
         data: expect.objectContaining({ status: "no_show" }),
       }),
