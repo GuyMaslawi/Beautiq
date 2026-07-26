@@ -1255,3 +1255,25 @@ model ActivityLog {
   @@index([category, createdAt])
   @@index([createdAt])
 }
+
+/// מונה הגבלת קצב מתמיד (persistent rate limit).
+///
+/// המגביל שבזיכרון (src/lib/rate-limit.ts) הוא פר-תהליך. בסביבת serverless
+/// (Vercel) כל בקשה בו-זמנית עשויה לרוץ במופע נפרד עם זיכרון משלו, ולכן תוקף
+/// שמנסה לנחש סיסמה מקבל בפועל מכסה חדשה בכל מופע — ההגבלה נחלשת ככל שהתעבורה
+/// גדלה. עבור נתיבים שבהם ההשלכה היא השתלטות על חשבון או עלות כספית אמיתית,
+/// המונה חייב להיות משותף לכל המופעים — כלומר במסד הנתונים.
+///
+/// אין `businessId`: זו טבלה תשתיתית ולא נתוני עסק. המפתח (`key`) מקודד את
+/// ההקשר (למשל "login:acct:<email>" או "wa:send:<businessId>").
+model RateLimitCounter {
+  /// מפתח הדלי — כולל את סוג הפעולה ואת הזהות שמוגבלת.
+  key       String   @id
+  count     Int      @default(0)
+  /// סוף חלון הזמן הנוכחי. אחריו המונה מתאפס בקריאה הבאה.
+  resetAt   DateTime
+  updatedAt DateTime @updatedAt
+
+  /// לניקוי תקופתי של שורות שפג תוקפן.
+  @@index([resetAt])
+}

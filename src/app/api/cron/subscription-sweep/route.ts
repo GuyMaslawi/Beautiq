@@ -17,6 +17,7 @@ import { NextResponse } from "next/server";
 import { AccountSubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
 import { RENEWAL_GRACE_DAYS } from "@/server/subscription/service";
+import { pruneRateLimitCounters } from "@/server/rate-limit/persistent";
 import { logger, captureError } from "@/lib/logger";
 import { bearerEquals } from "@/lib/secret-compare";
 
@@ -70,6 +71,15 @@ export async function GET(request: Request) {
     }
   }
 
-  logger.info("[cron.subscription-sweep] done", { candidates: due.length, expired });
-  return NextResponse.json({ candidates: due.length, expired });
+  // ניקיון תחזוקה: מוני הגבלת הקצב שבמסד הם רשומות קצרות-חיים, ובלי מחיקה
+  // הטבלה צוברת שורה לכל אימייל/IP/עסק לנצח. נתלה כאן כי זו משימת ה-cron
+  // היומית היחידה.
+  const prunedCounters = await pruneRateLimitCounters();
+
+  logger.info("[cron.subscription-sweep] done", {
+    candidates: due.length,
+    expired,
+    prunedCounters,
+  });
+  return NextResponse.json({ candidates: due.length, expired, prunedCounters });
 }

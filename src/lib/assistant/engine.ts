@@ -112,10 +112,19 @@ function norm(s: string): string {
     .trim();
 }
 
-// Keywords are stored already-normalized (roots, no final letters), ordered
-// most-specific → least so equal scores tie-break toward the sharper intent
-// (e.g. "כמה לקוחות בסיכון" → atRisk, not clients). A keyword containing a
-// space is a phrase and scores double — a stronger signal than a lone word.
+// Keywords are ordered most-specific → least, so equal scores tie-break toward
+// the sharper intent (e.g. "כמה לקוחות בסיכון" → atRisk, not clients). A keyword
+// containing a space is a phrase and scores double — a stronger signal than a
+// lone word.
+//
+// The list is written in NATURAL Hebrew and normalized at module load (see
+// NORMALIZED_INTENT_KEYWORDS below). It used to rely on each keyword being
+// hand-written in already-normalized form, which is a rule that quietly decays:
+// every keyword ending in a final letter — סיכון, מועדון, חלון, אנשים, תזמון —
+// could never match, because norm() rewrites the incoming text to מזמנ/סיכונ
+// while the keyword kept its ן. Those intents were simply unreachable through
+// those words. Normalizing both sides with the same function removes the rule
+// instead of restating it.
 const INTENT_KEYWORDS: { intent: AssistantIntent; keywords: string[] }[] = [
   { intent: "atRisk", keywords: ["לקוחות בסיכון", "סיכון", "נטש", "נוטש", "לא חזר", "לא חוזר", "מתגעגע", "לא הגיע", "לא באה", "עזב", "ברח", "איבד", "מזמן לא"] },
   { intent: "loyalty", keywords: ["נאמנות", "מועדון", "כרטיסי", "הטבה", "הטבת", "תגמול", "מתנה", "נקודות", "punch"] },
@@ -128,13 +137,25 @@ const INTENT_KEYWORDS: { intent: AssistantIntent; keywords: string[] }[] = [
   { intent: "clients", keywords: ["לקוח", "אנשים", "מאגר", "רשימת לקוחות", "כמה אנשים"] },
 ];
 
+/**
+ * The same table with every keyword passed through norm(), so both sides of the
+ * comparison always live in the same alphabet. `isPhrase` is captured before
+ * normalization only for readability — norm() preserves inner spaces.
+ */
+const NORMALIZED_INTENT_KEYWORDS = INTENT_KEYWORDS.map(({ intent, keywords }) => ({
+  intent,
+  keywords: keywords
+    .map((k) => ({ text: norm(k), isPhrase: k.trim().includes(" ") }))
+    .filter((k) => k.text.length > 0),
+}));
+
 /** Score every intent by keyword hits and return them best-first (may be empty). */
 export function detectIntents(text: string): AssistantIntent[] {
   const t = norm(text);
   if (!t) return [];
-  return INTENT_KEYWORDS.map(({ intent, keywords }) => {
+  return NORMALIZED_INTENT_KEYWORDS.map(({ intent, keywords }) => {
     let score = 0;
-    for (const k of keywords) if (t.includes(k)) score += k.includes(" ") ? 2 : 1;
+    for (const k of keywords) if (t.includes(k.text)) score += k.isPhrase ? 2 : 1;
     return { intent, score };
   })
     .filter((s) => s.score > 0)
@@ -158,10 +179,17 @@ const SMALLTALK_KEYWORDS: { kind: SmallTalk; keywords: string[] }[] = [
   { kind: "help", keywords: ["עזרה", "עזור", "תעזר", "לא יודע", "מה לשאול", "אפשרויות", "מה אפשר", "מה יש"] },
   { kind: "greeting", keywords: ["שלום", "היי", "הלו", "אהלן", "בוקר טוב", "צהריים טובים", "ערב טוב", "מה נשמע", "מה קורה", "מה שלומ"] },
 ];
+// Normalized for the same reason as the intent table above — so a keyword like
+// "מה שלום" does not have to be hand-written as "מה שלומ" to work.
+const NORMALIZED_SMALLTALK = SMALLTALK_KEYWORDS.map(({ kind, keywords }) => ({
+  kind,
+  keywords: keywords.map(norm).filter(Boolean),
+}));
+
 function detectSmallTalk(text: string): SmallTalk | null {
   const t = norm(text);
   if (!t) return null;
-  for (const { kind, keywords } of SMALLTALK_KEYWORDS) if (keywords.some((k) => t.includes(k))) return kind;
+  for (const { kind, keywords } of NORMALIZED_SMALLTALK) if (keywords.some((k) => t.includes(k))) return kind;
   return null;
 }
 

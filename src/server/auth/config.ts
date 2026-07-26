@@ -6,6 +6,7 @@ import { prisma } from "@/server/db/prisma";
 import { verifyPassword } from "@/server/auth/password";
 import { validateLogin } from "@/lib/validation/auth";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { checkPersistentRateLimit } from "@/server/rate-limit/persistent";
 import { logger } from "@/lib/logger";
 
 /**
@@ -42,13 +43,28 @@ const LOGIN_IP_WINDOW_MS = 10 * 60_000;
 /** Per-account cap, so guessing one owner's password cannot be spread over IPs. */
 const LOGIN_ACCOUNT_MAX = 10;
 const LOGIN_ACCOUNT_WINDOW_MS = 15 * 60_000;
+/**
+ * The shared (DB-backed) per-account ceiling. Slightly higher than the in-memory
+ * one so a single busy instance never trips it first — it exists to catch the
+ * attempts spread across instances that the in-memory counter cannot see.
+ */
+const LOGIN_ACCOUNT_PERSISTENT_MAX = 15;
 
 /**
- * True while this credential attempt is within both rate-limit buckets.
+ * True while this credential attempt is within every rate-limit bucket.
  *
  * Resolves the client IP from request headers; if the header store is
  * unavailable (outside a request scope) the per-IP bucket is skipped rather than
- * failing the login, but the per-account bucket still applies.
+ * failing the login, but the per-account buckets still apply.
+ *
+ * Two LAYERS, not just two buckets. The in-memory buckets stop a burst instantly
+ * and for free, but they are per-process: on Vercel, concurrent attempts land on
+ * different serverless instances that each hold their own counter, so the
+ * effective ceiling silently multiplies by the number of live instances — which
+ * grows precisely when an attacker pushes harder. The persistent per-account
+ * bucket is shared by every instance, so guessing one owner's password has a
+ * single real ceiling no matter how the attempts are spread. It fails open on a
+ * DB error, which is why the in-memory layer stays in front of it.
  */
 async function withinLoginRateLimit(email: string): Promise<boolean> {
   try {
@@ -59,10 +75,20 @@ async function withinLoginRateLimit(email: string): Promise<boolean> {
       return false;
     }
   } catch {
-    // no request scope — fall through to the per-account bucket
+    // no request scope — fall through to the per-account buckets
   }
   if (!checkRateLimit(`login:acct:${email}`, LOGIN_ACCOUNT_MAX, LOGIN_ACCOUNT_WINDOW_MS)) {
     logger.warn("[auth] login rate limit hit (account)");
+    return false;
+  }
+  if (
+    !(await checkPersistentRateLimit(
+      `login:acct:${email}`,
+      LOGIN_ACCOUNT_PERSISTENT_MAX,
+      LOGIN_ACCOUNT_WINDOW_MS,
+    ))
+  ) {
+    logger.warn("[auth] login rate limit hit (account, shared)");
     return false;
   }
   return true;

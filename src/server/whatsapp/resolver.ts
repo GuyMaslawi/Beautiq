@@ -25,6 +25,8 @@
  */
 
 import { prisma } from "@/server/db/prisma";
+import { logger } from "@/lib/logger";
+import { checkPersistentRateLimit } from "@/server/rate-limit/persistent";
 import { createMetaCloudApiProvider } from "@/lib/whatsapp/meta-cloud-api";
 import { tryDecryptToken } from "@/lib/whatsapp/crypto";
 import {
@@ -232,12 +234,57 @@ export async function resolveWhatsAppConnectionForBusiness(
   };
 }
 
+/**
+ * תקרה יומית של הודעות יוצאות לכל עסק.
+ *
+ * במודל המנוהל Allura היא זו שמשלמת ל-Meta על כל הודעה. עד עכשיו לא הייתה שום
+ * תקרה: חשבון שנפרץ, בעלת עסק שמנצלת לרעה, או לולאת ריצה תקולה יכלו לשלוח
+ * ללא הגבלה — נזק כספי ישיר, ובנוסף סיכון למוניטין השולח מול Meta.
+ *
+ * הסף נבחר גבוה בהרבה משימוש אמיתי (עסק יופי טיפוסי שולח עשרות הודעות ביום:
+ * תזכורות בוקר, אישורי תור, בקשות ביקורת) כדי שלעולם לא יפגע בעבודה שגרתית —
+ * הוא מיירט את הבלתי-סביר, לא את העמוס.
+ */
+const DAILY_SEND_CAP = 500;
+const DAILY_SEND_WINDOW_MS = 24 * 60 * 60 * 1000;
+
+export const DAILY_CAP_REASON =
+  "נשלחו היום יותר מדי הודעות מהעסק הזה. השליחה תתחדש מחר — לפרטים יש לפנות לתמיכה.";
+
+/**
+ * עוטף ספק שליחה במונה יומי משותף לכל מופעי השרת. המונה עולה רק כשבאמת
+ * מנסים לשלוח, כך שקריאות שנחסמות ממילא (ספק מנוטרל, מצב בדיקה) אינן צורכות
+ * מהמכסה. כשהתקרה נחצית מוחזר כשל רגיל — בדיוק כמו כל כשל שליחה אחר — ולכן
+ * הוא נרשם ביומן ההודעות ומוצג לבעלת העסק בלי טיפול מיוחד.
+ */
+function withDailyCap(inner: WhatsAppProvider, businessId: string): WhatsAppProvider {
+  return {
+    name: inner.name,
+    async send(params) {
+      const allowed = await checkPersistentRateLimit(
+        `wa:send:${businessId}`,
+        DAILY_SEND_CAP,
+        DAILY_SEND_WINDOW_MS,
+      );
+      if (!allowed) {
+        logger.warn(`[whatsapp] daily send cap reached — businessId=${businessId}`);
+        return {
+          success: false,
+          providerMessageId: null,
+          failureReason: DAILY_CAP_REASON,
+        };
+      }
+      return inner.send(params);
+    },
+  };
+}
+
 /** Drop-in async replacement for getWhatsAppProvider() — scoped to a business. */
 export async function getWhatsAppProviderForBusiness(
   businessId: string,
 ): Promise<WhatsAppProvider> {
   const resolved = await resolveWhatsAppConnectionForBusiness(businessId);
-  return resolved.provider;
+  return withDailyCap(resolved.provider, businessId);
 }
 
 /**

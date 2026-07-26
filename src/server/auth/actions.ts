@@ -8,6 +8,7 @@ import { hashPassword } from "@/server/auth/password";
 import { signIn, signOut } from "@/server/auth/config";
 import { logActivity } from "@/server/activity/log";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { checkPersistentRateLimit } from "@/server/rate-limit/persistent";
 import {
   validateSignup,
   validateLogin,
@@ -21,6 +22,9 @@ import { AUTH } from "@/lib/constants/he";
 const AUTH_RATE_WINDOW_MS = 10 * 60_000; // חלון של 10 דקות
 const LOGIN_RATE_MAX = 10; // עד 10 ניסיונות התחברות לכל IP בחלון
 const SIGNUP_RATE_MAX = 5; // הרשמה נדירה יותר — סף נמוך יותר
+// תקרה משותפת לכל מופעי השרת (במסד). מעט גבוהה מזו שבזיכרון כדי שמופע עמוס
+// בודד לא ייתקל בה ראשון — היא נועדה לתפוס ניסיונות שפוזרו בין מופעים.
+const SIGNUP_PERSISTENT_MAX = 8;
 
 /**
  * Server actions for authentication. Centralised here so all auth logic lives in
@@ -49,6 +53,18 @@ export async function signupAction(
 ): Promise<SignupState> {
   const ip = getClientIp(await headers());
   if (!checkRateLimit(`signup:${ip}`, SIGNUP_RATE_MAX, AUTH_RATE_WINDOW_MS)) {
+    return { formError: AUTH.errors.tooManyAttempts };
+  }
+  // הדלי שבזיכרון הוא פר-מופע serverless, ולכן מכסת ההרשמה בפועל מתרחבת
+  // ככל שיש יותר מופעים חיים. דלי משותף במסד נותן תקרה אחת אמיתית ליצירת
+  // חשבונות — כל חשבון חדש הוא רשומה ומשתמש פוטנציאלי בשליחת הודעות בתשלום.
+  if (
+    !(await checkPersistentRateLimit(
+      `signup:${ip}`,
+      SIGNUP_PERSISTENT_MAX,
+      AUTH_RATE_WINDOW_MS,
+    ))
+  ) {
     return { formError: AUTH.errors.tooManyAttempts };
   }
 
