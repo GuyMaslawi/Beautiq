@@ -18,6 +18,7 @@ import { AccountSubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
 import { RENEWAL_GRACE_DAYS } from "@/server/subscription/service";
 import { logger, captureError } from "@/lib/logger";
+import { bearerEquals } from "@/lib/secret-compare";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 120;
@@ -25,7 +26,7 @@ export const maxDuration = 120;
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!bearerEquals(authHeader, cronSecret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

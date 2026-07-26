@@ -8,6 +8,7 @@ import { prisma } from "@/server/db/prisma";
 import { findOrCreateClient } from "@/server/clients/find-or-create";
 import { syncClientStats } from "@/server/clients/stats";
 import { hasOverlap } from "@/server/bookings/queries";
+import { getAvailableSlots } from "@/server/availability/get-available-slots";
 import { validatePublicBooking } from "@/lib/validation/public-booking";
 import { parseIsraelDateTime } from "@/lib/time";
 import { PUBLIC_BOOKING } from "@/lib/constants/he";
@@ -17,6 +18,8 @@ import { notifyOwnerOfNewBooking } from "./notify-owner";
 
 const BOOKING_RATE_WINDOW_MS = 10 * 60_000; // 10 minutes
 const BOOKING_RATE_MAX = 5; // max 5 booking attempts per IP per business per 10 min
+/** לא מקבלים בקשות תור רחוק מדי קדימה (מונע "תפיסת" יומן שנים מראש). */
+const MAX_BOOKING_AHEAD_MS = 365 * 24 * 60 * 60 * 1000;
 
 const REVIEW_RATE_WINDOW_MS = 10 * 60_000;
 const REVIEW_RATE_MAX = 5;
@@ -97,6 +100,37 @@ export async function submitPublicBookingAction(
   if (startTime.getTime() < Date.now() - 5 * 60 * 1000) {
     return {
       formError: PUBLIC_BOOKING.errors.pastBooking,
+      slotConflict: true,
+      values: raw,
+    };
+  }
+
+  // Don't accept bookings arbitrarily far into the future.
+  if (startTime.getTime() > Date.now() + MAX_BOOKING_AHEAD_MS) {
+    return {
+      formError: PUBLIC_BOOKING.errors.overlap,
+      slotConflict: true,
+      values: raw,
+    };
+  }
+
+  // Re-derive the legal slot set server-side and require exact membership.
+  //
+  // `date` and `requestedTime` come from client-controlled hidden inputs. They
+  // were format-checked but never checked against the business's actual
+  // availability: the /api/public/[slug]/slots endpoint is only what the browser
+  // uses to RENDER choices. Without this, anyone could POST a time on a day the
+  // business is closed, or at 3 AM, and it was created with status "approved" —
+  // occupying the slot, notifying the owner, and firing an Allura-billed WhatsApp
+  // confirmation. AvailabilityRule + AvailabilityException are both honored here.
+  const legalSlots = await getAvailableSlots({
+    businessId: tenant.businessId,
+    date: value.date,
+    serviceId: service.id,
+  });
+  if (!legalSlots.includes(value.requestedTime)) {
+    return {
+      formError: PUBLIC_BOOKING.errors.overlap,
       slotConflict: true,
       values: raw,
     };
@@ -230,7 +264,10 @@ export async function submitPublicReviewAction(
 
   const errors: Partial<Record<string, string>> = {};
   if (!clientName) errors.clientName = "יש למלא את שמך";
+  else if (clientName.length > 80) errors.clientName = "השם ארוך מדי — עד 80 תווים";
   if (!reviewText) errors.reviewText = "יש למלא את הביקורת";
+  else if (reviewText.length > 1000)
+    errors.reviewText = "הביקורת ארוכה מדי — עד 1000 תווים";
   if (Object.keys(errors).length) return { errors };
 
   // Derive businessId from slug — never accept from client input
@@ -248,7 +285,13 @@ export async function submitPublicReviewAction(
         clientName,
         reviewText,
         rating,
-        isApproved: true,
+        // Reviews arrive PENDING and are published only once the owner approves
+        // them on /public-page. This endpoint is unauthenticated and the reviewer
+        // is not tied to a real booking, so auto-publishing handed anyone —
+        // including a competitor — direct write access to a business's public
+        // reputation (fake 1-star text, no approval step, deletable only after
+        // the fact). Moderation is the control; the rate limit only slows it.
+        isApproved: false,
       },
     });
   } catch {

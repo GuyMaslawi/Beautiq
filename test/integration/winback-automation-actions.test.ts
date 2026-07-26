@@ -47,7 +47,11 @@ import {
 beforeEach(() => {
   resetPrismaMock(prisma);
   requireCurrentBusiness.mockReset().mockResolvedValue(makeBusiness({ id: BUSINESS_A }));
-  getCurrentUser.mockReset().mockResolvedValue({ id: "u1", isAdmin: false });
+  // The win-back automation controls live on /automations, a platform-admin-only
+  // page, and each action re-checks admin server-side (they trigger real
+  // Allura-billed WhatsApp sends). So the default caller here is an admin; the
+  // non-admin rejection is asserted explicitly below.
+  getCurrentUser.mockReset().mockResolvedValue({ id: "admin", isAdmin: true });
   send.mockReset().mockResolvedValue({ success: true, providerMessageId: "wamid.1" });
   runWinBackForBusiness.mockReset();
   // Silence the action's console.log/error noise (restored globally in afterEach).
@@ -183,16 +187,26 @@ describe("saveWinBackAutomationSetting", () => {
     templateLanguage: "he",
   };
 
-  it("upserts scoped to the business and forces days mode for a non-admin in production", async () => {
-    // In production a non-admin owner can never enable minute mode.
-    vi.stubEnv("NODE_ENV", "production");
+  // A non-admin owner cannot reach this action at all — /automations is
+  // admin-only, and the action re-checks that rather than trusting the page.
+  it("rejects a non-admin caller and writes nothing", async () => {
     getCurrentUser.mockResolvedValue({ id: "u1", isAdmin: false });
-    prisma.automationSetting.upsert.mockResolvedValue({ id: "as_1" });
     const res = await saveWinBackAutomationSetting({
       ...baseInput,
       timingUnit: "minutes",
       testThresholdMinutes: 5,
       testCooldownMinutes: 5,
+    });
+    expect(res.success).toBe(false);
+    expect(prisma.automationSetting.upsert).not.toHaveBeenCalled();
+  });
+
+  it("upserts scoped to the business and keeps days mode in production", async () => {
+    vi.stubEnv("NODE_ENV", "production");
+    prisma.automationSetting.upsert.mockResolvedValue({ id: "as_1" });
+    const res = await saveWinBackAutomationSetting({
+      ...baseInput,
+      timingUnit: "days",
     });
     expect(res.success).toBe(true);
 
@@ -201,7 +215,6 @@ describe("saveWinBackAutomationSetting", () => {
       update: { timingUnit: string; testThresholdMinutes: number | null };
     };
     expect(arg.where.businessId_type.businessId).toBe(BUSINESS_A);
-    // Non-admin in production: minute mode dropped
     expect(arg.update.timingUnit).toBe("days");
     expect(arg.update.testThresholdMinutes).toBeNull();
     vi.unstubAllEnvs();

@@ -7,6 +7,7 @@ import {
 } from "@/server/db/retry";
 import { runMorningReminderForBusiness } from "@/server/morning-reminder/runner";
 import { logger, captureError } from "@/lib/logger";
+import { bearerEquals } from "@/lib/secret-compare";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -15,7 +16,7 @@ export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
 
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!bearerEquals(authHeader, cronSecret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

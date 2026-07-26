@@ -29,8 +29,19 @@ export interface ImpersonationPayload {
   startedAt: number;
 }
 
+/**
+ * The HMAC key. Fails CLOSED: with no AUTH_SECRET there is no safe key to sign
+ * with, so we refuse rather than fall back to a hardcoded string that would make
+ * every impersonation cookie forgeable by anyone who has read this file.
+ */
 function secret(): string {
-  return process.env.AUTH_SECRET ?? "dev-insecure-impersonation-secret";
+  const s = process.env.AUTH_SECRET?.trim();
+  if (!s) {
+    throw new Error(
+      "AUTH_SECRET is required to sign impersonation cookies (openssl rand -base64 32).",
+    );
+  }
+  return s;
 }
 
 function sign(data: string): string {
@@ -53,11 +64,32 @@ export function decodeImpersonation(value: string): ImpersonationPayload | null 
   const b = Buffer.from(expected);
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
 
+  let payload: ImpersonationPayload;
   try {
-    return JSON.parse(Buffer.from(body, "base64url").toString()) as ImpersonationPayload;
+    payload = JSON.parse(
+      Buffer.from(body, "base64url").toString(),
+    ) as ImpersonationPayload;
   } catch {
     return null;
   }
+
+  // Enforce the 2-hour window HERE, server-side. The cookie's maxAge is only a
+  // browser hint: a copied cookie value stays a valid bearer credential forever
+  // if nothing checks startedAt, letting an admin (or anyone who obtained the
+  // value) silently re-enter a tenant later with no admin.impersonate_start
+  // entry in the audit log. Future-dated tokens are rejected too, so a skewed or
+  // crafted startedAt cannot extend the window.
+  const now = Date.now();
+  if (
+    typeof payload.startedAt !== "number" ||
+    !Number.isFinite(payload.startedAt) ||
+    now - payload.startedAt > IMPERSONATION_MAX_AGE * 1000 ||
+    payload.startedAt > now + 60_000
+  ) {
+    return null;
+  }
+
+  return payload;
 }
 
 /**

@@ -51,7 +51,9 @@ export function PublicReviewForm({
           <Heart className="h-5 w-5" fill="currentColor" />
         </span>
         <p className="font-semibold text-green-800 text-sm">תודה רבה על הביקורת!</p>
-        <p className="text-xs text-green-600 mt-1">הביקורת שלך התקבלה בהצלחה.</p>
+        <p className="text-xs text-green-600 mt-1">
+          הביקורת שלך התקבלה ותתפרסם לאחר אישור העסק.
+        </p>
       </div>
     );
   }

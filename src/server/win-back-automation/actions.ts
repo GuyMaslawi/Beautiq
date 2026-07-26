@@ -9,6 +9,20 @@ import { runWinBackForBusiness } from "./runner";
 import { publicBusinessUrl } from "@/lib/config";
 import { isMinuteTestingAllowed } from "@/lib/automation/minute-testing";
 
+/**
+ * The win-back automation controls live on /automations, which is a platform-
+ * admin-only page (see src/app/(app)/automations/page.tsx). That page-level check
+ * does not protect these actions: they are directly POSTable endpoints whose ids
+ * ship in the client bundle, and they trigger real WhatsApp sends billed to
+ * Allura. So each one re-checks admin here.
+ */
+async function isAdminCaller(): Promise<boolean> {
+  const user = await getCurrentUser();
+  return user?.isAdmin === true;
+}
+
+const ADMIN_ONLY_ERROR = "פעולה זו זמינה למנהלי מערכת בלבד.";
+
 // ---------------------------------------------------------------------------
 // Test send — send one real message to WHATSAPP_TEST_PHONE only
 // ---------------------------------------------------------------------------
@@ -33,6 +47,9 @@ export interface TestSendResult {
 export async function sendWhatsAppTestMessage(): Promise<TestSendResult> {
   try {
     const business = await requireCurrentBusiness();
+    if (!(await isAdminCaller())) {
+      return { success: false, error: ADMIN_ONLY_ERROR };
+    }
 
     // All required env vars must be present — fail fast with a specific code
     if (process.env.WHATSAPP_TEST_MODE !== "true") {
@@ -168,6 +185,9 @@ export async function saveWinBackAutomationSetting(
       requireCurrentBusiness(),
       getCurrentUser(),
     ]);
+    if (user?.isAdmin !== true) {
+      return { success: false, error: ADMIN_ONLY_ERROR };
+    }
 
     // Minute mode is gated server-side: a crafted request from a regular owner
     // in production cannot enable it. When not allowed, force days and drop the
@@ -225,6 +245,9 @@ export async function toggleWinBackAutomation(
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const business = await requireCurrentBusiness();
+    if (!(await isAdminCaller())) {
+      return { success: false, error: ADMIN_ONLY_ERROR };
+    }
     await prisma.automationSetting.upsert({
       where: { businessId_type: { businessId: business.id, type: "win_back" } },
       create: {
@@ -265,6 +288,16 @@ export async function triggerWinBackRun(): Promise<{
 }> {
   try {
     const business = await requireCurrentBusiness();
+    if (!(await isAdminCaller())) {
+      return {
+        success: false,
+        sentCount: 0,
+        skippedCount: 0,
+        failedCount: 0,
+        mockSkipCount: 0,
+        error: ADMIN_ONLY_ERROR,
+      };
+    }
     const result = await runWinBackForBusiness(business);
     revalidatePath("/bring-back");
     revalidatePath("/automations");

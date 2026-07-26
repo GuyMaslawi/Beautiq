@@ -57,6 +57,10 @@ function makePublicRow(overrides: Record<string, unknown> = {}) {
       { weekday: 0, startMinutes: 1080, endMinutes: 1200 },
       { weekday: 2, startMinutes: 600, endMinutes: 900 },
     ],
+    // The owner's account state gates the page: a suspended or unpaid account
+    // must not keep a live, bookable public page (each booking costs real money
+    // — owner email + Allura-billed WhatsApp confirmation).
+    members: [{ user: { plan: "premium", suspendedUntil: null, isAdmin: false } }],
     ...overrides,
   };
 }
@@ -71,6 +75,35 @@ describe("getPublicBusiness", () => {
     expect(prisma.business.findUnique.mock.calls[0][0].where).toEqual({
       slug: "does-not-exist",
     });
+  });
+
+  // Suspension has to close the money-losing surface, not just the dashboard:
+  // every booking taken here writes real rows, emails the owner and fires an
+  // Allura-billed WhatsApp confirmation.
+  it("returns null for a suspended owner (page must not stay bookable)", async () => {
+    prisma.business.findUnique.mockResolvedValue(
+      makePublicRow({
+        members: [
+          {
+            user: {
+              plan: "premium",
+              suspendedUntil: new Date(Date.now() + 86_400_000),
+              isAdmin: false,
+            },
+          },
+        ],
+      }),
+    );
+    expect(await getPublicBusiness("studio-yofi")).toBeNull();
+  });
+
+  it("returns null for an unpaid owner", async () => {
+    prisma.business.findUnique.mockResolvedValue(
+      makePublicRow({
+        members: [{ user: { plan: null, suspendedUntil: null, isAdmin: false } }],
+      }),
+    );
+    expect(await getPublicBusiness("studio-yofi")).toBeNull();
   });
 
   it("selects only public-safe fields (no CRM/admin/secret fields)", async () => {

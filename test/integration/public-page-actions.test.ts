@@ -133,7 +133,7 @@ describe("addGalleryImageAction", () => {
   it("creates the image scoped to the tenant businessId with the next sort order", async () => {
     const res = await addGalleryImageAction(
       {},
-      fd({ imageUrl: "https://x/i.jpg", caption: "כיתוב" }),
+      fd({ imageUrl: "https://cdn.example.com/i.jpg", caption: "כיתוב" }),
     );
     expect(res.success).toBeTruthy();
     const arg = prisma.galleryImage.create.mock.calls[0][0];

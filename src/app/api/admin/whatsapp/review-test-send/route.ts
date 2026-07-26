@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/server/db/prisma";
 import { getCurrentUser, getCurrentBusiness } from "@/server/auth/session";
 import { sendReviewDemoTestMessage } from "@/server/whatsapp/review-demo";
+import { isSameOrigin } from "@/lib/csrf";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -20,6 +21,12 @@ export const maxDuration = 60;
  *   {}                       — use the current admin's own business
  */
 export async function POST(request: Request) {
+  // Explicit same-origin check: custom route handlers get no CSRF protection
+  // from Next.js, and these trigger outbound WhatsApp sends across tenants.
+  if (!isSameOrigin(request)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const user = await getCurrentUser();
   if (!user?.isAdmin) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });

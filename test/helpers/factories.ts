@@ -138,6 +138,14 @@ export function makeUser(overrides: Record<string, unknown> = {}) {
     name: "בעלת העסק",
     passwordHash: "$2a$10$hashhashhashhashhashhash",
     isAdmin: false,
+    // A paid, non-suspended owner is the default case. requireCurrentBusiness()
+    // enforces the plan/suspension gate (so Server Actions cannot bypass the
+    // paywall the way a layout-only guard allowed), so a user factory with no
+    // plan would send every business-scoped test to /subscribe.
+    plan: "premium",
+    planActivatedAt: new Date("2026-01-01T00:00:00Z"),
+    planExpiresAt: null,
+    suspendedUntil: null,
     createdAt: new Date("2026-01-01T00:00:00Z"),
     updatedAt: new Date("2026-01-01T00:00:00Z"),
     ...overrides,

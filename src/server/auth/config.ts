@@ -1,9 +1,12 @@
 import NextAuth from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import Google from "next-auth/providers/google";
+import { headers } from "next/headers";
 import { prisma } from "@/server/db/prisma";
 import { verifyPassword } from "@/server/auth/password";
 import { validateLogin } from "@/lib/validation/auth";
+import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 
 /**
  * Central NextAuth (Auth.js) configuration — the single source of truth for
@@ -33,6 +36,38 @@ import { validateLogin } from "@/lib/validation/auth";
  * import cycle — same reasoning as the Credentials authorize() below. Telemetry
  * is best-effort and must never block a valid sign-in.
  */
+/** Per-IP burst cap on credential attempts. */
+const LOGIN_IP_MAX = 10;
+const LOGIN_IP_WINDOW_MS = 10 * 60_000;
+/** Per-account cap, so guessing one owner's password cannot be spread over IPs. */
+const LOGIN_ACCOUNT_MAX = 10;
+const LOGIN_ACCOUNT_WINDOW_MS = 15 * 60_000;
+
+/**
+ * True while this credential attempt is within both rate-limit buckets.
+ *
+ * Resolves the client IP from request headers; if the header store is
+ * unavailable (outside a request scope) the per-IP bucket is skipped rather than
+ * failing the login, but the per-account bucket still applies.
+ */
+async function withinLoginRateLimit(email: string): Promise<boolean> {
+  try {
+    const h = await headers();
+    const ip = getClientIp(h);
+    if (!checkRateLimit(`login:ip:${ip}`, LOGIN_IP_MAX, LOGIN_IP_WINDOW_MS)) {
+      logger.warn("[auth] login rate limit hit (ip)");
+      return false;
+    }
+  } catch {
+    // no request scope — fall through to the per-account bucket
+  }
+  if (!checkRateLimit(`login:acct:${email}`, LOGIN_ACCOUNT_MAX, LOGIN_ACCOUNT_WINDOW_MS)) {
+    logger.warn("[auth] login rate limit hit (account)");
+    return false;
+  }
+  return true;
+}
+
 async function resolveGoogleUser(profile: {
   email?: string | null;
   name?: string | null;
@@ -73,8 +108,13 @@ async function resolveGoogleUser(profile: {
   return user.id;
 }
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  // We run behind a single known host in dev; trust it so callback URLs resolve.
-  trustHost: true,
+  // trustHost makes Auth.js derive its base URL from the inbound Host /
+  // X-Forwarded-Host header. Vercel normalises those to a deployment-owned
+  // domain, so trusting them there is safe — but on a self-hosted deployment
+  // behind a permissive proxy an attacker could send `Host: attacker.tld` and
+  // steer the OAuth callback URL. So: trust the platform, or dev, and require an
+  // explicit AUTH_URL anywhere else in production.
+  trustHost: process.env.VERCEL === "1" || process.env.NODE_ENV !== "production",
   session: { strategy: "jwt" },
   pages: {
     signIn: "/login",
@@ -91,6 +131,16 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           password: String(credentials?.password ?? ""),
         });
         if (!parsed.ok) return null;
+
+        // Throttle HERE, not only in loginAction: `handlers` is exported at
+        // /api/auth/[...nextauth], so POST /api/auth/callback/credentials reaches
+        // this function directly and never touches the server action's limiter.
+        // Without this, the login form's rate limit was cosmetic — an attacker
+        // could grab one CSRF token and then guess passwords at full speed.
+        // Two independent buckets: per-IP (burst) and per-account (so a
+        // distributed attack still cannot hammer one owner's password), each of
+        // which also caps the bcrypt work this endpoint can be made to do.
+        if (!(await withinLoginRateLimit(parsed.value.email))) return null;
 
         const user = await prisma.user.findUnique({
           where: { email: parsed.value.email },

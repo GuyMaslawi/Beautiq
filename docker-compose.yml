@@ -24,7 +24,11 @@ services:
       # Host port 5433 by default to avoid clashing with a native Postgres that
       # may already own 5432 on macOS/Linux. Override with DB_PORT if needed.
       # The container always listens on 5432 internally.
-      - "${DB_PORT:-5433}:5432"
+      # Bound to 127.0.0.1 on purpose: the dev credentials are well-known
+      # defaults, so without this the database is reachable by anyone on the same
+      # network (café Wi-Fi, shared office LAN) — and the dev DB is regularly
+      # seeded with realistic client names and phone numbers.
+      - "127.0.0.1:${DB_PORT:-5433}:5432"
     volumes:
       - beautiq_postgres_data:/var/lib/postgresql/data
     healthcheck:

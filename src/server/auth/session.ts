@@ -168,13 +168,23 @@ export async function getCurrentBusiness(): Promise<Business | null> {
 }
 
 /**
- * The current user's business, or a redirect: to /login if unauthenticated, or
- * to /dashboard if the user has no business yet (where the setup card lives).
- * This is the resolver every business-scoped route should use. The dashboard
- * itself must NOT use it — it handles the "no business" state inline.
+ * The current user's business, or a redirect: to /login if unauthenticated, to
+ * /subscribe if unpaid, to /suspended if suspended, or to /dashboard if the user
+ * has no business yet (where the setup card lives). This is the resolver every
+ * business-scoped route AND server action should use. The dashboard itself must
+ * NOT use it — it handles the "no business" state inline.
+ *
+ * SECURITY: the gate is requirePaidUser(), not requireCurrentUser(). Server
+ * Actions are publicly reachable HTTP endpoints — the (app) layout guard only
+ * runs when a PAGE renders, so it cannot protect an action POSTed directly.
+ * Enforcing the plan/suspension gate here means an unpaid account (and, more
+ * importantly, an account an admin suspended for abuse) cannot keep writing data
+ * or sending Allura-billed WhatsApp messages by replaying action ids harvested
+ * from the client bundle. Admins and impersonating admins are exempt inside
+ * requirePaidUser(), so those flows are unaffected.
  */
 export async function requireCurrentBusiness(): Promise<Business> {
-  await requireCurrentUser();
+  await requirePaidUser();
   const business = await getCurrentBusiness();
   if (!business) redirect("/dashboard");
   return business;

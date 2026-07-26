@@ -95,6 +95,11 @@ export async function startSubscriptionCheckoutAction(
       checkoutNonce: nonce,
       processId: null,
       processToken: null,
+      // A new plan means a NEW authorization at a new price. Keeping the old
+      // standing-order id let the previous plan's cheaper monthly charge come
+      // back and activate the more expensive plan (the old direct debit is only
+      // stopped best-effort, below), so it must not survive the switch.
+      directDebitId: null,
     },
   });
 
@@ -117,14 +122,23 @@ export async function startSubscriptionCheckoutAction(
     }
 
     const base = appBaseUrl();
+    // Grow signs nothing, so the notifyUrl carries our endpoint secret: Grow
+    // POSTs back to exactly this URL, which lets the webhook authenticate the
+    // sender on EVERY notification (including the automatic monthly runs, which
+    // carry no processToken). See src/app/api/subscription/webhook/route.ts.
+    const webhookSecret = process.env.SUBSCRIPTION_WEBHOOK_SECRET?.trim();
+    const notifyUrl = webhookSecret
+      ? `${base}/api/subscription/webhook?t=${encodeURIComponent(webhookSecret)}`
+      : `${base}/api/subscription/webhook`;
+
     const { paymentUrl, processId, processToken } = await createPaymentLink({
       amountMinor: priceMinor,
       description: `מנוי ${PLANS[plan].name} — Allura`,
       fullName: user.name ?? user.email.split("@")[0],
       phone: "",
       email: user.email,
-      successUrl: `${base}/api/subscription/return?sid=${subscription.id}`,
-      notifyUrl: `${base}/api/subscription/webhook`,
+      successUrl: `${base}/api/subscription/return`,
+      notifyUrl,
       nonce,
       userId: user.id,
       plan,

@@ -49,15 +49,30 @@ export function __resetRateLimitForTests(): void {
 
 /**
  * Extract a best-effort client IP from Next.js request headers.
- * Falls back to "unknown" when no IP header is present (local dev, etc.).
+ *
+ * Order matters for security. `x-real-ip` is set by the platform edge (Vercel)
+ * and is not client-controllable, so it is preferred. When falling back to
+ * `x-forwarded-for` we take the RIGHTMOST hop, not the leftmost: the leftmost
+ * value is whatever the caller sent, so `-H 'X-Forwarded-For: 1.2.3.<random>'`
+ * would mint a fresh rate-limit bucket per request and neutralise every limit in
+ * the app. The rightmost entry is the one appended by the closest trusted proxy.
+ *
+ * Falls back to "unknown" when no IP header is present (local dev, etc.) — that
+ * shares a single bucket, which is the safe direction to fail.
  */
 export function getClientIp(
   headers: { get(name: string): string | null },
 ): string {
+  const real = headers.get("x-real-ip")?.trim();
+  if (real) return real;
+
   const forwarded = headers.get("x-forwarded-for");
   if (forwarded) {
-    // x-forwarded-for may be comma-separated; the first value is the client IP.
-    return forwarded.split(",")[0].trim();
+    const hops = forwarded
+      .split(",")
+      .map((h) => h.trim())
+      .filter(Boolean);
+    if (hops.length > 0) return hops[hops.length - 1];
   }
-  return headers.get("x-real-ip") ?? "unknown";
+  return "unknown";
 }

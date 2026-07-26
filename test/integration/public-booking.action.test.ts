@@ -31,6 +31,17 @@ vi.mock("@/lib/rate-limit", () => ({
   getClientIp: () => "203.0.113.1",
 }));
 
+// The action re-derives the legal slot set server-side and requires the
+// requested time to be a member of it: `date`/`requestedTime` arrive from
+// client-controlled hidden inputs, so the availability rules must be checked on
+// the server, not just used to render choices. Default: the requested slot is
+// legal; a dedicated test below returns an empty set.
+const getAvailableSlots = vi.fn(async () => ["10:00", "10:30", "11:00"]);
+vi.mock("@/server/availability/get-available-slots", () => ({
+  getAvailableSlots: (...args: unknown[]) =>
+    (getAvailableSlots as (...a: unknown[]) => unknown)(...args),
+}));
+
 const findOrCreateClient = vi.fn();
 vi.mock("@/server/clients/find-or-create", () => ({
   findOrCreateClient: (...args: unknown[]) => findOrCreateClient(...args),
@@ -64,11 +75,20 @@ function formData(fields: Record<string, string>): FormData {
   return fd;
 }
 
+/** A YYYY-MM-DD date `days` from today (Israel calendar day is close enough here). */
+function dateInDays(days: number): string {
+  const d = new Date(Date.now() + days * 86_400_000);
+  return d.toISOString().slice(0, 10);
+}
+
+// Near-future rather than a fixed far-future date: the action now refuses
+// bookings more than a year out, so "2099-07-01" would be rejected by that cap
+// before any of the checks these tests are about.
 const validFields = {
   serviceId: "svc_1",
   clientName: "דנה",
   phone: "0501234567",
-  date: "2099-07-01",
+  date: dateInDays(30),
   requestedTime: "10:00",
   note: "",
 };
@@ -81,9 +101,49 @@ beforeEach(() => {
   sendBookingConfirmation.mockReset();
   notifyOwnerOfNewBooking.mockReset();
   checkRateLimit.mockReset().mockReturnValue(true);
+  getAvailableSlots.mockReset().mockResolvedValue(["10:00", "10:30", "11:00"]);
 });
 
 describe("submitPublicBookingAction — validation & tenant safety", () => {
+  // `date` and `requestedTime` are client-controlled hidden inputs. Before this
+  // guard, anyone could POST a time on a day the business is closed (or 3 AM,
+  // or years ahead) and it was created with status "approved" — occupying the
+  // slot and firing an Allura-billed WhatsApp confirmation.
+  it("rejects a time that is not in the server-derived slot set", async () => {
+    prisma.business.findUnique.mockResolvedValue(makeBusiness({ id: BUSINESS_A }));
+    prisma.service.findFirst.mockResolvedValue(makeService({ id: "svc_1" }));
+    getAvailableSlots.mockResolvedValue([]);
+    const res = await submitPublicBookingAction(
+      "studio-yofi",
+      {},
+      formData(validFields),
+    );
+    expect(res.slotConflict).toBe(true);
+    expect(prisma.booking.create).not.toHaveBeenCalled();
+  });
+
+  it("rejects a booking further than a year ahead", async () => {
+    prisma.business.findUnique.mockResolvedValue(makeBusiness({ id: BUSINESS_A }));
+    prisma.service.findFirst.mockResolvedValue(makeService({ id: "svc_1" }));
+    const res = await submitPublicBookingAction(
+      "studio-yofi",
+      {},
+      formData({ ...validFields, date: "2099-07-01" }),
+    );
+    expect(res.slotConflict).toBe(true);
+    expect(prisma.booking.create).not.toHaveBeenCalled();
+  });
+
+  it("derives the slot set from the tenant and the requested date", async () => {
+    prisma.business.findUnique.mockResolvedValue(makeBusiness({ id: BUSINESS_A }));
+    prisma.service.findFirst.mockResolvedValue(makeService({ id: "svc_1" }));
+    prisma.booking.create.mockResolvedValue({ id: "bkg_1" });
+    await submitPublicBookingAction("studio-yofi", {}, formData(validFields));
+    expect(getAvailableSlots).toHaveBeenCalledWith(
+      expect.objectContaining({ businessId: BUSINESS_A, date: validFields.date }),
+    );
+  });
+
   it("blocks the request when the rate limit is exceeded", async () => {
     checkRateLimit.mockReturnValue(false);
     const res = await submitPublicBookingAction("studio-yofi", {}, formData(validFields));
@@ -210,7 +270,10 @@ describe("submitPublicReviewAction", () => {
     expect(prisma.clientReview.create).not.toHaveBeenCalled();
   });
 
-  it("creates an approved review scoped to the slug business", async () => {
+  // Public submissions are unauthenticated, so they land PENDING and are
+  // published only once the owner approves them on /public-page. Auto-approving
+  // gave anyone direct write access to a business's public reputation.
+  it("creates a PENDING review scoped to the slug business", async () => {
     const { submitPublicReviewAction } = await import("@/server/public-booking/actions");
     prisma.business.findUnique.mockResolvedValue({ id: BUSINESS_A });
     prisma.clientReview.create.mockResolvedValue({ id: "rev_1" });
@@ -222,7 +285,7 @@ describe("submitPublicReviewAction", () => {
     expect(res.success).toBe(true);
     expect(prisma.clientReview.create).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ businessId: BUSINESS_A, isApproved: true }),
+        data: expect.objectContaining({ businessId: BUSINESS_A, isApproved: false }),
       }),
     );
   });

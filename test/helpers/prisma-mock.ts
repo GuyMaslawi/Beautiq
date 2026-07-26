@@ -48,6 +48,11 @@ const MODELS = [
   "bookingPayment",
   "whatsAppCampaign",
   "whatsAppCampaignRecipient",
+  "accountSubscription",
+  "activityLog",
+  "loyaltyProgram",
+  "loyaltyRedemption",
+  "loyaltyMessage",
 ] as const;
 
 const DELEGATE_METHODS = [

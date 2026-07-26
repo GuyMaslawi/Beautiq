@@ -1,26 +1,39 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { Trash2, Star } from "lucide-react";
+import { Trash2, Star, Check } from "lucide-react";
 import { PUBLIC_PAGE } from "@/lib/constants/he";
-import type { deleteClientReviewAction } from "@/server/public-page/actions";
+import type {
+  deleteClientReviewAction,
+  approveClientReviewAction,
+} from "@/server/public-page/actions";
 import type { ClientReviewData } from "@/server/public-page/queries";
 
 export function ReviewsManager({
   reviews,
   deleteAction,
+  approveAction,
 }: {
   reviews: ClientReviewData[];
   deleteAction: typeof deleteClientReviewAction;
+  approveAction: typeof approveClientReviewAction;
 }) {
-  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const handleDelete = (id: string) => {
-    setDeletingId(id);
+    setBusyId(id);
     startTransition(async () => {
       await deleteAction(id);
-      setDeletingId(null);
+      setBusyId(null);
+    });
+  };
+
+  const handleApprove = (id: string) => {
+    setBusyId(id);
+    startTransition(async () => {
+      await approveAction(id);
+      setBusyId(null);
     });
   };
 
@@ -28,7 +41,7 @@ export function ReviewsManager({
     <div className="space-y-5">
       {/* Info notice */}
       <div className="rounded-xl border border-[#e8d5e0] bg-[#fdf6fa] px-4 py-3 text-sm text-[var(--muted)]">
-        ביקורות יתווספו על ידי לקוחות דרך עמוד הלקוחות הציבורי.
+        {PUBLIC_PAGE.reviews.pendingNotice}
       </div>
 
       {/* Reviews list */}
@@ -46,7 +59,7 @@ export function ReviewsManager({
             >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex-1 space-y-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <span className="text-sm font-semibold text-[var(--foreground)]">
                       {review.clientName}
                     </span>
@@ -60,20 +73,39 @@ export function ReviewsManager({
                         />
                       ))}
                     </div>
+                    {!review.isApproved && (
+                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">
+                        {PUBLIC_PAGE.reviews.pendingBadge}
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm leading-relaxed text-[var(--muted)]">
                     {review.reviewText}
                   </p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => handleDelete(review.id)}
-                  disabled={deletingId === review.id || isPending}
-                  className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-red-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
-                  title={PUBLIC_PAGE.reviews.deleteButton}
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
+                <div className="flex shrink-0 items-center gap-1">
+                  {!review.isApproved && (
+                    <button
+                      type="button"
+                      onClick={() => handleApprove(review.id)}
+                      disabled={busyId === review.id || isPending}
+                      className="flex h-7 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-emerald-600 transition-colors hover:bg-emerald-50 disabled:opacity-40"
+                      title={PUBLIC_PAGE.reviews.approveButton}
+                    >
+                      <Check className="h-3.5 w-3.5" />
+                      {PUBLIC_PAGE.reviews.approveButton}
+                    </button>
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(review.id)}
+                    disabled={busyId === review.id || isPending}
+                    className="flex h-7 w-7 items-center justify-center rounded-lg text-red-400 transition-colors hover:bg-red-50 hover:text-red-600 disabled:opacity-40"
+                    title={PUBLIC_PAGE.reviews.deleteButton}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
+                </div>
               </div>
             </div>
           ))}

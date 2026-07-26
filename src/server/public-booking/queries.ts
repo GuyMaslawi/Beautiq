@@ -106,10 +106,26 @@ export async function getPublicBusiness(
         select: { weekday: true, startMinutes: true, endMinutes: true },
         orderBy: [{ weekday: "asc" }, { startMinutes: "asc" }],
       },
+      // The owner's account state decides whether this page should exist at all.
+      members: {
+        where: { role: "owner" },
+        orderBy: { createdAt: "asc" },
+        take: 1,
+        select: { user: { select: { plan: true, suspendedUntil: true, isAdmin: true } } },
+      },
     },
   });
 
   if (!business) return null;
+
+  // A suspended or unpaid account must not keep a live, bookable public page.
+  // Every booking made here creates real rows, emails the owner and fires an
+  // Allura-billed WhatsApp confirmation — so without this check, suspending an
+  // account for abuse stopped nothing that actually costs money. Treated as
+  // "not found" so the page 404s rather than advertising the account's state.
+  const owner = business.members[0]?.user;
+  const suspended = !!owner?.suspendedUntil && owner.suspendedUntil > new Date();
+  if (!owner || suspended || (!owner.plan && !owner.isAdmin)) return null;
 
   return {
     id: business.id,

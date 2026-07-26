@@ -51,9 +51,23 @@ describe("simple scoped getters", () => {
   it("getWhatsAppConnection scopes by business", async () => {
     prisma.whatsAppConnection.findUnique.mockResolvedValue({ status: "active" });
     await getWhatsAppConnection(tenant);
-    expect(prisma.whatsAppConnection.findUnique).toHaveBeenCalledWith({
-      where: { businessId: BUSINESS_A },
-    });
+    expect(prisma.whatsAppConnection.findUnique).toHaveBeenCalledWith(
+      expect.objectContaining({ where: { businessId: BUSINESS_A } }),
+    );
+  });
+
+  // The result is passed into client components, so it must never carry the
+  // credentials: anything selected is serialised into the RSC payload.
+  it("getWhatsAppConnection never selects the access token or Meta identifiers", async () => {
+    prisma.whatsAppConnection.findUnique.mockResolvedValue({ status: "active" });
+    await getWhatsAppConnection(tenant);
+    const arg = prisma.whatsAppConnection.findUnique.mock.calls[0][0] as {
+      select?: Record<string, boolean>;
+    };
+    expect(arg.select).toBeDefined();
+    expect(arg.select).not.toHaveProperty("accessTokenEncrypted");
+    expect(arg.select).not.toHaveProperty("wabaId");
+    expect(arg.select).not.toHaveProperty("phoneNumberId");
   });
 
   it("getLastWinBackRun scopes + orders desc", async () => {

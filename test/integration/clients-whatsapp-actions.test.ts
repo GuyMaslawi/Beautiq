@@ -18,8 +18,12 @@ const requireCurrentBusiness = vi.fn(async () => ({
   id: BUSINESS_A,
   name: "סטודיו יופי",
 }));
+// manual_test is admin-only (it dispatches Metas English hello_world template),
+// so the action re-checks isAdmin server-side rather than trusting the caller.
+const getCurrentUser = vi.fn(async () => ({ id: "admin", isAdmin: true }));
 vi.mock("@/server/auth/session", () => ({
   requireCurrentBusiness: (...args: unknown[]) => (requireCurrentBusiness as (...a: unknown[]) => unknown)(...args),
+  getCurrentUser: () => getCurrentUser(),
 }));
 
 // Provider send is mocked; default success.

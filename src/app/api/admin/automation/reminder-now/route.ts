@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/server/db/prisma";
 import { getCurrentUser } from "@/server/auth/session";
 import { runMorningReminderForBusiness } from "@/server/morning-reminder/runner";
+import { isSameOrigin } from "@/lib/csrf";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -20,6 +21,12 @@ export const maxDuration = 300;
  * can trigger a run at any time for testing. All other safeguards remain active.
  */
 export async function POST(request: Request) {
+  // Explicit same-origin check: custom route handlers get no CSRF protection
+  // from Next.js, and these trigger outbound WhatsApp sends across tenants.
+  if (!isSameOrigin(request)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const user = await getCurrentUser();
 
   if (!user?.isAdmin) {
@@ -100,7 +107,11 @@ export async function POST(request: Request) {
         sentCount: 0,
         failedCount: 0,
         skippedCount: 0,
-        error: String(err),
+        // Detail is logged server-side; the response carries an opaque code — a raw
+
+        // JS/Prisma error string can leak table, constraint or provider internals.
+
+        error: "run_failed",
       });
     }
   }

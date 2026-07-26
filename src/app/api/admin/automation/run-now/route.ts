@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/server/db/prisma";
 import { getCurrentUser } from "@/server/auth/session";
 import { runWinBackForBusiness } from "@/server/win-back-automation/runner";
+import { captureError } from "@/lib/logger";
+import { isSameOrigin } from "@/lib/csrf";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -23,6 +25,12 @@ export const maxDuration = 300;
  * cron job.
  */
 export async function POST(request: Request) {
+  // Explicit same-origin check: custom route handlers get no CSRF protection
+  // from Next.js, and these trigger outbound WhatsApp sends across tenants.
+  if (!isSameOrigin(request)) {
+    return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+  }
+
   const user = await getCurrentUser();
 
   if (!user?.isAdmin) {
@@ -89,6 +97,7 @@ export async function POST(request: Request) {
         `[admin/automation/run-now] error — businessId=${business.id}`,
         err,
       );
+      captureError("admin.automation", err, { businessId: business.id });
       results.push({
         businessId: business.id,
         businessName: business.name,
@@ -97,7 +106,11 @@ export async function POST(request: Request) {
         failedCount: 0,
         skippedCount: 0,
         mockSkipCount: 0,
-        error: String(err),
+        // Detail is logged server-side; the response carries an opaque code — a raw
+
+        // JS/Prisma error string can leak table, constraint or provider internals.
+
+        error: "run_failed",
       });
     }
   }

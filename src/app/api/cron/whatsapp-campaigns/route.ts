@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { processDueCampaigns } from "@/server/whatsapp/campaigns/processor";
 import { logger, captureError } from "@/lib/logger";
+import { bearerEquals } from "@/lib/secret-compare";
 
 // Cron backstop for bulk WhatsApp campaigns. Owner-driven sending drives most
 // progress in real time; this tick keeps queued campaigns moving (and processes
@@ -13,7 +14,7 @@ export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
 
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!bearerEquals(authHeader, cronSecret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

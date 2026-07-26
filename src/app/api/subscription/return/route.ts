@@ -27,24 +27,24 @@ function redirectTo(req: NextRequest, path: string): NextResponse {
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function GET(req: NextRequest) {
-  const sid = req.nextUrl.searchParams.get("sid");
+  // The subscription is resolved ONLY from the signed-in session. A bare `sid`
+  // used to be honored for anonymous callers, which turned this route into a
+  // status oracle (any leaked subscription id could be probed for active/not,
+  // and each probe held a serverless invocation for ~3s of polling).
   const user = await getCurrentUser();
-
-  // Resolve which subscription to watch: the signed-in user's, or an explicit sid.
-  const where = user ? { userId: user.id } : sid ? { id: sid } : null;
-  if (!where) return redirectTo(req, "/login");
+  if (!user) return redirectTo(req, "/login");
 
   // Grow's notification is usually near-instant; poll our own record a few times
   // so the common case lands straight in the app rather than on a pending screen.
   for (let attempt = 0; attempt < 4; attempt++) {
     const sub = await prisma.accountSubscription.findFirst({
-      where,
+      where: { userId: user.id },
       select: { status: true },
     });
     if (sub?.status === AccountSubscriptionStatus.active) {
       return redirectTo(req, "/dashboard");
     }
-    if (attempt < 3) await sleep(1000);
+    if (attempt < 3) await sleep(700);
   }
 
   return redirectTo(req, "/subscribe?pending=1");

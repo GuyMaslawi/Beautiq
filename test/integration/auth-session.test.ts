@@ -166,6 +166,35 @@ describe("requireCurrentBusiness", () => {
     const biz = await requireCurrentBusiness();
     expect(biz.id).toBe(BUSINESS_A);
   });
+
+  // The plan/suspension gate must live HERE, not only in the (app) layout:
+  // Server Actions are directly POSTable and never render the layout, so a
+  // layout-only guard let an unpaid or admin-suspended account keep writing data
+  // and sending Allura-billed WhatsApp messages.
+  it("redirects an unpaid account to /subscribe (Server Action paywall)", async () => {
+    signedInAs("usr_1");
+    prisma.user.findUnique.mockResolvedValue(
+      makeUser({ id: "usr_1", plan: null }),
+    );
+    await expect(requireCurrentBusiness()).rejects.toThrow(
+      "NEXT_REDIRECT:/subscribe",
+    );
+    // Never even resolves a tenant for an unpaid caller.
+    expect(prisma.businessUser.findFirst).not.toHaveBeenCalled();
+  });
+
+  it("redirects a suspended account to /suspended", async () => {
+    signedInAs("usr_1");
+    prisma.user.findUnique.mockResolvedValue(
+      makeUser({
+        id: "usr_1",
+        suspendedUntil: new Date(Date.now() + 86_400_000),
+      }),
+    );
+    await expect(requireCurrentBusiness()).rejects.toThrow(
+      "NEXT_REDIRECT:/suspended",
+    );
+  });
 });
 
 describe("requireTenant", () => {

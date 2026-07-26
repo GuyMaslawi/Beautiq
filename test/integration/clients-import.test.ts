@@ -26,13 +26,41 @@ beforeEach(() => {
 describe("importClients", () => {
   it("loads existing normalized phones scoped by businessId", async () => {
     prisma.client.findMany.mockResolvedValue([]);
-    await importClients([]);
+    prisma.client.create.mockResolvedValue({ id: "cli_new" });
+    // Non-empty: an empty array short-circuits before any query.
+    await importClients([{ fullName: "דנה", phone: "0501234567" }]);
     expect(prisma.client.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: { businessId: BUSINESS_A },
         select: { normalizedPhone: true },
       }),
     );
+  });
+
+  // `rows` is whatever the caller POSTs to this Server Action. Without a cap a
+  // huge array becomes that many sequential INSERTs in one request, saturating
+  // the shared connection pool and degrading every other tenant.
+  it("refuses an oversized batch without touching the database", async () => {
+    const rows = Array.from({ length: 2001 }, () => ({
+      fullName: "דנה",
+      phone: "0501234567",
+    }));
+    const res = await importClients(rows);
+    expect(res.created).toBe(0);
+    expect(res.failed).toBe(2001);
+    expect(prisma.client.create).not.toHaveBeenCalled();
+  });
+
+  it("counts rows with an invalid phone as failed instead of storing them", async () => {
+    prisma.client.findMany.mockResolvedValue([]);
+    prisma.client.create.mockResolvedValue({ id: "cli_new" });
+    const res = await importClients([
+      { fullName: "דנה", phone: "not-a-phone" },
+      { fullName: "", phone: "0501234567" },
+    ]);
+    expect(res.created).toBe(0);
+    expect(res.failed).toBe(2);
+    expect(prisma.client.create).not.toHaveBeenCalled();
   });
 
   it("creates new clients scoped to the business and counts them", async () => {

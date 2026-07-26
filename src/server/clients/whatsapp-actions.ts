@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/server/db/prisma";
-import { requireCurrentBusiness } from "@/server/auth/session";
+import { requireCurrentBusiness, getCurrentUser } from "@/server/auth/session";
 import {
   DEV_MOCK_SKIP_REASON,
   TEST_MODE_BLOCKED_REASON,
@@ -222,7 +222,14 @@ export async function sendManualClientWhatsAppAction(
     }
 
   } else {
-    // manual_test — admin only
+    // manual_test — admin only. This was documented but never enforced: a regular
+    // owner could POST kind="manual_test" and dispatch Meta's ENGLISH hello_world
+    // template to a real Israeli client (breaking the Hebrew-only rule), and with
+    // forceIfRecent it also skipped the 24-hour throttle below.
+    const currentUser = await getCurrentUser();
+    if (currentUser?.isAdmin !== true) {
+      return { error: "פעולה זו זמינה למנהלי מערכת בלבד." };
+    }
     messageText = `היי ${client.fullName}, זוהי הודעת בדיקה מ${business.name} 👋`;
     // manual_test without a configured template uses hello_world
     const winBackSetting = await prisma.automationSetting.findUnique({

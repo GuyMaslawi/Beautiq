@@ -238,7 +238,10 @@ describe("saveWinBackAutomationSetting — minute-mode gating", () => {
     return prisma.automationSetting.upsert.mock.calls[0][0].update;
   }
 
-  it("forces days for a regular owner in production (drops minute values)", async () => {
+  // The action itself is admin-only (/automations is an admin page), so a
+  // regular owner is refused outright rather than merely down-graded to days.
+  // The days/minutes gating logic is unit-tested directly above.
+  it("refuses a regular owner in production and writes nothing", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("ENABLE_AUTOMATION_MINUTE_TESTING", "");
     getCurrentUser.mockResolvedValue({ id: "u1", isAdmin: false });
@@ -251,11 +254,8 @@ describe("saveWinBackAutomationSetting — minute-mode gating", () => {
       testCooldownMinutes: 1,
     });
 
-    expect(res.success).toBe(true);
-    const data = savedData();
-    expect(data.timingUnit).toBe("days");
-    expect(data.testThresholdMinutes).toBeNull();
-    expect(data.testCooldownMinutes).toBeNull();
+    expect(res.success).toBe(false);
+    expect(prisma.automationSetting.upsert).not.toHaveBeenCalled();
   });
 
   it("persists minutes for an admin in production", async () => {
@@ -277,26 +277,27 @@ describe("saveWinBackAutomationSetting — minute-mode gating", () => {
     expect(data.testCooldownMinutes).toBe(1);
   });
 
-  it("persists minutes for an owner in production when the env flag is enabled", async () => {
+  // The ENABLE_AUTOMATION_MINUTE_TESTING escape hatch relaxes the timing gate,
+  // but it must NOT relax the admin gate on the action.
+  it("still refuses a regular owner even when the minute-testing env flag is on", async () => {
     vi.stubEnv("NODE_ENV", "production");
     vi.stubEnv("ENABLE_AUTOMATION_MINUTE_TESTING", "true");
     getCurrentUser.mockResolvedValue({ id: "u1", isAdmin: false });
     prisma.automationSetting.upsert.mockResolvedValue({});
 
-    await saveWinBackAutomationSetting({
+    const res = await saveWinBackAutomationSetting({
       ...baseInput,
       timingUnit: "minutes",
       testThresholdMinutes: 7,
       testCooldownMinutes: 2,
     });
 
-    const data = savedData();
-    expect(data.timingUnit).toBe("minutes");
-    expect(data.testThresholdMinutes).toBe(7);
+    expect(res.success).toBe(false);
+    expect(prisma.automationSetting.upsert).not.toHaveBeenCalled();
   });
 
   it("defaults existing day-based saves to timingUnit=days (backwards-compatible)", async () => {
-    getCurrentUser.mockResolvedValue({ id: "u1", isAdmin: false });
+    getCurrentUser.mockResolvedValue({ id: "admin", isAdmin: true });
     prisma.automationSetting.upsert.mockResolvedValue({});
 
     await saveWinBackAutomationSetting(baseInput);

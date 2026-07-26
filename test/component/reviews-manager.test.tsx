@@ -25,10 +25,12 @@ const REVIEWS: ClientReviewData[] = [
 ];
 
 let deleteAction: ReturnType<typeof vi.fn>;
+let approveAction: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
   vi.clearAllMocks();
   deleteAction = vi.fn(async () => undefined);
+  approveAction = vi.fn(async () => undefined);
 });
 
 function renderManager(reviews: ClientReviewData[] = REVIEWS) {
@@ -36,6 +38,7 @@ function renderManager(reviews: ClientReviewData[] = REVIEWS) {
     <ReviewsManager
       reviews={reviews}
       deleteAction={deleteAction}
+      approveAction={approveAction}
     />,
   );
 }
@@ -44,7 +47,7 @@ describe("ReviewsManager", () => {
   it("always shows the info notice about public reviews", () => {
     renderManager([]);
     expect(
-      screen.getByText(/ביקורות יתווספו על ידי לקוחות/),
+      screen.getByText(/ממתינות לאישורך/),
     ).toBeInTheDocument();
   });
 

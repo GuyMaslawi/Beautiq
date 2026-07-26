@@ -1087,8 +1087,10 @@ export const PUBLIC_BOOKING = {
   errors: {
     serviceRequired: "יש לבחור שירות",
     clientNameRequired: "יש למלא שם מלא",
+    clientNameTooLong: "השם ארוך מדי — עד 80 תווים",
     phoneRequired: "יש למלא מספר טלפון",
     phoneInvalid: "מספר הטלפון לא נראה תקין",
+    noteTooLong: "ההערה ארוכה מדי — עד 500 תווים",
     dateRequired: "יש לבחור תאריך",
     timeRequired: "יש לבחור שעה",
     pastBooking: "לא ניתן לשלוח בקשה לזמן שכבר עבר",
@@ -1947,6 +1949,10 @@ export const PUBLIC_PAGE = {
     emptyState: "עדיין לא נוספו ביקורות",
     addSuccess: "הביקורת נוספה בהצלחה",
     deleteSuccess: "הביקורת נמחקה",
+    pendingBadge: "ממתינה לאישור",
+    approveButton: "אישור ופרסום",
+    pendingNotice:
+      "ביקורות שנשלחות מעמוד ההזמנות הציבורי ממתינות לאישורך, ומתפרסמות רק אחרי שתאשרי אותן.",
     errors: {
       clientNameRequired: "יש למלא שם לקוחה",
       reviewTextRequired: "יש למלא תוכן ביקורת",
@@ -2695,6 +2701,7 @@ export const LOYALTY = {
     clientNotFound: "הלקוחה לא נמצאה",
     noPendingReward: "ללקוחה זו אין הטבה ממתינה למימוש",
     noRedemptionToUndo: "אין מימוש לביטול",
+    platinumRequired: "מועדון הנאמנות זמין בתוכנית Platinum.",
     generic: "משהו השתבש. נסי שוב.",
   },
 } as const;

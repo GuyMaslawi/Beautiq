@@ -7,6 +7,7 @@ import {
 } from "@/server/db/retry";
 import { runLoyaltyForBusiness } from "@/server/loyalty/runner";
 import { logger, captureError } from "@/lib/logger";
+import { bearerEquals } from "@/lib/secret-compare";
 
 // Vercel cron invokes this with GET, protected by CRON_SECRET (Bearer header).
 // Loyalty milestones are event-driven, not time-of-day-driven, so this runs on a
@@ -18,7 +19,7 @@ export const maxDuration = 300;
 export async function GET(request: Request) {
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;
-  if (!cronSecret || authHeader !== `Bearer ${cronSecret}`) {
+  if (!bearerEquals(authHeader, cronSecret)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

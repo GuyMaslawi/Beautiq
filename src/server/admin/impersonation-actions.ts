@@ -92,7 +92,12 @@ export async function stopImpersonationAction(): Promise<void> {
   const store = await cookies();
   store.delete(IMPERSONATION_COOKIE);
 
-  if (imp) {
+  // Only write the audit entry when the cookie's adminId matches the live session
+  // user. Otherwise an "impersonation stopped" record could be attributed to an
+  // admin who never acted (the cookie names the admin, so the log must not take
+  // that name on trust from an unauthenticated caller).
+  const session = await getCurrentUser();
+  if (imp && session && imp.adminId === session.id) {
     await logActivity({
       businessId: imp.businessId,
       category: "admin",

@@ -12,6 +12,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { prisma } from "@/server/db/prisma";
 import { checkEnv } from "@/lib/env";
+import { bearerEquals } from "@/lib/secret-compare";
 
 // תמיד דינמי — בריאות נמדדת בזמן אמת, ללא cache.
 export const dynamic = "force-dynamic";
@@ -26,9 +27,7 @@ function isTrue(name: string): boolean {
 }
 
 function isAuthorized(req: NextRequest): boolean {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) return false;
-  return req.headers.get("authorization") === `Bearer ${secret}`;
+  return bearerEquals(req.headers.get("authorization"), process.env.CRON_SECRET);
 }
 
 export async function GET(req: NextRequest) {

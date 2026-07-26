@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/server/db/prisma";
 import { requireTenant } from "@/server/auth/session";
 import { PUBLIC_PAGE } from "@/lib/constants/he";
+import { validateImageUrl, validateSocialField } from "@/lib/validation/url";
 
 // ---------------------------------------------------------------------------
 // Profile + intro message
@@ -36,6 +37,18 @@ export async function updatePublicProfileAction(
     return { errors: { name: "יש למלא שם עסק" }, values: raw };
   }
 
+  // Social links land in an <a href> on the public page. A bare handle is fine
+  // (the page completes it); anything URL-shaped must be https, so a
+  // `javascript:` value is rejected rather than silently prefixed.
+  const instagramUrl = raw.instagramUrl ? validateSocialField(raw.instagramUrl) : null;
+  if (raw.instagramUrl && !instagramUrl) {
+    return { errors: { instagramUrl: "הקישור אינו תקין" }, values: raw };
+  }
+  const facebookUrl = raw.facebookUrl ? validateSocialField(raw.facebookUrl) : null;
+  if (raw.facebookUrl && !facebookUrl) {
+    return { errors: { facebookUrl: "הקישור אינו תקין" }, values: raw };
+  }
+
   try {
     await prisma.business.update({
       where: { id: tenant.businessId },
@@ -44,8 +57,8 @@ export async function updatePublicProfileAction(
         description: raw.description || null,
         phone: raw.phone || null,
         addressNote: raw.addressNote || null,
-        instagramUrl: raw.instagramUrl || null,
-        facebookUrl: raw.facebookUrl || null,
+        instagramUrl,
+        facebookUrl,
         introMessage: raw.introMessage || null,
       },
     });
@@ -86,12 +99,27 @@ export async function updateBrandingAction(
     return { errors: { brandColor: "צבע לא תקין" }, values: raw };
   }
 
+  // These URLs are rendered on the public page. brandColor was already
+  // regex-validated; the URL fields were stored verbatim, which allowed
+  // `javascript:` / oversized `data:` values into columns that feed src/href.
+  const logoUrl = raw.logoUrl ? validateImageUrl(raw.logoUrl) : null;
+  if (raw.logoUrl && !logoUrl) {
+    return { errors: { logoUrl: "כתובת התמונה אינה תקינה (נדרשת כתובת https)" }, values: raw };
+  }
+  const coverImageUrl = raw.coverImageUrl ? validateImageUrl(raw.coverImageUrl) : null;
+  if (raw.coverImageUrl && !coverImageUrl) {
+    return {
+      errors: { coverImageUrl: "כתובת התמונה אינה תקינה (נדרשת כתובת https)" },
+      values: raw,
+    };
+  }
+
   try {
     await prisma.business.update({
       where: { id: tenant.businessId },
       data: {
-        logoUrl: raw.logoUrl || null,
-        coverImageUrl: raw.coverImageUrl || null,
+        logoUrl,
+        coverImageUrl,
         brandColor: raw.brandColor || null,
       },
     });
@@ -170,6 +198,15 @@ export async function addGalleryImageAction(
     return { errors: { imageUrl: PUBLIC_PAGE.gallery.errors.urlRequired } };
   }
 
+  // https only, length-capped — the value goes straight into an <img src> on the
+  // public page and into a DB column with no size limit of its own.
+  const safeImageUrl = validateImageUrl(imageUrl);
+  if (!safeImageUrl) {
+    return {
+      errors: { imageUrl: "כתובת התמונה אינה תקינה (נדרשת כתובת https)" },
+    };
+  }
+
   try {
     const maxOrder = await prisma.galleryImage.aggregate({
       where: { businessId: tenant.businessId },
@@ -180,7 +217,7 @@ export async function addGalleryImageAction(
     await prisma.galleryImage.create({
       data: {
         businessId: tenant.businessId,
-        imageUrl,
+        imageUrl: safeImageUrl,
         caption: caption || null,
         sortOrder,
       },
@@ -222,6 +259,33 @@ export async function deleteClientReviewAction(
   try {
     await prisma.clientReview.deleteMany({
       where: { id: reviewId, businessId: tenant.businessId },
+    });
+  } catch {
+    return { error: PUBLIC_PAGE.reviews.errors.generic };
+  }
+
+  revalidatePath("/public-page");
+  return {};
+}
+
+/**
+ * Publish a review that arrived from the public booking page.
+ *
+ * Public submissions are created with isApproved=false (that endpoint is
+ * unauthenticated, so anyone could otherwise write straight to a business's
+ * public reputation). Only the owner can publish, and only within her own
+ * tenant — the write is scoped by businessId, so a crafted reviewId belonging to
+ * another business simply matches nothing.
+ */
+export async function approveClientReviewAction(
+  reviewId: string,
+): Promise<{ error?: string }> {
+  const tenant = await requireTenant();
+
+  try {
+    await prisma.clientReview.updateMany({
+      where: { id: reviewId, businessId: tenant.businessId },
+      data: { isApproved: true },
     });
   } catch {
     return { error: PUBLIC_PAGE.reviews.errors.generic };

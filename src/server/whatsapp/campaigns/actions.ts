@@ -2,7 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/server/db/prisma";
-import { requireCurrentUser, getCurrentBusiness } from "@/server/auth/session";
+import {
+  requirePaidUser,
+  getCurrentBusiness,
+  hasPlatinumAccess,
+} from "@/server/auth/session";
 import { maskPhone } from "@/lib/phone";
 import { WA_CAMPAIGNS } from "@/lib/constants/whatsapp-campaigns";
 import {
@@ -24,7 +28,14 @@ import { getCampaignDetail, type CampaignDetail } from "./queries";
 // ---------------------------------------------------------------------------
 
 async function requireUserAndBusiness() {
-  const user = await requireCurrentUser();
+  // requirePaidUser (not requireCurrentUser): campaigns send real, Allura-billed
+  // WhatsApp messages, so an unpaid or admin-suspended account must not reach
+  // them by POSTing the action directly, bypassing the (app) layout guard.
+  const user = await requirePaidUser();
+  // Bulk campaigns are Platinum-tier. The page renders a PlatinumLock, but that
+  // only guards rendering — these action ids ship in the public client bundle, so
+  // the tier has to be enforced here or a Premium owner can POST straight to it.
+  if (!(await hasPlatinumAccess())) throw new Error("plan_locked");
   const business = await getCurrentBusiness();
   if (!business) throw new Error("no_business");
   return { user, business, tenant: { businessId: business.id } };

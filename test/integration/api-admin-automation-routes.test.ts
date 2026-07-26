@@ -40,10 +40,25 @@ import { POST as reminderPOST } from "@/app/api/admin/automation/reminder-now/ro
 import { POST as reviewPOST } from "@/app/api/admin/automation/review-now/route";
 import { POST as reviewTestPOST } from "@/app/api/admin/whatsapp/review-test-send/route";
 
+/**
+ * A request as a browser would send it from our own app. `Sec-Fetch-Site` is set
+ * by the browser (not reachable from JS), and these routes now require it to be
+ * same-origin — custom route handlers get no CSRF protection from Next.js, and
+ * these trigger outbound WhatsApp sends across tenants.
+ */
 function req(body?: unknown): Request {
   return new Request("http://localhost/x", {
     method: "POST",
-    headers: { "content-type": "application/json" },
+    headers: { "content-type": "application/json", "sec-fetch-site": "same-origin" },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  });
+}
+
+/** A cross-site request — what a CSRF attempt from an attacker page looks like. */
+function crossSiteReq(body?: unknown): Request {
+  return new Request("http://localhost/x", {
+    method: "POST",
+    headers: { "content-type": "application/json", "sec-fetch-site": "cross-site" },
     body: body === undefined ? undefined : JSON.stringify(body),
   });
 }
@@ -74,6 +89,16 @@ describe("POST /api/admin/automation/run-now (win-back)", () => {
   it("403 for non-admins, runner never called", async () => {
     getCurrentUser.mockResolvedValue({ id: "u1", isAdmin: false });
     const res = await runNowPOST(req({}));
+    expect(res.status).toBe(403);
+    expect(runWinBack).not.toHaveBeenCalled();
+  });
+
+  // A cross-site POST is refused before the session is even consulted, so an
+  // attacker page cannot ride an authenticated admin's cookie into a
+  // platform-wide WhatsApp send.
+  it("403 for a cross-site request, even from a real admin", async () => {
+    getCurrentUser.mockResolvedValue({ id: "a", isAdmin: true });
+    const res = await runNowPOST(crossSiteReq({}));
     expect(res.status).toBe(403);
     expect(runWinBack).not.toHaveBeenCalled();
   });
@@ -124,7 +149,11 @@ describe("POST /api/admin/automation/run-now (win-back)", () => {
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body.results[0].success).toBe(false);
-    expect(body.results[0].error).toContain("boom");
+    // The response carries an opaque code, never the raw error text: a JS/Prisma
+    // message can leak table, constraint or provider internals. The detail is
+    // logged server-side instead.
+    expect(body.results[0].error).toBe("run_failed");
+    expect(body.results[0].error).not.toContain("boom");
   });
 });
 

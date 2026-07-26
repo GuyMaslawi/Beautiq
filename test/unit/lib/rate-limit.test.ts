@@ -40,9 +40,20 @@ describe("getClientIp", () => {
     return { get: (name: string) => map[name.toLowerCase()] ?? null };
   }
 
-  it("uses the first IP from x-forwarded-for", () => {
+  // The RIGHTMOST x-forwarded-for hop is the one appended by the closest trusted
+  // proxy. Taking the leftmost value would let a caller mint a fresh rate-limit
+  // bucket per request with a forged header, neutralising every limit.
+  it("uses the last (trusted) IP from x-forwarded-for", () => {
     const h = headersFrom({ "x-forwarded-for": "1.2.3.4, 5.6.7.8" });
-    expect(getClientIp(h)).toBe("1.2.3.4");
+    expect(getClientIp(h)).toBe("5.6.7.8");
+  });
+
+  it("prefers the platform-set x-real-ip over a client-supplied x-forwarded-for", () => {
+    const h = headersFrom({
+      "x-real-ip": "9.9.9.9",
+      "x-forwarded-for": "1.2.3.4",
+    });
+    expect(getClientIp(h)).toBe("9.9.9.9");
   });
 
   it("falls back to x-real-ip", () => {

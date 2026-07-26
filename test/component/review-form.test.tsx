@@ -79,7 +79,9 @@ describe("PublicReviewForm — success state", () => {
     renderForm();
     await userEvent.click(screen.getByRole("button", { name: "שליחת ביקורת" }));
     expect(await screen.findByText("תודה רבה על הביקורת!")).toBeInTheDocument();
-    expect(screen.getByText("הביקורת שלך התקבלה בהצלחה.")).toBeInTheDocument();
+    expect(
+      screen.getByText("הביקורת שלך התקבלה ותתפרסם לאחר אישור העסק."),
+    ).toBeInTheDocument();
   });
 });
 

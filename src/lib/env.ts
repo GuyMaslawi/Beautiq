@@ -145,6 +145,15 @@ export function checkEnv(): EnvCheckResult {
         "NEXT_PUBLIC_APP_URL חסר — נדרש כדי לבנות את כתובת ה-notifyUrl שאליה Grow מדווח על התשלום.",
       );
     }
+    // Grow אינו חותם על ההודעות שהוא שולח, ולכן זהו הסוד היחיד שמאמת שההודעה
+    // אכן הגיעה מ-Grow. בלעדיו ה-Webhook דוחה כל בקשה (fail closed) והחיובים
+    // החודשיים לא ייקלטו — לכן זו שגיאה חוסמת ולא אזהרה.
+    if (!isSet("SUBSCRIPTION_WEBHOOK_SECRET")) {
+      errors.push(
+        "SUBSCRIPTION_WEBHOOK_SECRET חסר — SUBSCRIPTIONS_ENABLED=true אך אין סוד לאימות הודעות התשלום מ-Grow. " +
+          "ה-Webhook ידחה כל הודעה עד שיוגדר (openssl rand -base64 32).",
+      );
+    }
   }
 
   return { errors, warnings };

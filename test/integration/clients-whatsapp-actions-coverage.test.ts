@@ -23,8 +23,12 @@ const prisma = (globalThis as Record<string, unknown>).__prismaMock as ReturnTyp
 vi.mock("next/cache", () => ({ revalidatePath: vi.fn() }));
 
 const requireCurrentBusiness = vi.fn(async () => ({ id: BUSINESS_A, name: "סטודיו יופי" }));
+// manual_test is admin-only (it dispatches Metas English hello_world template),
+// so the action re-checks isAdmin server-side rather than trusting the caller.
+const getCurrentUser = vi.fn(async () => ({ id: "admin", isAdmin: true }));
 vi.mock("@/server/auth/session", () => ({
   requireCurrentBusiness: (...a: unknown[]) => (requireCurrentBusiness as (...x: unknown[]) => unknown)(...a),
+  getCurrentUser: () => getCurrentUser(),
 }));
 
 const send = vi.fn();

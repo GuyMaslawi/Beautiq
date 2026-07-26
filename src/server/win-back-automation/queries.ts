@@ -34,11 +34,51 @@ export async function getWinBackAutomationSetting(
 // WhatsApp connection
 // ---------------------------------------------------------------------------
 
+/**
+ * Public-safe view of the business's WhatsApp connection.
+ *
+ * NEVER select accessTokenEncrypted / wabaId / phoneNumberId here: the result is
+ * passed into client components, so anything selected is serialised into the RSC
+ * payload and visible in the browser. This used to return the whole row, which
+ * meant one line wiring it into a client prop would have leaked the encrypted
+ * access token and Meta identifiers.
+ */
+export type WhatsAppConnectionSummary = Pick<
+  WhatsAppConnection,
+  | "id"
+  | "businessId"
+  | "provider"
+  | "phoneNumber"
+  | "status"
+  | "connectionSource"
+  | "numberConfirmedAt"
+  // Webhook activity timestamps — diagnostics only, no secrets.
+  | "lastWebhookReceivedAt"
+  | "lastDeliveryEventAt"
+  | "lastReadEventAt"
+  | "createdAt"
+  | "updatedAt"
+>;
+
 export async function getWhatsAppConnection(
   tenant: TenantContext,
-): Promise<WhatsAppConnection | null> {
+): Promise<WhatsAppConnectionSummary | null> {
   return prisma.whatsAppConnection.findUnique({
     where: { businessId: tenant.businessId },
+    select: {
+      id: true,
+      businessId: true,
+      provider: true,
+      phoneNumber: true,
+      status: true,
+      connectionSource: true,
+      numberConfirmedAt: true,
+      lastWebhookReceivedAt: true,
+      lastDeliveryEventAt: true,
+      lastReadEventAt: true,
+      createdAt: true,
+      updatedAt: true,
+    },
   });
 }
 
@@ -127,7 +167,7 @@ export async function getWinBackStatsThisMonth(
 
 export interface WinBackAutomationData {
   setting: AutomationSetting | null;
-  connection: WhatsAppConnection | null;
+  connection: WhatsAppConnectionSummary | null;
   lastRun: AutomationRun | null;
   stats: WinBackStats;
   eligibleCount: number;

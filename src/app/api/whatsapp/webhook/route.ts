@@ -24,6 +24,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type { WhatsAppCampaignRecipientStatus } from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
 import { normalizePhone } from "@/lib/phone";
+import { secretEquals } from "@/lib/secret-compare";
 
 // This endpoint must never be statically optimized or cached: Meta calls it with
 // per-request query params (verification) and live event payloads (POST). Pin it
@@ -247,7 +248,10 @@ async function updateCampaignRecipientStatus(
 // Process a single incoming message (STOP handling)
 // ---------------------------------------------------------------------------
 
-async function processIncomingMessage(incomingMsg: MetaIncomingMessage): Promise<void> {
+async function processIncomingMessage(
+  incomingMsg: MetaIncomingMessage,
+  phoneNumberId?: string,
+): Promise<void> {
   if (incomingMsg.type !== "text" || !incomingMsg.text?.body) return;
 
   const body = incomingMsg.text.body;
@@ -256,9 +260,48 @@ async function processIncomingMessage(incomingMsg: MetaIncomingMessage): Promise
   const senderPhone = normalizePhone(incomingMsg.from);
   const now = new Date();
 
-  // Opt-out all client records matching this phone across all businesses
+  // Which business received this STOP? Meta tells us in the metadata. This
+  // matters because Client is tenant-owned (@@unique([businessId,
+  // normalizedPhone])): one phone number is N independent rows, one per business
+  // that has that person as a client.
+  //
+  // Previously the opt-out was applied to EVERY matching row across all
+  // businesses (CLAUDE.md §10 violation): someone replying STOP to business A
+  // silently killed reminders, review requests and loyalty messages for
+  // businesses B and C too, with no audit trail and no way for those owners to
+  // know why. In the per-business Embedded-Signup mode the sender may have no
+  // relationship with B and C at all.
+  //
+  // A STOP to the SHARED Allura-managed number is genuinely platform-wide (it is
+  // one sender identity for every business), so that case still opts out
+  // globally — but only that case, and only when we can confirm it.
+  const managedPhoneNumberId = process.env.META_WHATSAPP_PHONE_NUMBER_ID?.trim();
+  const isSharedManagedNumber =
+    !!phoneNumberId && !!managedPhoneNumberId && phoneNumberId === managedPhoneNumberId;
+
+  let scopedBusinessId: string | null = null;
+  if (!isSharedManagedNumber && phoneNumberId) {
+    const connection = await prisma.whatsAppConnection.findFirst({
+      where: { phoneNumberId },
+      select: { businessId: true },
+    });
+    scopedBusinessId = connection?.businessId ?? null;
+    if (!scopedBusinessId) {
+      // Unknown number and not the managed one — we cannot attribute this
+      // opt-out to a tenant, so we must not write across all of them.
+      console.log(
+        "[WhatsApp webhook] opt-out from unrecognised phone_number_id — ignored " +
+          `phoneNumberId=${phoneNumberId}`,
+      );
+      return;
+    }
+  }
+
   const updated = await prisma.client.updateMany({
-    where: { normalizedPhone: senderPhone },
+    where: {
+      normalizedPhone: senderPhone,
+      ...(scopedBusinessId ? { businessId: scopedBusinessId } : {}),
+    },
     data: {
       whatsappOptIn: false,
       marketingOptIn: false,
@@ -292,9 +335,13 @@ async function processChange(change: MetaWebhookChange): Promise<void> {
   const statusEvents = value.statuses ?? [];
   const incomingMessages = value.messages ?? [];
 
+  // Meta names the receiving number here — the opt-out handler needs it to
+  // attribute a STOP to the right tenant instead of writing across all of them.
+  const phoneNumberId = value.metadata?.phone_number_id;
+
   await Promise.allSettled([
     ...statusEvents.map((s) => processStatusEvent(s)),
-    ...incomingMessages.map((m) => processIncomingMessage(m)),
+    ...incomingMessages.map((m) => processIncomingMessage(m, phoneNumberId)),
   ]);
 }
 
@@ -314,7 +361,7 @@ export async function GET(request: NextRequest) {
   const token = (searchParams.get("hub.verify_token") ?? "").trim();
   const verifyToken = (process.env.META_WEBHOOK_VERIFY_TOKEN ?? "").trim();
 
-  const tokenMatches = verifyToken.length > 0 && token === verifyToken;
+  const tokenMatches = secretEquals(token, verifyToken);
 
   // Safe debug log — never logs the token value itself, only metadata.
   console.log(

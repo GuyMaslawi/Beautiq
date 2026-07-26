@@ -16,6 +16,22 @@ export type PublicBookingValidationResult =
   | { ok: true; value: PublicBookingInput }
   | { ok: false; errors: FieldErrors };
 
+/**
+ * הטופס הציבורי פתוח לכל אדם אנונימי, ולכן חייב גבולות מפורשים: בלי תקרת
+ * אורך אפשר לשמור מגה-בייטים של טקסט בכל בקשת תור, ובלי הסרת תווי בקרה
+ * אפשר להזריק שורות חדשות לתוך הודעות WhatsApp ולתבניות האימייל לבעלת העסק.
+ */
+const MAX_CLIENT_NAME = 80;
+const MAX_NOTE = 500;
+
+/** מסיר תווי בקרה (שורה חדשה, טאב וכו') ומכווץ רווחים — טקסט חד-שורתי נקי. */
+function stripControlChars(value: string): string {
+  return value
+    .replace(/\p{Cc}/gu, " ")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
 export function validatePublicBooking(
   raw: Record<string, string>,
 ): PublicBookingValidationResult {
@@ -24,8 +40,12 @@ export function validatePublicBooking(
   const serviceId = (raw.serviceId ?? "").trim();
   if (!serviceId) errors.serviceId = PUBLIC_BOOKING.errors.serviceRequired;
 
-  const clientName = (raw.clientName ?? "").trim();
-  if (!clientName) errors.clientName = PUBLIC_BOOKING.errors.clientNameRequired;
+  const clientName = stripControlChars(raw.clientName ?? "");
+  if (!clientName) {
+    errors.clientName = PUBLIC_BOOKING.errors.clientNameRequired;
+  } else if (clientName.length > MAX_CLIENT_NAME) {
+    errors.clientName = PUBLIC_BOOKING.errors.clientNameTooLong;
+  }
 
   const phone = (raw.phone ?? "").trim();
   if (!phone) {
@@ -51,7 +71,10 @@ export function validatePublicBooking(
     errors.requestedTime = PUBLIC_BOOKING.errors.timeRequired;
   }
 
-  const note = (raw.note ?? "").trim();
+  const note = stripControlChars(raw.note ?? "");
+  if (note.length > MAX_NOTE) {
+    errors.note = PUBLIC_BOOKING.errors.noteTooLong;
+  }
 
   if (Object.keys(errors).length > 0) return { ok: false, errors };
 

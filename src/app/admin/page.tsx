@@ -21,6 +21,7 @@ import {
   getRecentPlatformActivity,
 } from "@/server/admin/platform-analytics";
 import { Card } from "@/components/ui/card";
+import { requirePlatformAdmin } from "@/server/admin/auth";
 import { PlatformAnalyticsSection } from "./_components/platform-analytics-section";
 import { PlatformActivityFeed } from "./_components/platform-activity-feed";
 
@@ -60,6 +61,12 @@ function formatILS(amount: number): string {
 }
 
 export default async function AdminPage() {
+  // Self-guard in addition to the admin layout: Next.js does not re-run a layout
+  // on a soft client-side navigation between sibling pages, so a user whose admin
+  // rights were revoked mid-session could still reach this cross-tenant platform
+  // view from another /admin page until a full reload.
+  await requirePlatformAdmin();
+
   const [stats, revenue, platform, activity] = await Promise.all([
     getAdminOverviewStats(),
     getAccountSubscriptionRevenue(),

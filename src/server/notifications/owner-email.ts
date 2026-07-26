@@ -17,6 +17,7 @@
 
 import { prisma } from "@/server/db/prisma";
 import { sendEmail } from "@/lib/email/send";
+import { escapeHtml } from "@/lib/email/html";
 import { logger } from "@/lib/logger";
 import { APP_URL } from "@/lib/config";
 
@@ -171,14 +172,16 @@ function buildEmailHtml(v: {
   timeStr: string;
   priceStr: string | null;
 }): string {
+  // כל ערך דינמי עובר escaping: שם הלקוחה והטלפון מקורם בטופס ציבורי
+  // ואנונימי, ובלי זה ניתן להזריק HTML/קישור זדוני לאימייל של בעלת העסק.
   const row = (label: string, value: string) =>
     `<tr><td style="padding:4px 12px 4px 0;color:#8a7f86;white-space:nowrap">${label}</td>` +
-    `<td style="padding:4px 0;color:#2b2229;font-weight:600">${value}</td></tr>`;
+    `<td style="padding:4px 0;color:#2b2229;font-weight:600">${escapeHtml(value)}</td></tr>`;
   return `<!doctype html><html dir="rtl" lang="he"><body style="margin:0;background:#faf7f8;font-family:'Segoe UI',Arial,sans-serif">
   <div style="max-width:480px;margin:0 auto;padding:24px">
     <div style="background:#fff;border-radius:16px;padding:24px;border:1px solid #efe6ec">
-      <h1 style="font-size:18px;margin:0 0 4px;color:#2b2229">${v.headline} ✨</h1>
-      <p style="margin:0 0 16px;color:#8a7f86;font-size:14px">היי ${v.ownerName}, עדכון מ־Allura על פעולה בתור.</p>
+      <h1 style="font-size:18px;margin:0 0 4px;color:#2b2229">${escapeHtml(v.headline)} ✨</h1>
+      <p style="margin:0 0 16px;color:#8a7f86;font-size:14px">היי ${escapeHtml(v.ownerName)}, עדכון מ־Allura על פעולה בתור.</p>
       <table style="font-size:14px;border-collapse:collapse;width:100%">
         ${row("לקוחה", v.clientName)}
         ${row("טלפון", v.clientPhone)}

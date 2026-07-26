@@ -16,11 +16,12 @@
  *   5. acknowledge back to Grow (best-effort, via the optional Make approve webhook).
  */
 
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 import { AccountSubscriptionStatus, type AccountSubscription } from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
 import { parseCallback, approveTransaction } from "@/lib/subscription/grow";
 import { confirmSubscriptionPayment, markRenewalFailed } from "@/server/subscription/service";
+import { secretEquals } from "@/lib/secret-compare";
 import { logger, captureError } from "@/lib/logger";
 
 export const dynamic = "force-dynamic";
@@ -47,15 +48,48 @@ function parseBody(raw: string, contentType: string): Record<string, unknown> {
   return flat;
 }
 
-/** Timing-safe-ish equality for short secrets. */
-function safeEqual(a: string | null | undefined, b: string | null | undefined): boolean {
-  if (!a || !b || a.length !== b.length) return false;
-  let diff = 0;
-  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
-  return diff === 0;
+/**
+ * The endpoint secret every notification must present.
+ *
+ * Grow itself signs nothing, so the sender is authenticated with a secret we
+ * embed in the notifyUrl when the payment link is created (`?t=<secret>`) — Grow
+ * POSTs back to exactly that URL, so no Make-scenario change is needed. A header
+ * is also accepted for scenarios that prefer to send one explicitly.
+ *
+ * Fails CLOSED: with no secret configured every notification is rejected, and
+ * checkEnv() makes the variable a hard startup error whenever SUBSCRIPTIONS_ENABLED
+ * is on, so a misconfiguration surfaces at boot rather than as silent free access.
+ */
+function isAuthenticSender(req: Request): boolean {
+  const secret = process.env.SUBSCRIPTION_WEBHOOK_SECRET?.trim();
+  if (!secret) return false;
+
+  // Read the query via the standard URL API rather than `nextUrl`, so the check
+  // behaves identically for any Request shape reaching this handler.
+  let token: string | null = null;
+  try {
+    token = new URL(req.url).searchParams.get("t");
+  } catch {
+    token = null;
+  }
+
+  return (
+    secretEquals(token, secret) ||
+    secretEquals(req.headers.get("x-allura-webhook-secret"), secret)
+  );
 }
 
-export async function POST(req: NextRequest) {
+export async function POST(req: Request) {
+  // ── Gate 1: authenticate the SENDER, for every notification type ───────────
+  // Without this, anyone who learns or guesses a Grow directDebitId can POST a
+  // forged "paid" renewal (free plan forever) or a forged "failed" one (lapsing
+  // a paying customer). The per-transaction processToken check below only ever
+  // covered the FIRST charge, leaving every recurring run unauthenticated.
+  if (!isAuthenticSender(req)) {
+    logger.warn("[subscription.webhook] rejected — sender not authenticated");
+    return new NextResponse("Unauthorized", { status: 401 });
+  }
+
   const rawBody = await req.text();
   const contentType = req.headers.get("content-type") ?? "";
 
@@ -95,9 +129,11 @@ export async function POST(req: NextRequest) {
   // nonce (cField1) is a bonus check when present, but the token alone is
   // sufficient, so a scenario that does not round-trip cField1 still works.
   if (matchedByProcess) {
-    const tokenOk = safeEqual(subscription.processToken, event.processToken);
+    const tokenOk = secretEquals(subscription.processToken, event.processToken);
     const nonceMismatch =
-      !!subscription.checkoutNonce && !!event.nonce && !safeEqual(subscription.checkoutNonce, event.nonce);
+      !!subscription.checkoutNonce &&
+      !!event.nonce &&
+      !secretEquals(subscription.checkoutNonce, event.nonce);
     if (!tokenOk || nonceMismatch) {
       logger.warn("[subscription.webhook] authentication failed", {
         processId: event.processId,
@@ -108,16 +144,33 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // A cancelled/expired subscription must never be revived by a late recurring
-  // charge (e.g. Grow ran the standing order once more before it was stopped).
+  // A cancelled/expired subscription must never be revived — not by a late
+  // recurring charge (Grow ran the standing order once more before it was
+  // stopped) and not by anything else. This deliberately does NOT depend on
+  // `event.isRecurringRun`: that flag is derived from attacker-controllable body
+  // fields (paymentSource/paymentType), so gating on it let a crafted callback
+  // that simply omitted them resurrect a dead subscription.
   if (
-    event.isRecurringRun &&
-    (subscription.status === AccountSubscriptionStatus.cancelled ||
-      subscription.status === AccountSubscriptionStatus.expired)
+    subscription.status === AccountSubscriptionStatus.cancelled ||
+    subscription.status === AccountSubscriptionStatus.expired
   ) {
-    logger.warn("[subscription.webhook] recurring charge on cancelled/expired sub — ignored", {
+    logger.warn("[subscription.webhook] charge on cancelled/expired sub — ignored", {
       subscriptionId: subscription.id,
       status: subscription.status,
+      recurring: event.isRecurringRun,
+    });
+    return new NextResponse("OK", { status: 200 });
+  }
+
+  // The charge must be for the price we actually authorized. Without this, a
+  // standing order left running at the OLD plan's price (e.g. ₪149 Premium)
+  // activates whatever plan the row currently names (₪249 Platinum) — paid
+  // features at the cheaper price, renewing every month.
+  if (event.sumMinor !== undefined && event.sumMinor !== subscription.priceMinor) {
+    logger.warn("[subscription.webhook] amount mismatch — ignored", {
+      subscriptionId: subscription.id,
+      expected: subscription.priceMinor,
+      received: event.sumMinor,
     });
     return new NextResponse("OK", { status: 200 });
   }

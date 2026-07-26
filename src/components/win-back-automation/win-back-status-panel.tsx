@@ -19,8 +19,12 @@ import {
   triggerWinBackRun,
   sendWhatsAppTestMessage,
 } from "@/server/win-back-automation/actions";
-import type { AutomationSetting, WhatsAppConnection, AutomationRun } from "@prisma/client";
-import type { WinBackStats, EligibilityBreakdown } from "@/server/win-back-automation/queries";
+import type { AutomationSetting, AutomationRun } from "@prisma/client";
+import type {
+  WinBackStats,
+  EligibilityBreakdown,
+  WhatsAppConnectionSummary,
+} from "@/server/win-back-automation/queries";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -129,7 +133,10 @@ function BreakdownPanel({ breakdown }: { breakdown: EligibilityBreakdown }) {
 
 interface Props {
   setting: AutomationSetting | null;
-  connection: WhatsAppConnection | null;
+  // Summary type, never the full Prisma row: this is a client component, so
+  // every selected field is serialised into the RSC payload and readable in the
+  // browser — the row carries accessTokenEncrypted / wabaId / phoneNumberId.
+  connection: WhatsAppConnectionSummary | null;
   lastRun: AutomationRun | null;
   stats: WinBackStats;
   eligibleCount: number;

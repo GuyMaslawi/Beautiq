@@ -14,6 +14,7 @@ import {
   addGalleryImageAction,
   deleteGalleryImageAction,
   deleteClientReviewAction,
+  approveClientReviewAction,
 } from "@/server/public-page/actions";
 import { PublicProfileForm } from "@/components/public-page/public-profile-form";
 import { BrandingForm } from "@/components/public-page/branding-form";
@@ -138,6 +139,7 @@ export default async function PublicPageSettingsPage() {
         <ReviewsManager
           reviews={reviews}
           deleteAction={deleteClientReviewAction}
+          approveAction={approveClientReviewAction}
         />
       </Section>
 
