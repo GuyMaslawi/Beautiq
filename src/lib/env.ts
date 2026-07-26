@@ -90,6 +90,25 @@ export function checkEnv(): EnvCheckResult {
         "RESEND_API_KEY / EMAIL_FROM לא מוגדרים — התראות אימייל לבעלת העסק על בקשות תור חדשות לא יישלחו.",
       );
     }
+    // העלאת תמונות (לוגו / תמונת נושא / גלריה) נשמרת ב-Vercel Blob. הטוקן מוזרק
+    // אוטומטית כשמחברים Blob store לפרויקט; בלעדיו כל העלאה נכשלת.
+    if (!isSet("BLOB_READ_WRITE_TOKEN")) {
+      warnings.push(
+        "BLOB_READ_WRITE_TOKEN לא מוגדר — העלאת תמונות (לוגו, תמונת נושא, גלריה) תיכשל. " +
+          "חברו Vercel Blob store לפרויקט (Vercel → Storage → Blob).",
+      );
+    }
+    // כל בעלת עסק חייבת לשלם מחיר מלא. כשחיוב אמיתי אינו מחובר בייצור, מסך
+    // /subscribe חוסם את עצמו (ולא מעניק תוכנית בחינם) — כלומר אף בעלת עסק
+    // חדשה לא תוכל להשלים הרשמה עד שהחיוב יחובר. אזהרה ולא שגיאה, כדי שלקוחות
+    // משלמות קיימות לא יאבדו גישה בגלל תצורת חיוב חסרה.
+    if (!isTrue("SUBSCRIPTIONS_ENABLED")) {
+      warnings.push(
+        "SUBSCRIPTIONS_ENABLED אינו true בייצור — מסלול התשלום סגור: בעלות עסק חדשות " +
+          "לא יוכלו להפעיל מנוי (ולא יקבלו גישה בחינם). להשקה עם חיוב אמיתי הגדירו " +
+          "SUBSCRIPTIONS_ENABLED=true, MAKE_GROW_CREATE_LINK_WEBHOOK_URL ו-SUBSCRIPTION_WEBHOOK_SECRET.",
+      );
+    }
   }
 
   // ── WhatsApp — נבדק רק כששליחה אמיתית מופעלת ──────────────────

@@ -30,7 +30,28 @@ Production environment.
 |---|---|---|
 | `CRON_SECRET` | authorizes incoming `/api/cron/*` calls (401 without it) | `openssl rand -hex 32` |
 | `AUTH_URL` | full app domain for auth redirects | e.g. `https://app.allura.info` |
-| `NEXT_PUBLIC_APP_URL` | base for external links in WhatsApp/booking messages (defaults to `https://allura.info` with a warning) | your real domain |
+| `NEXT_PUBLIC_APP_URL` | base for external links in WhatsApp/booking messages (defaults to `https://allura.info` with a warning). Also inlined into `robots.txt` / `sitemap.xml` **at build time** | your real domain |
+| `DIRECT_URL` | non-pooler DB host — `prisma migrate deploy` runs in the Vercel build command, and `schema.prisma` declares `directUrl`. **Missing → the deploy itself fails** | Neon direct host (no `-pooler`) |
+| `BLOB_READ_WRITE_TOKEN` | image uploads (logo / cover / gallery). Injected automatically when a Blob store is connected | Vercel → Storage → Blob → Connect |
+
+### Billing is mandatory — everyone pays full price
+Every owner pays the full plan price. `User.plan` is set in exactly two places:
+a payment Grow confirmed server-side ([service.ts](../src/server/subscription/service.ts)),
+or a deliberate admin grant ([account-actions.ts](../src/server/admin/account-actions.ts)).
+An owner who signed up but hasn't paid simply has no plan and sits behind
+`/subscribe` — that is the only free state, and only an admin can convert it.
+
+| Variable | Purpose |
+|---|---|
+| `SUBSCRIPTIONS_ENABLED=true` | master switch for real Grow billing |
+| `MAKE_GROW_CREATE_LINK_WEBHOOK_URL` | Make scenario that creates the Grow payment link |
+| `SUBSCRIPTION_WEBHOOK_SECRET` | authenticates Grow's payment notifications (`openssl rand -base64 32`) |
+
+> **Without these, checkout fails closed in production** — the owner gets a
+> Hebrew retry message and **no plan is granted**. `checkEnv()` warns at boot and
+> every blocked attempt logs an `[ERROR]`. Never deploy expecting the dev
+> shortcut: outside production it activates a plan instantly with no charge, and
+> that path is hard-blocked in production on purpose.
 
 ### Required to actually send WhatsApp (when `ENABLE_REAL_WHATSAPP_SEND=true`)
 | Variable | Purpose |

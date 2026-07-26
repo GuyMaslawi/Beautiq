@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 import { getCurrentUser, getCurrentBusiness } from "@/server/auth/session";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { captureError } from "@/lib/logger";
 
 /** The only image types we accept — verified from the file's magic bytes. */
 type AllowedType = "image/jpeg" | "image/png" | "image/webp";
@@ -133,10 +134,22 @@ export async function POST(request: Request) {
   const ext = sniffed.split("/")[1];
   const filename = `businesses/${tenant.businessId}/${Date.now()}.${ext}`;
 
-  const blob = await put(filename, file, {
-    access: "public",
-    contentType: sniffed,
-  });
-
-  return NextResponse.json({ url: blob.url });
+  // The blob store is external and can fail for reasons the owner can do nothing
+  // about — most commonly BLOB_READ_WRITE_TOKEN missing because no Vercel Blob
+  // store is connected to the deployment. Unhandled, that surfaced as a raw 500
+  // with an English stack trace in a Hebrew-only product, so it is caught and
+  // reported as a plain retryable message while the real cause goes to the log.
+  try {
+    const blob = await put(filename, file, {
+      access: "public",
+      contentType: sniffed,
+    });
+    return NextResponse.json({ url: blob.url });
+  } catch (err) {
+    captureError("upload.put", err, { businessId: tenant.businessId });
+    return NextResponse.json(
+      { error: "העלאת התמונה נכשלה. נסי שוב בעוד רגע." },
+      { status: 502 },
+    );
+  }
 }

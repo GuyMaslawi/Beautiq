@@ -7,6 +7,7 @@ import { requireCurrentUser } from "@/server/auth/session";
 import { planPriceMinor, confirmSubscriptionPayment } from "@/server/subscription/service";
 import { isGrowConfigured, createPaymentLink, cancelDirectDebit } from "@/lib/subscription/grow";
 import { PLANS } from "@/lib/plans";
+import { SUPPORT_EMAIL } from "@/lib/config";
 import { logger, captureError } from "@/lib/logger";
 
 /**
@@ -18,8 +19,15 @@ import { logger, captureError } from "@/lib/logger";
  * actually activated once a payment is CONFIRMED server-side (the Grow webhook
  * or the return route), never from this call.
  *
- * When Grow is not configured (dev / tests) we fall back to an instant local
- * activation so the app stays runnable without an external service.
+ * Paying is mandatory: EVERY business owner pays the full plan price. There are
+ * exactly two ways `User.plan` is ever set — a payment confirmed server-side by
+ * Grow (confirmSubscriptionPayment), or a deliberate admin grant
+ * (adminSetAccountPlanAction). A signed-up owner who has not paid simply has no
+ * plan and sits behind the /subscribe gate, which is the only "free" state.
+ *
+ * Outside production (dev / tests) an instant local activation keeps the app
+ * runnable without Grow. That shortcut is hard-blocked in production — see
+ * assertCheckoutAvailable below.
  */
 
 export interface CheckoutResult {
@@ -43,6 +51,28 @@ function appBaseUrl(): string {
 }
 
 /**
+ * In production, refuse to run checkout at all unless real Grow billing is wired.
+ *
+ * Without this, a missing `SUBSCRIPTIONS_ENABLED` / `MAKE_GROW_CREATE_LINK_WEBHOOK_URL`
+ * in the deployment silently turned the paywall into a giveaway: the dev shortcut
+ * below activated a full Premium/Platinum plan for anyone who clicked, with no
+ * charge and nothing in the logs to notice. Free access must be a decision the
+ * admin makes per account, never a side effect of configuration.
+ *
+ * Checked BEFORE any write, because the code below resets the subscription row
+ * (clearing `directDebitId`) — bailing out afterwards would cut an existing
+ * paying customer loose from her live standing order.
+ */
+function assertCheckoutAvailable(): string | null {
+  if (isGrowConfigured()) return null;
+  if (process.env.NODE_ENV !== "production") return null;
+  return (
+    "התשלום אינו זמין כרגע ולכן לא ניתן להפעיל את המנוי. " +
+    `נסי שוב בעוד מספר דקות, ואם התקלה חוזרת פני אלינו ב-${SUPPORT_EMAIL}.`
+  );
+}
+
+/**
  * Start checkout for the chosen plan. Handles both the signup paywall and the
  * Premium→Platinum upgrade (any target plan that differs from the current one).
  * `planId` is validated server-side — never trust the client to name a plan.
@@ -55,6 +85,17 @@ export async function startSubscriptionCheckoutAction(
   const plan = parsePlan(planId);
   if (!plan) {
     return { ok: false, error: "בחירת תוכנית לא תקינה. נסי שוב." };
+  }
+
+  const unavailable = assertCheckoutAvailable();
+  if (unavailable) {
+    logger.error(
+      "[subscription.checkout] blocked — billing is not configured in production. " +
+        "Set SUBSCRIPTIONS_ENABLED=true and MAKE_GROW_CREATE_LINK_WEBHOOK_URL. " +
+        "No plan was granted.",
+      { userId: user.id, plan },
+    );
+    return { ok: false, error: unavailable };
   }
 
   // Capture the current standing order (if any) before we overwrite the row —
@@ -103,7 +144,8 @@ export async function startSubscriptionCheckoutAction(
     },
   });
 
-  // ── Dev / unconfigured fallback: activate immediately, no external charge. ──
+  // ── Dev / test only: activate immediately, no external charge. ─────────────
+  // Unreachable in production — assertCheckoutAvailable() returned above.
   if (!isGrowConfigured()) {
     await confirmSubscriptionPayment(subscription, {});
     return { ok: true, redirectUrl: "/dashboard" };
