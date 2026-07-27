@@ -80,7 +80,15 @@ describe("meta-cloud-api send()", () => {
     toPhone: "+972501112222",
     templateId: "booking_confirmation_he",
     templateLanguage: "he",
-    templateVariables: { "1": "דנה", "2": "מניקור" },
+    // חייב להיות מספר המשתנים האמיתי של התבנית (5). קודם היו כאן שניים בלבד —
+    // מצב שמעולם לא היה תקין מול Meta, והשומר החדש חוסם אותו לפני השליחה.
+    templateVariables: {
+      "1": "דנה",
+      "2": "סטודיו ביוטי",
+      "3": "מניקור",
+      "4": "שלישי 18.6",
+      "5": "10:30",
+    },
     fallbackText: "fallback",
     automationRunId: "run_1",
     clientId: "cli_1",
@@ -107,7 +115,10 @@ describe("meta-cloud-api send()", () => {
     expect(body.template.language.code).toBe("he");
     expect(body.template.components[0].parameters).toEqual([
       { type: "text", text: "דנה" },
+      { type: "text", text: "סטודיו ביוטי" },
       { type: "text", text: "מניקור" },
+      { type: "text", text: "שלישי 18.6" },
+      { type: "text", text: "10:30" },
     ]);
     assertTokenOnlyInAuthHeader();
   });
@@ -185,6 +196,33 @@ describe("meta-cloud-api send()", () => {
     const res = await provider.send({ ...baseParams, templateId: undefined });
     expect(res.success).toBe(false);
     expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  // רגרסיה: שליחה ידנית מנהלתית בחרה תבנית אמיתית אך לא סיפקה לה משתנים,
+  // ו-Meta החזירה 131008 גנרי. עכשיו זה נחסם לפני היציאה, עם הודעה בעברית.
+  it("blocks a known template sent with too few variables, before any fetch", async () => {
+    const res = await provider.send({
+      ...baseParams,
+      templateId: "win_back_offer_he", // מחייבת 2 משתנים
+      templateVariables: undefined,
+    });
+    expect(res.success).toBe(false);
+    expect(res.failureReason).toContain("2");
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  // תבנית שהעסק הגדיר בעצמו אינה מוכרת לנו — אסור שהשומר יחסום אותה.
+  it("does not block a template Allura does not define", async () => {
+    fetchSpy.mockResolvedValue(
+      jsonResponse({ messaging_product: "whatsapp", messages: [{ id: "wamid.X" }] }, 200),
+    );
+    const res = await provider.send({
+      ...baseParams,
+      templateId: "some_custom_business_template",
+      templateVariables: { "1": "דנה" },
+    });
+    expect(res.success).toBe(true);
+    expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
   it("returns safe failure when the response body is not valid JSON", async () => {

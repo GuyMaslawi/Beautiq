@@ -17,6 +17,7 @@ import type {
   MetaErrorDetails,
 } from "./provider";
 import { maskPhone } from "@/lib/phone";
+import { expectedTemplateVariableCount } from "@/lib/whatsapp/default-templates";
 
 const META_GRAPH_BASE = "https://graph.facebook.com";
 
@@ -131,6 +132,22 @@ export function createMetaCloudApiProvider(
       const recipientPhone = toPhone.startsWith("+") ? toPhone.slice(1) : toPhone;
 
       const bodyParams = templateVariables ? buildBodyComponents(templateVariables) : [];
+
+      // שער אחרון לפני Meta: כשהתבנית היא אחת מתבניות Allura אנחנו יודעים כמה
+      // משתנים היא מחייבת. אי-התאמה מוחזרת בעברית עם המספרים, במקום להישלח
+      // ולחזור כ-131008 גנרי שאינו מזהה תבנית ואינו אומר כמה חסרו. לתבניות
+      // שאיננו מגדירים (הוגדרו על ידי העסק) הבדיקה מדלגת — שם הספירה לא ידועה.
+      const expectedVars = expectedTemplateVariableCount(templateId);
+      if (expectedVars !== undefined && bodyParams.length !== expectedVars) {
+        console.error(
+          `[WhatsApp meta_cloud_api] BLOCKED before send — template variable mismatch. template=${templateId} expected=${expectedVars} got=${bodyParams.length} businessId=${businessId} clientId=${clientId} runId=${automationRunId}`,
+        );
+        return {
+          success: false,
+          providerMessageId: null,
+          failureReason: `תקלה בהגדרת ההודעה: התבנית מחייבת ${expectedVars} משתנים אך נשלחו ${bodyParams.length}`,
+        };
+      }
 
       const payload = {
         messaging_product: "whatsapp",

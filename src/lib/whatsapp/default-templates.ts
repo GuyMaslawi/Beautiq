@@ -139,7 +139,10 @@ export const OWNER_NEW_BOOKING_TEMPLATE = {
   language: "he",
   category: "UTILITY" as MetaTemplateCategory,
   body:
-    "היי {{1}} ✨\nנכנסה בקשת תור חדשה ב־Allura:\nלקוחה: {{2}}\nשירות: {{3}}\n{{4}} בשעה {{5}}\n\nלאישור התור — היכנסי ל־Allura",
+    // אין יותר אישור תורים ידני: תור שנקבע בשעה פנויה מאושר אוטומטית
+    // (BookingStatus @default(approved), והדף הציבורי יוצר ישירות status="approved").
+    // לכן הנוסח מדווח על תור שנקבע ומזמין לצפות בו — ולא מבקש לאשר אותו.
+    "היי {{1}} ✨\nנקבע תור חדש ב־Allura:\nלקוחה: {{2}}\nשירות: {{3}}\n{{4}} בשעה {{5}}\n\nלצפייה בתור — היכנסי ל־Allura",
   example: ["בעלת העסק", "נועה כהן", "מניקור ג'ל", "שלישי 18.6", "10:30"],
   variables: ["ownerName", "clientName", "serviceName", "bookingDate", "bookingTime"],
 } as const;
@@ -171,4 +174,22 @@ export function getDefaultTemplateForType(
   type: AutomationType,
 ): DefaultTemplate | undefined {
   return DEFAULT_TEMPLATES.find((t) => t.automationType === type);
+}
+
+/**
+ * How many body variables a template that Allura itself defines expects.
+ *
+ * Returns undefined for any name we do NOT own (a template a business configured
+ * on its own WABA) — there the count is genuinely unknown and must not be
+ * guessed, or we would block legitimate sends.
+ *
+ * Exists so a mismatch is caught before the request leaves us: Meta answers a
+ * missing/short parameter list with a bare `131008 Required parameter is
+ * missing`, which says nothing about which template or how many were expected.
+ */
+export function expectedTemplateVariableCount(name: string): number | undefined {
+  if (name === OWNER_NEW_BOOKING_TEMPLATE.name) {
+    return OWNER_NEW_BOOKING_TEMPLATE.variables.length;
+  }
+  return DEFAULT_TEMPLATES.find((t) => t.name === name)?.variables.length;
 }

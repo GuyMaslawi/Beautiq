@@ -240,6 +240,17 @@ export async function sendManualClientWhatsAppAction(
       winBackSetting?.templateName ?? "hello_world";
     effectiveTemplateLanguage =
       winBackSetting?.templateName ? (winBackSetting.templateLanguage ?? "he") : "en_US";
+    // hello_world נושאת אפס משתנים, ולכן כל עוד לא הייתה תבנית מוגדרת המסלול הזה
+    // עבד בלי לספק משתנים כלל. ברגע שתבנית ההחזרה אושרה ונשמרה, אותה שליחה החלה
+    // להישלח ל-Meta בלי גוף פרמטרים בזמן שהתבנית מחייבת שניים — וזו בדיוק
+    // השגיאה 131008 ("Required parameter is missing"). התבנית הניטרלית נושאת
+    // שני משתנים: שם הלקוחה ושם העסק.
+    if (winBackSetting?.templateName) {
+      templateVariables = {
+        "1": client.fullName,
+        "2": business.name,
+      };
+    }
   }
 
   // --- Recent message warning (non-blocking — owner can confirm) ---
