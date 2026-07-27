@@ -13,9 +13,20 @@ export const metadata: Metadata = {
  * gate (see (app)/layout.tsx) let them into the dashboard. Users who already
  * have a plan — or admins — skip straight to the app.
  */
-export default async function SubscribePage() {
+export default async function SubscribePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ pending?: string }>;
+}) {
   const user = await requireCurrentUser();
   if (user.plan || user.isAdmin) redirect("/dashboard");
 
-  return <SubscribeClient userName={user.name ?? null} />;
+  // /api/subscription/return שולח לכאן עם pending=1 כשהמשתמשת חזרה מעמוד התשלום
+  // אך אישור השרת של Grow טרם נקלט. בלי לקרוא את הפרמטר הזה המסך היה נראה לה
+  // כאילו התשלום לא נקלט כלל, והיא הייתה משלמת פעם שנייה.
+  const { pending } = await searchParams;
+
+  return (
+    <SubscribeClient userName={user.name ?? null} paymentPending={pending === "1"} />
+  );
 }

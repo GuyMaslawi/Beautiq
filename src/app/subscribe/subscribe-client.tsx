@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import {
   Sparkles,
@@ -10,6 +11,7 @@ import {
   Gem,
   Flower2,
   Star,
+  Loader2,
 } from "lucide-react";
 import { PREMIUM_PLAN, PLATINUM_PLAN, PLANS, type PlanId, type PlanInfo } from "@/lib/plans";
 import { PlanCheckout } from "@/components/plans/plan-checkout";
@@ -175,9 +177,88 @@ function PlanSelection({ userName, onSelect }: { userName: string | null; onSele
   );
 }
 
+/**
+ * מסך ביניים אחרי חזרה מעמוד התשלום של Grow, כשההודעה מהשרת של Grow עדיין לא
+ * הגיעה. בלי המסך הזה בעלת העסק הייתה נוחתת חזרה על בחירת התוכנית כאילו לא קרה
+ * כלום — והפעולה הטבעית הייתה לשלם שוב וליצור חיוב והוראת קבע שניים.
+ *
+ * העמוד עצמו (server component) מפנה ל-/dashboard ברגע שהתוכנית מופעלת, ולכן
+ * רענון פשוט מספיק כדי להשלים את המעבר. אנחנו מרעננים אוטומטית כל 3 שניות.
+ */
+function PaymentPending({ onChoosePlan }: { onChoosePlan: () => void }) {
+  const router = useRouter();
+
+  useEffect(() => {
+    const id = setInterval(() => router.refresh(), 3000);
+    return () => clearInterval(id);
+  }, [router]);
+
+  return (
+    <div className="relative mx-auto w-full max-w-lg px-5 py-8 text-center">
+      <div
+        className="rounded-[2rem] p-8 sm:p-10"
+        style={{
+          background: "rgba(255,255,255,0.04)",
+          border: "1px solid rgba(212,168,83,0.28)",
+          boxShadow: "0 24px 70px rgba(19,10,25,0.55)",
+        }}
+      >
+        <div
+          className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl"
+          style={{ background: "rgba(212,168,83,0.16)", border: "1px solid rgba(212,168,83,0.38)" }}
+        >
+          <Loader2 className="h-7 w-7 animate-spin" style={{ color: "#e5bd6a" }} />
+        </div>
+
+        <h1 className="font-display mb-3 text-2xl font-semibold text-white sm:text-3xl">
+          קיבלנו את התשלום — עוד רגע את בפנים
+        </h1>
+        <p className="mx-auto mb-6 max-w-sm text-sm leading-6" style={{ color: "rgba(255,255,255,0.62)" }}>
+          אישור התשלום נקלט אצלנו תוך כמה שניות, והמסך יתקדם לבד.
+          <br />
+          <strong style={{ color: "rgba(255,255,255,0.85)" }}>אין צורך לשלם שוב.</strong>
+        </p>
+
+        <button
+          type="button"
+          onClick={() => router.refresh()}
+          className="inline-flex items-center justify-center gap-2 rounded-2xl px-8 py-3.5 text-base font-bold transition-transform duration-200 hover:-translate-y-0.5"
+          style={{
+            background: "linear-gradient(135deg, #e5bd6a 0%, #c09560 100%)",
+            color: "#3a2200",
+            boxShadow: "0 8px 24px rgba(212,168,83,0.45)",
+          }}
+        >
+          בדיקת סטטוס עכשיו
+        </button>
+
+        <p className="mt-6 text-xs" style={{ color: "rgba(255,255,255,0.40)" }}>
+          התשלום לא בוצע בסוף?{" "}
+          <button
+            type="button"
+            onClick={onChoosePlan}
+            className="underline underline-offset-2"
+            style={{ color: "rgba(255,255,255,0.62)" }}
+          >
+            בחירת תוכנית מחדש
+          </button>
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /* ── Root ───────────────────────────────────────────────────────────────── */
-export function SubscribeClient({ userName }: { userName: string | null }) {
+export function SubscribeClient({
+  userName,
+  paymentPending = false,
+}: {
+  userName: string | null;
+  /** חזרנו מעמוד התשלום אך אישור Grow עדיין לא נקלט. */
+  paymentPending?: boolean;
+}) {
   const [selected, setSelected] = useState<PlanId | null>(null);
+  const [showPending, setShowPending] = useState(paymentPending);
 
   return (
     <div dir="rtl" className="relative flex min-h-screen flex-col items-center justify-center" style={{ background: "linear-gradient(155deg, #130a19 0%, #231131 35%, #3c1f3a 65%, #1b0f22 100%)" }}>
@@ -192,7 +273,11 @@ export function SubscribeClient({ userName }: { userName: string | null }) {
 
       <div className="relative flex w-full flex-1 items-center justify-center">
         <AnimatePresence mode="wait">
-          {selected === null ? (
+          {showPending ? (
+            <motion.div key="pending" exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3 }} className="w-full">
+              <PaymentPending onChoosePlan={() => setShowPending(false)} />
+            </motion.div>
+          ) : selected === null ? (
             <motion.div key="plans" exit={{ opacity: 0, y: -12 }} transition={{ duration: 0.3 }} className="w-full">
               <PlanSelection userName={userName} onSelect={setSelected} />
             </motion.div>
