@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { ChevronDown, ChevronUp, AlertTriangle, Info, CheckCircle2, TrendingUp } from "lucide-react";
 import { MarketRangeForm } from "@/components/pricing/market-range-form";
+import { SectionMedallion } from "@/components/services/service-form";
 import type { PricingServiceData } from "@/server/pricing/queries";
 import type { PricingInsight } from "@/lib/pricing/insights";
 import { PRICING } from "@/lib/constants/he";
@@ -69,17 +70,18 @@ export function ServicePricingHealth({
       : null;
 
   return (
-    <div
-      className="overflow-hidden rounded-2xl"
-      style={{ background: "var(--surface)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}
-      dir="rtl"
-    >
-      <div className="p-5 space-y-4">
-        <div className="flex items-center gap-2">
-          <TrendingUp className="h-4 w-4" style={{ color: "#ac5c7f" }} />
-          <h3 className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
-            בריאות תמחור
-          </h3>
+    <div className="aura-card h-full overflow-hidden rounded-[1.5rem]" dir="rtl">
+      <div className="space-y-4 p-6">
+        <div className="flex items-center gap-3">
+          <SectionMedallion icon={TrendingUp} />
+          <div className="min-w-0">
+            <h3 className="text-sm font-bold" style={{ color: "var(--foreground)" }}>
+              בריאות תמחור
+            </h3>
+            <p className="mt-0.5 text-xs leading-5" style={{ color: "var(--muted)" }}>
+              איך המחיר של השירות עומד ביחס לעסק ולשוק
+            </p>
+          </div>
         </div>
 
         {/* Price-per-hour vs business average */}

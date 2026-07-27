@@ -36,18 +36,23 @@ describe("AutomationsSection (Allura-managed notifications)", () => {
     expect(screen.getByText("אין פעילות אחרונה")).toBeInTheDocument();
   });
 
-  it("renders the most recent run with a localized type label and relative day", () => {
+  it("renders the recent runs with localized type labels and relative days", () => {
     const today = new Date().toISOString();
     render(
       <AutomationsSection
         {...baseProps}
         recentRuns={[
           { id: "r1", type: "booking_confirmation", status: "done", sentCount: 5, startedAtISO: today },
+          { id: "r2", type: "morning_reminder", status: "done", sentCount: 3, startedAtISO: today },
         ]}
       />,
     );
-    expect(screen.getByText("אישור תור · 5 נשלחו")).toBeInTheDocument();
-    expect(screen.getByText("היום")).toBeInTheDocument();
+    expect(screen.getByText("אישור תור")).toBeInTheDocument();
+    expect(screen.getByText("5 נשלחו · היום")).toBeInTheDocument();
+    expect(screen.getByText("תזכורת לתור")).toBeInTheDocument();
+    expect(screen.getByText("3 נשלחו · היום")).toBeInTheDocument();
+    // סיכום כולל של השליחות האחרונות
+    expect(screen.getByText(/סה״כ 8 הודעות/)).toBeInTheDocument();
   });
 
   it("surfaces the reminders-due count when reminders are pending", () => {

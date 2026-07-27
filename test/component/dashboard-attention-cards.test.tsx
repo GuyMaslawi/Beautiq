@@ -67,7 +67,9 @@ const todayBookings: UpcomingBookingItem[] = [
     clientName: "דנה",
     serviceName: "מניקור",
     startTimeISO: "2026-06-15T08:00:00.000Z",
+    endTimeISO: "2026-06-15T09:00:00.000Z",
     status: "approved",
+    price: 200,
   },
 ];
 

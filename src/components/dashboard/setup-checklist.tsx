@@ -71,6 +71,42 @@ function statusTone(status: UpcomingBookingItem["status"]): ToneKey {
   return "warning"; // pending
 }
 
+/** מפתח יום מקומי (ירושלים) בפורמט YYYY-MM-DD */
+function jerusalemDayKey(date: Date): string {
+  return date.toLocaleDateString("en-CA", { timeZone: TZ });
+}
+
+/** התורים של מחר מתוך רשימת התורים העתידיים */
+function pickTomorrow(upcoming: UpcomingBookingItem[]): UpcomingBookingItem[] {
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const key = jerusalemDayKey(tomorrow);
+  return upcoming.filter((b) => jerusalemDayKey(new Date(b.startTimeISO)) === key);
+}
+
+/**
+ * תמונת המצב של היום — מה נשאר, מה הבא בתור, כמה כסף היום צפוי להכניס.
+ * מחושב מהתורים עצמם כדי לא להוסיף שאילתות.
+ */
+function summariseDay(bookings: UpcomingBookingItem[]) {
+  const now = Date.now();
+  const upcomingToday = bookings.filter(
+    (b) => b.status !== "completed" && new Date(b.endTimeISO).getTime() >= now,
+  );
+  const next = upcomingToday[0] ?? null;
+  const completedCount = bookings.filter((b) => b.status === "completed").length;
+  const expectedRevenue = bookings.reduce((sum, b) => sum + b.price, 0);
+  const lastEndISO = bookings.length > 0 ? bookings[bookings.length - 1].endTimeISO : null;
+
+  return {
+    next,
+    remainingCount: upcomingToday.length,
+    completedCount,
+    expectedRevenue,
+    lastEndISO,
+  };
+}
+
 // ── Checklist helpers ─────────────────────────────────────────────────────────
 
 interface ChecklistItemDef {
@@ -278,13 +314,53 @@ function DashboardQuickActions() {
 // TodayAppointments — editorial timeline panel
 // ══════════════════════════════════════════════════════════════════════════════
 
-function TodayAppointmentsPanel({
-  todayBookings,
+/** תא אחד בפס "תמונת היום" בראש לוח הפגישות */
+function DayPulseCell({
+  label,
+  value,
+  hint,
+  icon: Icon,
 }: {
-  todayBookings: UpcomingBookingItem[];
+  label: string;
+  value: string;
+  hint?: string;
+  icon: LucideIcon;
 }) {
   return (
-    <div className="aura-card overflow-hidden rounded-2xl">
+    <div
+      className="flex min-w-0 flex-col gap-0.5 rounded-2xl px-3 py-2.5"
+      style={{ background: "rgba(247,238,243,0.55)", border: "1px solid rgba(172,92,127,0.10)" }}
+    >
+      <span className="flex items-center gap-1.5 text-[11px] font-medium" style={{ color: "var(--muted)" }}>
+        <Icon className="h-3 w-3 shrink-0" style={{ color: "var(--primary)" }} />
+        <span className="truncate">{label}</span>
+      </span>
+      <span className="display-num text-foreground truncate text-[15px] font-bold leading-tight">{value}</span>
+      {hint && (
+        <span className="truncate text-[11px]" style={{ color: "var(--muted)" }}>
+          {hint}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** כמה פגישות מוצגות בלוח לפני שעוברים ליומן המלא — שומר על גובה מאוזן מול הטור הצדדי */
+const TODAY_VISIBLE_LIMIT = 6;
+
+function TodayAppointmentsPanel({
+  todayBookings,
+  tomorrowBookings,
+}: {
+  todayBookings: UpcomingBookingItem[];
+  tomorrowBookings: UpcomingBookingItem[];
+}) {
+  const day = summariseDay(todayBookings);
+  const visible = todayBookings.slice(0, TODAY_VISIBLE_LIMIT);
+  const hiddenCount = todayBookings.length - visible.length;
+
+  return (
+    <div className="aura-card flex h-full flex-col overflow-hidden rounded-2xl">
       <div className="flex items-center justify-between px-5 py-4">
         <h3 className="text-foreground font-display text-[15px] font-bold tracking-tight">הפגישות שלך להיום</h3>
         <Link
@@ -298,8 +374,36 @@ function TodayAppointmentsPanel({
       </div>
       <div className="editorial-rule mx-5" />
 
+      {/* תמונת היום — נותן ערך גם כשיש מעט פגישות, במקום שטח לבן ריק */}
+      <div className="grid grid-cols-3 gap-2 px-4 pt-4">
+        <DayPulseCell
+          icon={Clock}
+          label="הבאה בתור"
+          value={day.next ? formatTimeOnly(day.next.startTimeISO) : "—"}
+          hint={day.next ? day.next.clientName : "אין פגישה נוספת היום"}
+        />
+        <DayPulseCell
+          icon={CalendarDays}
+          label="נותרו היום"
+          value={String(day.remainingCount)}
+          hint={
+            day.completedCount > 0
+              ? `${day.completedCount} הושלמו`
+              : day.lastEndISO
+                ? `סיום ב־${formatTimeOnly(day.lastEndISO)}`
+                : "יום פנוי"
+          }
+        />
+        <DayPulseCell
+          icon={TrendingUp}
+          label="צפי הכנסה היום"
+          value={formatILS(day.expectedRevenue)}
+          hint="מכל הפגישות של היום"
+        />
+      </div>
+
       {todayBookings.length === 0 ? (
-        <div className="flex items-center gap-4 px-5 py-5">
+        <div className="flex flex-1 items-center gap-4 px-5 py-5">
           <div
             className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
             style={{ background: "rgba(172,92,127,0.10)" }}
@@ -342,10 +446,10 @@ function TodayAppointmentsPanel({
           </div>
         </div>
       ) : (
-        <div className="px-4 py-4">
-          {todayBookings.map((booking, idx) => {
+        <div className="flex-1 px-4 py-4">
+          {visible.map((booking, idx) => {
             const tone = statusTone(booking.status);
-            const isLast = idx === todayBookings.length - 1;
+            const isLast = idx === visible.length - 1;
             return (
               <TimelineRow
                 key={booking.id}
@@ -364,9 +468,53 @@ function TodayAppointmentsPanel({
               />
             );
           })}
+          {hiddenCount > 0 && (
+            <Link
+              href="/bookings?filter=today"
+              className="mx-2 flex items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-semibold transition-opacity hover:opacity-80"
+              style={{ background: "rgba(172,92,127,0.08)", color: "var(--primary)" }}
+            >
+              <span>עוד {hiddenCount} פגישות היום</span>
+              <ArrowLeft className="h-3 w-3" />
+            </Link>
+          )}
         </div>
       )}
+
+      {/* מבט קדימה — סוגר את הכרטיס בשורת מידע במקום בקצה ריק */}
+      <TomorrowStrip bookings={tomorrowBookings} />
     </div>
+  );
+}
+
+function TomorrowStrip({ bookings }: { bookings: UpcomingBookingItem[] }) {
+  const first = bookings[0] ?? null;
+  const revenue = bookings.reduce((sum, b) => sum + b.price, 0);
+
+  return (
+    <Link
+      href="/bookings"
+      className="mt-auto flex items-center gap-3 px-5 py-3.5 transition-colors hover:bg-background-alt"
+      style={{ borderTop: "1px solid rgba(172,92,127,0.12)" }}
+    >
+      <span
+        className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
+        style={{ background: "rgba(172,92,127,0.10)" }}
+      >
+        <CalendarRange className="h-4 w-4" style={{ color: "var(--primary)" }} />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-foreground truncate text-xs font-bold">
+          {bookings.length > 0 ? `מחר · ${bookings.length} פגישות` : "מחר עדיין פנוי"}
+        </p>
+        <p className="truncate text-[11px]" style={{ color: "var(--muted)" }}>
+          {first
+            ? `מתחילים ב־${formatTimeOnly(first.startTimeISO)} · צפי ${formatILS(revenue)}`
+            : "אפשר להציע את היום הפנוי ללקוחות שמחכות"}
+        </p>
+      </div>
+      <ArrowLeft className="h-3.5 w-3.5 shrink-0" style={{ color: "var(--primary)" }} />
+    </Link>
   );
 }
 
@@ -542,7 +690,7 @@ function WeekCalendarMini({
   }, [allBookings]);
 
   return (
-    <div className="aura-card rounded-2xl p-4">
+    <div className="aura-card flex h-full flex-col rounded-2xl p-4">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-foreground font-display text-sm font-bold tracking-tight">מבט על השבוע</h3>
         <Link
@@ -554,11 +702,11 @@ function WeekCalendarMini({
         </Link>
       </div>
 
-      <div className="grid grid-cols-5 gap-1.5">
+      <div className="grid flex-1 grid-cols-5 gap-1.5">
         {slots.map((slot) => (
           <div
             key={slot.dayStr}
-            className="flex flex-col items-center gap-1 rounded-2xl py-3"
+            className="flex flex-col items-center justify-center gap-1 rounded-2xl py-3"
             style={
               slot.isToday
                 ? { background: "linear-gradient(135deg, #c76f93 0%, #ac5c7f 100%)", boxShadow: "0 8px 18px -6px rgba(172,92,127,0.45)" }
@@ -778,6 +926,7 @@ export function SetupChecklist({
   );
 
   const hasTodayAttention = extraUrgent.length > 0;
+  const tomorrowBookings = pickTomorrow(upcomingBookings);
 
   return (
     <PremiumPageShell
@@ -797,6 +946,9 @@ export function SetupChecklist({
               metrics={metrics}
             />
             <DashboardQuickActions />
+            {/* השלמת ההגדרות היא המשימה החשובה ביותר לעסק חדש — לכן היא יושבת
+                מיד מתחת לכותרת ולא בתחתית העמוד. מוסתרת אוטומטית כשהכול הושלם. */}
+            <SetupProgressRibbon setup={setup} />
           </div>
 
           {/* ── היום ── primary working area: appointments + side rail */}
@@ -808,44 +960,51 @@ export function SetupChecklist({
               icon={<CalendarDays className="h-3.5 w-3.5" />}
               tint="blush"
             />
-            <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-5">
-            <div className="lg:col-span-3">
-              <TodayAppointmentsPanel todayBookings={todayBookings} />
-            </div>
-            <div className="space-y-3 lg:col-span-2">
-              <p className="eyebrow" style={{ color: "var(--muted)" }}>
-                דורש את תשומת הלב שלך
-              </p>
-              <div className="space-y-2.5">
-                {extraUrgent.map((item) => (
-                  <AttentionCard
-                    key={item.id}
-                    count="!"
-                    label={item.title}
-                    subLabel={item.description}
-                    action={item.actionLabel}
-                    href={item.href}
-                    icon={Clock}
-                    color="warning"
-                    ariaLabel={`${item.title}: ${item.description} — ${item.actionLabel}`}
-                  />
-                ))}
-                {!hasTodayAttention && (
-                  <AttentionCard
-                    count=""
-                    label="הכול תחת שליטה"
-                    subLabel="אין משימות דחופות — אפשר להתמקד בצמיחה"
-                    action="להזדמנויות"
-                    href="/bring-back"
-                    icon={CheckCircle2}
-                    color="green"
-                    ariaLabel="אין משימות דחופות — מעבר להזדמנויות"
-                  />
-                )}
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-5">
+              <div className="lg:col-span-3">
+                <TodayAppointmentsPanel
+                  todayBookings={todayBookings}
+                  tomorrowBookings={tomorrowBookings}
+                />
               </div>
-              <WeekCalendarMini allBookings={[...todayBookings, ...upcomingBookings]} />
+              {/* הטור הצדדי נמתח לגובה לוח הפגישות (flex-1 על לוח השבוע) כדי
+                  שלא ייווצר שטח לבן בין הכרטיסים בימים עמוסים או ריקים. */}
+              <div className="flex flex-col gap-3 lg:col-span-2">
+                <p className="eyebrow" style={{ color: "var(--muted)" }}>
+                  דורש את תשומת הלב שלך
+                </p>
+                <div className="space-y-2.5">
+                  {extraUrgent.map((item) => (
+                    <AttentionCard
+                      key={item.id}
+                      count="!"
+                      label={item.title}
+                      subLabel={item.description}
+                      action={item.actionLabel}
+                      href={item.href}
+                      icon={Clock}
+                      color="warning"
+                      ariaLabel={`${item.title}: ${item.description} — ${item.actionLabel}`}
+                    />
+                  ))}
+                  {!hasTodayAttention && (
+                    <AttentionCard
+                      count=""
+                      label="הכול תחת שליטה"
+                      subLabel="אין משימות דחופות — אפשר להתמקד בצמיחה"
+                      action="להזדמנויות"
+                      href="/bring-back"
+                      icon={CheckCircle2}
+                      color="green"
+                      ariaLabel="אין משימות דחופות — מעבר להזדמנויות"
+                    />
+                  )}
+                </div>
+                <div className="flex-1">
+                  <WeekCalendarMini allBookings={[...todayBookings, ...upcomingBookings]} />
+                </div>
+              </div>
             </div>
-          </div>
           </section>
         </div>
       </FadeIn>
@@ -887,8 +1046,7 @@ export function SetupChecklist({
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <BeautyInsightCard
               tone="danger"
-              featured
-              icon={<RefreshCcw className="h-6 w-6" />}
+              icon={<RefreshCcw className="h-5 w-5" />}
               eyebrow="שימור לקוחות"
               title="לקוחות שלא חזרו"
               value={atRiskCount > 0 ? atRiskCount : "0"}
@@ -898,8 +1056,7 @@ export function SetupChecklist({
             />
             <BeautyInsightCard
               tone="success"
-              featured
-              icon={<CalendarRange className="h-6 w-6" />}
+              icon={<CalendarRange className="h-5 w-5" />}
               eyebrow="זמן פנוי"
               title="חלונות פנויים"
               value={emptySlots.length > 0 ? emptySlots.length : "—"}
@@ -962,8 +1119,6 @@ export function SetupChecklist({
           />
         </section>
       </FadeIn>
-
-      <SetupProgressRibbon setup={setup} />
     </PremiumPageShell>
   );
 }

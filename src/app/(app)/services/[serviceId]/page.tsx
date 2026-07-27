@@ -1,12 +1,11 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft } from "lucide-react";
 import { requireTenant } from "@/server/auth/session";
 import { getService } from "@/server/services/queries";
 import { getPricingServices } from "@/server/pricing/queries";
 import { updateServiceAction } from "@/server/services/actions";
 import { ServiceForm } from "@/components/services/service-form";
 import { ServicePricingHealth } from "@/components/services/service-pricing-health";
+import { ServicePageHeader } from "@/components/services/service-page-header";
 import {
   generateServiceInsights,
   calcBusinessAvgPricePerHour,
@@ -67,28 +66,11 @@ export default async function EditServicePage({
   return (
     <PremiumPageShell tint="champagne" width="default">
       {/* Breadcrumb + editorial header band */}
-      <div className="aura-card relative overflow-hidden rounded-[1.5rem] p-6">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute -top-14 h-40 w-40 rounded-full"
-          style={{ insetInlineEnd: "-2rem", background: "radial-gradient(circle, rgba(192,149,96,0.18) 0%, transparent 70%)", filter: "blur(14px)" }}
-        />
-        <div className="relative">
-          <div className="mb-2 flex items-center gap-1.5 text-sm" style={{ color: "var(--muted)" }}>
-            <Link href="/services" className="transition-colors hover:underline" style={{ color: "var(--muted)" }}>
-              שירותים
-            </Link>
-            <ChevronLeft className="h-3.5 w-3.5 shrink-0" />
-            <span className="eyebrow" style={{ color: "#b88a3e" }}>עריכת שירות</span>
-          </div>
-          <h1 className="display-num text-foreground text-2xl font-bold tracking-tight md:text-3xl">
-            {SERVICES.form.editTitle}
-          </h1>
-          <p className="mt-1.5 text-sm" style={{ color: "var(--muted)" }}>
-            {service.name} — עדכוני פרטים, מחיר וזמינות השירות
-          </p>
-        </div>
-      </div>
+      <ServicePageHeader
+        eyebrow="עריכת שירות"
+        title={SERVICES.form.editTitle}
+        subtitle={`${service.name} — עדכוני פרטים, מחיר וזמינות השירות`}
+      />
 
       <ServiceForm
         action={boundAction}

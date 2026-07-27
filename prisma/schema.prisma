@@ -289,6 +289,7 @@ model User {
   memberships  BusinessUser[]
   subscription AccountSubscription?
   activityLogs ActivityLog[]
+  charges      SubscriptionCharge[]
 }
 
 /// Self-serve account subscription — the owner's paid Allura plan, billed through
@@ -340,8 +341,61 @@ model AccountSubscription {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  charges SubscriptionCharge[]
+
   @@index([status, currentPeriodEnd])
   @@index([directDebitId])
+}
+
+/// Outcome of a single billing attempt.
+enum SubscriptionChargeOutcome {
+  paid
+  failed
+}
+
+/// Append-only ledger of every owner→Allura billing attempt.
+///
+/// WHY THIS EXISTS: AccountSubscription holds only the CURRENT state — a monthly
+/// renewal overwrites `providerTransactionId` and `lastChargeAt`, and a failure
+/// overwrites `lastFailureReason`. Without this table there is no way to answer
+/// "what was actually collected, from whom, and when", and a failed renewal that
+/// later succeeded leaves no trace at all. Rows here are never updated or deleted.
+///
+/// Not tenant-owned: billing belongs to the USER (the business may not exist yet
+/// at first purchase), so it is scoped by userId and read only by platform admins.
+model SubscriptionCharge {
+  id             String @id @default(cuid())
+  userId         String
+  subscriptionId String
+
+  plan   AccountPlan
+  /// Amount actually charged, in agorot (₪1 = 100).
+  amountMinor Int
+  currency    String @default("ILS")
+
+  outcome SubscriptionChargeOutcome
+
+  /// Grow transaction id of a successful charge. UNIQUE so a webhook retry (Grow
+  /// re-notifies until acknowledged) can never duplicate a ledger row. Null for
+  /// failures, which carry no transaction — Postgres allows repeated NULLs.
+  providerTransactionId String? @unique
+  directDebitId         String?
+  /// Last 4 digits of the paying card, display only. Never a full PAN.
+  cardSuffix            String?
+
+  /// True when Grow's automatic monthly run produced this, false for the first
+  /// checkout — the difference between "she bought" and "it renewed".
+  isRecurring   Boolean @default(false)
+  failureReason String?
+
+  occurredAt DateTime @default(now())
+
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subscription AccountSubscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+
+  @@index([occurredAt])
+  @@index([userId, occurredAt])
+  @@index([outcome, occurredAt])
 }
 
 /// Seeded reference table of beauty/wellness categories. NOT tenant-owned.

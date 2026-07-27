@@ -49,6 +49,7 @@ const MODELS = [
   "whatsAppCampaign",
   "whatsAppCampaignRecipient",
   "accountSubscription",
+  "subscriptionCharge",
   "activityLog",
   "loyaltyProgram",
   "loyaltyRedemption",

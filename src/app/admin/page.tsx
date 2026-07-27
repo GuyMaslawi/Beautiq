@@ -201,7 +201,10 @@ export default async function AdminPage() {
         </div>
 
         <p className="mt-2 text-xs text-muted">
-          המספרים משקפים הכנסה חוזרת מהמנויים הפעילים כרגע — לא סך הגבייה ההיסטורי.
+          המספרים משקפים הכנסה חוזרת מהמנויים הפעילים כרגע — לא סך הגבייה ההיסטורי.{" "}
+          <Link href="/admin/subscriptions" className="text-primary font-medium hover:underline">
+            לסך הגבייה ולכל החיובים →
+          </Link>
         </p>
       </div>
 

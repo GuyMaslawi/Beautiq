@@ -47,13 +47,7 @@ export function AutomationsSection({
   remindersDueCount: number;
   recentRuns: RecentAutomationRun[];
 }) {
-  const lastRun = recentRuns[0] ?? null;
-  const activityValue = lastRun
-    ? `${RUN_TYPE_LABEL[lastRun.type] ?? lastRun.type} · ${lastRun.sentCount} נשלחו`
-    : "אין פעילות אחרונה";
-  const activitySub = lastRun
-    ? relativeDay(lastRun.startedAtISO)
-    : "כאן תופיע פעילות השליחה ללקוחות";
+  const totalSent = recentRuns.reduce((sum, run) => sum + run.sentCount, 0);
 
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -105,20 +99,57 @@ export function AutomationsSection({
         )}
       </div>
 
-      {/* Recent activity — read-only */}
-      <div className="aura-card flex flex-col gap-2.5 rounded-[1.4rem] p-5">
+      {/* Recent activity — read-only. Shows the last few sends rather than only
+          the latest one, so the card carries real information instead of
+          leaving most of its height empty. */}
+      <div className="aura-card flex h-full flex-col gap-3 rounded-[1.4rem] p-5">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium" style={{ color: "var(--foreground-soft)" }}>
             פעילות אחרונה
           </span>
           <Activity className="h-4 w-4" style={{ color: "var(--primary)" }} />
         </div>
-        <p className="text-sm font-bold leading-snug" style={{ color: "var(--foreground)" }}>
-          {activityValue}
-        </p>
-        <p className="text-xs" style={{ color: "var(--muted)" }}>
-          {activitySub}
-        </p>
+
+        {recentRuns.length === 0 ? (
+          <div className="flex flex-1 flex-col justify-center">
+            <p className="text-sm font-bold leading-snug" style={{ color: "var(--foreground)" }}>
+              אין פעילות אחרונה
+            </p>
+            <p className="mt-1 text-xs leading-relaxed" style={{ color: "var(--muted)" }}>
+              ברגע שתיקבע פגישה, ההודעות ללקוחות יישלחו אוטומטית ויופיעו כאן.
+            </p>
+          </div>
+        ) : (
+          <>
+            <ul className="flex flex-1 flex-col gap-2">
+              {recentRuns.map((run) => (
+                <li key={run.id} className="flex items-center gap-2.5">
+                  <span
+                    className="h-1.5 w-1.5 shrink-0 rounded-full"
+                    style={{ background: "#3d8b6e" }}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className="truncate text-xs font-bold"
+                      style={{ color: "var(--foreground)" }}
+                    >
+                      {RUN_TYPE_LABEL[run.type] ?? run.type}
+                    </p>
+                    <p className="truncate text-[11px]" style={{ color: "var(--muted)" }}>
+                      {run.sentCount} נשלחו · {relativeDay(run.startedAtISO)}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <p
+              className="text-[11px]"
+              style={{ color: "var(--muted)", borderTop: "1px solid rgba(172,92,127,0.12)", paddingTop: "0.625rem" }}
+            >
+              סה״כ {totalSent} הודעות בשליחות האחרונות
+            </p>
+          </>
+        )}
       </div>
     </div>
   );

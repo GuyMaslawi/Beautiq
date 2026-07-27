@@ -201,6 +201,9 @@ export async function POST(req: Request) {
       transactionId: event.transactionId,
       directDebitId: event.directDebitId,
       cardSuffix: event.cardSuffix,
+      // A charge we did not match by our own processId can only be an automatic
+      // monthly run — that is the only notification Grow sends without one.
+      isRecurring: event.isRecurringRun || !matchedByProcess,
     });
     logger.info("[subscription.webhook] payment confirmed", {
       subscriptionId: subscription.id,

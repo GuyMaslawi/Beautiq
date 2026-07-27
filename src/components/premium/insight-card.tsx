@@ -41,7 +41,10 @@ export function BeautyInsightCard({
   return (
     <div
       className={cn(
-        "lift relative overflow-hidden rounded-[1.5rem]",
+        // flex-col + h-full: inside a grid the card fills the row height and the
+        // action stays pinned to the bottom, so cards of uneven text length
+        // don't leave a hole under the shorter one.
+        "lift relative flex h-full flex-col overflow-hidden rounded-[1.5rem]",
         featured ? "p-6 md:p-7" : "p-5",
         className,
       )}
@@ -112,7 +115,7 @@ export function BeautyInsightCard({
           </div>
         )}
       </div>
-      {action && <div className="relative mt-4 flex flex-wrap gap-2">{action}</div>}
+      {action && <div className="relative mt-auto flex flex-wrap gap-2 pt-4">{action}</div>}
     </div>
   );
 }

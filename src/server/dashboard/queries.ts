@@ -1,3 +1,4 @@
+import type { Prisma } from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
 import type { TenantContext } from "@/server/db/tenant";
 
@@ -25,7 +26,11 @@ export interface UpcomingBookingItem {
   clientName: string;
   serviceName: string;
   startTimeISO: string;
+  /** מועד סיום — משמש לחישוב "מתי מסיימים היום" */
+  endTimeISO: string;
   status: "pending" | "approved" | "completed";
+  /** המחיר שנשמר בעת הקביעה — בסיס לצפי ההכנסה היומי */
+  price: number;
 }
 
 export interface DashboardData {
@@ -174,7 +179,9 @@ export async function getDashboardData(
       select: {
         id: true,
         startTime: true,
+        endTime: true,
         status: true,
+        priceSnapshot: true,
         client: { select: { fullName: true } },
         service: { select: { name: true } },
       },
@@ -192,7 +199,9 @@ export async function getDashboardData(
       select: {
         id: true,
         startTime: true,
+        endTime: true,
         status: true,
+        priceSnapshot: true,
         client: { select: { fullName: true } },
         service: { select: { name: true } },
       },
@@ -216,7 +225,9 @@ export async function getDashboardData(
   const mapBooking = (b: {
     id: string;
     startTime: Date;
+    endTime: Date;
     status: string;
+    priceSnapshot: Prisma.Decimal;
     client: { fullName: string };
     service: { name: string };
   }): UpcomingBookingItem => ({
@@ -224,7 +235,9 @@ export async function getDashboardData(
     clientName: b.client.fullName,
     serviceName: b.service.name,
     startTimeISO: b.startTime.toISOString(),
+    endTimeISO: b.endTime.toISOString(),
     status: b.status as UpcomingBookingItem["status"],
+    price: Number(b.priceSnapshot),
   });
 
   return {

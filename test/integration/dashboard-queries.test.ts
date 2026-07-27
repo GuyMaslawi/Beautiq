@@ -98,7 +98,9 @@ describe("getDashboardData", () => {
         {
           id: "bkg_1",
           startTime: new Date("2026-06-14T09:00:00Z"),
+          endTime: new Date("2026-06-14T10:00:00Z"),
           status: "approved",
+          priceSnapshot: 200,
           client: { fullName: "דנה" },
           service: { name: "מניקור" },
         },
@@ -107,7 +109,9 @@ describe("getDashboardData", () => {
         {
           id: "bkg_2",
           startTime: new Date("2026-06-20T09:00:00Z"),
+          endTime: new Date("2026-06-20T10:00:00Z"),
           status: "pending",
+          priceSnapshot: 150,
           client: { fullName: "נועה" },
           service: { name: "פדיקור" },
         },

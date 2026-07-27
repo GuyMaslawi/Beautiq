@@ -37,6 +37,46 @@ export interface ConfirmedPayment {
   /** Grow direct-debit id (הוראת קבע) — links the monthly renewals to this sub. */
   directDebitId?: string;
   cardSuffix?: string;
+  /** True when this came from Grow's automatic monthly run, not the first checkout. */
+  isRecurring?: boolean;
+}
+
+/**
+ * Append one row to the billing ledger. Never throws: a ledger write must never
+ * fail a real payment — losing an audit row is bad, refusing a paid customer's
+ * access is worse. The unique providerTransactionId absorbs webhook retries, so
+ * a duplicate simply no-ops.
+ */
+async function recordCharge(data: {
+  userId: string;
+  subscriptionId: string;
+  plan: AccountPlan;
+  amountMinor: number;
+  outcome: "paid" | "failed";
+  transactionId?: string;
+  directDebitId?: string;
+  cardSuffix?: string;
+  isRecurring?: boolean;
+  failureReason?: string;
+}): Promise<void> {
+  try {
+    await prisma.subscriptionCharge.create({
+      data: {
+        userId: data.userId,
+        subscriptionId: data.subscriptionId,
+        plan: data.plan,
+        amountMinor: data.amountMinor,
+        outcome: data.outcome,
+        providerTransactionId: data.transactionId ?? null,
+        directDebitId: data.directDebitId ?? null,
+        cardSuffix: data.cardSuffix ?? null,
+        isRecurring: data.isRecurring ?? false,
+        failureReason: data.failureReason?.slice(0, 300) ?? null,
+      },
+    });
+  } catch {
+    // Duplicate transaction id (retry) or any transient write problem.
+  }
 }
 
 /**
@@ -50,7 +90,13 @@ export interface ConfirmedPayment {
 export async function confirmSubscriptionPayment(
   subscription: Pick<
     AccountSubscription,
-    "id" | "userId" | "plan" | "providerTransactionId" | "currentPeriodEnd" | "activatedAt"
+    | "id"
+    | "userId"
+    | "plan"
+    | "priceMinor"
+    | "providerTransactionId"
+    | "currentPeriodEnd"
+    | "activatedAt"
   >,
   payment: ConfirmedPayment,
 ): Promise<{ alreadyApplied: boolean }> {
@@ -93,6 +139,18 @@ export async function confirmSubscriptionPayment(
     }),
   ]);
 
+  await recordCharge({
+    userId: subscription.userId,
+    subscriptionId: subscription.id,
+    plan: subscription.plan,
+    amountMinor: subscription.priceMinor,
+    outcome: "paid",
+    transactionId: payment.transactionId,
+    directDebitId: payment.directDebitId,
+    cardSuffix: payment.cardSuffix,
+    isRecurring: payment.isRecurring,
+  });
+
   return { alreadyApplied: false };
 }
 
@@ -102,10 +160,26 @@ export async function confirmSubscriptionPayment(
  * close the gate by clearing the user's plan.
  */
 export async function markRenewalFailed(
-  subscription: Pick<AccountSubscription, "id" | "userId" | "currentPeriodEnd">,
+  subscription: Pick<
+    AccountSubscription,
+    "id" | "userId" | "plan" | "priceMinor" | "currentPeriodEnd"
+  >,
   reason: string,
 ): Promise<{ lapsed: boolean }> {
   const now = new Date();
+
+  // A failed renewal previously left only `lastFailureReason`, which the NEXT
+  // event overwrote — so a customer who failed twice and then paid looked like
+  // she never had a problem. The ledger keeps every attempt.
+  await recordCharge({
+    userId: subscription.userId,
+    subscriptionId: subscription.id,
+    plan: subscription.plan,
+    amountMinor: subscription.priceMinor,
+    outcome: "failed",
+    isRecurring: true,
+    failureReason: reason,
+  });
   const graceEnd = subscription.currentPeriodEnd
     ? new Date(subscription.currentPeriodEnd.getTime() + RENEWAL_GRACE_DAYS * 86_400_000)
     : now;
