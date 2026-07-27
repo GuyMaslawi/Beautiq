@@ -201,12 +201,16 @@ export async function getDashboardData(
 
   const monthRevenue = Number(monthRevenueAgg._sum.priceSnapshot ?? 0);
 
+  // הטלפון נדרש במפורש ולא כאחת מכמה חלופות: מאז שההתראות לבעלת העסק נשלחות
+  // בוואטסאפ בלבד, מספר הטלפון של העסק הוא היעד של ההתראה על תור חדש מהדף
+  // הציבורי. בלעדיו השליחה מדלגת בשקט (רק שורת לוג) — כלומר בעלת עסק שמילאה
+  // רק עיר או תיאור הייתה מסמנת את שלב ההשלמה כבוצע ובכל זאת לא מקבלת התראות.
   const hasProfileDetails = !!(
-    businessProfile.phone ||
-    businessProfile.description ||
-    businessProfile.city ||
-    businessProfile.area ||
-    businessProfile.addressNote
+    businessProfile.phone &&
+    (businessProfile.description ||
+      businessProfile.city ||
+      businessProfile.area ||
+      businessProfile.addressNote)
   );
 
   const mapBooking = (b: {

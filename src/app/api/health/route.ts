@@ -52,6 +52,11 @@ export async function GET(req: NextRequest) {
     body.config = {
       realWhatsAppSend: isTrue("ENABLE_REAL_WHATSAPP_SEND"),
       whatsAppTestMode: isTrue("WHATSAPP_TEST_MODE"),
+      // ערוץ ההתראות לבעלת העסק על תור חדש מהדף הציבורי. מאז שהוחלט
+      // שההתראות בוואטסאפ בלבד, הדגל הזה הוא ההבדל בין "קיבלה התראה"
+      // לבין "לא ידעה שנכנס תור" — ואי אפשר לקרוא את ערכו מחוץ לשרת.
+      ownerWhatsAppNotification: isTrue("ENABLE_OWNER_WHATSAPP_NOTIFICATION"),
+      emailConfigured: isSet("RESEND_API_KEY") && isSet("EMAIL_FROM"),
       whatsAppEnvFallback: isTrue("WHATSAPP_USE_ENV_FALLBACK"),
       subscriptionsEnabled: isTrue("SUBSCRIPTIONS_ENABLED"),
       growCreateLinkWebhookSet: isSet("MAKE_GROW_CREATE_LINK_WEBHOOK_URL"),

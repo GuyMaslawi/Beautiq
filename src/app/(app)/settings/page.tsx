@@ -19,6 +19,7 @@ import { PublicLinkCard } from "@/components/settings/public-link-card";
 import { NotificationsForm } from "@/components/settings/notifications-form";
 import { SubscriptionCard } from "@/components/settings/subscription-card";
 import { SETTINGS, SUBSCRIPTION } from "@/lib/constants/he";
+import { isEmailConfigured } from "@/lib/email/send";
 
 export default async function SettingsPage() {
   const business = await requireCurrentBusiness();
@@ -77,6 +78,7 @@ export default async function SettingsPage() {
           <NotificationsForm
             action={setEmailNotificationsAction}
             initialEnabled={settings.emailNotificationsEnabled}
+            emailAvailable={isEmailConfigured()}
           />
         </Section>
 

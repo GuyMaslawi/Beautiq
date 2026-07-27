@@ -140,11 +140,34 @@ describe("getDashboardData", () => {
 
   it("derives hasProfileDetails from the passed-in business profile", async () => {
     setupMocks();
-    const withPhone = await getDashboardData(tenant, {
+    const complete = await getDashboardData(tenant, {
+      ...emptyProfile,
+      phone: "0501234567",
+      city: "תל אביב",
+    });
+    expect(complete.setup.hasProfileDetails).toBe(true);
+  });
+
+  // ההתראה לבעלת העסק על תור חדש מהדף הציבורי נשלחת בוואטסאפ למספר הטלפון של
+  // העסק. בלעדיו השליחה מדלגת בשקט, ולכן שלב "להשלים פרטי עסק" לא יכול להיחשב
+  // כבוצע — גם אם שאר הפרטים מלאים.
+  it("does not mark the profile step done without a business phone", async () => {
+    setupMocks();
+    const noPhone = await getDashboardData(tenant, {
+      ...emptyProfile,
+      city: "תל אביב",
+      description: "סטודיו לציפורניים",
+    });
+    expect(noPhone.setup.hasProfileDetails).toBe(false);
+  });
+
+  it("does not mark the profile step done from a phone alone", async () => {
+    setupMocks();
+    const phoneOnly = await getDashboardData(tenant, {
       ...emptyProfile,
       phone: "0501234567",
     });
-    expect(withPhone.setup.hasProfileDetails).toBe(true);
+    expect(phoneOnly.setup.hasProfileDetails).toBe(false);
   });
 
   it("only counts COMPLETED bookings toward month revenue", async () => {

@@ -83,11 +83,19 @@ export function checkEnv(): EnvCheckResult {
         "NEXT_PUBLIC_APP_URL לא מוגדר — נעשה שימוש בברירת המחדל https://allura.info לקישורים חיצוניים.",
       );
     }
-    // התראת אימייל לבעלת העסק על בקשת תור חדשה היא best-effort. אם אינה מוגדרת
-    // בייצור — לא יישלח אימייל (ההזמנה עדיין נוצרת ומופיעה בלוח הבקרה).
-    if (!isSet("RESEND_API_KEY") || !isSet("EMAIL_FROM")) {
+    // ── ערוץ ההתראות לבעלת העסק על בקשת תור חדשה מהדף הציבורי ──────
+    // החלטת מוצר (2026-07-27): ההתראות נשלחות בוואטסאפ בלבד; אימייל אינו נדרש.
+    // לכן היעדר Resend אינו אזהרה בפני עצמו — אבל אם גם ערוץ הוואטסאפ כבוי,
+    // בעלת העסק לא מקבלת שום התראה על תור חדש (ההזמנה עדיין נוצרת ומופיעה
+    // בלוח הבקרה, אבל אף אחד לא דוחף אותה אליו). זה מצב שחייב להיות רועש.
+    const emailChannel = isSet("RESEND_API_KEY") && isSet("EMAIL_FROM");
+    const waOwnerChannel = isTrue("ENABLE_OWNER_WHATSAPP_NOTIFICATION");
+    if (!waOwnerChannel && !emailChannel) {
       warnings.push(
-        "RESEND_API_KEY / EMAIL_FROM לא מוגדרים — התראות אימייל לבעלת העסק על בקשות תור חדשות לא יישלחו.",
+        "לבעלת העסק אין ערוץ התראות פעיל על בקשת תור חדשה מהדף הציבורי — " +
+          "ההתראה בוואטסאפ כבויה ואין תצורת אימייל. להפעלת הערוץ המומלץ הגדירו " +
+          "ENABLE_OWNER_WHATSAPP_NOTIFICATION=true (דורש טלפון עסק תקין ותבנית " +
+          "business_new_booking_he מאושרת ב-Meta).",
       );
     }
     // העלאת תמונות (לוגו / תמונת נושא / גלריה) נשמרת ב-Vercel Blob. הטוקן מוזרק
@@ -109,6 +117,20 @@ export function checkEnv(): EnvCheckResult {
           "SUBSCRIPTIONS_ENABLED=true, MAKE_GROW_CREATE_LINK_WEBHOOK_URL ו-SUBSCRIPTION_WEBHOOK_SECRET.",
       );
     }
+  }
+
+  // ── WhatsApp כבוי בייצור — הבטחה שנמכרה ואינה מתקיימת ─────────
+  // כל שולחי ההודעות (תזכורת בוקר, בקשת ביקורת, החזרת לקוחות, מועדון נאמנות,
+  // קמפיינים, אישור הזמנה) בודקים את הדגל הזה ומדלגים בשקט כשהוא כבוי. בלי
+  // אזהרה כאן אפשר לעלות לאוויר עם מסלול שמבטיח "הודעות WhatsApp אוטומטיות"
+  // בזמן שאף הודעה לא נשלחת — ושום דבר במערכת לא יצעק.
+  if (isProd && !isTrue("ENABLE_REAL_WHATSAPP_SEND")) {
+    warnings.push(
+      "ENABLE_REAL_WHATSAPP_SEND אינו true בייצור — אף הודעת WhatsApp לא תישלח בפועל " +
+        "(תזכורות, בקשות ביקורת, החזרת לקוחות, מועדון נאמנות וקמפיינים ידלגו בשקט). " +
+        "להפעלה הגדירו ENABLE_REAL_WHATSAPP_SEND=true, WHATSAPP_PROVIDER=meta_cloud_api, " +
+        "META_WHATSAPP_ACCESS_TOKEN ו-META_WHATSAPP_PHONE_NUMBER_ID.",
+    );
   }
 
   // ── WhatsApp — נבדק רק כששליחה אמיתית מופעלת ──────────────────

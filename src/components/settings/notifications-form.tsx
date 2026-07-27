@@ -10,9 +10,16 @@ import type { setEmailNotificationsAction } from "@/server/settings/actions";
 export function NotificationsForm({
   action,
   initialEnabled,
+  emailAvailable,
 }: {
   action: typeof setEmailNotificationsAction;
   initialEnabled: boolean;
+  /**
+   * האם ערוץ האימייל מוגדר בשרת. כשאינו מוגדר, הפעלת המתג לא הייתה שולחת
+   * דבר — המתג היה נשמר, המסך היה מציג "מופעל", ואף מייל לא היה יוצא. במקרה
+   * כזה עדיף להשבית אותו ולומר במפורש שההתראות מגיעות בוואטסאפ.
+   */
+  emailAvailable: boolean;
 }) {
   const [enabled, setEnabled] = useState(initialEnabled);
   const [isPending, startTransition] = useTransition();
@@ -45,14 +52,16 @@ export function NotificationsForm({
             {SETTINGS.notifications.toggleLabel}
           </p>
           <p className="text-muted mt-1 text-sm leading-relaxed">
-            {SETTINGS.notifications.hint}
+            {emailAvailable
+              ? SETTINGS.notifications.hint
+              : SETTINGS.notifications.unavailableHint}
           </p>
         </div>
 
         <Switch
-          checked={enabled}
+          checked={emailAvailable && enabled}
           onCheckedChange={handleToggle}
-          disabled={isPending}
+          disabled={isPending || !emailAvailable}
           aria-label={SETTINGS.notifications.toggleLabel}
           className="mt-0.5"
         />
@@ -60,7 +69,11 @@ export function NotificationsForm({
 
       <div className="flex items-center gap-2 text-xs font-medium">
         <span className="text-muted">
-          {enabled ? SETTINGS.notifications.on : SETTINGS.notifications.off}
+          {!emailAvailable
+            ? SETTINGS.notifications.unavailable
+            : enabled
+              ? SETTINGS.notifications.on
+              : SETTINGS.notifications.off}
         </span>
         {isPending && (
           <span className="text-muted">· {SETTINGS.notifications.saving}</span>
