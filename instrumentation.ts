@@ -6,6 +6,11 @@
  *   - בפיתוח: רק מזהירים, כדי לא לחסום פיתוח מקומי.
  *
  * רץ רק ב-Node runtime (לא ב-Edge), שם משתני הסביבה זמינים במלואם.
+ *
+ * בנוסף, onRequestError תופס *כל* שגיאה לא-מטופלת בשרת (רינדור עמוד, Server
+ * Action, route handler) ומעביר אותה ל-captureError. עד עכשיו רק שגיאות
+ * שנתפסו ידנית ב-try/catch דיווחו על עצמן; קריסה בעמוד שאיש לא עטף פשוט
+ * הציגה מסך שגיאה ללקוחה ונעלמה בלוגים.
  */
 
 export async function register(): Promise<void> {
@@ -34,4 +39,27 @@ export async function register(): Promise<void> {
   } else {
     logger.info("[env] אימות משתני הסביבה עבר בהצלחה.");
   }
+}
+
+/**
+ * Hook של Next.js לכל שגיאת שרת לא-מטופלת.
+ *
+ * מדווח דרך captureError כדי שגם שגיאות שלא נתפסו ידנית יגיעו לערוץ ההתראות
+ * (ERROR_ALERT_WEBHOOK_URL). ה-scope כולל את הנתיב כדי שאפשר יהיה להבחין בין
+ * "העמוד /bookings קורס" לבין "ה-webhook נכשל" — וגם כדי שהשתקת ההתראות
+ * החוזרות תהיה פר-נתיב ולא אחת לכל האפליקציה.
+ */
+export async function onRequestError(
+  err: unknown,
+  request: { path?: string; method?: string },
+  context?: { routerKind?: string; routeType?: string },
+): Promise<void> {
+  const { captureError } = await import("@/lib/logger");
+  const path = request?.path ?? "unknown";
+  captureError(`request.${path}`, err, {
+    path,
+    method: request?.method,
+    routerKind: context?.routerKind,
+    routeType: context?.routeType,
+  });
 }

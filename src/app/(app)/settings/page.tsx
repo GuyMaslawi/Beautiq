@@ -1,4 +1,4 @@
-import { Store, Tag, Link2, SlidersHorizontal, CreditCard, Bell } from "lucide-react";
+import { Store, Tag, Link2, SlidersHorizontal, CreditCard, Bell, Database } from "lucide-react";
 import { PremiumPageShell, BeautyPageHero } from "@/components/premium";
 import { Section } from "@/components/ui/section";
 import { requireCurrentBusiness } from "@/server/auth/session";
@@ -18,6 +18,7 @@ import { BusinessCategoriesForm } from "@/components/settings/business-categorie
 import { PublicLinkCard } from "@/components/settings/public-link-card";
 import { NotificationsForm } from "@/components/settings/notifications-form";
 import { SubscriptionCard } from "@/components/settings/subscription-card";
+import { DataExportCard } from "@/components/settings/data-export-card";
 import { SETTINGS, SUBSCRIPTION } from "@/lib/constants/he";
 import { isEmailConfigured } from "@/lib/email/send";
 
@@ -85,6 +86,11 @@ export default async function SettingsPage() {
         {/* Section 5 — Allura subscription */}
         <Section title={SUBSCRIPTION.sectionTitle} icon={<CreditCard className="h-4 w-4" style={{ color: "#ac5c7f" }} />}>
           <SubscriptionCard overview={subscription} />
+        </Section>
+
+        {/* Section 6 — Data export & account deletion */}
+        <Section title={SETTINGS.dataExport.sectionTitle} icon={<Database className="h-4 w-4" style={{ color: "#ac5c7f" }} />}>
+          <DataExportCard />
         </Section>
       </div>
     </PremiumPageShell>

@@ -20,6 +20,8 @@ function setEnv(vars: Record<string, string>) {
     "WHATSAPP_TEST_MODE",
     "SUBSCRIPTIONS_ENABLED",
     "MAKE_GROW_CREATE_LINK_WEBHOOK_URL",
+    "ERROR_ALERT_WEBHOOK_URL",
+    "NEXT_PUBLIC_LEGAL_ENTITY_NAME",
   ]) {
     vi.stubEnv(k, "");
   }
@@ -108,5 +110,44 @@ describe("checkEnv", () => {
     const { errors, warnings } = checkEnv();
     expect(errors.some((e) => e.includes("WHATSAPP_TEST_MODE"))).toBe(false);
     expect(warnings.some((w) => w.includes("WHATSAPP_TEST_MODE"))).toBe(true);
+  });
+
+  // בלי ערוץ התראות, שגיאה בייצור נכתבת ללוג שאיש לא קורא. זו אינה שגיאה
+  // חוסמת (השרת חייב לעלות גם בלי ניטור) אבל היא חייבת להיות רועשת.
+  it("warns when no error-alert channel is configured in production", () => {
+    setEnv({
+      NODE_ENV: "production",
+      DATABASE_URL: "postgres://x",
+      AUTH_SECRET: "s",
+      CRON_SECRET: "c",
+    });
+    const { errors, warnings } = checkEnv();
+    expect(warnings.some((w) => w.includes("ERROR_ALERT_WEBHOOK_URL"))).toBe(true);
+    expect(errors.some((e) => e.includes("ERROR_ALERT_WEBHOOK_URL"))).toBe(false);
+  });
+
+  it("stays quiet about alerting once the webhook is set", () => {
+    setEnv({
+      NODE_ENV: "production",
+      DATABASE_URL: "postgres://x",
+      AUTH_SECRET: "s",
+      CRON_SECRET: "c",
+      ERROR_ALERT_WEBHOOK_URL: "https://hook.example/alerts",
+    });
+    expect(
+      checkEnv().warnings.some((w) => w.includes("ERROR_ALERT_WEBHOOK_URL")),
+    ).toBe(false);
+  });
+
+  it("warns when the operating legal entity is not named in production", () => {
+    setEnv({
+      NODE_ENV: "production",
+      DATABASE_URL: "postgres://x",
+      AUTH_SECRET: "s",
+      CRON_SECRET: "c",
+    });
+    expect(
+      checkEnv().warnings.some((w) => w.includes("NEXT_PUBLIC_LEGAL_ENTITY_NAME")),
+    ).toBe(true);
   });
 });

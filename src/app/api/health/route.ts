@@ -62,6 +62,8 @@ export async function GET(req: NextRequest) {
       growCreateLinkWebhookSet: isSet("MAKE_GROW_CREATE_LINK_WEBHOOK_URL"),
       webhookAppSecretSet: isSet("META_WEBHOOK_APP_SECRET"),
       whatsAppEncryptionKeySet: isSet("WHATSAPP_CREDENTIALS_ENCRYPTION_KEY"),
+      // האם שגיאות בייצור מתריעות בפועל, או רק נכתבות ללוג.
+      errorAlertWebhookSet: isSet("ERROR_ALERT_WEBHOOK_URL"),
     };
     body.env = { errors: env.errors, warnings: env.warnings };
   }
