@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef, useCallback } from "react";
+import { useState, useTransition, useRef, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Send, X, AlertTriangle, CheckCircle, Loader2 } from "lucide-react";
 import { WA_CAMPAIGNS } from "@/lib/constants/whatsapp-campaigns";
@@ -45,8 +45,14 @@ export function BulkCampaignDrawer() {
 
   const [error, setError] = useState<string>("");
   const [isPending, startTransition] = useTransition();
+  const [loadingCandidates, setLoadingCandidates] = useState(false);
   const idempotencyKey = useRef<string>("");
   const sendingRef = useRef(false);
+  // Clients the owner explicitly unchecked — kept out of the default selection
+  // when the list reloads after a filter change.
+  const deselectedRef = useRef<Set<string>>(new Set());
+  // Guards against an older in-flight request overwriting a newer one.
+  const loadSeqRef = useRef(0);
 
   function reset() {
     setStep("audience");
@@ -61,7 +67,10 @@ export function BulkCampaignDrawer() {
     setCounts(null);
     setProgressDone(false);
     setError("");
+    setLoadingCandidates(false);
     sendingRef.current = false;
+    deselectedRef.current = new Set();
+    loadSeqRef.current++;
   }
 
   function handleOpen() {
@@ -91,19 +100,36 @@ export function BulkCampaignDrawer() {
     return { mode: "all_eligible", filters: filters() };
   }
 
-  function loadCandidates() {
+  const loadCandidates = useCallback(async () => {
+    const seq = ++loadSeqRef.current;
     setError("");
-    startTransition(async () => {
-      const res = await listCampaignCandidatesAction(filters());
-      if (!res.ok) {
-        setError(WA_CAMPAIGNS.errors.generic);
-        return;
-      }
-      setCandidates(res.candidates);
-      // Pre-select all eligible candidates.
-      setSelected(new Set(res.candidates.filter((c) => c.eligible).map((c) => c.clientId)));
-    });
-  }
+    setLoadingCandidates(true);
+    const res = await listCampaignCandidatesAction(filters());
+    // A newer filter change already fired — drop this stale response.
+    if (seq !== loadSeqRef.current) return;
+    setLoadingCandidates(false);
+    if (!res.ok) {
+      setError(WA_CAMPAIGNS.errors.generic);
+      return;
+    }
+    setCandidates(res.candidates);
+    // Pre-select every eligible candidate, minus the ones the owner unchecked.
+    setSelected(
+      new Set(
+        res.candidates
+          .filter((c) => c.eligible && !deselectedRef.current.has(c.clientId))
+          .map((c) => c.clientId),
+      ),
+    );
+  }, [filters]);
+
+  // Keep the manual list in sync with the filters automatically — no refresh
+  // button. Typing in the search box is debounced; chip clicks apply at once.
+  useEffect(() => {
+    if (!open || mode !== "manual") return;
+    const timer = setTimeout(() => { void loadCandidates(); }, search.trim() ? 300 : 0);
+    return () => clearTimeout(timer);
+  }, [open, mode, search, loadCandidates]);
 
   function goToContent() {
     setError("");
@@ -253,7 +279,7 @@ export function BulkCampaignDrawer() {
                 {step === "audience" && (
                   <>
                     <RadioCard checked={mode === "all_eligible"} onClick={() => setMode("all_eligible")} title={WA_CAMPAIGNS.audience.allEligible} />
-                    <RadioCard checked={mode === "manual"} onClick={() => { setMode("manual"); if (candidates.length === 0) loadCandidates(); }} title={WA_CAMPAIGNS.audience.manual} />
+                    <RadioCard checked={mode === "manual"} onClick={() => setMode("manual")} title={WA_CAMPAIGNS.audience.manual} />
 
                     {/* Filters */}
                     <div className="space-y-3 rounded-xl p-3" style={{ background: "rgba(0,0,0,0.02)", border: "1px solid rgba(0,0,0,0.06)" }}>
@@ -280,18 +306,22 @@ export function BulkCampaignDrawer() {
                         className="w-full rounded-lg border px-3 py-2 text-sm"
                         style={{ borderColor: "rgba(0,0,0,0.12)" }}
                       />
-                      {mode === "manual" && (
-                        <button type="button" onClick={loadCandidates} disabled={isPending} className="text-xs font-semibold text-green-700 disabled:opacity-50">
-                          רענון רשימה
-                        </button>
+                      {mode === "manual" && loadingCandidates && (
+                        <p className="flex items-center gap-1.5 text-xs font-medium" style={{ color: "var(--muted,#888)" }}>
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          מעדכן רשימה…
+                        </p>
                       )}
                     </div>
 
                     {/* Manual candidate list */}
                     {mode === "manual" && (
-                      <div className="max-h-56 space-y-1.5 overflow-y-auto rounded-xl p-2" style={{ border: "1px solid rgba(0,0,0,0.08)" }}>
+                      <div
+                        className="max-h-56 space-y-1.5 overflow-y-auto rounded-xl p-2 transition-opacity"
+                        style={{ border: "1px solid rgba(0,0,0,0.08)", opacity: loadingCandidates ? 0.5 : 1 }}
+                      >
                         {candidates.length === 0 && (
-                          <p className="p-3 text-center text-xs" style={{ color: "var(--muted,#888)" }}>{isPending ? "טוען…" : "אין לקוחות מתאימים"}</p>
+                          <p className="p-3 text-center text-xs" style={{ color: "var(--muted,#888)" }}>{loadingCandidates ? "טוען…" : "אין לקוחות מתאימים"}</p>
                         )}
                         {candidates.map((c) => (
                           <label
@@ -306,8 +336,13 @@ export function BulkCampaignDrawer() {
                                 checked={selected.has(c.clientId)}
                                 onChange={(e) => {
                                   const next = new Set(selected);
-                                  if (e.target.checked) next.add(c.clientId);
-                                  else next.delete(c.clientId);
+                                  if (e.target.checked) {
+                                    next.add(c.clientId);
+                                    deselectedRef.current.delete(c.clientId);
+                                  } else {
+                                    next.delete(c.clientId);
+                                    deselectedRef.current.add(c.clientId);
+                                  }
                                   setSelected(next);
                                 }}
                                 className="h-4 w-4"
@@ -328,8 +363,8 @@ export function BulkCampaignDrawer() {
                       onCancel={handleClose}
                       primaryLabel="המשך"
                       onPrimary={goToContent}
-                      primaryDisabled={isPending || (mode === "manual" && selected.size === 0)}
-                      pending={isPending}
+                      primaryDisabled={isPending || loadingCandidates || (mode === "manual" && selected.size === 0)}
+                      pending={isPending || loadingCandidates}
                     />
                   </>
                 )}
