@@ -20,7 +20,7 @@
  */
 
 import { createMetaCloudApiProvider } from "./meta-cloud-api";
-import { phonesEqual, maskPhone } from "@/lib/phone";
+import { phonesEqual, maskPhone, isValidIsraeliPhone } from "@/lib/phone";
 
 export interface SendMessageParams {
   businessId: string;
@@ -75,6 +75,12 @@ export interface SendMessageResult {
    * designated test phone). Caller should record status=skipped.
    */
   isTestModeBlock?: boolean;
+  /**
+   * True when the send was blocked because the recipient has no usable phone
+   * number. Nothing was sent and no provider call was made. Caller should
+   * record status=skipped.
+   */
+  isMissingPhoneBlock?: boolean;
 }
 
 export interface WhatsAppProvider {
@@ -188,6 +194,44 @@ export function createTestModeProvider(inner: WhatsAppProvider): WhatsAppProvide
 }
 
 // ---------------------------------------------------------------------------
+// Recipient guard — no phone number, no message
+// ---------------------------------------------------------------------------
+
+export const MISSING_PHONE_REASON = "אין ללקוחה מספר טלפון תקין — לא נשלחה הודעה";
+
+/**
+ * חוסם כל שליחה שאין לה נמען תקין.
+ *
+ * כל זרימת שליחה (אוטומטית וידנית) כבר מסננת לקוחות בלי טלפון לפני שהיא מגיעה
+ * לכאן. העטיפה הזו היא רשת ביטחון אחרונה ומשותפת: אם מסיבה כלשהי — נתון ישן,
+ * טלפון ריק שנשמר בעבר, או קריאה חדשה ששכחה לבדוק — הגיע נמען ריק או לא תקין,
+ * ההודעה נעצרת כאן ולא מגיעה לספק בכלל.
+ *
+ * חשוב: normalizePhone("") מחזיר "+972", כלומר מחרוזת "לא ריקה" אך חסרת מספר.
+ * לכן הבדיקה חייבת להיות isValidIsraeliPhone ולא בדיקת truthy בלבד.
+ */
+export function createRecipientGuardProvider(inner: WhatsAppProvider): WhatsAppProvider {
+  return {
+    name: inner.name,
+    async send(params) {
+      const to = params.toPhone?.trim();
+      if (!to || !isValidIsraeliPhone(to)) {
+        console.warn(
+          `[WhatsApp] BLOCKED — missing/invalid recipient phone. businessId=${params.businessId} clientId=${params.clientId} to=${maskPhone(to)}`,
+        );
+        return {
+          success: false,
+          providerMessageId: null,
+          failureReason: MISSING_PHONE_REASON,
+          isMissingPhoneBlock: true,
+        };
+      }
+      return inner.send(params);
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Provider registry
 // ---------------------------------------------------------------------------
 
@@ -203,7 +247,7 @@ export function createTestModeProvider(inner: WhatsAppProvider): WhatsAppProvide
 export function getWhatsAppProvider(): WhatsAppProvider {
   const realSendEnabled = process.env.ENABLE_REAL_WHATSAPP_SEND === "true";
   if (!realSendEnabled) {
-    return devMockProvider;
+    return createRecipientGuardProvider(devMockProvider);
   }
 
   const providerName = process.env.WHATSAPP_PROVIDER;
@@ -234,10 +278,10 @@ export function getWhatsAppProvider(): WhatsAppProvider {
 
   // Wrap with test mode guard if active
   if (process.env.WHATSAPP_TEST_MODE === "true") {
-    return createTestModeProvider(baseProvider);
+    return createRecipientGuardProvider(createTestModeProvider(baseProvider));
   }
 
-  return baseProvider;
+  return createRecipientGuardProvider(baseProvider);
 }
 
 /** Returns true only when both ENABLE_REAL_WHATSAPP_SEND=true and Meta credentials are present. */

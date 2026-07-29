@@ -70,10 +70,41 @@ describe("retryAutomationMessageAction — send outcomes", () => {
         }),
       }),
     );
-    // Provider was invoked with the stored template + phone.
+    // Provider was invoked with the stored template + the canonical wa recipient.
     const arg = send.mock.calls[0][0] as { templateId: string; toPhone: string };
     expect(arg.templateId).toBe("tpl_he");
-    expect(arg.toPhone).toBe("+972501234567");
+    expect(arg.toPhone).toBe("972501234567");
+  });
+
+  it("resends to the client's current phone, never the stored row phone", async () => {
+    // The row's phone is a historical snapshot and may be empty; the validated
+    // client number is the only number we are allowed to send to.
+    prisma.automationMessage.findFirst.mockResolvedValue(
+      failedMessage({
+        phone: "",
+        client: {
+          id: "cli_1",
+          businessId: BUSINESS_A,
+          unsubscribedAt: null,
+          normalizedPhone: "+972509876543",
+        },
+      }),
+    );
+    send.mockResolvedValue({ success: true, providerMessageId: "wamid.R" });
+    await retryAutomationMessageAction("msg_1");
+    const arg = send.mock.calls[0][0] as { toPhone: string };
+    expect(arg.toPhone).toBe("972509876543");
+  });
+
+  it("never calls the provider when the client has no valid phone", async () => {
+    prisma.automationMessage.findFirst.mockResolvedValue(
+      failedMessage({
+        client: { id: "cli_1", businessId: BUSINESS_A, unsubscribedAt: null, normalizedPhone: "" },
+      }),
+    );
+    const res = await retryAutomationMessageAction("msg_1");
+    expect(res.success).toBe(false);
+    expect(send).not.toHaveBeenCalled();
   });
 
   it("returns the test-mode-block message and records the attempt on isTestModeBlock", async () => {

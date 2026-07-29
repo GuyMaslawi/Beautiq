@@ -7,8 +7,10 @@ import {
   devMockProvider,
   createDisabledProvider,
   createTestModeProvider,
+  createRecipientGuardProvider,
   DEV_MOCK_SKIP_REASON,
   TEST_MODE_BLOCKED_REASON,
+  MISSING_PHONE_REASON,
   type WhatsAppProvider,
   type SendMessageParams,
 } from "@/lib/whatsapp/provider";
@@ -160,5 +162,41 @@ describe("createTestModeProvider", () => {
     expect(inner.send).toHaveBeenCalledOnce();
     expect(result.success).toBe(true);
     expect(result.providerMessageId).toBe("wamid.123");
+  });
+});
+
+describe("createRecipientGuardProvider — no phone, no message", () => {
+  function spyInner(): WhatsAppProvider {
+    return {
+      name: "meta_cloud_api",
+      send: vi.fn(async () => ({ success: true, providerMessageId: "wamid.123" })),
+    };
+  }
+
+  // normalizePhone("") returns "+972" — non-empty but with no actual number.
+  // A truthy check would let these through, so the guard must validate.
+  it.each(["", "   ", "+972", "972", "abc", "05012", "+9725001234567890"])(
+    "blocks a send with an unusable recipient (%j)",
+    async (toPhone) => {
+      const inner = spyInner();
+      const result = await createRecipientGuardProvider(inner).send(params({ toPhone }));
+      expect(inner.send).not.toHaveBeenCalled();
+      expect(result.success).toBe(false);
+      expect(result.isMissingPhoneBlock).toBe(true);
+      expect(result.failureReason).toBe(MISSING_PHONE_REASON);
+    },
+  );
+
+  it("passes a valid Israeli number through to the inner provider", async () => {
+    const inner = spyInner();
+    const result = await createRecipientGuardProvider(inner).send(
+      params({ toPhone: "972501234567" }),
+    );
+    expect(inner.send).toHaveBeenCalledOnce();
+    expect(result.success).toBe(true);
+  });
+
+  it("keeps the inner provider name so diagnostics are unchanged", () => {
+    expect(createRecipientGuardProvider(spyInner()).name).toBe("meta_cloud_api");
   });
 });

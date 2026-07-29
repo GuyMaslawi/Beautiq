@@ -33,6 +33,7 @@ import {
   devMockProvider,
   createDisabledProvider,
   createTestModeProvider,
+  createRecipientGuardProvider,
   NUMBER_NOT_CONFIRMED_REASON,
   type WhatsAppProvider,
 } from "@/lib/whatsapp/provider";
@@ -71,7 +72,19 @@ export interface WhatsAppDiagnosticResult {
   details: Array<{ label: string; ok: boolean; value?: string }>;
 }
 
+/**
+ * מחזירה את הגדרות ה-WhatsApp של העסק, כשהספק עטוף תמיד בשומר הנמען — כך שאף
+ * זרימה (אוטומטית או ידנית) לא יכולה לשלוח הודעה ללקוחה שאין לנו את הטלפון שלה,
+ * גם אם היא שכחה לבדוק זאת בעצמה.
+ */
 export async function resolveWhatsAppConnectionForBusiness(
+  businessId: string,
+): Promise<ResolvedWhatsAppConfig> {
+  const resolved = await resolveConnection(businessId);
+  return { ...resolved, provider: createRecipientGuardProvider(resolved.provider) };
+}
+
+async function resolveConnection(
   businessId: string,
 ): Promise<ResolvedWhatsAppConfig> {
   const realSendEnabled = process.env.ENABLE_REAL_WHATSAPP_SEND === "true";

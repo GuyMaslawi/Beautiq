@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { prisma } from "@/server/db/prisma";
 import { requireTenant } from "@/server/auth/session";
 import { getWhatsAppProviderForBusiness } from "@/server/whatsapp/resolver";
-import { isValidIsraeliPhone } from "@/lib/phone";
+import { isValidIsraeliPhone, toWaPhone } from "@/lib/phone";
 
 const MAX_RETRY_COUNT = 3;
 
@@ -60,12 +60,18 @@ export async function retryAutomationMessageAction(
     return { success: false, error: "מספר טלפון לא תקין" };
   }
 
+  // שולחים למספר שנבדק זה עתה מכרטיס הלקוחה, ולא ל-message.phone — השדה הזה הוא
+  // צילום מצב היסטורי של השורה, ויכול להיות ריק או לא תקין (שורות שנוצרו לפני
+  // שהיה ללקוחה טלפון תקין). בדיקה על שדה אחד ושליחה לשדה אחר היא בדיוק הפער
+  // שמאפשר ניסיון שליחה בלי מספר.
+  const recipientPhone = toWaPhone(message.client.normalizedPhone);
+
   const provider = await getWhatsAppProviderForBusiness(tenant.businessId);
 
   try {
     const result = await provider.send({
       businessId: tenant.businessId,
-      toPhone: message.phone,
+      toPhone: recipientPhone,
       templateId: message.templateId ?? undefined,
       fallbackText: message.messageText,
       automationRunId: message.runId,
