@@ -1,6 +1,6 @@
 "use server";
 
-import { getCurrentBusiness, hasPlatinumAccess } from "@/server/auth/session";
+import { requirePaidUser, getCurrentBusiness, hasPlatinumAccess } from "@/server/auth/session";
 import { getAssistantContext } from "@/server/assistant/queries";
 import { captureError } from "@/lib/logger";
 import type { AssistantContext } from "@/lib/assistant/engine";
@@ -16,8 +16,16 @@ export type AssistantContextResult =
  *
  * Platinum-gated: admins always pass, otherwise the user must be on platinum
  * (see [[project_subscribe_paywall]] / hasPlatinumAccess). Business-scoped.
+ *
+ * SECURITY: requirePaidUser() runs first, exactly like requireCurrentBusiness()
+ * does for every other action. hasPlatinumAccess() alone checks only the plan —
+ * it says nothing about suspension, so an account an admin suspended for abuse
+ * kept pulling its full business dossier (today's schedule, revenue, at-risk
+ * clients) by POSTing this action id straight from the client bundle, long after
+ * the app shell had stopped rendering for it.
  */
 export async function loadAssistantContextAction(): Promise<AssistantContextResult> {
+  await requirePaidUser();
   if (!(await hasPlatinumAccess())) return { ok: false, reason: "locked" };
 
   const business = await getCurrentBusiness();

@@ -13,15 +13,19 @@ import {
   PlayCircle,
   ArrowLeftRight,
   Gift,
+  Wallet,
+  RotateCcw,
 } from "lucide-react";
 import {
   adminSetAccountPlanAction,
+  adminSetCustomPriceAction,
   adminResetPasswordAction,
   adminToggleAdminRoleAction,
   adminSuspendAccountAction,
   adminTransferOwnershipAction,
   type AdminActionResult,
 } from "@/server/admin/account-actions";
+import { PLAN_PRICES } from "@/lib/plans";
 
 type PlanValue = "premium" | "platinum" | "none";
 
@@ -33,6 +37,12 @@ interface Owner {
   isAdmin: boolean;
   planExpiresAt: string | null;
   suspendedUntil: string | null;
+  /** Admin-negotiated monthly price in agorot, or null for the list price. */
+  customPriceMinor: number | null;
+  /** What the live billing row charges each month, in agorot (null = no row). */
+  billedPriceMinor: number | null;
+  /** True when a real recurring charge is running (active / past due). */
+  hasActiveBilling: boolean;
 }
 
 function dateHe(iso: string): string {
@@ -53,6 +63,11 @@ function addDaysISO(days: number): string {
 /** Free-trial duration presets (days). */
 const TRIAL_PRESETS = [14, 30, 60];
 
+/** "₪149" from an agorot amount. */
+function shekels(minor: number): string {
+  return `₪${minor % 100 === 0 ? minor / 100 : (minor / 100).toFixed(2)}`;
+}
+
 export function GodControls({
   businessId,
   owner,
@@ -70,6 +85,9 @@ export function GodControls({
   const [expiryDate, setExpiryDate] = useState("");
   const [trialPlan, setTrialPlan] = useState<"premium" | "platinum">("platinum");
   const [trialDays, setTrialDays] = useState("30");
+  const [customPrice, setCustomPrice] = useState(
+    owner.customPriceMinor != null ? String(Math.round(owner.customPriceMinor / 100)) : "",
+  );
   const [suspendDate, setSuspendDate] = useState("");
   const [transferEmail, setTransferEmail] = useState("");
   // "now" captured once at mount (lazy init keeps render pure).
@@ -117,6 +135,17 @@ export function GodControls({
 
   const trialDaysNum = Number(trialDays);
   const trialDaysValid = Number.isInteger(trialDaysNum) && trialDaysNum >= 1 && trialDaysNum <= 365;
+
+  const customPriceNum = Number(customPrice);
+  const customPriceValid =
+    customPrice.trim() !== "" &&
+    Number.isInteger(customPriceNum) &&
+    customPriceNum >= 1 &&
+    customPriceNum <= 10000;
+  const listPriceMinor = owner.plan ? PLAN_PRICES[owner.plan] * 100 : null;
+  // The live billing row is the truth when there is one; otherwise the override,
+  // and only then the list price of her plan.
+  const billedNowMinor = owner.billedPriceMinor ?? owner.customPriceMinor ?? listPriceMinor;
 
   return (
     <div
@@ -215,6 +244,94 @@ export function GodControls({
         </p>
       </div>
 
+      {/* Custom monthly price — a negotiated amount that replaces the list price */}
+      <div className="mb-6">
+        <p className="mb-2 text-xs font-semibold text-foreground-soft">מחיר חודשי מותאם אישית</p>
+
+        <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
+          <span className="text-muted">
+            {billedNowMinor != null ? (
+              <>
+                מחויבת כרגע: <strong className="text-foreground">{shekels(billedNowMinor)}</strong> לחודש
+              </>
+            ) : (
+              "אין עדיין חיוב חודשי (ללא תוכנית פעילה)"
+            )}
+          </span>
+          <span
+            className="rounded-lg px-2 py-0.5 font-semibold"
+            style={{
+              background:
+                owner.customPriceMinor != null ? "var(--accent-light)" : "var(--background-alt)",
+              color: owner.customPriceMinor != null ? "var(--accent)" : "var(--muted)",
+            }}
+          >
+            {owner.customPriceMinor != null ? "מחיר מותאם" : "מחיר מחירון"}
+          </span>
+          {listPriceMinor != null && owner.customPriceMinor != null && (
+            <span className="text-muted">(מחירון: {shekels(listPriceMinor)})</span>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1.5">
+            <input
+              type="number"
+              min={1}
+              max={10000}
+              step={1}
+              value={customPrice}
+              onChange={(e) => setCustomPrice(e.target.value)}
+              placeholder={listPriceMinor != null ? String(listPriceMinor / 100) : "149"}
+              className="w-28 rounded-xl border border-border bg-surface px-2.5 py-1 text-sm text-foreground"
+            />
+            <span className="text-xs text-muted">₪ לחודש</span>
+          </div>
+          <button
+            type="button"
+            disabled={pending || !customPriceValid}
+            onClick={() =>
+              run(
+                () => adminSetCustomPriceAction(businessId, owner.id, customPriceNum),
+                `לקבוע לבעלת העסק חשבון חודשי קבוע של ₪${customPriceNum}? זה יהיה הסכום שייגבה ממנה כל חודש עד לשינוי.`,
+              )
+            }
+            className="flex items-center gap-1.5 rounded-xl border px-3.5 py-1.5 text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-60"
+            style={{ borderColor: "var(--primary)", background: "var(--primary)", color: "#fff" }}
+          >
+            <Wallet className="h-3.5 w-3.5" />
+            קבע מחיר חודשי
+          </button>
+          {owner.customPriceMinor != null && (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() =>
+                run(
+                  () => adminSetCustomPriceAction(businessId, owner.id, null),
+                  "לבטל את המחיר המותאם ולחזור למחיר המחירון של התוכנית?",
+                )
+              }
+              className="flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-background-alt disabled:opacity-60"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              חזרה למחיר המחירון
+            </button>
+          )}
+        </div>
+
+        <p className="mt-1.5 text-xs text-muted">
+          הסכום שנקבע כאן הוא החשבון החודשי הקבוע שלה — הוא חל על החיוב הבא ועל כל חידוש חודשי,
+          נשמר גם אם משנים לה תוכנית, ותקף עד שתשנה אותו כאן. אם כבר יש לה הוראת קבע פעילה בסכום
+          אחר, ההוראה הישנה תבוטל והיא תתבקש לאשר מחדש את הכרטיס בסכום החדש (הגישה לא נפגעת).
+        </p>
+        {customPrice.trim() !== "" && !customPriceValid && (
+          <p className="mt-1 text-xs" style={{ color: "var(--error)" }}>
+            יש להזין סכום שלם בין ₪1 ל־₪10,000. לגישה חינם יש להשתמש במנוי ניסיון שלמטה.
+          </p>
+        )}
+      </div>
+
       {/* Free trial — choose plan + duration, comped with automatic expiry */}
       <div className="mb-6">
         <p className="mb-2 text-xs font-semibold text-foreground-soft">מנוי ניסיון חינם</p>
@@ -306,6 +423,12 @@ export function GodControls({
         {!trialDaysValid && (
           <p className="mt-1 text-xs" style={{ color: "var(--error)" }}>
             יש להזין מספר ימים בין 1 ל־365.
+          </p>
+        )}
+        {owner.hasActiveBilling && (
+          <p className="mt-1 text-xs" style={{ color: "var(--warning)" }}>
+            שים לב: לחשבון הזה כבר יש הוראת קבע פעילה — מנוי ניסיון פותח גישה אך אינו עוצר את
+            החיוב החודשי. כדי לעצור את החיוב יש לבטל את המנוי מצד בעלת העסק או ב-Grow.
           </p>
         )}
         {isSuspended && (

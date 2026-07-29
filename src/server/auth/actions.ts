@@ -12,9 +12,18 @@ import { checkPersistentRateLimit } from "@/server/rate-limit/persistent";
 import {
   validateSignup,
   validateLogin,
+  isValidEmail,
+  PASSWORD_MIN_LENGTH,
+  PASSWORD_MAX_LENGTH,
+  EMAIL_MAX_LENGTH,
   type FieldErrors,
   type SignupField,
 } from "@/lib/validation/auth";
+import {
+  issuePasswordReset,
+  consumeResetToken,
+} from "@/server/auth/password-reset";
+import { captureError } from "@/lib/logger";
 import { AUTH } from "@/lib/constants/he";
 
 // הגבלת קצב על ניסיונות התחברות/הרשמה — הגנת עומק מפני ניחוש סיסמאות (brute-force)
@@ -171,4 +180,148 @@ export async function googleSignInAction(): Promise<void> {
 /** Sign the current user out and return to the home page. */
 export async function signOutAction(): Promise<void> {
   await signOut({ redirectTo: "/login" });
+}
+
+// ---------------------------------------------------------------------------
+// שחזור סיסמה ("שכחתי סיסמה")
+// ---------------------------------------------------------------------------
+
+/**
+ * תקרות לבקשת שחזור. הנקודה הזו שולחת אימייל אמיתי לכתובת שהקוראת בוחרת,
+ * ולכן בלי תקרה היא גם מנוע הצפת תיבות דואר על חשבוננו וגם דרך לשרוף את
+ * מכסת ספק האימייל. תקרה פר-IP (בולמת פרץ) ופר-כתובת (מונעת הטרדה של
+ * בעלת עסק מסוימת מכמה מקורות).
+ */
+const RESET_REQUEST_IP_MAX = 5;
+const RESET_REQUEST_EMAIL_MAX = 3;
+const RESET_REQUEST_WINDOW_MS = 15 * 60_000;
+/** תקרה משותפת לכל מופעי השרת — הדלי שבזיכרון הוא פר-תהליך. */
+const RESET_REQUEST_PERSISTENT_MAX = 5;
+
+/** תקרה על *מימוש* טוקן — מגבילה ניחוש טוקנים בכוח. */
+const RESET_SUBMIT_IP_MAX = 10;
+const RESET_SUBMIT_WINDOW_MS = 15 * 60_000;
+
+export interface ForgotPasswordState {
+  /** מוצג תמיד לאחר שליחה תקינה — זהה בין אם המייל קיים ובין אם לא. */
+  sent?: boolean;
+  errors?: { email?: string };
+  formError?: string;
+}
+
+/**
+ * שלב 1: בקשת קישור שחזור.
+ *
+ * מחזיר תמיד את אותה תוצאה כשהקלט תקין — בין אם נמצא חשבון ובין אם לא.
+ * אחרת הטופס הזה היה הופך למנוע לגילוי אילו כתובות אימייל רשומות במערכת
+ * (user enumeration), וזה מידע שמאפשר תקיפה ממוקדת של בעלות עסק אמיתיות.
+ */
+export async function requestPasswordResetAction(
+  _prevState: ForgotPasswordState,
+  formData: FormData,
+): Promise<ForgotPasswordState> {
+  const ip = getClientIp(await headers());
+  if (!checkRateLimit(`pwreset:ip:${ip}`, RESET_REQUEST_IP_MAX, RESET_REQUEST_WINDOW_MS)) {
+    return { formError: AUTH.errors.tooManyAttempts };
+  }
+
+  const email = String(formData.get("email") ?? "").trim().toLowerCase();
+  if (!email) return { errors: { email: AUTH.errors.emailRequired } };
+  if (email.length > EMAIL_MAX_LENGTH || !isValidEmail(email)) {
+    return { errors: { email: AUTH.errors.invalidEmail } };
+  }
+
+  if (
+    !checkRateLimit(`pwreset:mail:${email}`, RESET_REQUEST_EMAIL_MAX, RESET_REQUEST_WINDOW_MS) ||
+    !(await checkPersistentRateLimit(
+      `pwreset:mail:${email}`,
+      RESET_REQUEST_PERSISTENT_MAX,
+      RESET_REQUEST_WINDOW_MS,
+    ))
+  ) {
+    // גם כאן לא מגלים אם החשבון קיים — פשוט מבקשים להמתין.
+    return { formError: AUTH.errors.tooManyAttempts };
+  }
+
+  try {
+    await issuePasswordReset(email);
+  } catch (err) {
+    // כשל פנימי נרשם, אך התשובה נשארת אחידה: הודעת שגיאה שונה עבור כתובת
+    // קיימת מול לא-קיימת היא בדיוק ההדלפה שאנחנו מונעים.
+    captureError("auth.passwordResetRequest", err);
+  }
+
+  await logActivity({
+    category: "auth",
+    action: "auth.password_reset_requested",
+    summary: "התבקש איפוס סיסמה",
+    userId: null,
+    actorType: "system",
+    businessId: null,
+  });
+
+  return { sent: true };
+}
+
+export interface ResetPasswordState {
+  errors?: { password?: string; confirmPassword?: string };
+  formError?: string;
+  success?: boolean;
+}
+
+/**
+ * שלב 2: קביעת סיסמה חדשה בעזרת הטוקן.
+ *
+ * מימוש מוצלח גם מבטל כל סשן קיים של החשבון (consumeResetToken חותם
+ * sessionsValidFrom) — כך ששחזור סיסמה בעקבות פריצה באמת מוציא את התוקף,
+ * ולא רק משנה אישור שהוא כבר לא צריך.
+ */
+export async function resetPasswordAction(
+  _prevState: ResetPasswordState,
+  formData: FormData,
+): Promise<ResetPasswordState> {
+  const ip = getClientIp(await headers());
+  if (!checkRateLimit(`pwreset:submit:${ip}`, RESET_SUBMIT_IP_MAX, RESET_SUBMIT_WINDOW_MS)) {
+    return { formError: AUTH.errors.tooManyAttempts };
+  }
+
+  const token = String(formData.get("token") ?? "");
+  const password = String(formData.get("password") ?? "");
+  const confirmPassword = String(formData.get("confirmPassword") ?? "");
+
+  const errors: ResetPasswordState["errors"] = {};
+  if (!password) errors.password = AUTH.errors.passwordRequired;
+  else if (password.length < PASSWORD_MIN_LENGTH)
+    errors.password = AUTH.errors.passwordTooShort;
+  else if (password.length > PASSWORD_MAX_LENGTH)
+    errors.password = AUTH.errors.passwordTooLong;
+
+  if (!confirmPassword) errors.confirmPassword = AUTH.errors.confirmRequired;
+  else if (!errors.password && password !== confirmPassword)
+    errors.confirmPassword = AUTH.errors.passwordsMismatch;
+
+  if (Object.keys(errors).length > 0) return { errors };
+
+  let state;
+  try {
+    state = await consumeResetToken(token, password);
+  } catch (err) {
+    captureError("auth.passwordResetConsume", err);
+    return { formError: AUTH.errors.generic };
+  }
+
+  if (!state.valid) {
+    return { formError: AUTH.resetPassword.invalidToken[state.reason] };
+  }
+
+  await logActivity({
+    category: "auth",
+    action: "auth.password_reset_completed",
+    summary: "סיסמה אופסה בהצלחה על ידי בעלת החשבון",
+    userId: state.userId,
+    actorType: "owner",
+    businessId: null,
+  });
+
+  return { success: true };
 }

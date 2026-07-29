@@ -1,4 +1,5 @@
-import { ShieldCheck, Flower2 } from "lucide-react";
+import { ShieldCheck } from "lucide-react";
+import { notFound } from "next/navigation";
 import { getPublicBusiness } from "@/server/public-booking/queries";
 import { BookingRequestForm } from "./booking-request-form";
 import { PublicReviewForm } from "./review-form";
@@ -29,26 +30,12 @@ export default async function PublicBusinessPage({
 
   const business = await getPublicBusiness(slug);
 
-  if (!business) {
-    return (
-      <main
-        className="app-ambient flex min-h-screen items-center justify-center p-6"
-        dir="rtl"
-      >
-        <div className="aura-card w-full max-w-sm rounded-[1.75rem] px-8 py-10 text-center">
-          <span className="brand-chip mx-auto flex h-12 w-12 items-center justify-center rounded-2xl">
-            <Flower2 className="h-5 w-5" />
-          </span>
-          <h1 className="font-display mt-5 text-2xl font-semibold tracking-tight text-[var(--foreground)]">
-            הקישור לא נמצא
-          </h1>
-          <p className="mt-2 text-sm leading-6 text-[var(--muted)]">
-            כדאי לבדוק את הקישור שקיבלת מהעסק ולנסות שוב.
-          </p>
-        </div>
-      </main>
-    );
-  }
+  // notFound() ולא רינדור מוטבע: כך התגובה היא 404 אמיתי. עסק לא-קיים —
+  // וגם עסק מושהה או שמנויו פקע (getPublicBusiness מחזיר null לשלושתם) —
+  // חייב להיראות ל-uptime monitor, לבודק קישורים ולמנוע חיפוש כעמוד שאינו
+  // קיים, לא כ-200 תקין. הכרטיס המעוצב עבר ל-not-found.tsx; שום פרט של
+  // העסק המושהה אינו נחשף.
+  if (!business) notFound();
 
   const brand = business.brandColor ?? "#ac5c7f";
   const brandGrd = `linear-gradient(135deg, ${brand}cc 0%, ${brand} 100%)`;

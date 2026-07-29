@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/server/db/prisma";
 import { getAvailableSlots } from "@/server/availability/get-available-slots";
 import { checkRateLimit, getClientIp } from "@/lib/rate-limit";
+import { isValidDateStr } from "@/lib/time";
 
 const RATE_LIMIT_WINDOW_MS = 60_000;
 const RATE_LIMIT_MAX = 40;
@@ -23,7 +24,9 @@ export async function GET(
   const date = req.nextUrl.searchParams.get("date");
   const serviceId = req.nextUrl.searchParams.get("serviceId");
 
-  if (!date || !serviceId || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+  // isValidDateStr, ולא רק בדיקת תבנית: "2026-99-99" עובר regex ומתגלגל
+  // בשקט לתאריך אחר לגמרי.
+  if (!date || !serviceId || !isValidDateStr(date)) {
     return NextResponse.json({ slots: [] });
   }
 

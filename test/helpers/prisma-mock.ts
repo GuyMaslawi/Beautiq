@@ -55,6 +55,7 @@ const MODELS = [
   "loyaltyRedemption",
   "loyaltyMessage",
   "rateLimitCounter",
+  "passwordResetToken",
 ] as const;
 
 const DELEGATE_METHODS = [

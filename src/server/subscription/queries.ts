@@ -64,7 +64,9 @@ export async function getSubscriptionOverview(): Promise<SubscriptionOverview> {
   return {
     plan: user.plan,
     status: sub?.status ?? null,
-    priceMinor: sub?.priceMinor ?? null,
+    // Fall back to the admin-negotiated price when there is no billing row yet,
+    // so the owner never sees the list price where a different amount was agreed.
+    priceMinor: sub?.priceMinor ?? user.customPriceMinor ?? null,
     currentPeriodEnd: sub?.currentPeriodEnd ?? null,
     cardSuffix: sub?.cardSuffix ?? null,
     cancelledAt: sub?.cancelledAt ?? null,

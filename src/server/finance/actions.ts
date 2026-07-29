@@ -5,6 +5,8 @@ import { prisma } from "@/server/db/prisma";
 import { requireTenant } from "@/server/auth/session";
 import { logActivity } from "@/server/activity/log";
 import type { ExpenseCategory } from "@prisma/client";
+import { isValidDateStr } from "@/lib/time";
+import { TEXT_LIMITS, exceedsLimit, tooLongError } from "@/lib/validation/text";
 import { FINANCE } from "@/lib/constants/he";
 
 // ---------------------------------------------------------------------------
@@ -50,17 +52,32 @@ function validateExpenseFields(raw: Record<string, string>): {
 
   const description = raw.description?.trim() ?? "";
   if (!description) errors.description = FINANCE.errors.descriptionRequired;
+  else if (exceedsLimit(description, TEXT_LIMITS.short)) {
+    errors.description = tooLongError(TEXT_LIMITS.short);
+  }
 
+  const notes = raw.notes?.trim() ?? "";
+  if (exceedsLimit(notes, TEXT_LIMITS.notes)) {
+    errors.notes = tooLongError(TEXT_LIMITS.notes);
+  }
+
+  // הסכום נשמר בעמודת Decimal עם דיוק מוגבל. בלי תקרה, ערך כמו 1e30 עובר את
+  // הבדיקה "> 0" ומגיע ל-Prisma רק כדי להיזרק שם כשגיאה גנרית — ובינתיים
+  // מעוות את כל חישובי הרווח אם בכל זאת נכנס.
+  const MAX_AMOUNT = 100_000_000;
   const rawAmount = raw.amount?.trim() ?? "";
   const amount = parseFloat(rawAmount);
   if (!rawAmount) {
     errors.amount = FINANCE.errors.amountRequired;
-  } else if (isNaN(amount) || amount <= 0) {
+  } else if (!Number.isFinite(amount) || amount <= 0 || amount > MAX_AMOUNT) {
     errors.amount = FINANCE.errors.amountInvalid;
   }
 
+  // התאריך הגיע ישירות ל-`new Date(rawDate + "T12:00:00Z")`: ערך לא תקין ייצר
+  // Invalid Date שנזרק רק בשכבת Prisma, כשגיאה גנרית שלא מסבירה כלום.
   const rawDate = raw.date?.trim() ?? "";
   if (!rawDate) errors.date = FINANCE.errors.dateRequired;
+  else if (!isValidDateStr(rawDate)) errors.date = FINANCE.errors.dateInvalid;
 
   const category = raw.category?.trim() as ExpenseCategory;
   if (!VALID_CATEGORIES.includes(category)) errors.category = FINANCE.errors.categoryRequired;
@@ -74,7 +91,7 @@ function validateExpenseFields(raw: Record<string, string>): {
       amount,
       category,
       date: new Date(rawDate + "T12:00:00Z"),
-      notes: raw.notes?.trim() || null,
+      notes: notes || null,
     },
   };
 }

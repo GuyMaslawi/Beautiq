@@ -30,6 +30,10 @@ const PUBLIC_EXACT = new Set([
   "/", // מפנה בעצמו: מחוברת → /dashboard, אחרת → /login
   "/login",
   "/signup",
+  // שחזור סיסמה — מעצם טבעו נגיש למי שאינה יכולה להתחבר. מוגן בטוקן חד-פעמי
+  // קצר-מועד ובהגבלת קצב, לא בסשן (ראו server/auth/password-reset.ts).
+  "/forgot-password",
+  "/reset-password",
   "/about",
   "/contact",
   "/privacy",
@@ -62,9 +66,23 @@ const PUBLIC_PREFIXES = [
  */
 const SESSION_COOKIE_RE = /^(__Secure-)?authjs\.session-token(\.\d+)?$/;
 
+/**
+ * התאמת קידומת עם *גבול נתיב*, ולא startsWith גולמי.
+ *
+ * `"/api/health".startsWith` פותח גם את `/api/health-internal` ו-`/api/healthz`,
+ * ו-`"/b/"` פותח כל דבר שמתחיל כך. רשימת ההיתר הזו היא היחידה שמפרידה בין
+ * "פתוח לכולם" ל"דורש סשן", ולכן היא חייבת להתאים בדיוק לנתיב עצמו או
+ * לתת-נתיב שלו — לא לכל מחרוזת שבמקרה מתחילה באותן אותיות. נתיב חדש שנוסיף
+ * מחר ליד אחד מאלה ייוולד סגור, כפי שהכוונה כאן.
+ */
+function matchesPrefix(pathname: string, prefix: string): boolean {
+  const base = prefix.endsWith("/") ? prefix.slice(0, -1) : prefix;
+  return pathname === base || pathname.startsWith(`${base}/`);
+}
+
 function isPublicPath(pathname: string): boolean {
   if (PUBLIC_EXACT.has(pathname)) return true;
-  return PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  return PUBLIC_PREFIXES.some((prefix) => matchesPrefix(pathname, prefix));
 }
 
 function hasSessionCookie(request: NextRequest): boolean {

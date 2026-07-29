@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useState } from "react";
+import Link from "next/link";
 import { Mail, Lock } from "lucide-react";
 import { loginAction, type LoginState } from "@/server/auth/actions";
 import { AUTH } from "@/lib/constants/he";
@@ -70,6 +71,15 @@ export function LoginForm() {
           iconRight={<Lock className="h-4 w-4" />}
         />
       </Field>
+
+      <div className="-mt-2 text-left">
+        <Link
+          href="/forgot-password"
+          className="text-muted hover:text-primary text-sm transition-colors"
+        >
+          {AUTH.forgotPassword.linkFromLogin}
+        </Link>
+      </div>
 
       <Button type="submit" className="w-full" disabled={isPending}>
         {isPending ? AUTH.login.submitting : AUTH.login.submit}

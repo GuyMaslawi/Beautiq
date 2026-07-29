@@ -117,6 +117,39 @@ describe("middleware — public allowlist", () => {
     const res = middleware(makeRequest("/api/publicity/secrets"));
     expect(res.status).toBe(401);
   });
+
+  // רשימת ההיתר הזו היא היחידה שמפרידה בין "פתוח לכולם" ל"דורש סשן". התאמת
+  // startsWith גולמית פתחה כל נתיב שרק *מתחיל* באותן אותיות — כלומר מסלול
+  // חדש שייכתב מחר ליד אחד מאלה היה נולד חשוף, בלי ששום דבר יתריע.
+  const lookalikePaths = [
+    "/api/healthz", // ליד /api/health
+    "/api/health-internal",
+    "/api/subscription/webhook-admin", // ליד /api/subscription/webhook
+    "/api/whatsapp/webhooks-debug", // ליד /api/whatsapp/webhook
+    "/api/authorize", // ליד /api/auth/
+    "/api/cronjobs", // ליד /api/cron/
+    "/bookings", // ליד /b/
+  ];
+
+  it.each(lookalikePaths)(
+    "requires a session for the lookalike path %s",
+    (path) => {
+      const res = middleware(makeRequest(path));
+      expect(res.status === 401 || res.status === 307).toBe(true);
+    },
+  );
+
+  it("still serves genuine sub-paths of a public prefix", () => {
+    for (const path of [
+      "/b/studio-noa/confirm",
+      "/api/public/studio-noa/upcoming-slots",
+      "/api/auth/session",
+    ]) {
+      const res = middleware(makeRequest(path));
+      expect(res.status).not.toBe(401);
+      expect(res.status).not.toBe(307);
+    }
+  });
 });
 
 describe("middleware — design lab", () => {

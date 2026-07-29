@@ -4,11 +4,25 @@ import { randomUUID } from "crypto";
 import { AccountPlan, AccountSubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
 import { requireCurrentUser } from "@/server/auth/session";
-import { planPriceMinor, confirmSubscriptionPayment } from "@/server/subscription/service";
+import { effectivePriceMinor, confirmSubscriptionPayment } from "@/server/subscription/service";
 import { isGrowConfigured, createPaymentLink, cancelDirectDebit } from "@/lib/subscription/grow";
 import { PLANS } from "@/lib/plans";
 import { SUPPORT_EMAIL } from "@/lib/config";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { checkPersistentRateLimit } from "@/server/rate-limit/persistent";
 import { logger, captureError } from "@/lib/logger";
+
+/**
+ * תקרת פתיחות תשלום לחשבון. נדיב בהרבה משימוש אמיתי (בעלת עסק פותחת תשלום
+ * פעם אחת, ואולי מנסה שוב אחרי כרטיס שנדחה) — נועד ליירט לולאה או שימוש
+ * לרעה, לא את מי שמתקשה לשלם.
+ */
+const CHECKOUT_MAX = 6;
+const CHECKOUT_WINDOW_MS = 15 * 60_000;
+/** מעט גבוהה מזו שבזיכרון, כדי שמופע עמוס בודד לא ייתקל בה ראשון. */
+const CHECKOUT_PERSISTENT_MAX = 8;
+const CHECKOUT_RATE_LIMIT_ERROR =
+  "נפתחו יותר מדי בקשות תשלום בזמן קצר. יש להמתין מספר דקות ולנסות שוב.";
 
 /**
  * Self-serve subscription checkout (see CLAUDE.md §13, [[project_subscribe_paywall]]).
@@ -87,6 +101,26 @@ export async function startSubscriptionCheckoutAction(
     return { ok: false, error: "בחירת תוכנית לא תקינה. נסי שוב." };
   }
 
+  // הגבלת קצב פר-חשבון. הפעולה הזו אינה קריאה בלבד: כל הפעלה מבקשת מ-Grow
+  // לעצור את הוראת הקבע הקיימת, *מאפסת* את שורת המנוי (כולל directDebitId)
+  // ומייצרת קישור תשלום חדש דרך Make. בלי תקרה, לחיצות חוזרות — או קריאה
+  // ישירה ל-action id מתוך חבילת הלקוח — מייצרות סדרת קישורי תשלום, מבזבזות
+  // מכסת Make, ומשאירות לקוחה משלמת בלי הוראת קבע פעילה.
+  // הדלי בזיכרון בולם פרץ מיידית; הדלי במסד הוא התקרה האמיתית שמשותפת לכל
+  // מופעי ה-serverless (ראו src/server/rate-limit/persistent.ts).
+  if (!checkRateLimit(`checkout:${user.id}`, CHECKOUT_MAX, CHECKOUT_WINDOW_MS)) {
+    return { ok: false, error: CHECKOUT_RATE_LIMIT_ERROR };
+  }
+  if (
+    !(await checkPersistentRateLimit(
+      `checkout:${user.id}`,
+      CHECKOUT_PERSISTENT_MAX,
+      CHECKOUT_WINDOW_MS,
+    ))
+  ) {
+    return { ok: false, error: CHECKOUT_RATE_LIMIT_ERROR };
+  }
+
   const unavailable = assertCheckoutAvailable();
   if (unavailable) {
     logger.error(
@@ -116,7 +150,9 @@ export async function startSubscriptionCheckoutAction(
     return { ok: true, redirectUrl: "/dashboard" };
   }
 
-  const priceMinor = planPriceMinor(plan);
+  // An admin may have negotiated a fixed monthly price for this account; it
+  // replaces the list price for this charge and every renewal that follows.
+  const priceMinor = effectivePriceMinor(plan, user.customPriceMinor);
   const nonce = randomUUID();
 
   // Reset the (single) subscription row to a fresh pending checkout for this plan.

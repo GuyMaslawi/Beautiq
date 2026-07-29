@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { minutesToTime, timeToMinutes, parseIsraelDateTime } from "@/lib/time";
+import {
+  minutesToTime,
+  timeToMinutes,
+  parseIsraelDateTime,
+  isValidDateStr,
+  isValidTimeStr,
+  InvalidDateTimeError,
+} from "@/lib/time";
 
 describe("minutesToTime", () => {
   it("converts minutes since midnight to HH:MM", () => {
@@ -60,5 +67,73 @@ describe("parseIsraelDateTime", () => {
   it("handles midnight correctly in summer", () => {
     const d = parseIsraelDateTime("2026-07-01", "00:00");
     expect(d.toISOString()).toBe("2026-06-30T21:00:00.000Z");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// אימות תאריך/שעה — הגנה על כל מי שמזין קלט למנתח התאריכים
+// ---------------------------------------------------------------------------
+
+describe("isValidDateStr", () => {
+  it("accepts real calendar dates", () => {
+    expect(isValidDateStr("2026-07-01")).toBe(true);
+    expect(isValidDateStr("2024-02-29")).toBe(true); // שנה מעוברת
+  });
+
+  it("rejects anything that is not YYYY-MM-DD", () => {
+    expect(isValidDateStr("")).toBe(false);
+    expect(isValidDateStr("abc")).toBe(false);
+    expect(isValidDateStr("2026-7-1")).toBe(false);
+    expect(isValidDateStr("2026/07/01")).toBe(false);
+  });
+
+  // הליבה של התיקון: בדיקת תבנית לבדה עוברת על "2026-99-99", ו-Date.UTC
+  // מגלגל את החריגה קדימה בשקט — התאריך הזה נוחת ב-2034.
+  it("rejects shape-valid dates that do not exist", () => {
+    expect(isValidDateStr("2026-99-99")).toBe(false);
+    expect(isValidDateStr("2026-13-01")).toBe(false);
+    expect(isValidDateStr("2026-02-30")).toBe(false);
+    expect(isValidDateStr("2023-02-29")).toBe(false); // אינה שנה מעוברת
+  });
+
+  it("rejects years outside a sane calendar range", () => {
+    expect(isValidDateStr("0001-01-01")).toBe(false);
+    expect(isValidDateStr("9999-01-01")).toBe(false);
+  });
+});
+
+describe("isValidTimeStr", () => {
+  it("accepts 24-hour HH:MM", () => {
+    expect(isValidTimeStr("00:00")).toBe(true);
+    expect(isValidTimeStr("09:30")).toBe(true);
+    expect(isValidTimeStr("23:59")).toBe(true);
+  });
+
+  it("rejects out-of-range and malformed times", () => {
+    expect(isValidTimeStr("24:00")).toBe(false);
+    expect(isValidTimeStr("25:99")).toBe(false);
+    expect(isValidTimeStr("9:30")).toBe(false);
+    expect(isValidTimeStr("")).toBe(false);
+    expect(isValidTimeStr("xx")).toBe(false);
+  });
+});
+
+describe("parseIsraelDateTime — invalid input", () => {
+  // רגרסיה: קודם, קלט לא תקין ייצר new Date(NaN), והקריאה הראשונה ל-Intl
+  // בתוך הפונקציה זרקה RangeError גולמי — כלומר 500 לא מטופל בכל קורא
+  // שלא בדק את הקלט קודם. עכשיו הכישלון מפורש וניתן לתפיסה.
+  it("throws a NAMED error instead of a raw Intl RangeError", () => {
+    expect(() => parseIsraelDateTime("", "")).toThrow(InvalidDateTimeError);
+    expect(() => parseIsraelDateTime("abc", "xx")).toThrow(InvalidDateTimeError);
+    expect(() => parseIsraelDateTime("9999999-01-01", "00:00")).toThrow(
+      InvalidDateTimeError,
+    );
+  });
+
+  it("refuses to silently roll a non-existent date into another year", () => {
+    // "2026-99-99" @ "12:00" נחת קודם ב-2034 בלי שאיש שם לב.
+    expect(() => parseIsraelDateTime("2026-99-99", "12:00")).toThrow(
+      InvalidDateTimeError,
+    );
   });
 });

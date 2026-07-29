@@ -1,5 +1,5 @@
 import { prisma } from "@/server/db/prisma";
-import { parseIsraelDateTime, israeliWeekday } from "@/lib/time";
+import { parseIsraelDateTime, israeliWeekday, isValidDateStr } from "@/lib/time";
 
 const SLOT_STEP = 30;
 
@@ -31,6 +31,12 @@ export async function getDayAvailability({
   date: string;
   serviceId: string;
 }): Promise<DayAvailability> {
+  // `date` reaches here straight from query strings and form fields. A shape
+  // check alone lets "2026-99-99" through, which Date.UTC() silently rolls over
+  // into a completely different year — so every caller is validated against the
+  // real calendar here, once, and an impossible date is simply a closed day.
+  if (!isValidDateStr(date)) return { open: false, slots: [] };
+
   const service = await prisma.service.findFirst({
     where: { id: serviceId, businessId, isActive: true },
     select: {

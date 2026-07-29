@@ -470,6 +470,13 @@ export default async function AdminBusinessDetailPage({
             isAdmin: owner.isAdmin,
             planExpiresAt: owner.planExpiresAt?.toISOString() ?? null,
             suspendedUntil: owner.suspendedUntil?.toISOString() ?? null,
+            customPriceMinor: owner.customPriceMinor,
+            // What she is actually billed each month right now (the live billing
+            // row wins — it is what Grow charges), for display next to the form.
+            billedPriceMinor: owner.subscription?.priceMinor ?? null,
+            hasActiveBilling:
+              owner.subscription?.status === "active" ||
+              owner.subscription?.status === "past_due",
           }}
           isSelf={owner.id === admin?.id}
         />

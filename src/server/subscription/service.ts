@@ -20,9 +20,37 @@ import { PLAN_PRICES, type PlanId } from "@/lib/plans";
 /** Days of continued access after a failed renewal before the account lapses. */
 export const RENEWAL_GRACE_DAYS = 3;
 
-/** Authoritative monthly price for a plan, in agorot (₪1 = 100). */
+/** List monthly price for a plan, in agorot (₪1 = 100). */
 export function planPriceMinor(plan: AccountPlan): number {
   return PLAN_PRICES[plan as PlanId] * 100;
+}
+
+/** Bounds for an admin-set custom monthly price, in agorot. */
+export const MIN_CUSTOM_PRICE_MINOR = 100; // ₪1 — Grow cannot bill ₪0.
+export const MAX_CUSTOM_PRICE_MINOR = 1_000_000; // ₪10,000 — typo guard.
+
+/**
+ * What this owner actually pays each month, in agorot.
+ *
+ * An admin can negotiate a price per account (`User.customPriceMinor`); when set
+ * it REPLACES the plan's list price for every charge — the first checkout, an
+ * admin plan change, and each monthly renewal — until an admin changes or clears
+ * it. Every place that decides an amount must go through here, otherwise a
+ * renewal would quietly fall back to the list price.
+ */
+export function effectivePriceMinor(
+  plan: AccountPlan,
+  customPriceMinor: number | null | undefined,
+): number {
+  if (
+    typeof customPriceMinor === "number" &&
+    Number.isInteger(customPriceMinor) &&
+    customPriceMinor >= MIN_CUSTOM_PRICE_MINOR &&
+    customPriceMinor <= MAX_CUSTOM_PRICE_MINOR
+  ) {
+    return customPriceMinor;
+  }
+  return planPriceMinor(plan);
 }
 
 function addMonths(date: Date, n: number): Date {

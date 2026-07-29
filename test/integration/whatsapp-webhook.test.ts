@@ -282,7 +282,23 @@ describe("webhook POST — status events", () => {
 });
 
 describe("webhook POST — STOP opt-out", () => {
-  function incomingPayload(text: string, from = "972501112222") {
+  /** מספר Allura המנוהל והמשותף — STOP אליו הוא באמת חוצה-עסקים. */
+  const MANAGED_PHONE_NUMBER_ID = "pn_managed";
+  /** מספר פרטי של עסק יחיד (Embedded Signup). */
+  const TENANT_PHONE_NUMBER_ID = "pn_biz_a";
+
+  beforeEach(() => {
+    vi.stubEnv("META_WHATSAPP_PHONE_NUMBER_ID", MANAGED_PHONE_NUMBER_ID);
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  function incomingPayload(
+    text: string,
+    from = "972501112222",
+    phoneNumberId: string | null = MANAGED_PHONE_NUMBER_ID,
+  ) {
     return JSON.stringify({
       object: "whatsapp_business_account",
       entry: [
@@ -293,6 +309,9 @@ describe("webhook POST — STOP opt-out", () => {
               field: "messages",
               value: {
                 messaging_product: "whatsapp",
+                ...(phoneNumberId
+                  ? { metadata: { phone_number_id: phoneNumberId } }
+                  : {}),
                 messages: [{ from, id: "wamid.IN", timestamp: "1700000000", type: "text", text: { body: text } }],
               },
             },
@@ -334,5 +353,41 @@ describe("webhook POST — STOP opt-out", () => {
     prisma.client.updateMany.mockResolvedValue({ count: 0 });
     const res = await POST(postReq(incomingPayload("unsubscribe")));
     expect(res.status).toBe(200);
+  });
+
+  // ── בידוד דיירים (CLAUDE.md §10) ──────────────────────────────────────────
+  // Client הוא טבלה בבעלות עסק: אותו מספר טלפון הוא N שורות נפרדות, אחת לכל
+  // עסק שהאדם הזה לקוחה שלו. לכן STOP מותר לחצות עסקים רק כשהוא הגיע למספר
+  // המנוהל והמשותף של Allura — ורק כשאפשר לאשש זאת.
+
+  it("STOP to a TENANT number opts out only that business", async () => {
+    prisma.whatsAppConnection.findFirst.mockResolvedValue({ businessId: "biz_a" });
+    prisma.client.updateMany.mockResolvedValue({ count: 1 });
+
+    await POST(postReq(incomingPayload("STOP", "972501112222", TENANT_PHONE_NUMBER_ID)));
+
+    expect(prisma.client.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: expect.objectContaining({ businessId: "biz_a" }),
+      }),
+    );
+  });
+
+  it("STOP to an UNRECOGNISED number is ignored — never written tenant-wide", async () => {
+    prisma.whatsAppConnection.findFirst.mockResolvedValue(null);
+    const res = await POST(
+      postReq(incomingPayload("STOP", "972501112222", "pn_who_is_this")),
+    );
+    expect(res.status).toBe(200);
+    expect(prisma.client.updateMany).not.toHaveBeenCalled();
+  });
+
+  it("STOP with NO phone_number_id is ignored — cannot be attributed to a tenant", async () => {
+    // רגרסיה: קודם, מטען בלי metadata.phone_number_id דילג על כל בלוק
+    // הייחוס ונפל ישר ל-updateMany ללא businessId — כלומר ניתוק הלקוחה
+    // מהודעות של *כל* העסקים במערכת, לא רק זה ששלח.
+    const res = await POST(postReq(incomingPayload("STOP", "972501112222", null)));
+    expect(res.status).toBe(200);
+    expect(prisma.client.updateMany).not.toHaveBeenCalled();
   });
 });

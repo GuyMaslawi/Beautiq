@@ -170,7 +170,10 @@ export async function getAdminBusiness(businessId: string) {
               plan: true,
               isAdmin: true,
               planExpiresAt: true,
+              customPriceMinor: true,
               suspendedUntil: true,
+              // The owner's Allura billing row — what Grow actually charges her.
+              subscription: { select: { priceMinor: true, status: true } },
             },
           },
         },

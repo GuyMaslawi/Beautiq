@@ -1,4 +1,5 @@
 import { isValidIsraeliPhone } from "@/lib/phone";
+import { isValidDateStr, isValidTimeStr } from "@/lib/time";
 import { PUBLIC_BOOKING } from "@/lib/constants/he";
 
 export interface PublicBookingInput {
@@ -57,17 +58,20 @@ export function validatePublicBooking(
   // Both come from client-controlled hidden inputs, so validate the exact
   // format — otherwise garbage flows into the date parser, produces NaN/rolled-
   // over times, and silently bypasses the past-time guard in the action.
+  // בדיקת צורה בלבד אינה מספיקה: `/^\d{4}-\d{2}-\d{2}$/` מקבל גם "2026-99-99",
+  // ו-Date.UTC מגלגל את החריגה קדימה בשקט (התאריך הזה נוחת ב-2034). לכן
+  // isValidDateStr מאמת מול לוח השנה האמיתי ולא רק מול תבנית.
   const date = (raw.date ?? "").trim();
   if (!date) {
     errors.date = PUBLIC_BOOKING.errors.dateRequired;
-  } else if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+  } else if (!isValidDateStr(date)) {
     errors.date = PUBLIC_BOOKING.errors.dateRequired;
   }
 
   const requestedTime = (raw.requestedTime ?? "").trim();
   if (!requestedTime) {
     errors.requestedTime = PUBLIC_BOOKING.errors.timeRequired;
-  } else if (!/^([01]\d|2[0-3]):[0-5]\d$/.test(requestedTime)) {
+  } else if (!isValidTimeStr(requestedTime)) {
     errors.requestedTime = PUBLIC_BOOKING.errors.timeRequired;
   }
 

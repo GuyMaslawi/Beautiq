@@ -5,6 +5,7 @@ import { prisma } from "@/server/db/prisma";
 import { requireTenant } from "@/server/auth/session";
 import { PUBLIC_PAGE } from "@/lib/constants/he";
 import { validateImageUrl, validateSocialField } from "@/lib/validation/url";
+import { TEXT_LIMITS, exceedsLimit, tooLongError } from "@/lib/validation/text";
 
 // ---------------------------------------------------------------------------
 // Profile + intro message
@@ -35,6 +36,21 @@ export async function updatePublicProfileAction(
 
   if (!raw.name) {
     return { errors: { name: "יש למלא שם עסק" }, values: raw };
+  }
+
+  // תקרות אורך: כל השדות האלה מרונדרים בעמוד הציבורי ונשמרים בעמודות `text`
+  // ללא תקרה משלהן, כך שבלי הבדיקה כאן אפשר לשמור מגה-בייטים בשדה אחד
+  // ולהאט או להפיל את העמוד הציבורי של העסק.
+  const lengthChecks: Array<[keyof typeof raw, number]> = [
+    ["name", TEXT_LIMITS.name],
+    ["description", TEXT_LIMITS.paragraph],
+    ["addressNote", TEXT_LIMITS.short],
+    ["introMessage", TEXT_LIMITS.paragraph],
+  ];
+  for (const [field, limit] of lengthChecks) {
+    if (exceedsLimit(raw[field], limit)) {
+      return { errors: { [field]: tooLongError(limit) }, values: raw };
+    }
   }
 
   // Social links land in an <a href> on the public page. A bare handle is fine
@@ -205,6 +221,11 @@ export async function addGalleryImageAction(
     return {
       errors: { imageUrl: "כתובת התמונה אינה תקינה (נדרשת כתובת https)" },
     };
+  }
+
+  // הכיתוב מרונדר תחת התמונה בעמוד הציבורי ונשמר בעמודת `text` ללא תקרה.
+  if (exceedsLimit(caption, TEXT_LIMITS.short)) {
+    return { errors: { caption: tooLongError(TEXT_LIMITS.short) } };
   }
 
   try {

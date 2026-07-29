@@ -34,6 +34,11 @@ export interface CurrentUser {
    */
   plan: AccountPlan | null;
   planActivatedAt: Date | null;
+  /**
+   * Admin-negotiated monthly price in agorot, when one was set for this account.
+   * Overrides the plan list price everywhere an amount is charged or displayed.
+   */
+  customPriceMinor: number | null;
   /** When the account is suspended until (future = currently suspended). */
   suspendedUntil: Date | null;
   /** True when a platform admin is currently viewing the app AS this owner. */
@@ -74,11 +79,33 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
       plan: true,
       planActivatedAt: true,
       planExpiresAt: true,
+      customPriceMinor: true,
       suspendedUntil: true,
+      sessionsValidFrom: true,
       lastSeenAt: true,
     },
   });
   if (!user) return null;
+
+  // Session revocation. Sessions are JWTs — nothing about them lives on the
+  // server — so before this, changing a password ended nothing: an admin
+  // resetting the credentials of a compromised account locked the real owner out
+  // while the attacker's already-issued token kept full access for the rest of
+  // its lifetime. Any session issued before `sessionsValidFrom` is now refused.
+  //
+  // Fails CLOSED on an unstamped token: a session minted before this field
+  // existed carries no `authAt`, and once a revocation has been requested we
+  // cannot prove such a token predates it — so it is rejected too. Accounts that
+  // never revoked (sessionsValidFrom = null) are untouched.
+  //
+  // Checked against the REAL session, not the impersonation target: revoking an
+  // owner's sessions must not eject an admin who is legitimately viewing as her.
+  if (user.sessionsValidFrom && !impersonating) {
+    const authAt = session?.user?.authAt;
+    if (typeof authAt !== "number" || authAt < user.sessionsValidFrom.getTime()) {
+      return null;
+    }
+  }
 
   // Heartbeat only for real sessions — never pollute an owner's "last seen"
   // while an admin is impersonating them.
@@ -99,6 +126,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     isAdmin: user.isAdmin,
     plan: effectivePlan,
     planActivatedAt: user.planActivatedAt,
+    customPriceMinor: user.customPriceMinor,
     suspendedUntil: user.suspendedUntil,
     impersonating,
   };

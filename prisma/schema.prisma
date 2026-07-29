@@ -276,6 +276,12 @@ model User {
   /// set and passed, the effective plan is treated as lapsed (→ /subscribe) until
   /// re-granted. Null = the plan does not expire.
   planExpiresAt   DateTime?
+  /// Admin-set monthly price override, in agorot (₪1 = 100). When set, THIS is
+  /// the owner's recurring monthly bill for whichever plan she is on — instead
+  /// of the plan's list price — until an admin changes or clears it. It survives
+  /// plan changes and renewals on purpose: it is a negotiated price, not a
+  /// one-off discount. Null = the list price of her plan.
+  customPriceMinor Int?
   /// When set and in the future, the account is temporarily suspended by an
   /// admin — the app gate blocks access until this moment. Null = not suspended.
   suspendedUntil  DateTime?
@@ -283,6 +289,14 @@ model User {
   /// most one write per few minutes (see server/activity/last-seen.ts) so it is
   /// a cheap "last active" signal, not a per-request write.
   lastSeenAt      DateTime?
+  /// Sessions issued BEFORE this moment are rejected (see server/auth/session.ts).
+  /// Sessions are JWTs: nothing about them lives server-side, so changing a
+  /// password could not previously log anyone out. An admin resetting the
+  /// password of a compromised account therefore locked out the owner while the
+  /// attacker's existing token kept working for the rest of its 30-day life.
+  /// Stamping this field is how a credential change actually revokes access.
+  /// Null = every session is valid (the normal case).
+  sessionsValidFrom DateTime?
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
@@ -290,6 +304,7 @@ model User {
   subscription AccountSubscription?
   activityLogs ActivityLog[]
   charges      SubscriptionCharge[]
+  passwordResetTokens PasswordResetToken[]
 }
 
 /// Self-serve account subscription — the owner's paid Allura plan, billed through
@@ -1330,4 +1345,29 @@ model RateLimitCounter {
 
   /// לניקוי תקופתי של שורות שפג תוקפן.
   @@index([resetAt])
+}
+
+/// טוקן חד-פעמי לשחזור סיסמה ("שכחתי סיסמה").
+///
+/// עד עכשיו לא הייתה שום דרך לבעלת עסק לשחזר סיסמה בעצמה: רק מנהל פלטפורמה
+/// יכול היה לאפס אותה ידנית. זה אומר שדליפת סיסמה (או פשוט שכחה) השביתה
+/// חשבון עד להתערבות אנושית.
+///
+/// נשמר רק ה-HASH של הטוקן (SHA-256), לעולם לא הערך עצמו: מי שמשיג גישת
+/// קריאה למסד לא יכול להפוך אותו לקישור שחזור עובד. הטוקן חד-פעמי
+/// (usedAt) וקצר-מועד (expiresAt), ומימושו חותם גם sessionsValidFrom כדי
+/// שסשנים קיימים של התוקף ייפסלו — ראו server/auth/password-reset.ts.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// SHA-256 של הטוקן הגולמי, בבסיס 16. ייחודי — כך חיפוש הוא O(1) ואין התנגשות.
+  tokenHash String    @unique
+  expiresAt DateTime
+  /// מסומן ברגע המימוש. טוקן שכבר שימש לעולם אינו תקף שוב.
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }

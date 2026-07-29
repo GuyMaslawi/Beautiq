@@ -280,7 +280,23 @@ async function processIncomingMessage(
     !!phoneNumberId && !!managedPhoneNumberId && phoneNumberId === managedPhoneNumberId;
 
   let scopedBusinessId: string | null = null;
-  if (!isSharedManagedNumber && phoneNumberId) {
+  if (!isSharedManagedNumber) {
+    // Fail CLOSED when the receiving number is unknown OR absent.
+    //
+    // The earlier `if (!isSharedManagedNumber && phoneNumberId)` guard only ran
+    // when Meta actually supplied metadata.phone_number_id. A payload WITHOUT it
+    // skipped the whole block, left scopedBusinessId null, and fell through to
+    // the tenant-wide updateMany below — the exact CLAUDE.md §10 violation this
+    // code was written to prevent, just reached through a missing field instead
+    // of a wrong one. A cross-tenant write must require positive attribution, so
+    // "no phone_number_id" is now treated like "unrecognised phone_number_id".
+    if (!phoneNumberId) {
+      console.log(
+        "[WhatsApp webhook] opt-out with no phone_number_id — ignored (cannot attribute to a tenant)",
+      );
+      return;
+    }
+
     const connection = await prisma.whatsAppConnection.findFirst({
       where: { phoneNumberId },
       select: { businessId: true },

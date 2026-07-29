@@ -38,14 +38,23 @@ const confirmSubscriptionPayment = vi.fn();
 vi.mock("@/server/subscription/service", () => ({
   confirmSubscriptionPayment: (...a: unknown[]) => confirmSubscriptionPayment(...(a as [])),
   planPriceMinor: () => 14900,
+  // The real rule: an admin-negotiated price replaces the list price.
+  effectivePriceMinor: (_plan: string, custom: number | null | undefined) =>
+    typeof custom === "number" ? custom : 14900,
 }));
 
 import { resetPrismaMock } from "../helpers/prisma-mock";
+import { __resetRateLimitForTests } from "@/lib/rate-limit";
 import { startSubscriptionCheckoutAction } from "@/server/subscription/actions";
 
 const USER = { id: "user_1", email: "owner@example.com", name: "בעלת עסק", plan: null };
 
 beforeEach(() => {
+  // Checkout is rate-limited per account and the in-memory counter is
+  // module-level, so it survives between test cases. Without this reset the
+  // suite's own repeated calls eventually trip the limit and a later test fails
+  // for a reason that has nothing to do with what it asserts.
+  __resetRateLimitForTests();
   resetPrismaMock(prisma);
   requireCurrentUser.mockReset().mockResolvedValue(USER);
   isGrowConfigured.mockReset().mockReturnValue(false);
@@ -122,6 +131,52 @@ describe("startSubscriptionCheckoutAction — production paywall", () => {
     expect(res.redirectUrl).toBe("https://grow.example/pay/abc");
     // Access opens only when Grow confirms the charge, never from this call.
     expect(confirmSubscriptionPayment).not.toHaveBeenCalled();
+  });
+});
+
+describe("startSubscriptionCheckoutAction — admin-negotiated price", () => {
+  beforeEach(() => {
+    vi.stubEnv("NODE_ENV", "production");
+    isGrowConfigured.mockReturnValue(true);
+    createPaymentLink.mockResolvedValue({
+      paymentUrl: "https://grow.example/pay/abc",
+      processId: "p1",
+      processToken: "t1",
+    });
+  });
+
+  it("charges the owner's custom price, not the plan list price", async () => {
+    // A distinct user id per test — checkout is rate-limited per account.
+    requireCurrentUser.mockResolvedValue({
+      ...USER,
+      id: "user_custom",
+      customPriceMinor: 9900,
+    });
+
+    await startSubscriptionCheckoutAction("platinum");
+
+    // What Grow is told to collect — and what the recurring standing order
+    // will therefore be authorized for.
+    expect(createPaymentLink).toHaveBeenCalledWith(
+      expect.objectContaining({ amountMinor: 9900 }),
+    );
+    // ...and what the billing row records, so renewals match the charge.
+    expect(prisma.accountSubscription.upsert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        create: expect.objectContaining({ priceMinor: 9900 }),
+        update: expect.objectContaining({ priceMinor: 9900 }),
+      }),
+    );
+  });
+
+  it("falls back to the list price when no custom price is set", async () => {
+    requireCurrentUser.mockResolvedValue({ ...USER, id: "user_listprice" });
+
+    await startSubscriptionCheckoutAction("platinum");
+
+    expect(createPaymentLink).toHaveBeenCalledWith(
+      expect.objectContaining({ amountMinor: 14900 }),
+    );
   });
 });
 

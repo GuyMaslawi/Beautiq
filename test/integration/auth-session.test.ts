@@ -42,9 +42,60 @@ beforeEach(() => {
   auth.mockReset();
 });
 
-function signedInAs(userId: string) {
-  auth.mockResolvedValue({ user: { id: userId } });
+function signedInAs(userId: string, authAt?: number) {
+  auth.mockResolvedValue({ user: { id: userId, authAt } });
 }
+
+// ---------------------------------------------------------------------------
+// ביטול סשנים (session revocation)
+// ---------------------------------------------------------------------------
+//
+// סשנים הם JWT: שום דבר לגביהם לא נשמר בשרת, ולכן שינוי סיסמה לא סיים כלום.
+// מנהל שאיפס את הסיסמה של חשבון שנפרץ נעל דווקא את בעלת העסק האמיתית בחוץ,
+// בזמן שהטוקן שכבר היה בידי התוקף המשיך לעבוד עד סוף חייו. השדה
+// sessionsValidFrom הוא מה שהופך איפוס סיסמה לביטול גישה אמיתי.
+describe("getCurrentUser — session revocation", () => {
+  const REVOKED_AT = new Date("2026-07-27T10:00:00Z");
+
+  function userRow(extra: Record<string, unknown> = {}) {
+    return {
+      id: "usr_1",
+      email: "owner@example.com",
+      name: "בעלת העסק",
+      isAdmin: false,
+      plan: "premium",
+      suspendedUntil: null,
+      sessionsValidFrom: REVOKED_AT,
+      ...extra,
+    };
+  }
+
+  it("rejects a session issued BEFORE the revocation moment", async () => {
+    signedInAs("usr_1", REVOKED_AT.getTime() - 60_000);
+    prisma.user.findUnique.mockResolvedValue(userRow());
+    await expect(getCurrentUser()).resolves.toBeNull();
+  });
+
+  it("accepts a session issued AFTER the revocation moment", async () => {
+    signedInAs("usr_1", REVOKED_AT.getTime() + 60_000);
+    prisma.user.findUnique.mockResolvedValue(userRow());
+    await expect(getCurrentUser()).resolves.toMatchObject({ id: "usr_1" });
+  });
+
+  // נכשל סגור: טוקן שנוצר לפני שהשדה הזה היה קיים אינו נושא authAt, ואי אפשר
+  // להוכיח שהוא קדם לביטול — ולכן הוא נדחה גם הוא.
+  it("rejects an unstamped (legacy) session once a revocation exists", async () => {
+    signedInAs("usr_1"); // ללא authAt
+    prisma.user.findUnique.mockResolvedValue(userRow());
+    await expect(getCurrentUser()).resolves.toBeNull();
+  });
+
+  it("leaves accounts that never revoked completely untouched", async () => {
+    signedInAs("usr_1"); // ללא authAt
+    prisma.user.findUnique.mockResolvedValue(userRow({ sessionsValidFrom: null }));
+    await expect(getCurrentUser()).resolves.toMatchObject({ id: "usr_1" });
+  });
+});
 
 describe("getCurrentUser", () => {
   it("returns null when there is no session", async () => {
@@ -86,7 +137,9 @@ describe("getCurrentUser", () => {
       plan: true,
       planActivatedAt: true,
       planExpiresAt: true,
+      customPriceMinor: true,
       suspendedUntil: true,
+      sessionsValidFrom: true,
       lastSeenAt: true,
     });
   });

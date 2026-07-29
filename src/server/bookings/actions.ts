@@ -13,6 +13,7 @@ import { sendThankYouForCompletedBooking } from "@/server/review-request/on-comp
 import { notifyOwnerOfClientEvent } from "@/server/notifications/owner-email";
 import { logActivity } from "@/server/activity/log";
 import { validateBooking } from "@/lib/validation/booking";
+import { TEXT_LIMITS, exceedsLimit, tooLongError } from "@/lib/validation/text";
 import { parseIsraelDateTime } from "@/lib/time";
 import { BOOKINGS } from "@/lib/constants/he";
 
@@ -167,6 +168,10 @@ export async function updateBookingNotesAction(
   if (!booking) return { formError: BOOKINGS.errors.notFound };
 
   const notes = String(formData.get("notes") ?? "").trim();
+  // עמודת `text` ללא תקרה משלה — חוסם שמירת מגה-בייטים בתור אחד.
+  if (exceedsLimit(notes, TEXT_LIMITS.notes)) {
+    return { formError: tooLongError(TEXT_LIMITS.notes) };
+  }
 
   try {
     await prisma.booking.updateMany({

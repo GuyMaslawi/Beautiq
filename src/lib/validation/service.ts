@@ -1,8 +1,10 @@
 import type { BusinessCategoryKey } from "@prisma/client";
+import { TEXT_LIMITS, exceedsLimit, tooLongError } from "@/lib/validation/text";
 import { SERVICES } from "@/lib/constants/he";
 
 export type ServiceField =
   | "name"
+  | "description"
   | "durationMinutes"
   | "price"
   | "bufferBeforeMinutes"
@@ -45,8 +47,18 @@ export function validateService(
 ): ServiceValidationResult {
   const errors: FieldErrors = {};
 
+  // השם והתיאור מוצגים בעמוד הציבורי ונכנסים להודעות WhatsApp; העמודות הן
+  // `text` ללא תקרה משלהן, ולכן הגבול נאכף כאן בשרת.
   const name = (raw.name ?? "").trim();
   if (!name) errors.name = SERVICES.errors.nameRequired;
+  else if (exceedsLimit(name, TEXT_LIMITS.name)) {
+    errors.name = tooLongError(TEXT_LIMITS.name);
+  }
+
+  const descriptionRaw = (raw.description ?? "").trim();
+  if (exceedsLimit(descriptionRaw, TEXT_LIMITS.paragraph)) {
+    errors.description = tooLongError(TEXT_LIMITS.paragraph);
+  }
 
   const durationRaw = (raw.durationMinutes ?? "").trim();
   const durationMinutes = parseInt(durationRaw, 10);
@@ -88,7 +100,7 @@ export function validateService(
     ok: true,
     value: {
       name,
-      description: (raw.description ?? "").trim() || undefined,
+      description: descriptionRaw || undefined,
       durationMinutes,
       price,
       bufferBeforeMinutes: isNaN(bufferBeforeMinutes) ? 0 : bufferBeforeMinutes,

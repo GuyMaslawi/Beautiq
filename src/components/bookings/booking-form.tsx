@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { BOOKINGS } from "@/lib/constants/he";
+import { MAX_BOOKING_NOTES } from "@/lib/validation/booking";
 import type { BookingFormState } from "@/server/bookings/actions";
 
 interface ServiceOption {
@@ -377,11 +378,20 @@ export function BookingForm({
         <Textarea
           id="notes"
           name="notes"
+          maxLength={MAX_BOOKING_NOTES}
           placeholder={BOOKINGS.detail.notesPlaceholder}
           rows={3}
           value={fields.notes}
           onChange={(e) => set("notes")(e.target.value)}
         />
+        {/* השרת אוכף את התקרה בכל מקרה (maxLength הוא נוחות בלבד, ולא קיים
+            עבור מי שלא עוברת דרך הדפדפן) — אבל בלי הצגת השגיאה כאן הטופס
+            היה נכשל בשקט. */}
+        {state.errors?.notes && (
+          <p className="text-xs" style={{ color: "var(--destructive)" }}>
+            {state.errors.notes}
+          </p>
+        )}
       </div>
 
       {/* Actions */}

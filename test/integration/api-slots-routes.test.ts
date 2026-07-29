@@ -12,9 +12,20 @@ const prisma = (globalThis as Record<string, unknown>)
   .__prismaMock as ReturnType<typeof createPrismaMock>;
 
 const getCurrentBusiness = vi.fn();
+const getCurrentUser = vi.fn();
 vi.mock("@/server/auth/session", () => ({
   getCurrentBusiness: () => getCurrentBusiness(),
+  getCurrentUser: () => getCurrentUser(),
 }));
+
+/** בעלת עסק משלמת ולא מושהית — ברירת המחדל לרוב הבדיקות. */
+const PAID_USER = {
+  id: "usr_1",
+  isAdmin: false,
+  impersonating: false,
+  plan: "premium",
+  suspendedUntil: null,
+};
 
 const getDayAvailability = vi.fn();
 const getAvailableSlots = vi.fn();
@@ -43,12 +54,39 @@ const slugParams = (slug = "studio-yofi") => ({ params: Promise.resolve({ slug }
 beforeEach(() => {
   resetPrismaMock(prisma);
   getCurrentBusiness.mockReset();
+  getCurrentUser.mockReset().mockResolvedValue(PAID_USER);
   getDayAvailability.mockReset();
   getAvailableSlots.mockReset();
   checkRateLimit.mockReset().mockReturnValue(true);
 });
 
 describe("GET /api/owner/slots", () => {
+  it("401 when unauthenticated", async () => {
+    getCurrentUser.mockResolvedValue(null);
+    const res = await ownerGET(url("/api/owner/slots?date=2026-07-01&serviceId=s1"));
+    expect(res.status).toBe(401);
+    expect(getDayAvailability).not.toHaveBeenCalled();
+  });
+
+  // המסלול הזה נשאר מחוץ לשער התשלום/ההשהיה בעוד שכל שאר האפליקציה נחסמה,
+  // כך שחשבון מושהה או שלא שילם המשיך לתשאל אותו.
+  it("403 for an unpaid account", async () => {
+    getCurrentUser.mockResolvedValue({ ...PAID_USER, plan: null });
+    const res = await ownerGET(url("/api/owner/slots?date=2026-07-01&serviceId=s1"));
+    expect(res.status).toBe(403);
+    expect(getDayAvailability).not.toHaveBeenCalled();
+  });
+
+  it("403 for a suspended account", async () => {
+    getCurrentUser.mockResolvedValue({
+      ...PAID_USER,
+      suspendedUntil: new Date(Date.now() + 86_400_000),
+    });
+    const res = await ownerGET(url("/api/owner/slots?date=2026-07-01&serviceId=s1"));
+    expect(res.status).toBe(403);
+    expect(getDayAvailability).not.toHaveBeenCalled();
+  });
+
   it("401 when there is no current business", async () => {
     getCurrentBusiness.mockResolvedValue(null);
     const res = await ownerGET(url("/api/owner/slots?date=2026-07-01&serviceId=s1"));
@@ -64,6 +102,11 @@ describe("GET /api/owner/slots", () => {
     ).toBe(400);
     expect(
       (await ownerGET(url("/api/owner/slots?date=2026-07-01"))).status,
+    ).toBe(400);
+    // תאריך שעובר regex אך אינו קיים בלוח השנה — Date.UTC היה מגלגל אותו
+    // בשקט לתאריך אחר לגמרי במקום להידחות.
+    expect(
+      (await ownerGET(url("/api/owner/slots?date=2026-99-99&serviceId=s1"))).status,
     ).toBe(400);
   });
 

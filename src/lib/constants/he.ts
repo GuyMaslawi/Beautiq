@@ -113,6 +113,8 @@ export const WAITLIST = {
     successAdded: "הלקוחה נוספה לרשימת ההמתנה",
     errorName: "יש להזין שם",
     errorPhone: "יש להזין מספר טלפון תקין",
+    errorDate: "התאריך שנבחר אינו תקין",
+    errorTime: "השעה שנבחרה אינה תקינה",
     errorGeneric: "משהו השתבש. נסי שוב.",
   },
   match: {
@@ -225,10 +227,12 @@ export const AUTH = {
   errors: {
     required: "יש למלא אימייל וסיסמה",
     nameRequired: "יש למלא שם מלא",
+    nameTooLong: "השם ארוך מדי — עד 120 תווים",
     emailRequired: "יש למלא אימייל",
     invalidEmail: "כתובת האימייל אינה תקינה",
     passwordRequired: "יש למלא סיסמה",
     passwordTooShort: "הסיסמה צריכה להכיל לפחות 8 תווים",
+    passwordTooLong: "הסיסמה ארוכה מדי — עד 200 תווים",
     confirmRequired: "יש לאמת את הסיסמה",
     passwordsMismatch: "הסיסמאות אינן תואמות",
     emailTaken: "קיים כבר חשבון עם האימייל הזה",
@@ -238,6 +242,44 @@ export const AUTH = {
   },
   success: {
     accountCreated: "החשבון נוצר בהצלחה",
+  },
+
+  /** "שכחתי סיסמה" — בקשת קישור שחזור */
+  forgotPassword: {
+    linkFromLogin: "שכחת סיסמה?",
+    title: "שחזור סיסמה",
+    subtitle: "נשלח אליך קישור לבחירת סיסמה חדשה.",
+    emailLabel: "כתובת אימייל",
+    emailPlaceholder: "you@example.com",
+    submit: "שליחת קישור",
+    submitting: "שולחים…",
+    backToLogin: "חזרה להתחברות",
+    // מנוסח כך שיהיה זהה בין אם החשבון קיים ובין אם לא — אחרת ההודעה עצמה
+    // מגלה אילו כתובות רשומות במערכת.
+    sentTitle: "הקישור נשלח",
+    sentBody:
+      "אם קיים חשבון עם הכתובת הזו, נשלח אליו קישור לבחירת סיסמה חדשה. הקישור תקף לשעה אחת.",
+    sentHint: "לא הגיע? כדאי לבדוק גם בתיקיית הספאם.",
+  },
+
+  /** קביעת סיסמה חדשה מתוך קישור השחזור */
+  resetPassword: {
+    title: "בחירת סיסמה חדשה",
+    subtitle: "יש לבחור סיסמה חדשה לחשבון.",
+    passwordLabel: "סיסמה חדשה",
+    confirmLabel: "אימות סיסמה",
+    submit: "שמירת הסיסמה",
+    submitting: "שומרים…",
+    successTitle: "הסיסמה עודכנה",
+    successBody:
+      "אפשר להתחבר עכשיו עם הסיסמה החדשה. מכשירים אחרים שהיו מחוברים לחשבון נותקו.",
+    goToLogin: "מעבר להתחברות",
+    invalidToken: {
+      invalid: "הקישור אינו תקין. אפשר לבקש קישור חדש.",
+      expired: "תוקף הקישור פג. אפשר לבקש קישור חדש.",
+      used: "הקישור כבר שימש לאיפוס. אפשר לבקש קישור חדש.",
+    },
+    requestNew: "בקשת קישור חדש",
   },
 } as const;
 
@@ -648,12 +690,16 @@ export const BOOKINGS = {
 
   errors: {
     clientNameRequired: "יש למלא שם לקוחה",
+    clientNameTooLong: "השם ארוך מדי — עד 80 תווים",
     phoneRequired: "יש למלא מספר טלפון",
     phoneInvalid: "מספר הטלפון לא נראה תקין",
     serviceRequired: "יש לבחור שירות",
     serviceUnavailable: "השירות שנבחר אינו זמין",
     dateRequired: "יש לבחור תאריך",
+    dateInvalid: "התאריך שנבחר אינו תקין",
     startTimeRequired: "יש לבחור שעה",
+    startTimeInvalid: "השעה שנבחרה אינה תקינה",
+    notesTooLong: "ההערה ארוכה מדי — עד 1000 תווים",
     pastBooking: "לא ניתן לקבוע תור בזמן שכבר עבר",
     overlap: "כבר קיים תור בשעה הזו",
     notFound: "התור לא נמצא",
@@ -2090,6 +2136,7 @@ export const FINANCE = {
     amountRequired: "יש למלא סכום",
     amountInvalid: "הסכום אינו תקין",
     dateRequired: "יש לבחור תאריך",
+    dateInvalid: "התאריך שנבחר אינו תקין",
     categoryRequired: "יש לבחור קטגוריה",
     generic: "משהו השתבש. יש לנסות שוב בעוד רגע",
     notFound: "ההוצאה לא נמצאה",

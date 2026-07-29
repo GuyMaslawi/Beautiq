@@ -236,16 +236,30 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               ? profile.email_verified
               : undefined,
         });
-        if (id) token.id = id;
+        if (id) {
+          token.id = id;
+          token.authAt = Date.now();
+        }
         return token;
       }
       // Credentials: authorize() already returned our user with its real id.
-      if (user) token.id = user.id;
+      if (user) {
+        token.id = user.id;
+        // Stamp WHEN this session was issued, once, at sign-in. This is what
+        // makes a JWT session revocable: getCurrentUser() rejects it if the
+        // account's sessionsValidFrom is later. It must not be the token's own
+        // `iat` — Auth.js re-encodes the token as the user browses, which would
+        // keep bumping `iat` forward and make revocation impossible.
+        token.authAt = Date.now();
+      }
       return token;
     },
     session: ({ session, token }) => {
       if (session.user && typeof token.id === "string") {
         session.user.id = token.id;
+        if (typeof token.authAt === "number") {
+          session.user.authAt = token.authAt;
+        }
       }
       return session;
     },

@@ -6,7 +6,7 @@ import { prisma } from "@/server/db/prisma";
 import { requireTenant } from "@/server/auth/session";
 import { findOrCreateClient } from "@/server/clients/find-or-create";
 import { isValidIsraeliPhone } from "@/lib/phone";
-import { parseIsraelDateTime } from "@/lib/time";
+import { parseIsraelDateTime, isValidDateStr, isValidTimeStr } from "@/lib/time";
 import { WAITLIST } from "@/lib/constants/he";
 
 export interface WaitlistFormState {
@@ -42,6 +42,20 @@ export async function createWaitlistEntryAction(
   const errors: Record<string, string> = {};
   if (!raw.clientName) errors.clientName = WAITLIST.form.errorName;
   if (!isValidIsraeliPhone(raw.phone)) errors.phone = WAITLIST.form.errorPhone;
+
+  // התאריך והשעות מגיעים משדות טופס ונמסרים ישירות ל-parseIsraelDateTime.
+  // בלי אימות, ערך כמו "abc" הפיל את הבקשה כולה (RangeError מתוך Intl) לפני
+  // שהגיעה בכלל ל-try, וערך כמו "2026-99-99" נשמר כחלון זמן בשנה אחרת לגמרי.
+  if (raw.preferredDate && !isValidDateStr(raw.preferredDate)) {
+    errors.preferredDate = WAITLIST.form.errorDate;
+  }
+  if (raw.preferredFromTime && !isValidTimeStr(raw.preferredFromTime)) {
+    errors.preferredFromTime = WAITLIST.form.errorTime;
+  }
+  if (raw.preferredToTime && !isValidTimeStr(raw.preferredToTime)) {
+    errors.preferredToTime = WAITLIST.form.errorTime;
+  }
+
   if (Object.keys(errors).length > 0) return { errors, values: raw };
 
   // Verify the optional service belongs to this business (tenant safety).
@@ -95,6 +109,14 @@ export async function createWaitlistEntryAction(
   }
 }
 
+/** הסטטוסים שמותר לעבור אליהם — רשימת היתר שנאכפת בזמן ריצה. */
+const ALLOWED_WAITLIST_STATUSES: readonly WaitlistStatus[] = [
+  "active",
+  "notified",
+  "booked",
+  "cancelled",
+];
+
 /**
  * Move a waitlist entry to a new status (notified / booked / cancelled). Scoped
  * by businessId so a cross-tenant id matches no rows.
@@ -104,6 +126,12 @@ export async function setWaitlistStatusAction(
   status: WaitlistStatus,
 ): Promise<void> {
   const tenant = await requireTenant();
+
+  // `status: WaitlistStatus` הוא הבטחה של TypeScript בלבד — הפעולה הזו היא
+  // נקודת קצה HTTP שכל אחת יכולה לקרוא לה עם מחרוזת שרירותית. בלי הרשימה כאן
+  // ערך לא חוקי הגיע ל-Prisma, נזרק כחריגה לא מטופלת והפיל את הבקשה.
+  if (!ALLOWED_WAITLIST_STATUSES.includes(status)) return;
+
   await prisma.waitlistEntry.updateMany({
     where: { id: entryId, businessId: tenant.businessId },
     data: { status },

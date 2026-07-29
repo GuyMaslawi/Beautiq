@@ -6,6 +6,7 @@ import { requireTenant } from "@/server/auth/session";
 import { getClientDetail } from "@/server/clients/queries";
 import { logActivity } from "@/server/activity/log";
 import { normalizePhone, isValidIsraeliPhone } from "@/lib/phone";
+import { TEXT_LIMITS, exceedsLimit, tooLongError } from "@/lib/validation/text";
 import { CLIENTS } from "@/lib/constants/he";
 
 export interface ClientNotesFormState {
@@ -25,6 +26,11 @@ export async function updateClientNotesAction(
   if (!client) return { formError: CLIENTS.errors.notFound };
 
   const notes = String(formData.get("notes") ?? "").trim();
+  // עמודת `text` ללא תקרה משלה — בלי הבדיקה אפשר לשמור מגה-בייטים בכרטיס
+  // לקוחה אחד ולהאט כל מסך שמציג אותו.
+  if (exceedsLimit(notes, TEXT_LIMITS.notes)) {
+    return { formError: tooLongError(TEXT_LIMITS.notes) };
+  }
 
   try {
     await prisma.client.updateMany({
@@ -77,6 +83,9 @@ export async function updateClientAction(
   const fieldErrors: NonNullable<UpdateClientState["fieldErrors"]> = {};
 
   if (!fullName) fieldErrors.fullName = CLIENTS.edit.errors.nameRequired;
+  else if (exceedsLimit(fullName, TEXT_LIMITS.name)) {
+    fieldErrors.fullName = tooLongError(TEXT_LIMITS.name);
+  }
 
   if (!phone) {
     fieldErrors.phone = CLIENTS.edit.errors.phoneRequired;
@@ -84,7 +93,17 @@ export async function updateClientAction(
     fieldErrors.phone = CLIENTS.edit.errors.phoneInvalid;
   }
 
+  // השם והאימייל נכנסים להודעות WhatsApp ולאימיילים, וההערות נשמרות בעמודת
+  // `text` ללא תקרה — כולם חייבים גבול מפורש בשרת.
+  if (email && exceedsLimit(email, TEXT_LIMITS.email)) {
+    fieldErrors.email = tooLongError(TEXT_LIMITS.email);
+  }
+
   if (Object.keys(fieldErrors).length > 0) return { fieldErrors };
+
+  if (notes && exceedsLimit(notes, TEXT_LIMITS.notes)) {
+    return { formError: tooLongError(TEXT_LIMITS.notes) };
+  }
 
   const normalizedPhone = normalizePhone(phone);
 
