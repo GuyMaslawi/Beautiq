@@ -145,7 +145,9 @@ function HeroStat({
   return (
     <Link
       href={href}
-      className="ring-soft group flex items-center gap-3 rounded-2xl px-4 py-3 transition-transform hover:-translate-y-0.5 active:scale-[0.98]"
+      // בטלפון האריח צר (שתי עמודות), ולכן הכיתוב עולה לשורה נפרדת מעל הנתון —
+      // אחרת סכום כמו ‎₪12,500‎ נחתך באמצע. מ-sm ומעלה חוזרים לאייקון בצד.
+      className="ring-soft group flex flex-col gap-1.5 rounded-2xl px-3.5 py-3 transition-transform hover:-translate-y-0.5 active:scale-[0.98] sm:flex-row sm:items-center sm:gap-3 sm:px-4"
       style={{
         background: "rgba(255,255,255,0.08)",
         border: "1px solid rgba(255,255,255,0.14)",
@@ -153,16 +155,15 @@ function HeroStat({
         WebkitBackdropFilter: "blur(8px)",
       }}
     >
-      <span
-        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl"
-        style={{ background: "rgba(255,255,255,0.10)" }}
-      >
+      {/* צ'יפ האייקון — בדסקטופ בלבד; בטלפון האייקון יושב לצד הכיתוב */}
+      <span className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white/10 sm:flex">
         <Icon className="h-4 w-4" style={{ color: iconColor }} />
       </span>
-      <span className="flex min-w-0 flex-col leading-tight">
-        <span className="display-num truncate text-xl font-bold text-white">{value}</span>
-        <span className="truncate text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
-          {label}
+      <span className="flex w-full min-w-0 flex-col-reverse leading-tight sm:flex-col">
+        <span className="display-num truncate text-lg font-bold text-white sm:text-xl">{value}</span>
+        <span className="flex min-w-0 items-center gap-1.5 text-xs" style={{ color: "rgba(255,255,255,0.6)" }}>
+          <Icon className="h-3.5 w-3.5 shrink-0 sm:hidden" style={{ color: iconColor }} />
+          <span className="truncate">{label}</span>
         </span>
       </span>
     </Link>
@@ -331,13 +332,14 @@ function DayPulseCell({
       className="flex min-w-0 flex-col gap-0.5 rounded-2xl px-3 py-2.5"
       style={{ background: "rgba(247,238,243,0.55)", border: "1px solid rgba(172,92,127,0.10)" }}
     >
-      <span className="flex items-center gap-1.5 text-[11px] font-medium" style={{ color: "var(--muted)" }}>
-        <Icon className="h-3 w-3 shrink-0" style={{ color: "var(--primary)" }} />
-        <span className="truncate">{label}</span>
+      <span className="flex items-start gap-1.5 text-[11px] font-medium leading-tight" style={{ color: "var(--muted)" }}>
+        <Icon className="mt-0.5 h-3 w-3 shrink-0" style={{ color: "var(--primary)" }} />
+        {/* התוויות נשברות לשתי שורות במקום להיחתך — בטלפון התא צר מדי לשורה אחת */}
+        <span className="line-clamp-2">{label}</span>
       </span>
       <span className="display-num text-foreground truncate text-[15px] font-bold leading-tight">{value}</span>
       {hint && (
-        <span className="truncate text-[11px]" style={{ color: "var(--muted)" }}>
+        <span className="line-clamp-2 text-[11px] leading-tight" style={{ color: "var(--muted)" }}>
           {hint}
         </span>
       )}

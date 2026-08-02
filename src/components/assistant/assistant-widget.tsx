@@ -248,7 +248,9 @@ export function AssistantWidget() {
         onClick={toggleOpen}
         aria-label={open ? ASSISTANT.closeAria : ASSISTANT.launcherAria}
         aria-expanded={open}
-        className="group fixed bottom-5 left-5 z-50 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg transition-all duration-300 hover:scale-105 md:bottom-6 md:left-6"
+        // z-30 (ולא z-50): הווידג'ט נטען אחרי תוכן העמוד, ולכן ב-z-50 הכפתור
+        // הצף היה מצויר מעל חלונות קופצים ומעל תפריט המובייל ומסתיר כפתורים.
+        className="group fixed bottom-5 left-5 z-30 flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg transition-all duration-300 hover:scale-105 md:bottom-6 md:left-6"
         style={{
           background: "linear-gradient(135deg,#c76f93,#ac5c7f)",
           boxShadow: "0 10px 30px rgba(172,92,127,0.45)",
@@ -270,7 +272,7 @@ export function AssistantWidget() {
       {open && (
         <div
           dir="rtl"
-          className="animate-in fade-in slide-in-from-bottom-2 fixed bottom-24 left-4 z-50 flex max-h-[min(70vh,560px)] w-[calc(100vw-2rem)] max-w-[380px] flex-col overflow-hidden rounded-[1.5rem] duration-200 md:bottom-24 md:left-6"
+          className="animate-in fade-in slide-in-from-bottom-2 fixed bottom-24 left-4 z-30 flex max-h-[min(70dvh,560px)] w-[calc(100vw-2rem)] max-w-[380px] flex-col overflow-hidden rounded-[1.5rem] duration-200 md:bottom-24 md:left-6"
           style={{
             background: "var(--background, #fff)",
             border: "1px solid var(--border)",

@@ -68,7 +68,7 @@ export function ConfirmDialog({
             aria-modal="true"
             aria-label={title}
             dir="rtl"
-            className="relative w-full max-w-sm rounded-2xl p-5 text-right"
+            className="relative max-h-[calc(100dvh-2rem)] w-full max-w-sm overflow-y-auto overscroll-contain rounded-2xl p-5 text-right"
             initial={{ opacity: 0, y: 8, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.97 }}

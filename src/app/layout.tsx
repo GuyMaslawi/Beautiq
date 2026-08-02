@@ -42,7 +42,7 @@ export default function RootLayout({
       dir="rtl"
       className={`${heebo.variable} h-full antialiased`}
     >
-      <body className="bg-background text-foreground flex min-h-screen flex-col">
+      <body className="bg-background text-foreground flex min-h-dvh flex-col">
         {children}
       </body>
     </html>

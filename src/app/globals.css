@@ -481,6 +481,18 @@ body {
 }
 .float-slow { animation: float-slow 6s ease-in-out infinite; }
 
+/* ── שדות קלט בטלפון ──────────────────────────────────────
+   ספארי ב-iOS מגדיל אוטומטית את כל העמוד ברגע שנכנסים לשדה שהגופן בו קטן
+   מ-16px — המסך "קופץ", התוכן נחתך בצדדים והמשתמשת נשארת עם עמוד מוזז.
+   לכן בטלפון כל שדות הקלט מקבלים 16px (בדסקטופ נשמר הגודל המקורי). */
+@media (max-width: 640px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
 /* ── Reduced motion ───────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

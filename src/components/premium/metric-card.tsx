@@ -62,7 +62,7 @@ export function PremiumMetricCard({
   return (
     <div
       className={cn(
-        "lift metric-glow relative overflow-hidden rounded-[1.25rem] p-5",
+        "lift metric-glow relative overflow-hidden rounded-[1.25rem] p-4 sm:p-5",
         className,
       )}
       style={{
@@ -97,7 +97,8 @@ export function PremiumMetricCard({
           </span>
         )}
       </div>
-      <p className="display-num relative z-10 text-[1.75rem] font-bold" style={{ color: numColor }}>
+      {/* מספר קטן יותר בטלפון — בשתי עמודות סכום כמו ‎₪120,500‎ נחתך בגודל המלא */}
+      <p className="display-num relative z-10 text-2xl font-bold sm:text-[1.75rem]" style={{ color: numColor }}>
         {count}
       </p>
       <p className="relative z-10 mt-1 text-xs font-medium leading-tight" style={{ color: "var(--muted)" }}>

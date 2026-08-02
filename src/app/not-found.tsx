@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 // עמוד 404 כללי — שומר על השפה הוויזואלית של Allura גם כשמשהו לא נמצא.
 export default function NotFound() {
   return (
-    <div className="app-ambient flex min-h-screen items-center justify-center px-4" dir="rtl">
+    <div className="app-ambient flex min-h-dvh items-center justify-center px-4" dir="rtl">
       <div className="aura-card relative max-w-md rounded-[1.75rem] px-8 py-10 text-center">
         <p className="eyebrow text-primary">404</p>
         <h1 className="font-display mt-3 text-2xl font-semibold text-foreground">

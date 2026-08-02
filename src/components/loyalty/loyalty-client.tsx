@@ -472,7 +472,7 @@ export function LoyaltyClient({ overview, businessName }: { overview: LoyaltyOve
               {closeClients.map((c) => (
                 <li key={c.clientId} className="flex flex-wrap items-center justify-between gap-3 px-5 py-3.5" style={{ borderBottom: "1px solid var(--border)" }}>
                   <div className="min-w-0">
-                    <span className="truncate text-sm font-semibold" style={{ color: "var(--foreground)" }}>{c.fullName}</span>
+                    <span className="block truncate text-sm font-semibold" style={{ color: "var(--foreground)" }}>{c.fullName}</span>
                     <p className="mt-0.5 text-xs font-medium" style={{ color: "var(--primary)" }}>
                       {LOYALTY.close.remaining(config.visitsRequired - c.visitsInCurrentCard)}
                     </p>

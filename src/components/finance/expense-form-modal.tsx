@@ -51,9 +51,10 @@ export function ExpenseFormModal({ open, expense, onClose }: Props) {
         style={{ background: "rgba(0,0,0,0.55)" }}
       />
 
-      {/* Panel */}
+      {/* Panel — מוגבל לגובה המסך וגליל, כדי שכפתורי השמירה יישארו בהישג יד
+          גם במסכי מובייל נמוכים או במצב לרוחב. */}
       <div
-        className="relative w-full max-w-md rounded-2xl p-6 shadow-2xl"
+        className="relative max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto overscroll-contain rounded-2xl p-5 shadow-2xl sm:p-6"
         dir="rtl"
         style={{
           background: "var(--surface)",

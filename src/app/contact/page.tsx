@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 
 export default function ContactPage() {
   return (
-    <div className="app-ambient flex min-h-screen flex-col">
+    <div className="app-ambient flex min-h-dvh flex-col">
       <main className="flex-1 px-5 py-12">
         <article className="aura-card mx-auto max-w-3xl rounded-3xl px-6 py-10 sm:px-10">
           <header>

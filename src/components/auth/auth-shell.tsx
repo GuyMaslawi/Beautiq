@@ -519,7 +519,7 @@ function PreviewPanel() {
 /* ── exported shell ──────────────────────────────────────────────────────── */
 export function AuthShell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="relative flex min-h-screen" dir="rtl">
+    <div className="relative flex min-h-dvh" dir="rtl">
       {/* Form panel — right side in RTL */}
       <FormPanel>{children}</FormPanel>
       {/* Preview panel — left side in RTL, desktop only */}

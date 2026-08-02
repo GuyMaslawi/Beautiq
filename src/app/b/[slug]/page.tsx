@@ -63,7 +63,7 @@ export default async function PublicBusinessPage({
   return (
     <BookingSelectionProvider>
       <main
-        className="app-ambient min-h-screen overflow-x-hidden pb-28 lg:pb-0"
+        className="app-ambient min-h-dvh overflow-x-hidden pb-28 lg:pb-0"
         dir="rtl"
       >
         {/* 1 ─ Compact business header */}

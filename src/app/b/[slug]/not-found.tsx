@@ -14,7 +14,7 @@ import { Flower2 } from "lucide-react";
 export default function PublicBusinessNotFound() {
   return (
     <main
-      className="app-ambient flex min-h-screen items-center justify-center p-6"
+      className="app-ambient flex min-h-dvh items-center justify-center p-6"
       dir="rtl"
     >
       <div className="aura-card w-full max-w-sm rounded-[1.75rem] px-8 py-10 text-center">

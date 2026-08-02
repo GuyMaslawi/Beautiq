@@ -11,7 +11,7 @@ export default async function AdminLayout({
   await requirePlatformAdmin();
 
   return (
-    <div dir="rtl" className="app-ambient min-h-screen">
+    <div dir="rtl" className="app-ambient min-h-dvh">
       {/* Admin top bar — dark plum, same language as the app sidebar */}
       <header
         className="sticky top-0 z-10 flex items-center justify-between gap-4 border-b px-4 py-3 sm:px-6"

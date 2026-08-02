@@ -165,7 +165,7 @@ function DayRow({
 
       {/* Content row: time selects (open) or closed note */}
       {config.isOpen ? (
-        <div className="mt-3 flex flex-wrap items-start gap-x-4 gap-y-2 ps-14">
+        <div className="mt-3 flex flex-wrap items-start gap-x-4 gap-y-2 ps-2 sm:ps-14">
           {/* Start time */}
           <div className="flex flex-col gap-1">
             <label
@@ -207,7 +207,7 @@ function DayRow({
           </div>
         </div>
       ) : (
-        <p className="text-muted mt-2 ps-14 text-xs">
+        <p className="text-muted mt-2 ps-2 text-xs sm:ps-14">
           {AVAILABILITY.weekly.closedDayNote}
         </p>
       )}

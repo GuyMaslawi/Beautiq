@@ -59,7 +59,7 @@ function HeroCard({
 
   return (
     <div
-      className="relative overflow-hidden rounded-3xl px-7 py-8"
+      className="relative overflow-hidden rounded-3xl px-5 py-7 sm:px-7 sm:py-8"
       style={{
         background: "linear-gradient(145deg, #2b0e1f 0%, #3e1630 55%, #2c1527 100%)",
         border: "1px solid rgba(172,92,127,0.28)",
@@ -110,7 +110,7 @@ function HeroCard({
             {REVENUE_FORECAST.hero.expectedLabel}
           </p>
           <p
-            className="text-5xl font-bold tabular-nums leading-none tracking-tight text-white"
+            className="text-4xl font-bold tabular-nums leading-none tracking-tight text-white sm:text-5xl"
             style={{ textShadow: "0 2px 12px rgba(0,0,0,0.25)" }}
           >
             {formatILS(expectedRevenue)}

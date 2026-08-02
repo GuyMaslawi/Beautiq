@@ -70,7 +70,7 @@ const HOW_IT_WORKS = [
 
 export default function AboutPage() {
   return (
-    <div className="app-ambient flex min-h-screen flex-col">
+    <div className="app-ambient flex min-h-dvh flex-col">
       {/* כותרת עליונה — המותג גלוי וברור */}
       <header className="sticky top-0 z-40 border-b border-[var(--border)]/70 bg-white/70 backdrop-blur-md">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-5 py-3.5 sm:px-8">

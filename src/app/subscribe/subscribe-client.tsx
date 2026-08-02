@@ -141,7 +141,7 @@ export function SubscribeClient({
   const [showPending, setShowPending] = useState(paymentPending);
 
   return (
-    <div dir="rtl" className="relative flex min-h-screen flex-col items-center justify-center" style={{ background: "linear-gradient(155deg, #130a19 0%, #231131 35%, #3c1f3a 65%, #1b0f22 100%)" }}>
+    <div dir="rtl" className="relative flex min-h-dvh flex-col items-center justify-center" style={{ background: "linear-gradient(155deg, #130a19 0%, #231131 35%, #3c1f3a 65%, #1b0f22 100%)" }}>
       <Ambient />
 
       <div className="relative flex w-full items-center justify-center pt-5">

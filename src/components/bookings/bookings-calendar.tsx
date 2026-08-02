@@ -556,7 +556,7 @@ export function BookingsCalendar({
           ref={scrollRef}
           className="flex-1 overflow-y-auto overflow-x-auto"
           style={{
-            height: "calc(100vh - 360px)",
+            height: "calc(100dvh - 360px)",
             minHeight: 620,
           }}
         >
