@@ -15,12 +15,10 @@ export function Sidebar({
   userName,
   businessName,
   isAdmin = false,
-  hasPlatinum = false,
 }: {
   userName: string | null;
   businessName: string | null;
   isAdmin?: boolean;
-  hasPlatinum?: boolean;
 }) {
   const initials = getInitials(businessName);
 
@@ -111,7 +109,7 @@ export function Sidebar({
 
       {/* Navigation */}
       <div className="flex-1 overflow-y-auto px-3 py-4 scrollbar-hide">
-        <AppNav hasPlatinum={hasPlatinum} />
+        <AppNav />
       </div>
 
       {/* Footer: sign out */}

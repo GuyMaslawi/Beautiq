@@ -1,13 +1,13 @@
 # מנוי Allura — סליקה דרך Grow (משולם) עם Make
 
-מסמך זה מסביר איך מחברים את חיוב המנוי החודשי של בעלת העסק (פרימיום ₪149 /
-פלטינום ₪249) לשער התשלומים **Grow (משולם)**, בחיוב חוזר אוטומטי (**הוראת קבע**),
-דרך תרחיש (scenario) חינמי ב-**Make**.
+מסמך זה מסביר איך מחברים את חיוב המנוי החודשי של בעלת העסק (מנוי Allura ₪199 —
+מנוי אחד שכולל את כל הפיצ׳רים) לשער התשלומים **Grow (משולם)**, בחיוב חוזר
+אוטומטי (**הוראת קבע**), דרך תרחיש (scenario) חינמי ב-**Make**.
 
 ## איך זה עובד (התמונה הגדולה)
 
 ```
-בעלת העסק בוחרת תוכנית ב-/subscribe
+בעלת העסק מפעילה את המנוי ב-/subscribe
         │
         ▼
 השרת של Allura שולח את פרטי ההזמנה ל-Webhook של Make
@@ -58,11 +58,11 @@ Allura מאמת ומפעיל את התוכנית → האתר נפתח
   גוף הבקשה שאנחנו שולחים:
   ```json
   {
-    "secret": "...", "sum": "149.00", "description": "מנוי פרימיום — Allura",
+    "secret": "...", "sum": "199.00", "description": "מנוי Allura — מנוי חודשי",
     "fullName": "שם בעלת העסק", "phone": "", "email": "owner@example.com",
     "successUrl": "https://<הדומיין>/api/subscription/return?sid=...",
     "notifyUrl": "https://<הדומיין>/api/subscription/webhook",
-    "recurring": true, "cField1": "<nonce>", "cField2": "<userId>", "cField3": "premium"
+    "recurring": true, "cField1": "<nonce>", "cField2": "<userId>", "cField3": "standard"
   }
   ```
 
@@ -134,18 +134,18 @@ MAKE_WEBHOOK_SHARED_SECRET=
 
 ## מה כבר מוכן בקוד (בגזרתי)
 
-- **מסך /subscribe** — שער אחרי הרשמה, 2 תוכניות + מעבר לתשלום מאובטח.
+- **מסך /subscribe** — שער אחרי הרשמה, מנוי אחד + מעבר לתשלום מאובטח.
 - **השער (paywall) פעיל** — `requirePaidUser()` חוסם כניסה עד שיש `User.plan`
-  שהופעל מתשלום מאומת; אדמין ומשתמשים קיימים (platinum) עוברים.
+  שהופעל מתשלום מאומת; אדמין עובר.
 - **מתאם Make/Grow** — `src/lib/subscription/grow.ts`.
 - **webhook מאומת** — `src/app/api/subscription/webhook/route.ts` (מקור האמת).
 - **חזרה מהסליקה** — `src/app/api/subscription/return/route.ts`.
 - **מודל נתונים** — `AccountSubscription` (סטטוס, תקופת חיוב, directDebitId).
 - **מסך ניהול מנוי** — בהגדרות (/settings › "מנוי Allura"): התוכנית הנוכחית,
-  סטטוס, מחיר, מועד חידוש, שדרוג לפלטינום, וביטול מנוי (עם אישור).
+  סטטוס, מחיר, מועד חידוש, וביטול מנוי (עם אישור).
 - **סריקה יומית** — `/api/cron/subscription-sweep` (03:00) סוגרת את הגישה למנויים
   שבוטלו/נכשלו כשתקופתם נגמרה. Grow מבצע את החיוב החודשי בעצמו — אין cron חיוב.
-- **מצב פיתוח** — כשאין הגדרות Make, /subscribe מפעיל את התוכנית מיידית ללא
+- **מצב פיתוח** — כשאין הגדרות Make, /subscribe מפעיל את המנוי מיידית ללא
   סליקה, כדי לשמור על האפליקציה ניתנת להרצה מקומית.
 
 > הערה: שמות השדות של חיווי הוראת-הקבע החוזר (directDebitId / paymentSource /

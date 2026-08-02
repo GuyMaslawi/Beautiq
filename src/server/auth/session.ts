@@ -111,8 +111,8 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   // while an admin is impersonating them.
   if (!impersonating) void touchLastSeen(user.id, user.lastSeenAt);
 
-  // A comped/time-limited plan lapses the instant planExpiresAt passes — every
-  // consumer (paywall, hasPlatinumAccess, feature gates) then sees plan = null.
+  // A comped/time-limited plan lapses the instant planExpiresAt passes — the
+  // paywall then sees plan = null and the account is back behind /subscribe.
   const now = Date.now();
   const effectivePlan =
     user.plan && (!user.planExpiresAt || user.planExpiresAt.getTime() > now)
@@ -164,18 +164,6 @@ export async function requireCurrentUser(): Promise<CurrentUser> {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
   return user;
-}
-
-/**
- * True when the current user may use Platinum-tier features. Admins always pass;
- * otherwise the user must be on the `platinum` plan. Used to gate the advanced
- * growth tools (revenue forecast, at-risk clients, automated campaigns) — see
- * [[project_subscribe_paywall]].
- */
-export async function hasPlatinumAccess(): Promise<boolean> {
-  const user = await getCurrentUser();
-  if (!user) return false;
-  return user.isAdmin || user.plan === AccountPlan.platinum;
 }
 
 /**

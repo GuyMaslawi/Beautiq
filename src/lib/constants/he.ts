@@ -51,7 +51,6 @@ export const NAV = {
   atRisk: "לקוחות בסיכון",
   winBack: "קמפיינים להחזרה",
   revenueForecast: "תחזית הכנסות",
-  plans: "חבילות פרימיום",
 } as const;
 
 /**
@@ -1044,7 +1043,7 @@ export const SETTINGS = {
 /** טקסטים לניהול מנוי Allura (בהגדרות) */
 export const SUBSCRIPTION = {
   sectionTitle: "מנוי Allura",
-  currentPlan: "התוכנית שלך",
+  currentPlan: "המנוי שלך",
   monthlyPrice: "מחיר חודשי",
   renewsOn: "התחדשות הבאה",
   endsOn: "המנוי פעיל עד",
@@ -1070,24 +1069,8 @@ export const SUBSCRIPTION = {
     success: "אמצעי התשלום אושר והחיוב החודשי עודכן.",
   },
 
-  upgradeButton: "שדרוג לפלטינום",
-  changePlanButton: "שינוי מסלול",
   cancelButton: "ביטול מנוי",
   cancelling: "מבטל…",
-
-  changePlan: {
-    title: "בחירת מסלול",
-    description: "אפשר לעבור בין המסלולים בכל עת. החיוב החודשי יתעדכן בהתאם.",
-    currentBadge: "המסלול שלך",
-    switchTo: "מעבר למסלול הזה",
-    upgradeTo: "שדרוג למסלול הזה",
-    downgradeTo: "מעבר למסלול הזה",
-    perMonth: "לחודש",
-    switching: "מעבירים…",
-    successToPlatinum: "המסלול עודכן לפלטינום. כל כלי הצמיחה נפתחו.",
-    successToPremium: "המסלול עודכן לפרימיום. החיוב החודשי עודכן בהתאם.",
-    note: "המחיר החדש נכנס לתוקף מיד. אפשר לשנות שוב בכל עת.",
-  },
 
   cancelConfirm: {
     title: "לבטל את המנוי?",
@@ -2761,7 +2744,6 @@ export const LOYALTY = {
     clientNotFound: "הלקוחה לא נמצאה",
     noPendingReward: "ללקוחה זו אין הטבה ממתינה למימוש",
     noRedemptionToUndo: "אין מימוש לביטול",
-    platinumRequired: "מועדון הנאמנות זמין בתוכנית Platinum.",
     generic: "משהו השתבש. נסי שוב.",
   },
 } as const;

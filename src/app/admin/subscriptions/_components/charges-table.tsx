@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { CheckCircle2, XCircle, RefreshCw, Sparkles } from "lucide-react";
+import { CheckCircle2, XCircle, RefreshCw } from "lucide-react";
 import type { AdminChargeRow } from "@/server/admin/charge-queries";
 
 function formatILS(amount: number): string {
@@ -42,7 +42,6 @@ export function ChargesTable({ rows }: { rows: AdminChargeRow[] }) {
           <tr className="border-border text-muted border-b text-xs">
             <th className="px-4 py-3 font-medium">מתי</th>
             <th className="px-4 py-3 font-medium">בעלת העסק</th>
-            <th className="px-4 py-3 font-medium">תוכנית</th>
             <th className="px-4 py-3 font-medium">סכום</th>
             <th className="px-4 py-3 font-medium">סוג</th>
             <th className="px-4 py-3 font-medium">תוצאה</th>
@@ -72,15 +71,6 @@ export function ChargesTable({ rows }: { rows: AdminChargeRow[] }) {
                   )}
                   <p className="text-muted truncate text-xs">{row.ownerEmail}</p>
                 </div>
-              </td>
-
-              <td className="px-4 py-3 whitespace-nowrap">
-                <span className="text-foreground inline-flex items-center gap-1.5 text-xs font-medium">
-                  {row.plan === "platinum" ? (
-                    <Sparkles className="text-accent h-3.5 w-3.5" />
-                  ) : null}
-                  {row.plan === "platinum" ? "פלטינום" : "פרימיום"}
-                </span>
               </td>
 
               <td className="text-foreground px-4 py-3 font-semibold whitespace-nowrap tabular-nums">

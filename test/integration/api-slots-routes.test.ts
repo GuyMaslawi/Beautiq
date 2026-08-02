@@ -23,7 +23,7 @@ const PAID_USER = {
   id: "usr_1",
   isAdmin: false,
   impersonating: false,
-  plan: "premium",
+  plan: "standard",
   suspendedUntil: null,
 };
 

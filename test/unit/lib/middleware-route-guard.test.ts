@@ -51,7 +51,6 @@ describe("middleware — deny by default", () => {
     "/finance",
     "/loyalty",
     "/subscribe",
-    "/upgrade",
     // The one that matters most: a route that does not exist yet.
     "/some-page-added-next-month",
   ];

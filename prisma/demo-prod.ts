@@ -579,8 +579,8 @@ async function ensureOwnerAndBusiness(
   const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 12);
   const user = await prisma.user.upsert({
     where: { email },
-    update: { plan: "platinum" },
-    create: { email, name: ownerName, passwordHash, plan: "platinum", planActivatedAt: new Date() },
+    update: { plan: "standard" },
+    create: { email, name: ownerName, passwordHash, plan: "standard", planActivatedAt: new Date() },
   });
 
   const bizFields = {
@@ -615,7 +615,7 @@ async function resolveStarBusiness(): Promise<{ business: Business; userId: stri
   // Keep admin flag + plan so they can reach /admin and the paywall is bypassed.
   await prisma.user.update({
     where: { id: admin.id },
-    data: { isAdmin: true, plan: "platinum", planActivatedAt: admin.planActivatedAt ?? new Date() },
+    data: { isAdmin: true, plan: "standard", planActivatedAt: admin.planActivatedAt ?? new Date() },
   });
 
   const existing = admin.memberships.find((m) => m.role === "owner") ?? admin.memberships[0];

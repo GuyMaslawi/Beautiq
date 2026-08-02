@@ -12,11 +12,11 @@ const MAIN_TABS: { key: HubTab; label: string }[] = [
   { key: "messages", label: BRING_BACK_HUB.tabs.messages },
 ];
 
-const SUB_TABS: { key: HubSubTab; label: string; platinum?: boolean }[] = [
+const SUB_TABS: { key: HubSubTab; label: string }[] = [
   { key: "overview", label: BRING_BACK_HUB.subTabs.overview },
   { key: "retention", label: BRING_BACK_HUB.subTabs.retention },
-  { key: "at-risk", label: BRING_BACK_HUB.subTabs.atRisk, platinum: true },
-  { key: "campaigns", label: BRING_BACK_HUB.subTabs.campaigns, platinum: true },
+  { key: "at-risk", label: BRING_BACK_HUB.subTabs.atRisk },
+  { key: "campaigns", label: BRING_BACK_HUB.subTabs.campaigns },
 ];
 
 const ACTIVE_STYLE: React.CSSProperties = {
@@ -32,12 +32,9 @@ const ACTIVE_STYLE: React.CSSProperties = {
 export function BringBackTabs({
   activeTab,
   activeSub,
-  hasPlatinum = true,
 }: {
   activeTab: HubTab;
   activeSub: HubSubTab;
-  /** When false, Platinum-only sub-tabs are hidden (Premium users). */
-  hasPlatinum?: boolean;
 }) {
   return (
     <div className="space-y-2.5" dir="rtl">
@@ -78,7 +75,7 @@ export function BringBackTabs({
       {/* Sub tabs — only for the "clients" tab; also a scrollable single row */}
       {activeTab === "clients" && (
         <div className="flex gap-1.5 overflow-x-auto px-1 pb-0.5 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {SUB_TABS.filter((sub) => hasPlatinum || !sub.platinum).map((sub) => {
+          {SUB_TABS.map((sub) => {
             const active = sub.key === activeSub;
             return (
               <Link

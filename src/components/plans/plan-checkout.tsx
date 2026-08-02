@@ -9,7 +9,6 @@ import {
   Lock,
   Loader2,
   Gem,
-  Flower2,
   Check,
   CreditCard,
 } from "lucide-react";
@@ -23,7 +22,7 @@ const EASE = [0.22, 1, 0.36, 1] as const;
  * owner pays on Grow's (Meshulam) secure hosted page. This shows the order
  * summary and a single CTA that opens the checkout: it calls the server action,
  * then redirects to Grow's hosted page (or, when Grow is not configured in dev,
- * straight into the app). Shared by the signup paywall and the upgrade flow.
+ * straight into the app).
  */
 export function PlanCheckout({
   plan,
@@ -43,7 +42,7 @@ export function PlanCheckout({
   function handleContinue() {
     setError(null);
     startTransition(async () => {
-      const result = await startSubscriptionCheckoutAction(plan.id);
+      const result = await startSubscriptionCheckoutAction();
       if (!result.ok || !result.redirectUrl) {
         setError(result.error ?? "אירעה תקלה. נסי שוב.");
         return;
@@ -91,12 +90,8 @@ export function PlanCheckout({
             סיכום הזמנה
           </p>
           <div className="mb-5 flex items-center gap-2.5">
-            {plan.id === "platinum" ? (
-              <Gem className="h-6 w-6" style={{ color: "#e5bd6a" }} />
-            ) : (
-              <Flower2 className="h-6 w-6" style={{ color: "#e7a9c4" }} />
-            )}
-            <h2 className="font-display text-2xl font-semibold text-white">תוכנית {plan.name}</h2>
+            <Gem className="h-6 w-6" style={{ color: "#e5bd6a" }} />
+            <h2 className="font-display text-2xl font-semibold text-white">{plan.name}</h2>
           </div>
 
           <div
@@ -109,16 +104,14 @@ export function PlanCheckout({
             </span>
           </div>
 
-          {plan.featuresIntro && (
-            <p className="mb-2.5 text-xs font-semibold" style={{ color: "rgba(229,189,106,0.85)" }}>
-              {plan.featuresIntro}
-            </p>
-          )}
-          <ul className="flex flex-col gap-2">
-            {plan.features.slice(0, 6).map((f) => (
+          <p className="mb-2.5 text-xs font-semibold" style={{ color: "rgba(229,189,106,0.85)" }}>
+            הכול כלול:
+          </p>
+          <ul className="grid gap-x-4 gap-y-1.5 sm:grid-cols-2">
+            {plan.features.map((f) => (
               <li key={f} className="flex items-center gap-2">
                 <Check className="h-3.5 w-3.5 shrink-0" style={{ color: "#e5bd6a" }} />
-                <span className="text-sm" style={{ color: "rgba(255,255,255,0.78)" }}>{f}</span>
+                <span className="text-[13px] leading-5" style={{ color: "rgba(255,255,255,0.78)" }}>{f}</span>
               </li>
             ))}
           </ul>

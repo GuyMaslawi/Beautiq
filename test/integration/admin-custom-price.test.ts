@@ -45,7 +45,7 @@ function owner(overrides: Record<string, unknown> = {}) {
       name: "בעלת העסק",
       email: "owner@example.com",
       isAdmin: false,
-      plan: "premium",
+      plan: "standard",
       customPriceMinor: null,
       ...overrides,
     },
@@ -78,14 +78,14 @@ describe("adminSetCustomPriceAction", () => {
       id: "sub_1",
       status: "active",
       directDebitId: null, // authorized outside Grow / dev — nothing to stop
-      priceMinor: 14900,
+      priceMinor: 19900,
     });
 
     await adminSetCustomPriceAction(BIZ, OWNER_ID, 99);
 
     expect(prisma.accountSubscription.update).toHaveBeenCalledWith({
       where: { id: "sub_1" },
-      data: { plan: "premium", priceMinor: 9900 },
+      data: { plan: "standard", priceMinor: 9900 },
     });
   });
 
@@ -94,7 +94,7 @@ describe("adminSetCustomPriceAction", () => {
       id: "sub_1",
       status: "active",
       directDebitId: "dd_123",
-      priceMinor: 14900,
+      priceMinor: 19900,
     });
 
     const res = await adminSetCustomPriceAction(BIZ, OWNER_ID, 99);
@@ -144,7 +144,7 @@ describe("adminSetCustomPriceAction", () => {
     });
     expect(prisma.accountSubscription.update).toHaveBeenCalledWith({
       where: { id: "sub_1" },
-      data: { plan: "premium", priceMinor: 14900 },
+      data: { plan: "standard", priceMinor: 19900 },
     });
   });
 

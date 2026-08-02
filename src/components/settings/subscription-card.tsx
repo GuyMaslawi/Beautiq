@@ -2,13 +2,12 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeftRight, Gem, Flower2, CreditCard, CalendarClock, AlertCircle, ShieldCheck } from "lucide-react";
+import { Gem, CreditCard, CalendarClock, AlertCircle, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
-import { ChangePlanDialog } from "@/components/settings/change-plan-dialog";
 import { cancelSubscriptionAction, startSubscriptionCheckoutAction } from "@/server/subscription/actions";
-import { PLANS, type PlanId } from "@/lib/plans";
+import { ALLURA_PLAN } from "@/lib/plans";
 import { SUBSCRIPTION } from "@/lib/constants/he";
 import type { SubscriptionOverview } from "@/server/subscription/queries";
 
@@ -31,37 +30,27 @@ const STATUS_STYLE: Record<StatusKey, { bg: string; fg: string; border: string }
 };
 
 /**
- * Owner-facing subscription summary in Settings: current plan, monthly price,
- * next renewal (or end date once cancelled), and actions (upgrade / cancel).
- * Cancelling keeps access until the paid period ends.
+ * Owner-facing subscription summary in Settings: the plan, monthly price, next
+ * renewal (or end date once cancelled), and cancelling. There is a single plan,
+ * so there is nothing to switch to. Cancelling keeps access until the paid
+ * period ends.
  */
 export function SubscriptionCard({ overview }: { overview: SubscriptionOverview }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [changeOpen, setChangeOpen] = useState(false);
-
-  const planId = (overview.plan ?? "premium") as PlanId;
-  const planInfo = PLANS[planId];
-  const isPlatinum = planId === "platinum";
 
   const statusKey: StatusKey =
     overview.status ?? (overview.isManaged ? "active" : "active");
   const statusStyle = STATUS_STYLE[statusKey];
 
-  const price = overview.priceMinor != null ? Math.round(overview.priceMinor / 100) : planInfo.price;
+  const price =
+    overview.priceMinor != null ? Math.round(overview.priceMinor / 100) : ALLURA_PLAN.price;
   const cancelled = overview.status === "cancelled";
-
-  // The plan the pending re-authorization is for (may differ from the current
-  // access plan if the owner abandoned a self-serve switch).
-  const reauthPlanId = (overview.pendingPlan ?? planId) as PlanId;
-  const reauthPlanInfo = PLANS[reauthPlanId];
-  const reauthPrice =
-    overview.priceMinor != null ? Math.round(overview.priceMinor / 100) : reauthPlanInfo.price;
 
   function handleReauth() {
     startTransition(async () => {
-      const result = await startSubscriptionCheckoutAction(reauthPlanId);
+      const result = await startSubscriptionCheckoutAction();
       if (!result.ok) {
         toast.error(result.error ?? SUBSCRIPTION.genericError);
         return;
@@ -98,20 +87,16 @@ export function SubscriptionCard({ overview }: { overview: SubscriptionOverview 
           <span
             className="flex h-9 w-9 items-center justify-center rounded-xl"
             style={{
-              background: isPlatinum ? "rgba(212,168,83,0.15)" : "rgba(172,92,127,0.12)",
-              border: isPlatinum ? "1px solid rgba(212,168,83,0.35)" : "1px solid rgba(172,92,127,0.24)",
+              background: "rgba(172,92,127,0.12)",
+              border: "1px solid rgba(172,92,127,0.24)",
             }}
           >
-            {isPlatinum ? (
-              <Gem className="h-4.5 w-4.5" style={{ color: "#c79a3e" }} />
-            ) : (
-              <Flower2 className="h-4.5 w-4.5" style={{ color: "#ac5c7f" }} />
-            )}
+            <Gem className="h-4.5 w-4.5" style={{ color: "#ac5c7f" }} />
           </span>
           <div>
             <p className="text-xs" style={{ color: "var(--muted)" }}>{SUBSCRIPTION.currentPlan}</p>
             <p className="text-base font-bold" style={{ color: "var(--foreground)" }}>
-              {planInfo.name}
+              {ALLURA_PLAN.name}
             </p>
           </div>
         </div>
@@ -175,7 +160,7 @@ export function SubscriptionCard({ overview }: { overview: SubscriptionOverview 
                 {SUBSCRIPTION.reauth.title}
               </p>
               <p className="mt-0.5 text-sm" style={{ color: "var(--muted)" }}>
-                המסלול שלך עודכן ל{reauthPlanInfo.name}. כדי להפעיל את החיוב החודשי החדש (₪{reauthPrice} {SUBSCRIPTION.perMonth}) יש לאשר מחדש את אמצעי התשלום בעמוד המאובטח.
+                כדי להפעיל את החיוב החודשי (₪{price} {SUBSCRIPTION.perMonth}) יש לאשר מחדש את אמצעי התשלום בעמוד המאובטח.
               </p>
             </div>
           </div>
@@ -191,17 +176,6 @@ export function SubscriptionCard({ overview }: { overview: SubscriptionOverview 
           {!cancelled && (
             <Button
               size="sm"
-              variant="secondary"
-              onClick={() => setChangeOpen(true)}
-              disabled={isPending}
-            >
-              <ArrowLeftRight className="h-4 w-4" />
-              {SUBSCRIPTION.changePlanButton}
-            </Button>
-          )}
-          {!cancelled && (
-            <Button
-              size="sm"
               variant="ghost"
               onClick={() => setConfirmOpen(true)}
               disabled={isPending}
@@ -214,8 +188,6 @@ export function SubscriptionCard({ overview }: { overview: SubscriptionOverview 
       ) : (
         <p className="text-sm" style={{ color: "var(--muted)" }}>{SUBSCRIPTION.adminNote}</p>
       )}
-
-      <ChangePlanDialog open={changeOpen} onOpenChange={setChangeOpen} currentPlan={planId} />
 
       <ConfirmDialog
         open={confirmOpen}

@@ -38,18 +38,12 @@ const ICONS: Record<string, LucideIcon> = {
 interface AppNavProps {
   /** When true, renders with light-background styles (e.g. mobile drawer). */
   light?: boolean;
-  /** When false, Platinum-only items are hidden (Premium users). */
-  hasPlatinum?: boolean;
 }
 
-export function AppNav({ light = false, hasPlatinum = false }: AppNavProps) {
+export function AppNav({ light = false }: AppNavProps) {
   const pathname = usePathname();
 
-  // Hide Platinum-only items for Premium users; drop any group left empty.
-  const groups = NAV_GROUPS.map((group) => ({
-    ...group,
-    items: group.items.filter((item) => hasPlatinum || !item.platinum),
-  })).filter((group) => group.items.length > 0);
+  const groups = NAV_GROUPS;
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);

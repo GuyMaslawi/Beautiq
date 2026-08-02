@@ -23,7 +23,6 @@ export interface AdminChargeRow {
   userId: string;
   businessName: string | null;
   businessId: string | null;
-  plan: "premium" | "platinum";
   /** Amount in shekels. */
   amount: number;
   outcome: "paid" | "failed";
@@ -105,7 +104,6 @@ export async function getAdminCharges(params: {
       select: {
         id: true,
         occurredAt: true,
-        plan: true,
         amountMinor: true,
         outcome: true,
         isRecurring: true,
@@ -152,7 +150,6 @@ export async function getAdminCharges(params: {
         userId: c.userId,
         businessName: business?.name ?? null,
         businessId: business?.id ?? null,
-        plan: c.plan,
         amount: c.amountMinor / 100,
         outcome: c.outcome,
         isRecurring: c.isRecurring,

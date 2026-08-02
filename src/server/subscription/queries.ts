@@ -22,8 +22,6 @@ export interface SubscriptionOverview {
    * False for admins / grandfathered accounts that have `plan` but no billing row.
    */
   isManaged: boolean;
-  /** True when the owner can move up to Platinum. */
-  canUpgrade: boolean;
   /**
    * True when access is open (`plan` set) but the monthly billing is awaiting the
    * owner's card re-authorization — e.g. after an admin plan change on a live
@@ -31,8 +29,6 @@ export interface SubscriptionOverview {
    * serve switch. The owner must re-authorize to resume the charge at the new price.
    */
   needsReauth: boolean;
-  /** The plan the pending re-authorization is for (the sub's plan), when any. */
-  pendingPlan: AccountPlan | null;
 }
 
 export async function getSubscriptionOverview(): Promise<SubscriptionOverview> {
@@ -40,7 +36,6 @@ export async function getSubscriptionOverview(): Promise<SubscriptionOverview> {
   const sub = await prisma.accountSubscription.findUnique({
     where: { userId: user.id },
     select: {
-      plan: true,
       status: true,
       priceMinor: true,
       currentPeriodEnd: true,
@@ -71,8 +66,6 @@ export async function getSubscriptionOverview(): Promise<SubscriptionOverview> {
     cardSuffix: sub?.cardSuffix ?? null,
     cancelledAt: sub?.cancelledAt ?? null,
     isManaged,
-    canUpgrade: user.plan === AccountPlan.premium,
     needsReauth,
-    pendingPlan: needsReauth ? (sub?.plan ?? null) : null,
   };
 }

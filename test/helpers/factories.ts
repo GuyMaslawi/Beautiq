@@ -142,7 +142,7 @@ export function makeUser(overrides: Record<string, unknown> = {}) {
     // enforces the plan/suspension gate (so Server Actions cannot bypass the
     // paywall the way a layout-only guard allowed), so a user factory with no
     // plan would send every business-scoped test to /subscribe.
-    plan: "premium",
+    plan: "standard",
     planActivatedAt: new Date("2026-01-01T00:00:00Z"),
     planExpiresAt: null,
     suspendedUntil: null,

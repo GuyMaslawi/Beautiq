@@ -25,7 +25,7 @@ import {
 const SUB = {
   id: "sub_1",
   userId: "usr_1",
-  plan: "platinum" as const,
+  plan: "standard" as const,
   priceMinor: 24900,
   providerTransactionId: null,
   currentPeriodEnd: null,
@@ -54,7 +54,7 @@ describe("subscription charge ledger", () => {
     expect(data).toMatchObject({
       userId: "usr_1",
       subscriptionId: "sub_1",
-      plan: "platinum",
+      plan: "standard",
       // The price we authorized — never a number echoed back by the provider.
       amountMinor: 24900,
       outcome: "paid",

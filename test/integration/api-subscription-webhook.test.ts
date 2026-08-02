@@ -46,7 +46,7 @@ function activeSub(overrides: Record<string, unknown> = {}) {
   return {
     id: "sub_1",
     userId: "usr_1",
-    plan: "platinum",
+    plan: "standard",
     status: "active",
     priceMinor: 24900,
     processId: null,
@@ -163,7 +163,7 @@ describe("POST /api/subscription/webhook — amount verification", () => {
       activeSub({ priceMinor: 24900 }),
     );
     const res = await POST(
-      req(recurringPaidBody({ "data[sum]": "149.00" })), // Premium price, Platinum row
+      req(recurringPaidBody({ "data[sum]": "199.00" })), // Premium price, Platinum row
     );
     expect(res.status).toBe(200); // ack so Grow stops retrying
     expect(confirmSubscriptionPayment).not.toHaveBeenCalled();
@@ -171,9 +171,9 @@ describe("POST /api/subscription/webhook — amount verification", () => {
 
   it("accepts a charge that matches the authorized price", async () => {
     prisma.accountSubscription.findFirst.mockResolvedValue(
-      activeSub({ priceMinor: 14900, plan: "premium" }),
+      activeSub({ priceMinor: 19900, plan: "standard" }),
     );
-    const res = await POST(req(recurringPaidBody({ "data[sum]": "149.00" })));
+    const res = await POST(req(recurringPaidBody({ "data[sum]": "199.00" })));
     expect(res.status).toBe(200);
     expect(confirmSubscriptionPayment).toHaveBeenCalled();
   });

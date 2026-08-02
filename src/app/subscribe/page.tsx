@@ -4,14 +4,14 @@ import { requireCurrentUser } from "@/server/auth/session";
 import { SubscribeClient } from "./subscribe-client";
 
 export const metadata: Metadata = {
-  title: "בחירת תוכנית · Allura",
+  title: "הפעלת המנוי · Allura",
 };
 
 /**
- * The paywall shown right after signup. A signed-in user who has not yet chosen
- * & paid for a plan picks Premium or Platinum here; only once paid does the app
- * gate (see (app)/layout.tsx) let them into the dashboard. Users who already
- * have a plan — or admins — skip straight to the app.
+ * The paywall shown right after signup. Allura has one plan, so there is nothing
+ * to choose here — the owner pays and is in. Only once paid does the app gate
+ * (see (app)/layout.tsx) let them into the dashboard. Users who already have a
+ * plan — or admins — skip straight to the app.
  */
 export default async function SubscribePage({
   searchParams,

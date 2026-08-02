@@ -63,7 +63,7 @@ describe("getCurrentUser — session revocation", () => {
       email: "owner@example.com",
       name: "בעלת העסק",
       isAdmin: false,
-      plan: "premium",
+      plan: "standard",
       suspendedUntil: null,
       sessionsValidFrom: REVOKED_AT,
       ...extra,

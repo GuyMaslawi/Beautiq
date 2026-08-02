@@ -8,8 +8,6 @@ import {
   CalendarDays,
   Users2,
   ArrowLeft,
-  Gem,
-  Crown,
   AlertTriangle,
 } from "lucide-react";
 import {
@@ -176,20 +174,6 @@ export default async function AdminPage() {
             icon={<AlertTriangle className="h-5 w-5" />}
             color="var(--error)"
             bg="var(--error-light)"
-          />
-          <StatCard
-            label="פרימיום"
-            value={revenue.premiumCount}
-            icon={<Gem className="h-5 w-5" />}
-            color="var(--primary)"
-            bg="var(--primary-light)"
-          />
-          <StatCard
-            label="פלטינום"
-            value={revenue.platinumCount}
-            icon={<Crown className="h-5 w-5" />}
-            color="var(--accent)"
-            bg="var(--accent-light)"
           />
           <StatCard
             label="ביטולים (פעילים עד סוף התקופה)"

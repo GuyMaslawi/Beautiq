@@ -2,21 +2,18 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/server/db/prisma";
-import { requireTenant, hasPlatinumAccess } from "@/server/auth/session";
+import { requireTenant } from "@/server/auth/session";
 import { LOYALTY_BOUNDS } from "@/lib/loyalty/constants";
 import { LOYALTY } from "@/lib/constants/he";
 
 /**
- * The loyalty club is a Platinum-tier feature. The /loyalty page renders a
- * PlatinumLock for everyone else, but that is a RENDERING guard — these actions
- * are directly POSTable endpoints whose ids ship in the public client bundle, so
- * each one must check the tier itself. Without this a Premium owner could enable
- * the program and the hourly loyalty cron would then send milestone WhatsApp
- * messages on their behalf, billed to Allura.
+ * The loyalty club ships with the single Allura plan, so there is no tier to
+ * check here — but every action still goes through requireTenant(), which
+ * enforces the paywall and suspension. That matters: these action ids ship in
+ * the public client bundle, and an unpaid account that could enable the program
+ * would have the hourly loyalty cron sending milestone WhatsApp messages on its
+ * behalf, billed to Allura.
  */
-async function assertPlatinum(): Promise<boolean> {
-  return hasPlatinumAccess();
-}
 
 export interface LoyaltyFormState {
   errors?: Partial<Record<string, string>>;
@@ -33,10 +30,6 @@ export async function saveLoyaltyProgramAction(
   formData: FormData,
 ): Promise<LoyaltyFormState> {
   const tenant = await requireTenant();
-  if (!(await assertPlatinum())) {
-    return { formError: LOYALTY.errors.platinumRequired };
-  }
-
   const errors: Partial<Record<string, string>> = {};
 
   const isActive = String(formData.get("isActive") ?? "") === "on";
@@ -104,7 +97,6 @@ export async function redeemLoyaltyRewardAction(
   clientId: string,
 ): Promise<{ success?: string; error?: string }> {
   const tenant = await requireTenant();
-  if (!(await assertPlatinum())) return { error: LOYALTY.errors.platinumRequired };
   if (!clientId) return { error: LOYALTY.errors.generic };
 
   try {
@@ -155,7 +147,6 @@ export async function undoLoyaltyRedemptionAction(
   clientId: string,
 ): Promise<{ success?: string; error?: string }> {
   const tenant = await requireTenant();
-  if (!(await assertPlatinum())) return { error: LOYALTY.errors.platinumRequired };
   if (!clientId) return { error: LOYALTY.errors.generic };
 
   try {

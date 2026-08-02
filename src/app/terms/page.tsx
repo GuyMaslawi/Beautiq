@@ -6,7 +6,7 @@ import {
   LEGAL_ENTITY_NAME,
   SUPPORT_EMAIL,
 } from "@/lib/config";
-import { PLANS } from "@/lib/plans";
+import { ALLURA_PLAN } from "@/lib/plans";
 import { PublicBrandFooter } from "@/components/public/brand-footer";
 
 // עמוד ציבורי — תנאי שימוש. אינו דורש התחברות ואינו משתמש
@@ -106,24 +106,23 @@ export default function TermsPage() {
           </p>
         </Section>
 
-        <Section title="מסלולים ומחירים">
+        <Section title="המנוי והמחיר">
           <p>
-            השימוש בשירות מחייב מנוי חודשי בתשלום. המסלולים והמחירים הם:
+            השימוש בשירות מחייב מנוי חודשי בתשלום. קיים מנוי אחד בלבד, הכולל את
+            כל הכלים בשירות:
           </p>
           <ul className="list-disc space-y-2 pr-5">
-            {Object.values(PLANS).map((plan) => (
-              <li key={plan.id}>
-                <span className="font-medium">{plan.name}</span> — {plan.price} ₪
-                לחודש.
-              </li>
-            ))}
+            <li>
+              <span className="font-medium">{ALLURA_PLAN.name}</span> —{" "}
+              {ALLURA_PLAN.price} ₪ לחודש.
+            </li>
           </ul>
           <p>
             המחירים נקובים בשקלים חדשים. פירוט המס יופיע במסמך (חשבונית/קבלה)
-            שיונפק לך עבור כל חיוב. אנו רשאים לעדכן את המחירים מעת לעת; עדכון
+            שיונפק לך עבור כל חיוב. אנו רשאים לעדכן את המחיר מעת לעת; עדכון
             מחיר למנוי קיים ייכנס לתוקף רק לאחר הודעה מראש, ולא יחול על תקופה
-            ששולמה כבר. מסלול או מחיר מיוחד שסוכם עמך באופן פרטני גובר על
-            המחירון המוצג.
+            ששולמה כבר. מחיר מיוחד שסוכם עמך באופן פרטני גובר על
+            המחיר המוצג.
           </p>
         </Section>
 

@@ -21,7 +21,7 @@ vi.mock("motion/react", async () => {
 });
 
 // מסך התשלום מושך את ה-server action ודרכו את next-auth, שאינו נטען בסביבת
-// jsdom. הבדיקה כאן עוסקת רק במסך ההמתנה ובבחירת התוכנית, ולכן די בתחליף.
+// jsdom. הבדיקה כאן עוסקת רק במסך ההמתנה ובמסך ההפעלה, ולכן די בתחליף.
 vi.mock("@/components/plans/plan-checkout", () => ({
   PlanCheckout: () => null,
 }));
@@ -31,7 +31,7 @@ import { SubscribeClient } from "@/app/subscribe/subscribe-client";
 /**
  * הגנה על תיקון של חיוב כפול: /api/subscription/return מפנה ל-/subscribe?pending=1
  * כשאישור התשלום מ-Grow עדיין לא נקלט. קודם הפרמטר הזה לא נקרא כלל, ובעלת העסק
- * ראתה שוב את מסך בחירת התוכנית כאילו התשלום נעלם — ושילמה פעם שנייה.
+ * ראתה שוב את מסך התשלום כאילו התשלום נעלם — ושילמה פעם שנייה.
  */
 describe("SubscribeClient — payment pending", () => {
   beforeEach(() => m.refresh.mockClear());
@@ -43,16 +43,16 @@ describe("SubscribeClient — payment pending", () => {
     expect(screen.getByText(/אין צורך לשלם שוב/)).toBeInTheDocument();
   });
 
-  it("hides plan selection while pending, so there is nothing to pay for twice", () => {
+  it("hides the checkout while pending, so there is nothing to pay for twice", () => {
     render(<SubscribeClient userName="גיא" paymentPending />);
 
-    expect(screen.queryByText(/בחרי את התוכנית שלך/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/מנוי אחד. כל הכלים./)).not.toBeInTheDocument();
   });
 
-  it("shows plan selection normally when not returning from payment", () => {
+  it("shows the checkout normally when not returning from payment", () => {
     render(<SubscribeClient userName="גיא" />);
 
-    expect(screen.getByText(/בחרי את התוכנית שלך/)).toBeInTheDocument();
+    expect(screen.getByText(/מנוי אחד. כל הכלים./)).toBeInTheDocument();
     expect(screen.queryByText(/קיבלנו את התשלום/)).not.toBeInTheDocument();
   });
 
@@ -63,10 +63,10 @@ describe("SubscribeClient — payment pending", () => {
     expect(m.refresh).toHaveBeenCalled();
   });
 
-  it("still offers a way back to plan selection if the payment really failed", async () => {
+  it("still offers a way back to checkout if the payment really failed", async () => {
     render(<SubscribeClient userName="גיא" paymentPending />);
 
-    await userEvent.click(screen.getByRole("button", { name: /בחירת תוכנית מחדש/ }));
-    expect(screen.getByText(/בחרי את התוכנית שלך/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /מעבר לתשלום מחדש/ }));
+    expect(screen.getByText(/מנוי אחד. כל הכלים./)).toBeInTheDocument();
   });
 });

@@ -122,8 +122,8 @@ export interface AdminActionResult {
 
 /**
  * Grant or revoke paid access for the owner, bypassing Grow billing. `"none"`
- * revokes access (the app gate sends them back to /subscribe); `premium`/
- * `platinum` open the app immediately (platinum also unlocks the growth tools).
+ * revokes access (the app gate sends them back to /subscribe); `"standard"` —
+ * the single Allura plan — opens the app, with every feature, immediately.
  *
  * `expiresAt` (optional ISO date) makes it a COMPED, time-limited plan — access
  * lapses automatically the moment it passes (enforced live in getCurrentUser).
@@ -132,7 +132,7 @@ export interface AdminActionResult {
 export async function adminSetAccountPlanAction(
   businessId: string,
   targetUserId: string,
-  plan: "premium" | "platinum" | "none",
+  plan: "standard" | "none",
   expiresAt?: string | null,
 ): Promise<AdminActionResult> {
   await requirePlatformAdmin();
@@ -166,7 +166,7 @@ export async function adminSetAccountPlanAction(
   // owner's negotiated price (if an admin set one) outranks the plan list price
   // and survives the plan change — it holds until an admin says otherwise.
   const newPriceMinor = newPlan
-    ? effectivePriceMinor(newPlan, owner.customPriceMinor)
+    ? effectivePriceMinor(owner.customPriceMinor)
     : 0;
 
   // True when we stopped a live standing order and the owner must re-authorize
@@ -201,8 +201,7 @@ export async function adminSetAccountPlanAction(
     }
   }
 
-  const label =
-    plan === "none" ? "ללא גישה" : plan === "platinum" ? "פלטינום" : "פרימיום";
+  const label = plan === "none" ? "ללא גישה" : "מנוי Allura";
   const suffix = expiry
     ? ` (חינם עד ${expiry.toLocaleDateString("he-IL")})`
     : "";
@@ -276,7 +275,7 @@ export async function adminSetCustomPriceAction(
   let billingReauthRequired = false;
   let newPriceMinor: number | null = null;
   if (owner.plan) {
-    newPriceMinor = effectivePriceMinor(owner.plan, customPriceMinor);
+    newPriceMinor = effectivePriceMinor(customPriceMinor);
     billingReauthRequired = await syncSubscriptionBilling(
       owner.id,
       owner.plan,

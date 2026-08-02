@@ -147,10 +147,16 @@ enum SubscriptionPlan {
   pro
 }
 
-/// Self-serve account plan chosen by the owner during signup. This gates access
-/// to the app: a user must pick and pay for a plan before the dashboard opens.
-/// Distinct from the admin-managed `SubscriptionPlan` on BusinessSubscription.
+/// Self-serve account plan. Allura has exactly ONE plan — `standard` — which
+/// includes every feature; it gates access to the app: a user must pay before
+/// the dashboard opens. Distinct from the admin-managed `SubscriptionPlan` on
+/// BusinessSubscription.
+///
+/// `premium` / `platinum` are the retired two-tier values. They are never
+/// written any more (see the single-plan backfill migration) and remain here
+/// only because Postgres cannot drop an enum value that columns reference.
 enum AccountPlan {
+  standard
   premium
   platinum
 }

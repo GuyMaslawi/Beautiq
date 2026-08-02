@@ -52,7 +52,7 @@ function paidOwner(overrides: Record<string, unknown> = {}) {
     email: "owner@example.com",
     name: "בעלת העסק",
     isAdmin: false,
-    plan: "premium",
+    plan: "standard",
     planActivatedAt: new Date("2026-01-01T00:00:00Z"),
     suspendedUntil: null,
     impersonating: false,

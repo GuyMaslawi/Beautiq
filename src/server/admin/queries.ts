@@ -54,8 +54,6 @@ export interface AccountSubscriptionRevenue {
   /** MRR × 12 — annualised run-rate, in shekels. */
   arr: number;
   activeCount: number;
-  premiumCount: number;
-  platinumCount: number;
   pastDueCount: number;
   cancelledCount: number;
 }
@@ -72,27 +70,21 @@ export async function getAccountSubscriptionRevenue(): Promise<AccountSubscripti
   const [activeSubs, pastDueCount, cancelledCount] = await Promise.all([
     prisma.accountSubscription.findMany({
       where: { status: "active" },
-      select: { plan: true, priceMinor: true },
+      select: { priceMinor: true },
     }),
     prisma.accountSubscription.count({ where: { status: "past_due" } }),
     prisma.accountSubscription.count({ where: { status: "cancelled" } }),
   ]);
 
   let mrrMinor = 0;
-  let premiumCount = 0;
-  let platinumCount = 0;
   for (const s of activeSubs) {
     mrrMinor += s.priceMinor;
-    if (s.plan === "platinum") platinumCount++;
-    else premiumCount++;
   }
 
   return {
     mrr: mrrMinor / 100,
     arr: (mrrMinor * 12) / 100,
     activeCount: activeSubs.length,
-    premiumCount,
-    platinumCount,
     pastDueCount,
     cancelledCount,
   };

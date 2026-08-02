@@ -4,7 +4,6 @@ import { useState, useTransition } from "react";
 import {
   ShieldCheck,
   KeyRound,
-  Crown,
   Gem,
   Ban,
   Copy,
@@ -25,15 +24,15 @@ import {
   adminTransferOwnershipAction,
   type AdminActionResult,
 } from "@/server/admin/account-actions";
-import { PLAN_PRICES } from "@/lib/plans";
+import { PLAN_PRICE } from "@/lib/plans";
 
-type PlanValue = "premium" | "platinum" | "none";
+type PlanValue = "standard" | "none";
 
 interface Owner {
   id: string;
   name: string | null;
   email: string;
-  plan: "premium" | "platinum" | null;
+  plan: "standard" | "premium" | "platinum" | null;
   isAdmin: boolean;
   planExpiresAt: string | null;
   suspendedUntil: string | null;
@@ -83,7 +82,6 @@ export function GodControls({
   const [copied, setCopied] = useState(false);
   const [customPw, setCustomPw] = useState("");
   const [expiryDate, setExpiryDate] = useState("");
-  const [trialPlan, setTrialPlan] = useState<"premium" | "platinum">("platinum");
   const [trialDays, setTrialDays] = useState("30");
   const [customPrice, setCustomPrice] = useState(
     owner.customPriceMinor != null ? String(Math.round(owner.customPriceMinor / 100)) : "",
@@ -93,7 +91,7 @@ export function GodControls({
   // "now" captured once at mount (lazy init keeps render pure).
   const [nowMs] = useState(() => Date.now());
 
-  const currentPlan: PlanValue = owner.plan ?? "none";
+  const currentPlan: PlanValue = owner.plan ? "standard" : "none";
   const isSuspended =
     !!owner.suspendedUntil && new Date(owner.suspendedUntil).getTime() > nowMs;
 
@@ -118,19 +116,8 @@ export function GodControls({
     icon: React.ReactNode;
     color: string;
   }[] = [
-    { value: "premium", label: "פרימיום", icon: <Gem className="h-4 w-4" />, color: "var(--primary)" },
-    { value: "platinum", label: "פלטינום", icon: <Crown className="h-4 w-4" />, color: "var(--accent)" },
+    { value: "standard", label: "מנוי Allura", icon: <Gem className="h-4 w-4" />, color: "var(--primary)" },
     { value: "none", label: "ללא גישה", icon: <Ban className="h-4 w-4" />, color: "var(--error)" },
-  ];
-
-  const TRIAL_PLANS: {
-    value: "premium" | "platinum";
-    label: string;
-    icon: React.ReactNode;
-    color: string;
-  }[] = [
-    { value: "premium", label: "פרימיום", icon: <Gem className="h-4 w-4" />, color: "var(--primary)" },
-    { value: "platinum", label: "פלטינום", icon: <Crown className="h-4 w-4" />, color: "var(--accent)" },
   ];
 
   const trialDaysNum = Number(trialDays);
@@ -142,7 +129,7 @@ export function GodControls({
     Number.isInteger(customPriceNum) &&
     customPriceNum >= 1 &&
     customPriceNum <= 10000;
-  const listPriceMinor = owner.plan ? PLAN_PRICES[owner.plan] * 100 : null;
+  const listPriceMinor = owner.plan ? PLAN_PRICE * 100 : null;
   // The live billing row is the truth when there is one; otherwise the override,
   // and only then the list price of her plan.
   const billedNowMinor = owner.billedPriceMinor ?? owner.customPriceMinor ?? listPriceMinor;
@@ -234,7 +221,7 @@ export function GodControls({
           )}
         </div>
         <p className="mt-1.5 text-xs text-muted">
-          מעניק גישה מיידית ללא חיוב ב-Grow (פלטינום פותח גם את כלי הצמיחה), או חוסם גישה.
+          מעניק גישה מיידית לכל הכלים ללא חיוב ב-Grow, או חוסם גישה.
           {owner.planExpiresAt && (
             <span style={{ color: "var(--warning)" }}>
               {" "}
@@ -332,34 +319,9 @@ export function GodControls({
         )}
       </div>
 
-      {/* Free trial — choose plan + duration, comped with automatic expiry */}
+      {/* Free trial — duration only, comped with automatic expiry */}
       <div className="mb-6">
         <p className="mb-2 text-xs font-semibold text-foreground-soft">מנוי ניסיון חינם</p>
-
-        {/* Which plan the trial grants */}
-        <div className="mb-2 flex flex-wrap items-center gap-2">
-          <span className="w-12 shrink-0 text-xs text-muted">תוכנית:</span>
-          {TRIAL_PLANS.map((opt) => {
-            const active = trialPlan === opt.value;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                disabled={pending}
-                onClick={() => setTrialPlan(opt.value)}
-                className="flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-sm font-medium transition-colors disabled:opacity-60"
-                style={{
-                  borderColor: active ? opt.color : "var(--border)",
-                  background: active ? opt.color : "var(--surface)",
-                  color: active ? "#fff" : "var(--foreground)",
-                }}
-              >
-                {opt.icon}
-                {opt.label}
-              </button>
-            );
-          })}
-        </div>
 
         {/* How many days */}
         <div className="flex flex-wrap items-center gap-2">
@@ -403,10 +365,10 @@ export function GodControls({
                 adminSetAccountPlanAction(
                   businessId,
                   owner.id,
-                  trialPlan,
+                  "standard",
                   addDaysISO(trialDaysNum),
                 ),
-              `להעניק לבעלת העסק מנוי ${trialPlan === "platinum" ? "פלטינום" : "פרימיום"} חינם ל־${trialDaysNum} ימים? הגישה תיפתח מיד ותיסגר אוטומטית בתום התקופה.`,
+              `להעניק לבעלת העסק מנוי חינם ל־${trialDaysNum} ימים? הגישה תיפתח מיד ותיסגר אוטומטית בתום התקופה.`,
             )
           }
           className="mt-3 flex items-center gap-1.5 rounded-xl border px-3.5 py-1.5 text-sm font-semibold transition-opacity hover:opacity-90 disabled:opacity-60"
@@ -417,7 +379,7 @@ export function GodControls({
         </button>
 
         <p className="mt-1.5 text-xs text-muted">
-          פותח את התוכנית שנבחרה מיד וללא חיוב, ומסתיים אוטומטית בתום התקופה — ואז החשבון חוזר
+          פותח את המנוי מיד וללא חיוב, ומסתיים אוטומטית בתום התקופה — ואז החשבון חוזר
           למסך התשלום מעצמו. לתאריך תפוגה מדויק אפשר להשתמש בשדה &quot;מנוי חינם עד תאריך&quot; שמעל.
         </p>
         {!trialDaysValid && (

@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 /**
  * The paywall must never give a plan away (src/server/subscription/actions.ts).
  *
- * Every business owner pays the full plan price. `User.plan` may only be set by a
+ * Every business owner pays the full price. `User.plan` may only be set by a
  * payment Grow confirmed server-side, or by a deliberate admin grant. The dev
  * shortcut that activates a plan locally with no charge keeps the app runnable
  * without Grow — and would silently turn production into a giveaway if a
@@ -37,10 +37,10 @@ vi.mock("@/lib/subscription/grow", () => ({
 const confirmSubscriptionPayment = vi.fn();
 vi.mock("@/server/subscription/service", () => ({
   confirmSubscriptionPayment: (...a: unknown[]) => confirmSubscriptionPayment(...(a as [])),
-  planPriceMinor: () => 14900,
+  planPriceMinor: () => 19900,
   // The real rule: an admin-negotiated price replaces the list price.
-  effectivePriceMinor: (_plan: string, custom: number | null | undefined) =>
-    typeof custom === "number" ? custom : 14900,
+  effectivePriceMinor: (custom: number | null | undefined) =>
+    typeof custom === "number" ? custom : 19900,
 }));
 
 import { resetPrismaMock } from "../helpers/prisma-mock";
@@ -75,7 +75,7 @@ describe("startSubscriptionCheckoutAction — production paywall", () => {
     vi.stubEnv("NODE_ENV", "production");
     isGrowConfigured.mockReturnValue(false);
 
-    const res = await startSubscriptionCheckoutAction("platinum");
+    const res = await startSubscriptionCheckoutAction();
 
     expect(res.ok).toBe(false);
     expect(res.redirectUrl).toBeUndefined();
@@ -87,7 +87,7 @@ describe("startSubscriptionCheckoutAction — production paywall", () => {
     vi.stubEnv("NODE_ENV", "production");
     isGrowConfigured.mockReturnValue(false);
 
-    await startSubscriptionCheckoutAction("premium");
+    await startSubscriptionCheckoutAction();
 
     // The checkout path resets the subscription row (directDebitId: null). Bailing
     // out after that would detach a paying customer from her monthly charge.
@@ -100,20 +100,11 @@ describe("startSubscriptionCheckoutAction — production paywall", () => {
     vi.stubEnv("NODE_ENV", "production");
     isGrowConfigured.mockReturnValue(false);
 
-    const res = await startSubscriptionCheckoutAction("platinum");
+    const res = await startSubscriptionCheckoutAction();
 
     expect(res.error).toBeTruthy();
     expect(res.error).toMatch(/[֐-׿]/); // Hebrew, per CLAUDE.md §5
     expect(res.error).not.toMatch(/SUBSCRIPTIONS_ENABLED|webhook|undefined/i);
-  });
-
-  it("rejects an invalid plan id before anything else", async () => {
-    vi.stubEnv("NODE_ENV", "production");
-
-    const res = await startSubscriptionCheckoutAction("free");
-
-    expect(res.ok).toBe(false);
-    expect(confirmSubscriptionPayment).not.toHaveBeenCalled();
   });
 
   it("sends the owner to Grow's hosted page when billing IS configured", async () => {
@@ -125,7 +116,7 @@ describe("startSubscriptionCheckoutAction — production paywall", () => {
       processToken: "t1",
     });
 
-    const res = await startSubscriptionCheckoutAction("platinum");
+    const res = await startSubscriptionCheckoutAction();
 
     expect(res.ok).toBe(true);
     expect(res.redirectUrl).toBe("https://grow.example/pay/abc");
@@ -145,7 +136,7 @@ describe("startSubscriptionCheckoutAction — admin-negotiated price", () => {
     });
   });
 
-  it("charges the owner's custom price, not the plan list price", async () => {
+  it("charges the owner's custom price, not the list price", async () => {
     // A distinct user id per test — checkout is rate-limited per account.
     requireCurrentUser.mockResolvedValue({
       ...USER,
@@ -153,7 +144,7 @@ describe("startSubscriptionCheckoutAction — admin-negotiated price", () => {
       customPriceMinor: 9900,
     });
 
-    await startSubscriptionCheckoutAction("platinum");
+    await startSubscriptionCheckoutAction();
 
     // What Grow is told to collect — and what the recurring standing order
     // will therefore be authorized for.
@@ -172,10 +163,10 @@ describe("startSubscriptionCheckoutAction — admin-negotiated price", () => {
   it("falls back to the list price when no custom price is set", async () => {
     requireCurrentUser.mockResolvedValue({ ...USER, id: "user_listprice" });
 
-    await startSubscriptionCheckoutAction("platinum");
+    await startSubscriptionCheckoutAction();
 
     expect(createPaymentLink).toHaveBeenCalledWith(
-      expect.objectContaining({ amountMinor: 14900 }),
+      expect.objectContaining({ amountMinor: 19900 }),
     );
   });
 });
@@ -184,7 +175,7 @@ describe("startSubscriptionCheckoutAction — local development", () => {
   it("still activates instantly outside production so the app runs without Grow", async () => {
     isGrowConfigured.mockReturnValue(false); // NODE_ENV is "test" here
 
-    const res = await startSubscriptionCheckoutAction("premium");
+    const res = await startSubscriptionCheckoutAction();
 
     expect(res.ok).toBe(true);
     expect(res.redirectUrl).toBe("/dashboard");

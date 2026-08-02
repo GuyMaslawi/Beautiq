@@ -60,7 +60,7 @@ function makePublicRow(overrides: Record<string, unknown> = {}) {
     // The owner's account state gates the page: a suspended or unpaid account
     // must not keep a live, bookable public page (each booking costs real money
     // — owner email + Allura-billed WhatsApp confirmation).
-    members: [{ user: { plan: "premium", suspendedUntil: null, isAdmin: false } }],
+    members: [{ user: { plan: "standard", suspendedUntil: null, isAdmin: false } }],
     ...overrides,
   };
 }
@@ -86,7 +86,7 @@ describe("getPublicBusiness", () => {
         members: [
           {
             user: {
-              plan: "premium",
+              plan: "standard",
               suspendedUntil: new Date(Date.now() + 86_400_000),
               isAdmin: false,
             },

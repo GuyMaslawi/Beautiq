@@ -137,8 +137,7 @@ export function AssistantWidget() {
   function applyResult(res: Awaited<ReturnType<typeof loadAssistantContextAction>>) {
     if (res.ok) setLoad({ status: "ready", context: res.context });
     else if (res.reason === "no-business") setLoad({ status: "no-business" });
-    else if (res.reason === "error") setLoad({ status: "error" });
-    else setLoad({ status: "idle" }); // locked — shouldn't happen (widget is gated), retry next open
+    else setLoad({ status: "error" });
   }
 
   // Full (blocking) load — shows the spinner. Used on the first open and on retry.
