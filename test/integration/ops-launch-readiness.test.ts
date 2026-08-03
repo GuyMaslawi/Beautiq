@@ -17,8 +17,25 @@ vi.mock("@/server/db/prisma", async () => {
 const prisma = (globalThis as Record<string, unknown>)
   .__prismaMock as ReturnType<typeof createPrismaMock>;
 
+// בדיקת הטוקן יוצאת לרשת אל Meta — כאן נבדק מה המסך *עושה* עם התשובה.
+const metaTokenStatus = vi.fn();
+vi.mock("@/server/ops/meta-token", () => ({
+  getMetaTokenStatus: () => metaTokenStatus(),
+}));
+
 import { getCronHealth, CRON_JOBS, recordCronRun } from "@/server/ops/cron-heartbeat";
 import { getLaunchReadiness } from "@/server/ops/launch-readiness";
+
+const TOKEN_OK = {
+  configured: true,
+  valid: true,
+  neverExpires: true,
+  expiresAt: null,
+  daysLeft: null,
+  type: "SYSTEM_USER",
+  scopes: ["whatsapp_business_messaging"],
+  checkFailed: false,
+};
 
 const NOW = new Date("2026-08-03T12:00:00.000Z");
 const ENV = { ...process.env };
@@ -26,6 +43,7 @@ const ENV = { ...process.env };
 beforeEach(() => {
   resetPrismaMock(prisma);
   prisma.activityLog.findMany.mockResolvedValue([]);
+  metaTokenStatus.mockResolvedValue(TOKEN_OK);
 });
 
 afterEach(() => {
@@ -105,6 +123,65 @@ describe("בדיקות מוכנות להשקה", () => {
 
     const { checks } = await getLaunchReadiness();
     expect(checks.find((c) => c.key === "error-alerts")!.level).toBe("ok");
+  });
+
+  it("טוקן System User ללא תפוגה — תקין", async () => {
+    const { checks } = await getLaunchReadiness();
+    const token = checks.find((c) => c.key === "meta-token")!;
+    expect(token.level).toBe("ok");
+    expect(token.detail).toContain("ללא תפוגה");
+  });
+
+  it("טוקן תקף שפג בעוד שבוע — חוסם, ומראה כמה ימים נשארו", async () => {
+    metaTokenStatus.mockResolvedValue({
+      ...TOKEN_OK,
+      neverExpires: false,
+      expiresAt: new Date("2026-08-10T00:00:00Z"),
+      daysLeft: 7,
+      type: "USER",
+    });
+
+    const { checks } = await getLaunchReadiness();
+    const token = checks.find((c) => c.key === "meta-token")!;
+    expect(token.level).toBe("blocker");
+    expect(token.detail).toContain("7 ימים");
+  });
+
+  it("טוקן תקף שפג בעוד חודשיים — אזהרה ולא חוסם", async () => {
+    metaTokenStatus.mockResolvedValue({
+      ...TOKEN_OK,
+      neverExpires: false,
+      expiresAt: new Date("2026-10-01T00:00:00Z"),
+      daysLeft: 59,
+      type: "USER",
+    });
+
+    const { checks } = await getLaunchReadiness();
+    expect(checks.find((c) => c.key === "meta-token")!.level).toBe("warn");
+  });
+
+  it("טוקן שנפסל על ידי Meta — חוסם", async () => {
+    metaTokenStatus.mockResolvedValue({ ...TOKEN_OK, valid: false, neverExpires: false });
+
+    const { checks } = await getLaunchReadiness();
+    expect(checks.find((c) => c.key === "meta-token")!.level).toBe("blocker");
+  });
+
+  it("כשל בבדיקה עצמה הוא אזהרה — לא מכריזים על תקלה שלא הוכחה", async () => {
+    metaTokenStatus.mockResolvedValue({
+      configured: true,
+      valid: false,
+      neverExpires: false,
+      expiresAt: null,
+      daysLeft: null,
+      type: null,
+      scopes: [],
+      checkFailed: true,
+      error: "timeout",
+    });
+
+    const { checks } = await getLaunchReadiness();
+    expect(checks.find((c) => c.key === "meta-token")!.level).toBe("warn");
   });
 
   it("בלי שום ערוץ התראות — חוסם", async () => {

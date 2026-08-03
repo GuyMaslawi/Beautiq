@@ -10,6 +10,7 @@
  */
 
 import { getCronHealth, type CronHealthRow } from "@/server/ops/cron-heartbeat";
+import { getMetaTokenStatus } from "@/server/ops/meta-token";
 
 function isSet(name: string): boolean {
   const v = process.env[name];
@@ -65,6 +66,56 @@ export async function getLaunchReadiness(): Promise<LaunchReadiness> {
       : "ENABLE_REAL_WHATSAPP_SEND כבוי — ההודעות נרשמות בלבד ולא יוצאות.",
     action: realSend ? undefined : "להגדיר ENABLE_REAL_WHATSAPP_SEND=true בפרודקשן.",
   });
+
+  // 1ב. הטוקן של Meta. טוקן משתמש רגיל פג אחרי 60 יום ואז ההודעות מתות באמצע
+  // החודש. זו הבדיקה היחידה כאן שיוצאת החוצה לרשת — היא שואלת את Meta מה מצב
+  // הטוקן שמוגדר בפועל, כי הערך עצמו מוצפן ואי אפשר לקרוא אותו.
+  const meta = await getMetaTokenStatus();
+  if (!meta.configured) {
+    checks.push({
+      key: "meta-token",
+      label: "טוקן Meta",
+      level: "blocker",
+      detail: "לא מוגדר `META_WHATSAPP_ACCESS_TOKEN` — לא נשלחת אף הודעה.",
+      action: "להנפיק טוקן System User ולהגדיר אותו בפרודקשן.",
+    });
+  } else if (meta.checkFailed) {
+    checks.push({
+      key: "meta-token",
+      label: "טוקן Meta",
+      level: "warn",
+      detail: `לא הצלחנו לאמת מול Meta (${meta.error ?? "שגיאה לא ידועה"}). ייתכן שזו תקלת רשת זמנית.`,
+      action: "לרענן; אם זה חוזר — לבדוק את הטוקן ב-Access Token Debugger של Meta.",
+    });
+  } else if (!meta.valid) {
+    checks.push({
+      key: "meta-token",
+      label: "טוקן Meta",
+      level: "blocker",
+      detail: "Meta מדווחת שהטוקן אינו תקף — ההודעות לא נשלחות (שגיאה 190).",
+      action: "להנפיק טוקן חדש של System User (ללא תפוגה) ולהחליף בפרודקשן.",
+    });
+  } else if (meta.neverExpires) {
+    checks.push({
+      key: "meta-token",
+      label: "טוקן Meta",
+      level: "ok",
+      detail: `תקף וללא תפוגה${meta.type ? ` (${meta.type})` : ""} — זהו טוקן קבוע.`,
+    });
+  } else {
+    // תקף אך זמני: זו בדיוק הפצצה המתקתקת.
+    const days = meta.daysLeft ?? 0;
+    checks.push({
+      key: "meta-token",
+      label: "טוקן Meta",
+      level: days <= 14 ? "blocker" : "warn",
+      detail:
+        `הטוקן תקף אך פג בעוד ${days} ימים` +
+        `${meta.expiresAt ? ` (${meta.expiresAt.toLocaleDateString("he-IL")})` : ""}` +
+        `${meta.type ? ` — סוג: ${meta.type}` : ""}. כשזה יקרה ההודעות יפסיקו להישלח בלי התראה.`,
+      action: "להחליף בטוקן של System User שהונפק עם expiration=Never.",
+    });
+  }
 
   // 2. ערוץ התראות. לוג אינו ניטור.
   const alertWebhook = isSet("ERROR_ALERT_WEBHOOK_URL");
