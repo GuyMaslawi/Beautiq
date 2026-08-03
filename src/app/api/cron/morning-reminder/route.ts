@@ -8,6 +8,7 @@ import {
 import { runMorningReminderForBusiness } from "@/server/morning-reminder/runner";
 import { logger, captureError } from "@/lib/logger";
 import { bearerEquals } from "@/lib/secret-compare";
+import { recordCronRun } from "@/server/ops/cron-heartbeat";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -92,6 +93,7 @@ export async function GET(request: Request) {
     skipped: totalSkipped,
     failed: totalFailed,
   });
+  await recordCronRun("morning-reminder", "ok", { sent: totalSent, failed: totalFailed });
   return NextResponse.json({
     hour: israelHour,
     businessesChecked: eligibleSettings.length,

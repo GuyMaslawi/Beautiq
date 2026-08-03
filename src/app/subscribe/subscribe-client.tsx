@@ -21,7 +21,13 @@ function Ambient() {
 }
 
 /* ── Headline above the checkout ────────────────────────────────────────── */
-function SubscribeHeader({ userName }: { userName: string | null }) {
+function SubscribeHeader({
+  userName,
+  trialEnded = false,
+}: {
+  userName: string | null;
+  trialEnded?: boolean;
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 16 }}
@@ -31,8 +37,18 @@ function SubscribeHeader({ userName }: { userName: string | null }) {
     >
       <div className="mx-auto mb-3 inline-flex items-center gap-2 rounded-full px-4 py-1" style={{ background: "rgba(199,111,147,0.12)", border: "1px solid rgba(199,111,147,0.26)" }}>
         <Sparkles className="h-3.5 w-3.5" style={{ color: "#e7a9c4" }} />
-        <span className="text-xs font-semibold tracking-wide" style={{ color: "#e7a9c4" }}>עוד צעד אחד — ואת בפנים</span>
+        <span className="text-xs font-semibold tracking-wide" style={{ color: "#e7a9c4" }}>
+          {trialEnded ? "תקופת הניסיון הסתיימה" : "עוד צעד אחד — ואת בפנים"}
+        </span>
       </div>
+      {/* מי שהגיעה לכאן מתום תקופת ניסיון ראתה מסך מכירה כללי, בלי מילה על מה
+          שקרה זה עתה ובלי לדעת אם הלקוחות והתורים שהזינה עדיין קיימים. */}
+      {trialEnded && (
+        <p className="mx-auto mb-3 max-w-lg text-sm leading-6" style={{ color: "rgba(255,255,255,0.72)" }}>
+          תקופת הניסיון שלך הסתיימה. כל הנתונים שלך — לקוחות, תורים והגדרות —
+          שמורים וממתינים לך, והם יחזרו ברגע שהמנוי יופעל.
+        </p>
+      )}
       <h1 className="font-display text-2xl font-semibold leading-tight tracking-tight text-white sm:text-3xl md:text-4xl">
         {userName ? `${userName}, ` : ""}מנוי אחד. כל הכלים.
       </h1>
@@ -133,10 +149,13 @@ function PaymentPending({ onRetryCheckout }: { onRetryCheckout: () => void }) {
 export function SubscribeClient({
   userName,
   paymentPending = false,
+  trialEnded = false,
 }: {
   userName: string | null;
   /** חזרנו מעמוד התשלום אך אישור Grow עדיין לא נקלט. */
   paymentPending?: boolean;
+  /** הגישה נסגרה כי תקופת ניסיון חינם הסתיימה (ולא כי מעולם לא היה מנוי). */
+  trialEnded?: boolean;
 }) {
   const [showPending, setShowPending] = useState(paymentPending);
 
@@ -159,7 +178,7 @@ export function SubscribeClient({
             </motion.div>
           ) : (
             <motion.div key="checkout" className="w-full">
-              <SubscribeHeader userName={userName} />
+              <SubscribeHeader userName={userName} trialEnded={trialEnded} />
               <PlanCheckout plan={ALLURA_PLAN} />
             </motion.div>
           )}

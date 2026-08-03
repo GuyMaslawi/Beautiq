@@ -35,6 +35,13 @@ export interface CurrentUser {
   plan: AccountPlan | null;
   planActivatedAt: Date | null;
   /**
+   * When the current (comped / free-trial) access ends. Null for a normal paid
+   * subscription, which renews instead of expiring. Exposed so the app can tell
+   * the owner she is on a trial and how long is left — an account that is simply
+   * dropped at /subscribe one morning with no warning reads as a bug.
+   */
+  planExpiresAt: Date | null;
+  /**
    * Admin-negotiated monthly price in agorot, when one was set for this account.
    * Overrides the plan list price everywhere an amount is charged or displayed.
    */
@@ -126,6 +133,9 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     isAdmin: user.isAdmin,
     plan: effectivePlan,
     planActivatedAt: user.planActivatedAt,
+    // Only meaningful while access is still open; a lapsed expiry is reported as
+    // null so no screen can show "your trial ends" to someone already locked out.
+    planExpiresAt: effectivePlan ? user.planExpiresAt : null,
     customPriceMinor: user.customPriceMinor,
     suspendedUntil: user.suspendedUntil,
     impersonating,

@@ -140,11 +140,73 @@ export async function adminSetAccountPlanAction(
   const owner = await getOwnerUser(businessId, targetUserId);
   if (!owner) return { success: false, error: "לא נמצאה בעלת העסק." };
 
+  return applyAccountPlan(owner, plan, expiresAt ?? null, businessId);
+}
+
+/**
+ * The same grant, addressed by USER instead of by business — the flow that
+ * matters at launch.
+ *
+ * A new owner signs up and immediately hits the paywall: she cannot create her
+ * business until she has access, so there is no business row, and the
+ * business-scoped control above cannot reach her at all. Handing a waiting owner
+ * a free trial has to work on the account itself, before anything else exists.
+ *
+ * Accepts any user id (the target need not own a business yet); everything else —
+ * expiry validation, billing sync, audit — is identical.
+ */
+export async function adminSetAccountPlanByUserAction(
+  targetUserId: string,
+  plan: "standard" | "none",
+  expiresAt?: string | null,
+): Promise<AdminActionResult> {
+  await requirePlatformAdmin();
+
+  const target = await prisma.user.findUnique({
+    where: { id: targetUserId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      isAdmin: true,
+      plan: true,
+      customPriceMinor: true,
+      // The audit entry is attached to her business when she already has one.
+      memberships: {
+        where: { role: "owner" },
+        orderBy: { createdAt: "asc" },
+        take: 1,
+        select: { businessId: true },
+      },
+    },
+  });
+  if (!target) return { success: false, error: "לא נמצא משתמש." };
+
+  return applyAccountPlan(
+    target,
+    plan,
+    expiresAt ?? null,
+    target.memberships[0]?.businessId ?? null,
+  );
+}
+
+/** Shared core of both grant paths. `businessId` is only used for the audit log. */
+async function applyAccountPlan(
+  owner: { id: string; name: string | null; email: string; customPriceMinor: number | null },
+  plan: "standard" | "none",
+  expiresAt: string | null,
+  businessId: string | null,
+): Promise<AdminActionResult> {
   const newPlan = plan === "none" ? null : (plan as AccountPlan);
 
   let expiry: Date | null = null;
   if (newPlan && expiresAt) {
-    const d = new Date(expiresAt);
+    // A bare `yyyy-mm-dd` parses as midnight UTC — 02:00/03:00 in Israel — so a
+    // "trial until the 30th" would actually have died in the small hours of the
+    // 30th, costing the owner her last day. Take the end of that day instead.
+    const d = /^\d{4}-\d{2}-\d{2}$/.test(expiresAt.trim())
+      ? new Date(`${expiresAt.trim()}T23:59:59.999+02:00`)
+      : new Date(expiresAt);
     if (isNaN(d.getTime())) return { success: false, error: "תאריך תפוגה לא תקין." };
     if (d.getTime() <= Date.now()) {
       return { success: false, error: "תאריך התפוגה חייב להיות בעתיד." };
@@ -214,8 +276,9 @@ export async function adminSetAccountPlanAction(
     metadata: { targetUserId: owner.id, plan, expiresAt: expiry?.toISOString() ?? null },
   });
 
-  revalidatePath(`/admin/businesses/${businessId}`);
+  if (businessId) revalidatePath(`/admin/businesses/${businessId}`);
   revalidatePath("/admin");
+  revalidatePath("/admin/accounts");
   const message = billingReauthRequired
     ? `התוכנית עודכנה ל־${label}. הוראת הקבע הישנה בוטלה כדי לא לחייב בסכום שגוי — ` +
       `בעלת העסק תתבקש לאשר מחדש את אמצעי התשלום בסכום החדש (${shekels(newPriceMinor)} לחודש) ` +

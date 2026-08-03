@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { processDueCampaigns } from "@/server/whatsapp/campaigns/processor";
 import { logger, captureError } from "@/lib/logger";
 import { bearerEquals } from "@/lib/secret-compare";
+import { recordCronRun } from "@/server/ops/cron-heartbeat";
 
 // Cron backstop for bulk WhatsApp campaigns. Owner-driven sending drives most
 // progress in real time; this tick keeps queued campaigns moving (and processes
@@ -23,9 +24,11 @@ export async function GET(request: Request) {
     // processCampaignBatch guarantees this never overlaps with owner-driven sends.
     const result = await processDueCampaigns({ maxCampaigns: 10 });
     logger.info("[cron.whatsapp-campaigns] done", { processed: result.processed });
+    await recordCronRun("whatsapp-campaigns", "ok", { processed: result.processed });
     return NextResponse.json({ processed: result.processed });
   } catch (err) {
     captureError("cron.whatsapp-campaigns", err);
+    await recordCronRun("whatsapp-campaigns", "error");
     return NextResponse.json({ error: "processing_failed" }, { status: 500 });
   }
 }

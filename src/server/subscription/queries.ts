@@ -29,6 +29,13 @@ export interface SubscriptionOverview {
    * serve switch. The owner must re-authorize to resume the charge at the new price.
    */
   needsReauth: boolean;
+  /**
+   * End of a free-trial (comped) grant, when the current access is one. Null for
+   * a paid subscription, which renews rather than expires. Drives the whole
+   * trial presentation: without it the card told a trial owner she was on a paid
+   * ₪199 plan, and her access simply vanished on the expiry date.
+   */
+  trialEndsAt: Date | null;
 }
 
 export async function getSubscriptionOverview(): Promise<SubscriptionOverview> {
@@ -67,5 +74,7 @@ export async function getSubscriptionOverview(): Promise<SubscriptionOverview> {
     cancelledAt: sub?.cancelledAt ?? null,
     isManaged,
     needsReauth,
+    // getCurrentUser already nulls a lapsed expiry, so this is only ever a live trial.
+    trialEndsAt: user.planExpiresAt,
   };
 }

@@ -8,7 +8,9 @@ const NAV_ITEMS = [
   { href: "/admin", label: "סקירה" },
   { href: "/admin/subscriptions", label: "לוג רכישות" },
   { href: "/admin/businesses", label: "ניהול עסקים" },
+  { href: "/admin/accounts", label: "ניהול חשבונות" },
   { href: "/admin/clients", label: "ניהול לקוחות" },
+  { href: "/admin/ops", label: "מצב המערכת" },
 ] as const;
 
 export function AdminNav() {

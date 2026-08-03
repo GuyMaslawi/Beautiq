@@ -5,6 +5,8 @@ import {
 } from "@/server/auth/session";
 import { AppShell } from "@/components/layout/app-shell";
 import { ImpersonationBanner } from "@/components/layout/impersonation-banner";
+import { TrialBanner } from "@/components/layout/trial-banner";
+import { trialDaysLeft } from "@/lib/subscription/trial";
 
 /**
  * Guard + shell for the authenticated area. Every route inside this group
@@ -29,6 +31,11 @@ export default async function AppLayout({
         businessName={business?.name ?? null}
         isAdmin={user.isAdmin}
       >
+        {/* גישת ניסיון היא גישה עם תאריך תפוגה — בעלת העסק חייבת לדעת שהיא בתוכה
+            ומתי היא נגמרת, בכל מסך ולא רק בהגדרות. */}
+        {user.planExpiresAt && (
+          <TrialBanner daysLeft={trialDaysLeft(user.planExpiresAt)} />
+        )}
         {children}
       </AppShell>
       {impersonation && <ImpersonationBanner ownerName={impersonation.ownerName} />}

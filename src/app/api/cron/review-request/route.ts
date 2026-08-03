@@ -8,6 +8,7 @@ import {
 import { runReviewRequestForBusiness } from "@/server/review-request/runner";
 import { logger, captureError } from "@/lib/logger";
 import { bearerEquals } from "@/lib/secret-compare";
+import { recordCronRun } from "@/server/ops/cron-heartbeat";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -77,6 +78,7 @@ export async function GET(request: Request) {
     skipped: totalSkipped,
     failed: totalFailed,
   });
+  await recordCronRun("review-request", "ok", { sent: totalSent, failed: totalFailed });
   return NextResponse.json({
     businessesChecked: eligibleSettings.length,
     sent: totalSent,

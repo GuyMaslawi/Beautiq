@@ -8,6 +8,7 @@ import {
 import { runLoyaltyForBusiness } from "@/server/loyalty/runner";
 import { logger, captureError } from "@/lib/logger";
 import { bearerEquals } from "@/lib/secret-compare";
+import { recordCronRun } from "@/server/ops/cron-heartbeat";
 
 // Vercel cron invokes this with GET, protected by CRON_SECRET (Bearer header).
 // Loyalty milestones are event-driven, not time-of-day-driven, so this runs on a
@@ -90,6 +91,7 @@ export async function GET(request: Request) {
     totalSent,
     totalFailed,
   });
+  await recordCronRun("loyalty", "ok", { sent: totalSent, failed: totalFailed });
 
   return NextResponse.json({
     processed: businesses.length,

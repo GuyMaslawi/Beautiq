@@ -8,6 +8,7 @@ import {
 import { runWinBackForBusiness } from "@/server/win-back-automation/runner";
 import { logger, captureError } from "@/lib/logger";
 import { bearerEquals } from "@/lib/secret-compare";
+import { recordCronRun } from "@/server/ops/cron-heartbeat";
 
 // Vercel cron invokes this with GET. The route is protected by CRON_SECRET
 // so it must not be publicly callable. Vercel automatically sends
@@ -157,6 +158,7 @@ export async function GET(request: Request) {
     totalSent,
     totalFailed,
   });
+  await recordCronRun("win-back", "ok", { sent: totalSent, failed: totalFailed });
 
   return NextResponse.json({
     hour: israelHour,

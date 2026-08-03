@@ -17,6 +17,8 @@ import { NextResponse } from "next/server";
 import { AccountSubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
 import { RENEWAL_GRACE_DAYS } from "@/server/subscription/service";
+import { notifyTrialLifecycle } from "@/server/subscription/trial-notifications";
+import { recordCronRun } from "@/server/ops/cron-heartbeat";
 import { pruneRateLimitCounters } from "@/server/rate-limit/persistent";
 import { prunePasswordResetTokens } from "@/server/auth/password-reset";
 import { logger, captureError } from "@/lib/logger";
@@ -72,6 +74,16 @@ export async function GET(request: Request) {
     }
   }
 
+  // התראות על תקופת ניסיון שמתקרבת לסיומה או שהסתיימה אתמול. גישת ניסיון
+  // נסגרת מעצמה (getCurrentUser בודק את planExpiresAt בזמן אמת), ולכן אין כאן
+  // מה לעדכן במסד — רק להודיע לבעלת העסק לפני שהיא מגלה את זה לבד.
+  let trialNotices = { ending: 0, ended: 0 };
+  try {
+    trialNotices = await notifyTrialLifecycle(now);
+  } catch (err) {
+    captureError("cron.subscription-sweep.trials", err);
+  }
+
   // ניקיון תחזוקה: מוני הגבלת הקצב שבמסד הם רשומות קצרות-חיים, ובלי מחיקה
   // הטבלה צוברת שורה לכל אימייל/IP/עסק לנצח. נתלה כאן כי זו משימת ה-cron
   // היומית היחידה.
@@ -82,12 +94,15 @@ export async function GET(request: Request) {
   logger.info("[cron.subscription-sweep] done", {
     candidates: due.length,
     expired,
+    trialNotices,
     prunedCounters,
     prunedResetTokens,
   });
+  await recordCronRun("subscription-sweep", "ok", { expired, trialNotices });
   return NextResponse.json({
     candidates: due.length,
     expired,
+    trialNotices,
     prunedCounters,
     prunedResetTokens,
   });

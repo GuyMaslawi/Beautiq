@@ -118,10 +118,11 @@ export function checkEnv(): EnvCheckResult {
     // לוג אינו ניטור. בלי ערוץ התראות אקטיבי, תקלה אצל בעלת עסק בשעה 2 בלילה
     // מתגלה רק כשהיא מתקשרת. ה-Webhook הוא הדבר היחיד שהופך שגיאה בייצור
     // להודעה שמישהו באמת רואה.
-    if (!isSet("ERROR_ALERT_WEBHOOK_URL")) {
+    if (!isSet("ERROR_ALERT_WEBHOOK_URL") && !isSet("ERROR_ALERT_EMAIL")) {
       warnings.push(
-        "ERROR_ALERT_WEBHOOK_URL לא מוגדר — שגיאות בייצור ייכתבו ללוג בלבד ולא תישלח " +
-          "עליהן שום התראה. הגדירו כתובת Webhook (Make / Slack) שתקבל JSON.",
+        "אין ערוץ התראות — שגיאות בייצור ייכתבו ללוג בלבד ולא תישלח עליהן שום התראה. " +
+          "הגדירו ERROR_ALERT_EMAIL (הכי מהיר — עובד דרך Resend שכבר מוגדר) או " +
+          "ERROR_ALERT_WEBHOOK_URL (Make / Slack).",
       );
     }
     // Meta (ורגולציה ישראלית) מצפים לקשר ברור בין המוצר לישות המשפטית שמפעילה

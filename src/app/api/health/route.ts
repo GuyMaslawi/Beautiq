@@ -64,6 +64,8 @@ export async function GET(req: NextRequest) {
       whatsAppEncryptionKeySet: isSet("WHATSAPP_CREDENTIALS_ENCRYPTION_KEY"),
       // האם שגיאות בייצור מתריעות בפועל, או רק נכתבות ללוג.
       errorAlertWebhookSet: isSet("ERROR_ALERT_WEBHOOK_URL"),
+      errorAlertEmailSet: isSet("ERROR_ALERT_EMAIL"),
+      legalEntityNameSet: isSet("NEXT_PUBLIC_LEGAL_ENTITY_NAME"),
     };
     body.env = { errors: env.errors, warnings: env.warnings };
   }

@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { requireCurrentUser } from "@/server/auth/session";
+import { prisma } from "@/server/db/prisma";
+import { isTrialLapsed } from "@/lib/subscription/trial";
 import { SubscribeClient } from "./subscribe-client";
 
 export const metadata: Metadata = {
@@ -26,7 +28,20 @@ export default async function SubscribePage({
   // כאילו התשלום לא נקלט כלל, והיא הייתה משלמת פעם שנייה.
   const { pending } = await searchParams;
 
+  // getCurrentUser מאפס תפוגה שעברה, ולכן הוא כבר לא יודע לספר שהיא נבעה
+  // מתקופת ניסיון שהסתיימה. קריאה קצרה אחת מאפשרת להסביר לבעלת העסק למה היא
+  // כאן — ושהנתונים שלה לא נמחקו.
+  const account = await prisma.user.findUnique({
+    where: { id: user.id },
+    select: { planExpiresAt: true },
+  });
+  const trialEnded = isTrialLapsed(account?.planExpiresAt);
+
   return (
-    <SubscribeClient userName={user.name ?? null} paymentPending={pending === "1"} />
+    <SubscribeClient
+      userName={user.name ?? null}
+      paymentPending={pending === "1"}
+      trialEnded={trialEnded}
+    />
   );
 }

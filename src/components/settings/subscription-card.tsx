@@ -9,6 +9,7 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cancelSubscriptionAction, startSubscriptionCheckoutAction } from "@/server/subscription/actions";
 import { ALLURA_PLAN } from "@/lib/plans";
 import { SUBSCRIPTION } from "@/lib/constants/he";
+import { isTrialActive, trialDaysLeft } from "@/lib/subscription/trial";
 import type { SubscriptionOverview } from "@/server/subscription/queries";
 
 function formatDate(d: Date | string): string {
@@ -39,6 +40,8 @@ export function SubscriptionCard({ overview }: { overview: SubscriptionOverview 
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [confirmOpen, setConfirmOpen] = useState(false);
+  // "עכשיו" נלכד פעם אחת בטעינה — קריאה לשעון בזמן render אינה דטרמיניסטית.
+  const [nowMs] = useState(() => Date.now());
 
   const statusKey: StatusKey =
     overview.status ?? (overview.isManaged ? "active" : "active");
@@ -47,6 +50,13 @@ export function SubscriptionCard({ overview }: { overview: SubscriptionOverview 
   const price =
     overview.priceMinor != null ? Math.round(overview.priceMinor / 100) : ALLURA_PLAN.price;
   const cancelled = overview.status === "cancelled";
+
+  // תקופת ניסיון: גישה מלאה עם תאריך סיום ובלי חיוב. גובר על סטטוס שורת החיוב —
+  // בעלת עסק בניסיון עשויה לגרור מאחוריה שורת מנוי ישנה, ואסור שהמסך יציג לה
+  // "פעיל · ₪199 לחודש" כשלא מחויב ממנה דבר והגישה עומדת להיסגר.
+  const trialEndsAt = overview.trialEndsAt;
+  const onTrial = isTrialActive(trialEndsAt, nowMs);
+  const daysLeft = trialEndsAt ? trialDaysLeft(trialEndsAt, nowMs) : 0;
 
   function handleReauth() {
     startTransition(async () => {
@@ -103,9 +113,17 @@ export function SubscriptionCard({ overview }: { overview: SubscriptionOverview 
 
         <span
           className="rounded-full px-3 py-1 text-xs font-semibold"
-          style={{ background: statusStyle.bg, color: statusStyle.fg, border: `1px solid ${statusStyle.border}` }}
+          style={
+            onTrial
+              ? {
+                  background: "rgba(146,96,159,0.12)",
+                  color: "#92609f",
+                  border: "1px solid rgba(146,96,159,0.30)",
+                }
+              : { background: statusStyle.bg, color: statusStyle.fg, border: `1px solid ${statusStyle.border}` }
+          }
         >
-          {SUBSCRIPTION.status[statusKey]}
+          {onTrial ? SUBSCRIPTION.trial.badge : SUBSCRIPTION.status[statusKey]}
         </span>
       </div>
 
@@ -116,15 +134,41 @@ export function SubscriptionCard({ overview }: { overview: SubscriptionOverview 
           <div>
             <p className="text-xs" style={{ color: "var(--muted)" }}>{SUBSCRIPTION.monthlyPrice}</p>
             <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
-              ₪{price} <span className="font-normal" style={{ color: "var(--muted)" }}>/ {SUBSCRIPTION.perMonth}</span>
-              {overview.cardSuffix ? (
-                <span className="font-normal" style={{ color: "var(--muted)" }}> · {SUBSCRIPTION.card} •••• {overview.cardSuffix}</span>
-              ) : null}
+              {onTrial ? (
+                <>
+                  {SUBSCRIPTION.trial.priceLabel}{" "}
+                  <span className="font-normal" style={{ color: "var(--muted)" }}>
+                    · {SUBSCRIPTION.trial.priceHint}
+                  </span>
+                </>
+              ) : (
+                <>
+                  ₪{price} <span className="font-normal" style={{ color: "var(--muted)" }}>/ {SUBSCRIPTION.perMonth}</span>
+                  {overview.cardSuffix ? (
+                    <span className="font-normal" style={{ color: "var(--muted)" }}> · {SUBSCRIPTION.card} •••• {overview.cardSuffix}</span>
+                  ) : null}
+                </>
+              )}
             </p>
           </div>
         </div>
 
-        {overview.currentPeriodEnd && (
+        {onTrial && trialEndsAt ? (
+          <div className="flex items-center gap-2.5 rounded-xl px-3.5 py-3" style={{ background: "var(--surface-muted, rgba(172,92,127,0.05))", border: "1px solid var(--border)" }}>
+            <CalendarClock className="h-4 w-4 shrink-0" style={{ color: "#92609f" }} />
+            <div>
+              <p className="text-xs" style={{ color: "var(--muted)" }}>
+                {SUBSCRIPTION.trial.endsOn.replace("־", "")}
+              </p>
+              <p className="text-sm font-semibold" style={{ color: "var(--foreground)" }}>
+                {formatDate(trialEndsAt)}{" "}
+                <span className="font-normal" style={{ color: "var(--muted)" }}>
+                  · {SUBSCRIPTION.trial.daysLeft(daysLeft)}
+                </span>
+              </p>
+            </div>
+          </div>
+        ) : overview.currentPeriodEnd && (
           <div className="flex items-center gap-2.5 rounded-xl px-3.5 py-3" style={{ background: "var(--surface-muted, rgba(172,92,127,0.05))", border: "1px solid var(--border)" }}>
             <CalendarClock className="h-4 w-4 shrink-0" style={{ color: "#ac5c7f" }} />
             <div>
@@ -148,7 +192,31 @@ export function SubscriptionCard({ overview }: { overview: SubscriptionOverview 
       )}
 
       {/* Actions */}
-      {overview.needsReauth ? (
+      {onTrial ? (
+        // בתקופת ניסיון אין מה לבטל ואין מה לחדש — יש רק דרך אחת קדימה: להפעיל
+        // את המנוי. הכפתור חייב להופיע כאן, אחרת בעלת עסק שרוצה להמשיך פשוט
+        // אין לה איפה לשלם עד שהגישה נסגרת מעצמה.
+        <div
+          className="flex flex-col gap-3 rounded-xl px-3.5 py-3.5"
+          style={{ background: "rgba(146,96,159,0.07)", border: "1px solid rgba(146,96,159,0.26)" }}
+        >
+          <div className="flex items-start gap-2">
+            <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" style={{ color: "#92609f" }} />
+            <div>
+              <p className="text-sm" style={{ color: "var(--muted)" }}>{SUBSCRIPTION.trial.note}</p>
+              <p className="mt-1 text-sm" style={{ color: "var(--muted)" }}>
+                {SUBSCRIPTION.trial.activateHint(price)}
+              </p>
+            </div>
+          </div>
+          <div>
+            <Button size="sm" variant="primary" onClick={handleReauth} disabled={isPending}>
+              <CreditCard className="h-4 w-4" />
+              {isPending ? SUBSCRIPTION.trial.activating : SUBSCRIPTION.trial.activateButton}
+            </Button>
+          </div>
+        </div>
+      ) : overview.needsReauth ? (
         <div
           className="flex flex-col gap-3 rounded-xl px-3.5 py-3.5"
           style={{ background: "rgba(172,92,127,0.07)", border: "1px solid rgba(172,92,127,0.28)" }}

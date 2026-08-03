@@ -165,6 +165,12 @@ export async function confirmSubscriptionPayment(
       data: {
         plan: subscription.plan,
         planActivatedAt: subscription.activatedAt ?? now,
+        // A paid subscription never expires on a date — it renews. Clearing this
+        // is what lets a FREE-TRIAL owner convert: her comped grant left a
+        // `planExpiresAt`, and the gate treats a past expiry as "no plan" no
+        // matter what `plan` says. Without this she would pay, be sent straight
+        // back to /subscribe with no explanation, and pay again.
+        planExpiresAt: null,
       },
     }),
   ]);

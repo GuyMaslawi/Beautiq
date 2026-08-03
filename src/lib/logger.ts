@@ -111,7 +111,12 @@ function shouldAlert(scope: string, now: number): boolean {
  */
 function sendErrorAlert(scope: string, err: unknown, context?: LogFields): void {
   const url = (process.env.ERROR_ALERT_WEBHOOK_URL ?? "").trim();
-  if (!url) return;
+  // ערוץ גיבוי: אימייל. חיבור Webhook דורש חשבון Make/Slack וקונפיגורציה
+  // חיצונית, ובלעדיו לא נשלחה שום התראה — כלומר שגיאה בייצור נכתבה ללוג ואיש
+  // לא ידע עליה. Resend כבר מוגדר בפרודקשן, ולכן די בכתובת אחת כדי שההתראות
+  // יעבדו בפועל.
+  const alertEmail = (process.env.ERROR_ALERT_EMAIL ?? "").trim();
+  if (!url && !alertEmail) return;
   // בפיתוח לא מציפים את ערוץ ההתראות האמיתי בשגיאות של עבודה מקומית.
   // נקרא בזמן אמת (ולא מ-isProd שנקבע בטעינת המודול) כדי שאפשר יהיה לכסות
   // את ההתנהגות בבדיקות בלי לטעון את המודול מחדש.
@@ -131,16 +136,51 @@ function sendErrorAlert(scope: string, err: unknown, context?: LogFields): void 
     text: `🔴 Allura — שגיאה ב-${scope}: ${truncate(String(serialized.errMessage ?? "error"), 300)}`,
   };
 
-  void fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  }).catch((alertErr: unknown) => {
+  const onFailure = (alertErr: unknown) => {
     emit("warn", "[alert] שליחת התראת שגיאה נכשלה", {
       scope,
       ...serializeError(alertErr),
     });
-  });
+  };
+
+  if (url) {
+    void fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).catch(onFailure);
+  }
+
+  if (alertEmail) {
+    const apiKey = (process.env.RESEND_API_KEY ?? "").trim();
+    const from = (process.env.EMAIL_FROM ?? "").trim();
+    // לא מייבאים את שכבת האימייל: היא מייבאת את הלוגר, וייבוא הדדי היה יוצר
+    // מעגל. קריאת fetch אחת שומרת על המודול הזה נטול תלויות (גם ב-Edge).
+    if (apiKey && from) {
+      void fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          from,
+          to: alertEmail,
+          subject: `🔴 Allura — שגיאה ב-${scope}`,
+          text: [
+            payload.text,
+            "",
+            `סביבה: ${payload.env}`,
+            `זמן: ${payload.time}`,
+            "",
+            payload.stack || "(ללא stack)",
+            "",
+            `הקשר: ${JSON.stringify(payload.context)}`,
+          ].join("\n"),
+        }),
+      }).catch(onFailure);
+    }
+  }
 }
 
 /**
