@@ -99,7 +99,7 @@ Generate Token).
 
 ### 5. ~~לחבר את ערוץ ההתראות~~ ✅ בוצע (3.8.2026)
 
-`ERROR_ALERT_EMAIL=guymuslave@gmail.com` הוגדר ב-Production. כל `captureError`
+`ERROR_ALERT_EMAIL=allurasupport@gmail.com` הוגדר ב-Production. כל `captureError`
 בייצור שולח עכשיו מייל דרך Resend (שכבר היה מוגדר) — בלי תלות ב-Make.
 `ERROR_ALERT_WEBHOOK_URL` נשאר נתמך ואפשר להוסיף אותו במקביל אם תרצה ערוץ
 Slack/Make; כששניהם מוגדרים, ההתראה נשלחת לשניהם.
@@ -141,10 +141,16 @@ npx vercel env rm NEXT_PUBLIC_LEGAL_ENTITY_NAME production
 npx vercel env add NEXT_PUBLIC_LEGAL_ENTITY_NAME production
 ```
 
-### 9. תיבת התמיכה חייבת לקבל דואר
+### 9. ~~תיבת התמיכה חייבת לקבל דואר~~ ✅ בוצע (3.8.2026)
 
-`support@allura.info` מופיעה בתנאי השימוש, במדיניות הפרטיות, בעמוד יצירת קשר
-ובמסך הקריסה. Resend מאומת ל**שליחה** — לוודא שיש תיבה/העברה שבאמת **מקבלת**.
+כתובת התמיכה היא `allurasupport@gmail.com` — תיבת Gmail אמיתית שמקבלת דואר.
+היא מוגדרת במקום אחד, `SUPPORT_EMAIL` ב-[src/lib/config.ts](../src/lib/config.ts),
+ומשם מגיעה לתנאי השימוש, למדיניות הפרטיות, לעמוד יצירת קשר, למסך החשבון המושהה,
+למסך הקריסה ול-Reply-To של המיילים היוצאים. אותה כתובת מקבלת גם את התראות
+השגיאה מהשרת.
+
+השולח (`EMAIL_FROM`) נשאר בדומיין המאומת ב-Resend — אי אפשר לשלוח *מ*-Gmail
+דרכו, ולכן הכתובת משמשת לקבלה ולמענה בלבד.
 
 ### 10. חשבוניות על המנוי
 

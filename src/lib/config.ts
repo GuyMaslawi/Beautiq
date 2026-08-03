@@ -32,8 +32,14 @@ export const APP_URL = normalizeBaseUrl(ENV_APP_URL || DEFAULT_APP_URL);
 /** הדומיין בלבד (ללא פרוטוקול) — לתצוגת קישורים מקוצרים ומוקאפים. */
 export const APP_DOMAIN = APP_URL.replace(/^https?:\/\//, "");
 
-/** כתובת התמיכה הרשמית. */
-export const SUPPORT_EMAIL = "support@allura.info";
+/**
+ * כתובת התמיכה הרשמית — התיבה שבאמת מקבלת דואר ונקראת.
+ *
+ * מוצגת בתנאי השימוש, במדיניות הפרטיות, בעמוד יצירת קשר, במסך החשבון המושהה
+ * ובמסך הקריסה, ומשמשת כ-Reply-To במיילים שיוצאים ללקוחות. השולח עצמו נשאר
+ * EMAIL_FROM שבדומיין המאומת ב-Resend — אי אפשר לשלוח *מ*-gmail דרכו.
+ */
+export const SUPPORT_EMAIL = "allurasupport@gmail.com";
 
 /** תיאור המותג הרשמי — מוצג בעמודים ציבוריים (נדרש גם לאימות המותג מול Meta). */
 export const BRAND_DESCRIPTION =
@@ -41,8 +47,8 @@ export const BRAND_DESCRIPTION =
 
 /**
  * שם הישות המשפטית שמפעילה את Allura (עוסק/חברה רשומים).
- * TODO: להגדיר NEXT_PUBLIC_LEGAL_ENTITY_NAME בפרודקשן — Meta מצפה לקשר ברור
- * בין המותג לעסק הרשום. כל עוד לא הוגדר, שורת "מופעלת על ידי" לא תוצג.
+ * מוגדר ב-Production מ-3.8.2026. כל עוד אינו מוגדר, שורת "מופעלת על ידי"
+ * פשוט לא תוצג.
  */
 export const LEGAL_ENTITY_NAME =
   process.env.NEXT_PUBLIC_LEGAL_ENTITY_NAME?.trim() || null;

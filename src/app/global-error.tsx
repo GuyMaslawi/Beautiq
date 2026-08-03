@@ -1,6 +1,10 @@
 "use client";
 
 import { useEffect } from "react";
+// הקבוע היחיד שהמסך הזה מייבא: config.ts הוא מודול טהור שלא זורק בטעינה
+// (כל הפרסור שלו עטוף ב-try). כתובת קשיחה כאן כבר התיישנה פעם אחת מול שאר
+// המוצר, וזה בדיוק המסך שבו כתובת שגויה עולה הכי ביוקר.
+import { SUPPORT_EMAIL } from "@/lib/config";
 
 /**
  * מסך שגיאה אחרון (global error boundary).
@@ -64,7 +68,7 @@ export default function GlobalError({
             }}
           >
             אירעה תקלה זמנית בטעינת המערכת. אפשר לנסות שוב — ואם זה חוזר,
-            נשמח לעזור בכתובת support@allura.info
+            נשמח לעזור בכתובת {SUPPORT_EMAIL}
           </p>
           <button
             onClick={reset}

@@ -99,7 +99,7 @@ Verified:
 - Hebrew RTL — ✅ (root layout `lang="he" dir="rtl"`).
 - Describe Allura as a CRM/management system for beauty businesses — ✅.
 - Describe WhatsApp/Meta usage for reminders + business-approved client messages, and place consent responsibility on the business owner — ✅.
-- Support email — ✅ `support@allura.info` (placeholder — replace with the real inbox before launch).
+- Support email — ✅ `allurasupport@gmail.com` (placeholder — replace with the real inbox before launch).
 - **Legal operator placeholder** — added `Allura מופעלת על ידי [שם העסק המשפטי].` to both page footers (was missing).
 - No broken internal links — ✅ (`/`, `/privacy` ↔ `/terms`, `mailto:`).
 - No Beautiq leftovers on these pages — ✅.
@@ -263,7 +263,7 @@ No product behavior was changed beyond the production-safety fix (#3) and the cu
 1. **Meta approval** — complete Meta Business Verification + WhatsApp/Embedded-Signup app review (the reason real send is gated).
 2. **Set production env (see checklist below)** — in particular flip the guards and provide real credentials/secrets.
 3. **Canonical public domain** — ✅ done: all links resolve through `src/lib/config.ts` (`https://allura.info` by default, `NEXT_PUBLIC_APP_URL` to override in prod). Set `NEXT_PUBLIC_APP_URL` if the final launch domain differs.
-4. **Replace `support@allura.info`** with the real monitored support inbox (now centralized in `src/lib/config.ts` → `SUPPORT_EMAIL`), and fill `[שם העסק המשפטי]` with the real legal operator name on both legal pages.
+4. **Replace `allurasupport@gmail.com`** with the real monitored support inbox (now centralized in `src/lib/config.ts` → `SUPPORT_EMAIL`), and fill `[שם העסק המשפטי]` with the real legal operator name on both legal pages.
 5. **Approved Hebrew message templates** — every automation needs a Meta-approved `templateName`; real-send mode refuses to send without one (already enforced).
 6. **Webhook registration** — register `https://<domain>/api/whatsapp/webhook` in the Meta dashboard with the matching `META_WEBHOOK_VERIFY_TOKEN`, and confirm `META_WEBHOOK_APP_SECRET` is set (now required in prod).
 7. **Staged rollout** — keep `WHATSAPP_TEST_MODE=true` with a single `WHATSAPP_TEST_PHONE` for the first live verification, then flip to `false` only after confirming end-to-end delivery.

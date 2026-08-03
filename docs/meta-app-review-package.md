@@ -11,7 +11,7 @@ notes.
 | Domain | https://allura.info |
 | Privacy Policy | https://allura.info/privacy |
 | Terms of Service | https://allura.info/terms |
-| Support / Data contact | support@allura.info |
+| Support / Data contact | allurasupport@gmail.com |
 | Business Verification | Approved |
 | Requested permissions | `whatsapp_business_messaging`, `whatsapp_business_management` |
 | Connection method | Meta Embedded Signup (per-business) |
@@ -96,7 +96,7 @@ owner's WABA or manage the templates required for the messaging flows.
 | --- | --- | --- |
 | Privacy Policy | https://allura.info/privacy | Public, no login required |
 | Terms of Service | https://allura.info/terms | Public, no login required |
-| Support / Data contact | support@allura.info | — |
+| Support / Data contact | allurasupport@gmail.com | — |
 
 Both pages are served from the public (unauthenticated) part of the app
 (`src/app/privacy/page.tsx` and `src/app/terms/page.tsx`), so the Meta reviewer can open
@@ -273,7 +273,7 @@ With `WHATSAPP_TEST_MODE=true`, the only number that can ever receive a message 
       secure per-business storage).
 - [x] Privacy Policy public at https://allura.info/privacy.
 - [x] Terms public at https://allura.info/terms.
-- [x] Support / data contact: support@allura.info.
+- [x] Support / data contact: allurasupport@gmail.com.
 - [x] Video script written.
 - [x] Demo recording options documented (Video A: management / Embedded Signup + template
       sync; Video B: messaging / real send + received).
