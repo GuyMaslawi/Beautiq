@@ -18,7 +18,7 @@ import { AccountSubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
 import { RENEWAL_GRACE_DAYS } from "@/server/subscription/service";
 import { notifyTrialLifecycle } from "@/server/subscription/trial-notifications";
-import { recordCronRun } from "@/server/ops/cron-heartbeat";
+import { withCronHeartbeat } from "@/server/ops/cron-heartbeat";
 import { pruneRateLimitCounters } from "@/server/rate-limit/persistent";
 import { prunePasswordResetTokens } from "@/server/auth/password-reset";
 import { logger, captureError } from "@/lib/logger";
@@ -34,6 +34,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  return withCronHeartbeat("subscription-sweep", runSubscriptionSweepCron);
+}
+
+async function runSubscriptionSweepCron() {
   const now = new Date();
   const graceCutoff = new Date(now.getTime() - RENEWAL_GRACE_DAYS * 86_400_000);
 
@@ -98,7 +102,6 @@ export async function GET(request: Request) {
     prunedCounters,
     prunedResetTokens,
   });
-  await recordCronRun("subscription-sweep", "ok", { expired, trialNotices });
   return NextResponse.json({
     candidates: due.length,
     expired,

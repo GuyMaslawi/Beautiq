@@ -8,7 +8,7 @@ import {
 import { runReviewRequestForBusiness } from "@/server/review-request/runner";
 import { logger, captureError } from "@/lib/logger";
 import { bearerEquals } from "@/lib/secret-compare";
-import { recordCronRun } from "@/server/ops/cron-heartbeat";
+import { withCronHeartbeat } from "@/server/ops/cron-heartbeat";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
@@ -21,6 +21,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  return withCronHeartbeat("review-request", runReviewRequestCron);
+}
+
+async function runReviewRequestCron() {
   logger.info("[cron.review-request] starting");
 
   const now = new Date();
@@ -78,7 +82,6 @@ export async function GET(request: Request) {
     skipped: totalSkipped,
     failed: totalFailed,
   });
-  await recordCronRun("review-request", "ok", { sent: totalSent, failed: totalFailed });
   return NextResponse.json({
     businessesChecked: eligibleSettings.length,
     sent: totalSent,

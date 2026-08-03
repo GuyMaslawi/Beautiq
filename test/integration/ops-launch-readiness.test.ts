@@ -23,7 +23,12 @@ vi.mock("@/server/ops/meta-token", () => ({
   getMetaTokenStatus: () => metaTokenStatus(),
 }));
 
-import { getCronHealth, CRON_JOBS, recordCronRun } from "@/server/ops/cron-heartbeat";
+import {
+  getCronHealth,
+  CRON_JOBS,
+  recordCronRun,
+  withCronHeartbeat,
+} from "@/server/ops/cron-heartbeat";
 import { getLaunchReadiness } from "@/server/ops/launch-readiness";
 
 const TOKEN_OK = {
@@ -72,6 +77,45 @@ describe("דופק המשימות המתוזמנות", () => {
       actorType: "system",
       action: "cron.loyalty",
     });
+  });
+
+  it("רושמת ריצה גם כשהמשימה יצאה מוקדם ולא עשתה כלום", async () => {
+    // זה בדיוק הבאג שהיה: 'אין עסקים מתוזמנים לשעה הזו' → יציאה מוקדמת →
+    // שום רישום → המסך הכריז "לא רצה מעולם" על משימה שרצה בפועל כל שעה.
+    const res = await withCronHeartbeat("win-back", async () => ({
+      ok: true,
+      status: 200,
+    }));
+
+    expect(res.status).toBe(200);
+    const { data } = prisma.activityLog.create.mock.calls[0][0] as {
+      data: { action: string; metadata: { outcome: string } };
+    };
+    expect(data.action).toBe("cron.win-back");
+    expect(data.metadata.outcome).toBe("ok");
+  });
+
+  it("תשובת שגיאה מהמשימה נרשמת כ-error", async () => {
+    await withCronHeartbeat("loyalty", async () => ({ ok: false, status: 503 }));
+
+    const { data } = prisma.activityLog.create.mock.calls[0][0] as {
+      data: { metadata: { outcome: string; status: number } };
+    };
+    expect(data.metadata).toMatchObject({ outcome: "error", status: 503 });
+  });
+
+  it("חריגה נרשמת ואז נזרקת הלאה — הטיפול בשגיאה נשאר במקומו", async () => {
+    const boom = new Error("boom");
+    await expect(
+      withCronHeartbeat("review-request", async () => {
+        throw boom;
+      }),
+    ).rejects.toBe(boom);
+
+    const { data } = prisma.activityLog.create.mock.calls[0][0] as {
+      data: { metadata: { outcome: string } };
+    };
+    expect(data.metadata.outcome).toBe("error");
   });
 
   it("משימה שרצה זה עתה תקינה, ומשימה ששתקה מעבר למרווח שלה מסומנת", async () => {

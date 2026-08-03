@@ -97,6 +97,32 @@ export async function recordCronRun(
   }
 }
 
+/**
+ * עוטף את גוף ה-cron ומבטיח שהריצה תירשם — בכל מסלול יציאה.
+ *
+ * למה זה נחוץ: הרישום נוסף בתחילה רק בסוף הפונקציה, וכך משימה שיצאה מוקדם
+ * ("אין עסקים מתוזמנים לשעה הזו") רצה בפועל אבל לא רשמה כלום — ומסך מצב
+ * המערכת הציג "לא רצה מעולם", כלומר בדיוק הפוך מהמציאות. הדופק אמור לענות
+ * על "האם המשימה נורתה", ולא על "האם היא מצאה עבודה".
+ *
+ * הטיפוס גנרי כדי לא לייבא כאן את next/server — המודול הזה נקרא גם ממסכי
+ * האדמין וגם מהבדיקות.
+ */
+export async function withCronHeartbeat<T extends { ok: boolean; status: number }>(
+  key: CronKey,
+  run: () => Promise<T>,
+): Promise<T> {
+  try {
+    const res = await run();
+    await recordCronRun(key, res.ok ? "ok" : "error", { status: res.status });
+    return res;
+  } catch (err) {
+    // נרשם ואז נזרק הלאה — הטיפול בשגיאה עצמה (כולל ההתראה) נשאר במקומו.
+    await recordCronRun(key, "error", { thrown: true });
+    throw err;
+  }
+}
+
 export interface CronHealthRow {
   key: CronKey;
   label: string;

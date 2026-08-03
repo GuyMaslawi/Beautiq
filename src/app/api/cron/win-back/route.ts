@@ -8,7 +8,7 @@ import {
 import { runWinBackForBusiness } from "@/server/win-back-automation/runner";
 import { logger, captureError } from "@/lib/logger";
 import { bearerEquals } from "@/lib/secret-compare";
-import { recordCronRun } from "@/server/ops/cron-heartbeat";
+import { withCronHeartbeat } from "@/server/ops/cron-heartbeat";
 
 // Vercel cron invokes this with GET. The route is protected by CRON_SECRET
 // so it must not be publicly callable. Vercel automatically sends
@@ -25,6 +25,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  return withCronHeartbeat("win-back", runWinBackCron);
+}
+
+async function runWinBackCron() {
   // Current hour in Israel (Asia/Jerusalem) — matches AutomationSetting.sendHour
   const israelHour = parseInt(
     new Intl.DateTimeFormat("he-IL", {
@@ -158,7 +162,6 @@ export async function GET(request: Request) {
     totalSent,
     totalFailed,
   });
-  await recordCronRun("win-back", "ok", { sent: totalSent, failed: totalFailed });
 
   return NextResponse.json({
     hour: israelHour,
