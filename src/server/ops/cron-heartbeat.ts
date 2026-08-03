@@ -123,6 +123,13 @@ export async function withCronHeartbeat<T extends { ok: boolean; status: number 
   }
 }
 
+/**
+ * `ok` — דיווחה בזמן. `stale` — שתקה מעבר למרווח שלה, כלומר תקלה אמיתית.
+ * `pending` — עוד לא דיווחה, אבל גם לא עבר מספיק זמן כדי לקבוע שמשהו שבור
+ * (למשל משימה יומית, שעתיים אחרי שהרישום עלה לאוויר).
+ */
+export type CronStatus = "ok" | "stale" | "pending";
+
 export interface CronHealthRow {
   key: CronKey;
   label: string;
@@ -131,7 +138,8 @@ export interface CronHealthRow {
   scheduleHe: string;
   lastRunAt: Date | null;
   lastOutcome: "ok" | "error" | null;
-  /** שקטה יותר מדי זמן — או שמעולם לא רצה. */
+  status: CronStatus;
+  /** שקטה יותר מדי זמן — תקלה אמיתית. `pending` אינו נחשב שקט. */
   stale: boolean;
 }
 
@@ -140,12 +148,26 @@ export interface CronHealthRow {
  * כדי לא להתריע על ריצה שאיחרה, ומספיק הדוק כדי לתפוס משימה שהפסיקה לרוץ.
  */
 export async function getCronHealth(now: Date = new Date()): Promise<CronHealthRow[]> {
-  const rows = await prisma.activityLog.findMany({
-    where: { action: { in: CRON_JOBS.map((j) => `cron.${j.key}`) } },
-    select: { action: true, createdAt: true, metadata: true },
-    orderBy: { createdAt: "desc" },
-    take: 300,
-  });
+  const actions = CRON_JOBS.map((j) => `cron.${j.key}`);
+
+  const [rows, oldest] = await Promise.all([
+    prisma.activityLog.findMany({
+      where: { action: { in: actions } },
+      select: { action: true, createdAt: true, metadata: true },
+      orderBy: { createdAt: "desc" },
+      take: 300,
+    }),
+    // מאז מתי אנחנו בכלל מקשיבים. משימה יומית שלא דיווחה שעתיים אחרי שהרישום
+    // עלה לאוויר אינה תקלה — פשוט לא הגיע תורה. בלי זה המסך היה מתריע באדום
+    // על משהו תקין לחלוטין, וזו הדרך הבטוחה לגרום לאנשים להפסיק להאמין לו.
+    prisma.activityLog.aggregate({
+      where: { action: { in: actions } },
+      _min: { createdAt: true },
+    }),
+  ]);
+
+  const watchingSince = oldest?._min?.createdAt ?? null;
+  const watchingForMs = watchingSince ? now.getTime() - watchingSince.getTime() : 0;
 
   return CRON_JOBS.map((job) => {
     const last = rows.find((r) => r.action === `cron.${job.key}`);
@@ -154,6 +176,15 @@ export async function getCronHealth(now: Date = new Date()): Promise<CronHealthR
         ? ((last.metadata as Record<string, unknown>).outcome as "ok" | "error" | undefined)
         : undefined;
     const staleAfterMs = job.everyMinutes * 60_000 * 2.5;
+
+    let status: CronStatus;
+    if (last) {
+      status = now.getTime() - last.createdAt.getTime() > staleAfterMs ? "stale" : "ok";
+    } else {
+      // מעולם לא דיווחה: תקלה רק אם כבר הקשבנו מספיק זמן כדי לצפות לדיווח.
+      status = watchingForMs > staleAfterMs ? "stale" : "pending";
+    }
+
     return {
       key: job.key,
       label: job.label,
@@ -162,7 +193,8 @@ export async function getCronHealth(now: Date = new Date()): Promise<CronHealthR
       scheduleHe: job.scheduleHe,
       lastRunAt: last?.createdAt ?? null,
       lastOutcome: outcome ?? null,
-      stale: !last || now.getTime() - last.createdAt.getTime() > staleAfterMs,
+      status,
+      stale: status === "stale",
     };
   });
 }

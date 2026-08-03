@@ -158,11 +158,27 @@ export default async function AdminOpsPage() {
                 <span
                   className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl"
                   style={{
-                    background: c.stale ? "var(--error-light)" : "var(--success-light)",
-                    color: c.stale ? "var(--error)" : "var(--success)",
+                    background:
+                      c.status === "stale"
+                        ? "var(--error-light)"
+                        : c.status === "pending"
+                          ? "var(--background-alt)"
+                          : "var(--success-light)",
+                    color:
+                      c.status === "stale"
+                        ? "var(--error)"
+                        : c.status === "pending"
+                          ? "var(--muted)"
+                          : "var(--success)",
                   }}
                 >
-                  {c.stale ? <XCircle className="h-4 w-4" /> : <RefreshCw className="h-4 w-4" />}
+                  {c.status === "stale" ? (
+                    <XCircle className="h-4 w-4" />
+                  ) : c.status === "pending" ? (
+                    <Clock className="h-4 w-4" />
+                  ) : (
+                    <RefreshCw className="h-4 w-4" />
+                  )}
                 </span>
                 <div>
                   <p className="font-semibold text-foreground">{c.label}</p>
@@ -186,10 +202,11 @@ export default async function AdminOpsPage() {
                       · {absoluteHe(c.lastRunAt)}
                     </span>
                   </span>
+                ) : c.status === "pending" ? (
+                  // עוד לא הגיע תורה מאז שהרישום עלה לאוויר — לא תקלה.
+                  <span style={{ color: "var(--muted)" }}>ממתינה לריצה הראשונה</span>
                 ) : (
-                  <span style={{ color: c.stale ? "var(--error)" : "var(--foreground)" }}>
-                    לא רצה מעולם
-                  </span>
+                  <span style={{ color: "var(--error)" }}>לא רצה מעולם</span>
                 )}
                 {c.lastOutcome === "error" && (
                   <span className="text-xs font-medium" style={{ color: "var(--error)" }}>
@@ -201,8 +218,8 @@ export default async function AdminOpsPage() {
           ))}
         </div>
         <p className="mt-2 text-xs text-muted">
-          שים לב: הרישום מתחיל מהפריסה הראשונה שכוללת אותו, ולכן מיד אחרי פריסה כל
-          המשימות יוצגו כשקטות עד לריצה הראשונה שלהן.
+          משימה שטרם הגיע תורה מאז שהרישום עלה לאוויר מוצגת כ&quot;ממתינה לריצה
+          הראשונה&quot; ואינה נחשבת תקלה — אדום מופיע רק כשמשימה באמת פספסה את המועד שלה.
         </p>
       </div>
     </div>

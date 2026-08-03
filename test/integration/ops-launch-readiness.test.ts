@@ -43,11 +43,18 @@ const TOKEN_OK = {
 };
 
 const NOW = new Date("2026-08-03T12:00:00.000Z");
+const DAY = 86_400_000;
 const ENV = { ...process.env };
 
 beforeEach(() => {
   resetPrismaMock(prisma);
   prisma.activityLog.findMany.mockResolvedValue([]);
+  // מאז מתי הרישום פעיל. ברירת המחדל: מקשיבים כבר 10 ימים — יותר מהמרווח של
+  // כל משימה, כולל היומית — ולכן משימה שלא דיווחה היא באמת תקלה ולא "טרם הגיע
+  // תורה". הבדיקות שעוסקות במצב ה"ממתינה" קובעות ערך משלהן.
+  prisma.activityLog.aggregate.mockResolvedValue({
+    _min: { createdAt: new Date(NOW.getTime() - 10 * DAY) },
+  });
   metaTokenStatus.mockResolvedValue(TOKEN_OK);
 });
 
@@ -56,11 +63,37 @@ afterEach(() => {
 });
 
 describe("דופק המשימות המתוזמנות", () => {
-  it("מסמן כשקטה משימה שלא רצה מעולם", async () => {
+  it("מסמן כשקטה משימה שלא רצה מעולם — כשכבר הקשבנו מספיק זמן", async () => {
     const rows = await getCronHealth(NOW);
     expect(rows).toHaveLength(CRON_JOBS.length);
     expect(rows.every((r) => r.stale)).toBe(true);
     expect(rows.every((r) => r.lastRunAt === null)).toBe(true);
+  });
+
+  it("משימה יומית שטרם הגיע תורה אינה תקלה — 'ממתינה', לא 'שקטה'", async () => {
+    // הרישום עלה לאוויר לפני 4 שעות. משימה שרצה פעם ביום פשוט לא הגיע תורה,
+    // ואדום כאן הוא אזעקת שווא — בדיוק מה שגורם להפסיק להאמין למסך. משימה
+    // שעתית, לעומתה, כבר הייתה אמורה לדווח מזמן.
+    prisma.activityLog.aggregate.mockResolvedValue({
+      _min: { createdAt: new Date(NOW.getTime() - 4 * 3_600_000) },
+    });
+
+    const rows = await getCronHealth(NOW);
+    const daily = rows.find((r) => r.key === "subscription-sweep")!;
+    const hourly = rows.find((r) => r.key === "morning-reminder")!;
+
+    expect(daily.status).toBe("pending");
+    expect(daily.stale).toBe(false);
+    // לעומתה, משימה שעתית ששתקה 4 שעות חרגה מזמן מהמרווח שלה (שעה × 2.5).
+    expect(hourly.status).toBe("stale");
+  });
+
+  it("כשעוד לא נרשם דבר בכלל — הכול 'ממתינה', לא מכריזים על תקלה בלי ראיה", async () => {
+    prisma.activityLog.aggregate.mockResolvedValue({ _min: { createdAt: null } });
+
+    const rows = await getCronHealth(NOW);
+    expect(rows.every((r) => r.status === "pending")).toBe(true);
+    expect(rows.some((r) => r.stale)).toBe(false);
   });
 
   it("רישום ריצה לא נשען על סשן ולא מפיל את המשימה כשהכתיבה נכשלת", async () => {
