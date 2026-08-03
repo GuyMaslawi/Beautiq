@@ -39,9 +39,16 @@ export interface LaunchReadiness {
   crons: CronHealthRow[];
   blockers: number;
   warnings: number;
+  /**
+   * מתי התמונה הזו נלקחה. נקבע כאן ולא בקומפוננטה — גם כדי שהזמן יהיה אחיד
+   * לכל המסך (הזמן היחסי של כל משימה נמדד מולו), וגם כי קריאה לשעון בזמן
+   * render אינה דטרמיניסטית.
+   */
+  checkedAt: Date;
 }
 
 export async function getLaunchReadiness(): Promise<LaunchReadiness> {
+  const checkedAt = new Date();
   const checks: ReadinessCheck[] = [];
 
   // 1. מצב בדיקה של WhatsApp — הפער היחיד שגורם לכך שכלום לא נשלח, בלי שגיאה.
@@ -203,11 +210,11 @@ export async function getLaunchReadiness(): Promise<LaunchReadiness> {
     detail: encKey ? "מפתח ההצפנה מוגדר." : "לא מוגדר — חיבור WhatsApp עצמאי של עסק לא יעבוד.",
   });
 
-  const crons = await getCronHealth();
+  const crons = await getCronHealth(checkedAt);
 
   const blockers =
     checks.filter((c) => c.level === "blocker").length + crons.filter((c) => c.stale).length;
   const warnings = checks.filter((c) => c.level === "warn").length;
 
-  return { checks, crons, blockers, warnings };
+  return { checks, crons, blockers, warnings, checkedAt };
 }

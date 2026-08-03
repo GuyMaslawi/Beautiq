@@ -32,8 +32,36 @@ const LEVEL_STYLE: Record<CheckLevel, { bg: string; fg: string; icon: React.Reac
   },
 };
 
-function relativeHe(date: Date): string {
-  const mins = Math.round((Date.now() - date.getTime()) / 60_000);
+/** הכול מוצג בשעון ישראל — השרת רץ ב-UTC, וזמן שלא מסכים עם השעון על הקיר מטעה. */
+const TZ = "Asia/Jerusalem";
+
+/** "3 באוגוסט, 17:34" — התאריך והשעה המדויקים שבהם הדבר קרה. */
+function absoluteHe(date: Date): string {
+  return date.toLocaleString("he-IL", {
+    timeZone: TZ,
+    day: "numeric",
+    month: "long",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/** "יום ראשון, 3 באוגוסט 2026, 17:34" — לכותרת, כולל היום בשבוע. */
+function fullHe(date: Date): string {
+  return date.toLocaleString("he-IL", {
+    timeZone: TZ,
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+/** "לפני 27 דקות" — נמדד מול רגע הבדיקה, לא מול שעון שנקרא בזמן render. */
+function relativeHe(date: Date, now: Date): string {
+  const mins = Math.round((now.getTime() - date.getTime()) / 60_000);
   if (mins < 1) return "ממש עכשיו";
   if (mins < 60) return `לפני ${mins} דקות`;
   const hours = Math.round(mins / 60);
@@ -44,7 +72,7 @@ function relativeHe(date: Date): string {
 
 export default async function AdminOpsPage() {
   await requirePlatformAdmin();
-  const { checks, crons, blockers, warnings } = await getLaunchReadiness();
+  const { checks, crons, blockers, warnings, checkedAt } = await getLaunchReadiness();
 
   return (
     <div className="space-y-6">
@@ -55,6 +83,10 @@ export default async function AdminOpsPage() {
         </h1>
         <p className="mt-1 text-sm text-muted">
           תצורת הפרודקשן והמשימות המתוזמנות — כל מה שנכשל בשקט ולא מופיע בשום מסך אחר.
+        </p>
+        <p className="mt-1.5 flex items-center gap-1.5 text-xs text-muted">
+          <Clock className="h-3.5 w-3.5" />
+          נבדק ב־{fullHe(checkedAt)} (שעון ישראל) · הנתונים נקראים מחדש בכל רענון
         </p>
       </div>
 
@@ -135,21 +167,30 @@ export default async function AdminOpsPage() {
                 <div>
                   <p className="font-semibold text-foreground">{c.label}</p>
                   <p className="text-xs text-muted">
-                    {c.everyMinutes >= 1440
-                      ? "פעם ביום"
-                      : c.everyMinutes >= 60
-                        ? `כל ${c.everyMinutes / 60} שעות`
-                        : `כל ${c.everyMinutes} דקות`}
+                    {c.scheduleHe}
                     {" · "}
                     {c.path}
                   </p>
                 </div>
               </div>
               <div className="flex items-center gap-1.5 text-sm">
-                <Clock className="h-3.5 w-3.5 text-muted" />
-                <span style={{ color: c.stale ? "var(--error)" : "var(--foreground)" }}>
-                  {c.lastRunAt ? relativeHe(c.lastRunAt) : "לא רצה מעולם"}
-                </span>
+                <Clock className="h-3.5 w-3.5 shrink-0 text-muted" />
+                {c.lastRunAt ? (
+                  <span className="text-left" dir="rtl">
+                    <span style={{ color: c.stale ? "var(--error)" : "var(--foreground)" }}>
+                      {relativeHe(c.lastRunAt, checkedAt)}
+                    </span>
+                    {/* התאריך והשעה המדויקים — "לפני 27 דקות" לא אומר מתי זה קרה
+                        כשחוזרים למסך אחרי שעה, וזה מה שצריך כדי להצליב מול לוג. */}
+                    <span className="mr-1.5 text-xs" style={{ color: "var(--muted)" }}>
+                      · {absoluteHe(c.lastRunAt)}
+                    </span>
+                  </span>
+                ) : (
+                  <span style={{ color: c.stale ? "var(--error)" : "var(--foreground)" }}>
+                    לא רצה מעולם
+                  </span>
+                )}
                 {c.lastOutcome === "error" && (
                   <span className="text-xs font-medium" style={{ color: "var(--error)" }}>
                     (הריצה האחרונה נכשלה)

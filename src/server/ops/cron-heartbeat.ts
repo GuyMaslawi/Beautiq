@@ -22,21 +22,43 @@ export const CRON_JOBS = [
     path: "/api/cron/morning-reminder",
     /** כל כמה דקות המשימה אמורה לרוץ. */
     everyMinutes: 60,
+    /** מתי בדיוק — כדי שאפשר יהיה לדעת מתי לצפות לריצה הבאה. */
+    scheduleHe: "בכל שעה עגולה",
   },
-  { key: "win-back", label: "החזרת לקוחות", path: "/api/cron/win-back", everyMinutes: 60 },
-  { key: "review-request", label: "בקשות לביקורת", path: "/api/cron/review-request", everyMinutes: 60 },
-  { key: "loyalty", label: "מועדון נאמנות", path: "/api/cron/loyalty", everyMinutes: 60 },
+  {
+    key: "win-back",
+    label: "החזרת לקוחות",
+    path: "/api/cron/win-back",
+    everyMinutes: 60,
+    scheduleHe: "בדקה 12 של כל שעה",
+  },
+  {
+    key: "review-request",
+    label: "בקשות לביקורת",
+    path: "/api/cron/review-request",
+    everyMinutes: 60,
+    scheduleHe: "בדקה 24 של כל שעה",
+  },
+  {
+    key: "loyalty",
+    label: "מועדון נאמנות",
+    path: "/api/cron/loyalty",
+    everyMinutes: 60,
+    scheduleHe: "בדקה 36 של כל שעה",
+  },
   {
     key: "whatsapp-campaigns",
     label: "קמפיינים ב-WhatsApp",
     path: "/api/cron/whatsapp-campaigns",
     everyMinutes: 10,
+    scheduleHe: "כל 10 דקות",
   },
   {
     key: "subscription-sweep",
     label: "מנויים והתראות ניסיון",
     path: "/api/cron/subscription-sweep",
     everyMinutes: 60 * 24,
+    scheduleHe: "כל יום ב-03:00",
   },
 ] as const;
 
@@ -80,6 +102,7 @@ export interface CronHealthRow {
   label: string;
   path: string;
   everyMinutes: number;
+  scheduleHe: string;
   lastRunAt: Date | null;
   lastOutcome: "ok" | "error" | null;
   /** שקטה יותר מדי זמן — או שמעולם לא רצה. */
@@ -110,6 +133,7 @@ export async function getCronHealth(now: Date = new Date()): Promise<CronHealthR
       label: job.label,
       path: job.path,
       everyMinutes: job.everyMinutes,
+      scheduleHe: job.scheduleHe,
       lastRunAt: last?.createdAt ?? null,
       lastOutcome: outcome ?? null,
       stale: !last || now.getTime() - last.createdAt.getTime() > staleAfterMs,
