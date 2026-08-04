@@ -16,7 +16,7 @@
 import { NextResponse } from "next/server";
 import { AccountSubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
-import { RENEWAL_GRACE_DAYS } from "@/server/subscription/service";
+import { RENEWAL_GRACE_DAYS, findOverdueRenewals } from "@/server/subscription/service";
 import { notifyTrialLifecycle } from "@/server/subscription/trial-notifications";
 import { withCronHeartbeat } from "@/server/ops/cron-heartbeat";
 import { pruneRateLimitCounters } from "@/server/rate-limit/persistent";
@@ -78,6 +78,37 @@ async function runSubscriptionSweepCron() {
     }
   }
 
+  // חידושים שלא הגיעו. Grow מחייב את הוראת הקבע ושולח חיווי שמאריך את התקופה,
+  // ולכן מנוי שנשאר `active` הרבה אחרי סוף התקופה שלו הוא מנוי שלא התקבל עבורו
+  // חיוב — והוא היחיד שנופל בין הכיסאות: ה-sweep מטפל רק ב-cancelled וב-past_due,
+  // אז הגישה נשארת פתוחה בלי תשלום ובלי שאף אחד ידע. לא סוגרים אותה כאן
+  // אוטומטית (ראו findOverdueRenewals) — מתריעים, וההחלטה נשארת אנושית.
+  let overdueRenewals = 0;
+  try {
+    const overdue = await findOverdueRenewals(now);
+    overdueRenewals = overdue.length;
+    if (overdue.length > 0) {
+      captureError(
+        "subscription.renewal-missing",
+        new Error(
+          `${overdue.length} מנויים פעילים עברו את מועד החידוש ולא התקבל עבורם חיוב מ-Grow`,
+        ),
+        {
+          count: overdue.length,
+          // רק עשרה — מספיק כדי להתחיל לבדוק, בלי לנפח את גוף ההתראה.
+          subscriptions: overdue.slice(0, 10).map((s) => ({
+            email: s.user.email,
+            periodEnd: s.currentPeriodEnd?.toISOString() ?? null,
+            lastChargeAt: s.lastChargeAt?.toISOString() ?? null,
+            hasDirectDebit: !!s.directDebitId,
+          })),
+        },
+      );
+    }
+  } catch (err) {
+    captureError("cron.subscription-sweep.overdue", err);
+  }
+
   // התראות על תקופת ניסיון שמתקרבת לסיומה או שהסתיימה אתמול. גישת ניסיון
   // נסגרת מעצמה (getCurrentUser בודק את planExpiresAt בזמן אמת), ולכן אין כאן
   // מה לעדכן במסד — רק להודיע לבעלת העסק לפני שהיא מגלה את זה לבד.
@@ -98,6 +129,7 @@ async function runSubscriptionSweepCron() {
   logger.info("[cron.subscription-sweep] done", {
     candidates: due.length,
     expired,
+    overdueRenewals,
     trialNotices,
     prunedCounters,
     prunedResetTokens,
@@ -105,6 +137,7 @@ async function runSubscriptionSweepCron() {
   return NextResponse.json({
     candidates: due.length,
     expired,
+    overdueRenewals,
     trialNotices,
     prunedCounters,
     prunedResetTokens,

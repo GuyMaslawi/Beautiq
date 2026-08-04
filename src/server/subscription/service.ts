@@ -55,6 +55,55 @@ export function effectivePriceMinor(
   return planPriceMinor();
 }
 
+/**
+ * A subscription that is still `active` well past its own `currentPeriodEnd`.
+ *
+ * Grow charges the standing order and re-notifies our webhook, which extends the
+ * period. So an active row whose period ended days ago means NO renewal
+ * notification was ever processed: the standing order was stopped, the card died
+ * and Grow gave up, or the callback never reached us (wrong URL, rejected
+ * secret, a field name we do not parse). Nothing else in the system looks at
+ * this — the daily sweep only handles `cancelled` and `past_due` — so such a row
+ * keeps `User.plan` set and the owner keeps full access, for free, forever, with
+ * nothing in the logs.
+ */
+function overdueRenewalFilter(now: Date) {
+  return {
+    status: AccountSubscriptionStatus.active,
+    currentPeriodEnd: { lt: new Date(now.getTime() - RENEWAL_GRACE_DAYS * 86_400_000) },
+  };
+}
+
+/** How many active subscriptions are past due a renewal we never saw. */
+export async function countOverdueRenewals(now: Date): Promise<number> {
+  return prisma.accountSubscription.count({ where: overdueRenewalFilter(now) });
+}
+
+/**
+ * The overdue subscriptions themselves, oldest first, for the alert payload.
+ *
+ * Deliberately read-only: this does NOT revoke access. The recurring callback
+ * has never been verified against a real Grow charge, so auto-expiring accounts
+ * on its absence could cut off every paying customer in month two — a far worse
+ * failure than the leak it would close. Surfacing it is the safe half; the
+ * decision stays with a human.
+ */
+export async function findOverdueRenewals(now: Date, limit = 100) {
+  return prisma.accountSubscription.findMany({
+    where: overdueRenewalFilter(now),
+    select: {
+      id: true,
+      userId: true,
+      currentPeriodEnd: true,
+      directDebitId: true,
+      lastChargeAt: true,
+      user: { select: { email: true } },
+    },
+    orderBy: { currentPeriodEnd: "asc" },
+    take: limit,
+  });
+}
+
 function addMonths(date: Date, n: number): Date {
   const d = new Date(date);
   d.setMonth(d.getMonth() + n);

@@ -5,7 +5,12 @@ import { AccountPlan, AccountSubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
 import { requireCurrentUser } from "@/server/auth/session";
 import { effectivePriceMinor, confirmSubscriptionPayment } from "@/server/subscription/service";
-import { isGrowConfigured, createPaymentLink, cancelDirectDebit } from "@/lib/subscription/grow";
+import {
+  isGrowConfigured,
+  createPaymentLink,
+  cancelDirectDebit,
+  isDirectDebitCancelConfigured,
+} from "@/lib/subscription/grow";
 import { ALLURA_PLAN } from "@/lib/plans";
 import { SUPPORT_EMAIL } from "@/lib/config";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -269,6 +274,22 @@ export async function cancelSubscriptionAction(): Promise<CancelResult> {
       userId: user.id,
       directDebitStopped: stopped,
     });
+
+    if (!stopped) {
+      // הגישה נסגרת בסוף התקופה — אבל הוראת הקבע ב-Grow עדיין חיה וממשיכה
+      // לגבות מהכרטיס של מי שכבר ביטלה. זה כסף שנלקח מלקוחה בטעות, ולכן זו
+      // התראה אקטיבית ולא שורת לוג שאיש לא קורא: צריך לעצור אותה ידנית בלוח
+      // הבקרה של Grow, ובהתראה יש בדיוק את המזהה הדרוש לשם כך.
+      captureError(
+        "subscription.cancel.direct-debit",
+        new Error(
+          isDirectDebitCancelConfigured()
+            ? "בקשת עצירת הוראת הקבע ב-Grow נכשלה — יש לעצור אותה ידנית, אחרת הלקוחה תמשיך להיות מחויבת"
+            : "ביטול הוראת קבע אוטומטי אינו מוגדר (MAKE_GROW_CANCEL_WEBHOOK_URL) — יש לעצור את הוראת הקבע ידנית ב-Grow, אחרת הלקוחה תמשיך להיות מחויבת",
+        ),
+        { userId: user.id, email: user.email, directDebitId: sub.directDebitId },
+      );
+    }
   }
 
   return { ok: true };

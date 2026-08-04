@@ -11,6 +11,8 @@
 
 import { getCronHealth, type CronHealthRow } from "@/server/ops/cron-heartbeat";
 import { getMetaTokenStatus } from "@/server/ops/meta-token";
+import { countOverdueRenewals } from "@/server/subscription/service";
+import { isDirectDebitCancelConfigured } from "@/lib/subscription/grow";
 
 function isSet(name: string): boolean {
   const v = process.env[name];
@@ -178,6 +180,45 @@ export async function getLaunchReadiness(): Promise<LaunchReadiness> {
       ? "מוגדר — רק הודעות שמגיעות עם הסוד מתקבלות."
       : "לא מוגדר — נקודת הקצה שמאשרת תשלומים אינה מאומתת.",
     action: webhookSecret ? undefined : "להגדיר SUBSCRIPTION_WEBHOOK_SECRET בפרודקשן.",
+  });
+
+  // 4ב. חידושים שלא הגיעו. זו הבדיקה היחידה שחושפת את הכשל השקט של החיוב
+  // החוזר: מנוי שנשאר `active` אחרי סוף התקופה שלו הוא מנוי שממשיך לקבל גישה
+  // מלאה בלי ששולם עליו. אין שום מקום אחר במערכת שמסתכל על זה.
+  let overdue = 0;
+  let overdueCheckFailed = false;
+  try {
+    overdue = await countOverdueRenewals(checkedAt);
+  } catch {
+    overdueCheckFailed = true;
+  }
+  checks.push({
+    key: "renewals-overdue",
+    label: "חידושי מנוי שלא התקבלו",
+    level: overdueCheckFailed ? "warn" : overdue > 0 ? "blocker" : "ok",
+    detail: overdueCheckFailed
+      ? "לא הצלחנו לבדוק — שגיאה בקריאה מהמסד."
+      : overdue > 0
+        ? `${overdue} מנויים פעילים עברו את מועד החידוש ולא התקבל עבורם חיוב מ-Grow. הגישה שלהם פתוחה בלי תשלום.`
+        : "לכל המנויים הפעילים התקבל חיוב בתקופה הנוכחית.",
+    action:
+      overdue > 0
+        ? "לבדוק ב-Grow אם הוראת הקבע עדיין פעילה, וב-/admin/subscriptions אם נרשם חיוב חוזר."
+        : undefined,
+  });
+
+  // 4ג. ביטול הוראת הקבע. בלי זה ביטול מנוי סוגר את הגישה אבל לא את החיוב.
+  const cancelWired = isDirectDebitCancelConfigured();
+  checks.push({
+    key: "billing-cancel",
+    label: "עצירת חיוב בביטול מנוי",
+    level: cancelWired ? "ok" : "warn",
+    detail: cancelWired
+      ? "מוגדר — ביטול מנוי עוצר גם את החיוב החודשי ב-Grow."
+      : "לא מוגדר — כשבעלת עסק מבטלת מנוי הגישה נסגרת בסוף התקופה, אבל הוראת הקבע ב-Grow ממשיכה לחייב את הכרטיס שלה עד שתיעצר ידנית.",
+    action: cancelWired
+      ? undefined
+      : "להגדיר MAKE_GROW_CANCEL_WEBHOOK_URL, או לעצור כל ביטול ידנית ב-Grow (נשלחת התראה במייל על כל ביטול שלא נעצר).",
   });
 
   // 5. שם הישות המשפטית — מוצג בעמודים הציבוריים ובמסמכים המשפטיים.
