@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 export default async function SubscribePage({
   searchParams,
 }: {
-  searchParams: Promise<{ pending?: string }>;
+  searchParams: Promise<{ pending?: string; canceled?: string }>;
 }) {
   const user = await requireCurrentUser();
   if (user.plan || user.isAdmin) redirect("/dashboard");
@@ -26,7 +26,8 @@ export default async function SubscribePage({
   // /api/subscription/return שולח לכאן עם pending=1 כשהמשתמשת חזרה מעמוד התשלום
   // אך אישור השרת של Grow טרם נקלט. בלי לקרוא את הפרמטר הזה המסך היה נראה לה
   // כאילו התשלום לא נקלט כלל, והיא הייתה משלמת פעם שנייה.
-  const { pending } = await searchParams;
+  // canceled=1 מגיע מ-Grow כשבעלת העסק נטשה את עמוד הסליקה (cancelUrl).
+  const { pending, canceled } = await searchParams;
 
   // getCurrentUser מאפס תפוגה שעברה, ולכן הוא כבר לא יודע לספר שהיא נבעה
   // מתקופת ניסיון שהסתיימה. קריאה קצרה אחת מאפשרת להסביר לבעלת העסק למה היא
@@ -42,6 +43,7 @@ export default async function SubscribePage({
       userName={user.name ?? null}
       paymentPending={pending === "1"}
       trialEnded={trialEnded}
+      canceled={canceled === "1"}
     />
   );
 }

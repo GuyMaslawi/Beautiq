@@ -87,6 +87,24 @@ function assertCheckoutAvailable(): string | null {
 }
 
 /**
+ * The owner's business phone, for Grow's payer details. Empty when she has no
+ * business yet (the paywall sits before onboarding) or never filled one in —
+ * never a reason to refuse checkout.
+ */
+async function getOwnerPhone(userId: string): Promise<string> {
+  try {
+    const membership = await prisma.businessUser.findFirst({
+      where: { userId },
+      select: { business: { select: { phone: true } } },
+      orderBy: { createdAt: "asc" },
+    });
+    return membership?.business.phone?.trim() ?? "";
+  } catch {
+    return "";
+  }
+}
+
+/**
  * Start checkout for the Allura subscription. There is exactly one plan, so this
  * takes no argument: the signup paywall and a re-authorization of the recurring
  * charge are the same flow at the same price.
@@ -202,13 +220,23 @@ export async function startSubscriptionCheckoutAction(): Promise<CheckoutResult>
       ? `${base}/api/subscription/webhook?t=${encodeURIComponent(webhookSecret)}`
       : `${base}/api/subscription/webhook`;
 
+    // Grow's hosted page asks for the payer's phone, and the sample the Make
+    // scenario was built from carried one — we always sent an empty string.
+    // The owner's business phone is the number she already gave us; it is only
+    // absent for an account that has not finished onboarding, so it stays
+    // optional rather than blocking checkout.
+    const ownerPhone = await getOwnerPhone(user.id);
+
     const { paymentUrl, processId, processToken } = await createPaymentLink({
       amountMinor: priceMinor,
       description: `${ALLURA_PLAN.name} — מנוי חודשי`,
       fullName: user.name ?? user.email.split("@")[0],
-      phone: "",
+      phone: ownerPhone,
       email: user.email,
       successUrl: `${base}/api/subscription/return`,
+      // Abandoning Grow's page returns her to the plan screen with an
+      // explanation, rather than to a dead end.
+      cancelUrl: `${base}/subscribe?canceled=1`,
       notifyUrl,
       nonce,
       userId: user.id,

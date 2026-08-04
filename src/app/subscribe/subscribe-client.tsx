@@ -24,9 +24,11 @@ function Ambient() {
 function SubscribeHeader({
   userName,
   trialEnded = false,
+  canceled = false,
 }: {
   userName: string | null;
   trialEnded?: boolean;
+  canceled?: boolean;
 }) {
   return (
     <motion.div
@@ -47,6 +49,13 @@ function SubscribeHeader({
         <p className="mx-auto mb-3 max-w-lg text-sm leading-6" style={{ color: "rgba(255,255,255,0.72)" }}>
           תקופת הניסיון שלך הסתיימה. כל הנתונים שלך — לקוחות, תורים והגדרות —
           שמורים וממתינים לך, והם יחזרו ברגע שהמנוי יופעל.
+        </p>
+      )}
+      {/* חזרה מעמוד הסליקה בלי לשלם. בלי מילה על כך, המסך נראה כאילו הלחיצה
+          הקודמת פשוט נעלמה, ומי שבחרה לא להשלים תשלום לא יודעת אם חויבה. */}
+      {canceled && !trialEnded && (
+        <p className="mx-auto mb-3 max-w-lg text-sm leading-6" style={{ color: "rgba(255,255,255,0.72)" }}>
+          התשלום לא הושלם ולא בוצע שום חיוב. אפשר לנסות שוב מתי שנוח לך.
         </p>
       )}
       <h1 className="font-display text-2xl font-semibold leading-tight tracking-tight text-white sm:text-3xl md:text-4xl">
@@ -150,12 +159,15 @@ export function SubscribeClient({
   userName,
   paymentPending = false,
   trialEnded = false,
+  canceled = false,
 }: {
   userName: string | null;
   /** חזרנו מעמוד התשלום אך אישור Grow עדיין לא נקלט. */
   paymentPending?: boolean;
   /** הגישה נסגרה כי תקופת ניסיון חינם הסתיימה (ולא כי מעולם לא היה מנוי). */
   trialEnded?: boolean;
+  /** בעלת העסק נטשה את עמוד הסליקה של Grow וחזרה לכאן בלי לשלם. */
+  canceled?: boolean;
 }) {
   const [showPending, setShowPending] = useState(paymentPending);
 
@@ -178,7 +190,7 @@ export function SubscribeClient({
             </motion.div>
           ) : (
             <motion.div key="checkout" className="w-full">
-              <SubscribeHeader userName={userName} trialEnded={trialEnded} />
+              <SubscribeHeader userName={userName} trialEnded={trialEnded} canceled={canceled} />
               <PlanCheckout plan={ALLURA_PLAN} />
             </motion.div>
           )}

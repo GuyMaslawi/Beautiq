@@ -54,6 +54,8 @@ export interface CreateLinkInput {
   phone: string;
   email?: string;
   successUrl: string;
+  /** Where Grow returns the owner if she abandons the payment page. */
+  cancelUrl: string;
   notifyUrl: string;
   /** Our secret nonce, echoed back on the callback to authenticate it. */
   nonce: string;
@@ -77,15 +79,25 @@ export async function createPaymentLink(input: CreateLinkInput): Promise<CreateL
   const webhookUrl = env("MAKE_GROW_CREATE_LINK_WEBHOOK_URL");
   if (!webhookUrl) throw new Error("MAKE_GROW_CREATE_LINK_WEBHOOK_URL is not configured.");
 
+  // The payload must match the sample bundle the Make scenario learned its data
+  // structure from, field for field. Make maps Grow's required `price` from
+  // `sum`; anything Make cannot resolve arrives at Grow empty and the scenario
+  // dies with "Missing value of required parameter 'price'" before Grow is even
+  // called. Two things were off:
+  //   - `sum` was sent as the STRING "199.00" while the learned sample carried a
+  //     number, and Grow's price is a strict numeric field;
+  //   - `cancelUrl` existed in the sample and was never sent at all.
+  // Both are now sent in the shape the scenario expects.
   const payload = {
     // Shared secret the Make scenario can filter on (optional hardening).
     secret: env("MAKE_WEBHOOK_SHARED_SECRET"),
-    sum: (input.amountMinor / 100).toFixed(2),
+    sum: Math.round(input.amountMinor) / 100,
     description: input.description,
     fullName: input.fullName,
     phone: input.phone,
     email: input.email,
     successUrl: input.successUrl,
+    cancelUrl: input.cancelUrl,
     notifyUrl: input.notifyUrl,
     recurring: true,
     cField1: input.nonce,
@@ -108,14 +120,28 @@ export async function createPaymentLink(input: CreateLinkInput): Promise<CreateL
     clearTimeout(timeout);
   }
 
-  if (!res.ok) throw new Error(`Make create-link webhook returned HTTP ${res.status}`);
-
   const text = await res.text();
+
+  // Carry Make's own words into the error. Without this the alert said only
+  // "returned HTTP 400" and the actual reason — a Grow validation failure, a
+  // dead connection, an inactive scenario — was visible nowhere but Make's
+  // execution history. The body of a FAILED create-link call carries no payment
+  // link and therefore no process token.
+  if (!res.ok) {
+    throw new Error(
+      `Make create-link webhook returned HTTP ${res.status}: ${text.slice(0, 300) || "(empty body)"}`,
+    );
+  }
+
   let body: Record<string, unknown>;
   try {
     body = JSON.parse(text) as Record<string, unknown>;
   } catch {
-    throw new Error("Make create-link webhook returned a non-JSON body");
+    // A scenario with no Webhook-Response module answers "Accepted"; an inactive
+    // one says so in plain text. Both land here, and both are worth naming.
+    throw new Error(
+      `Make create-link webhook returned a non-JSON body: ${text.slice(0, 200) || "(empty body)"}`,
+    );
   }
 
   // Accept both our clean keys and Grow's verbose ones, in case the scenario
