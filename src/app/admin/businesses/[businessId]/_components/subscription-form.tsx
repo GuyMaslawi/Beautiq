@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { updateBusinessSubscription } from "@/server/admin/actions";
 import type { SubscriptionStatus, SubscriptionPlan, DiscountType } from "@prisma/client";
+import { PLAN_PRICE } from "@/lib/plans";
 
 const STATUS_OPTIONS = [
   { value: "trial", label: "בתקופת ניסיון" },
@@ -13,9 +14,12 @@ const STATUS_OPTIONS = [
   { value: "pending_payment", label: "ממתין לתשלום" },
 ];
 
+// סיווג פנימי ישן. הטופס הזה אינו גובה כסף ואינו פותח גישה — לשם כך יש את
+// המנוי של בעלת העסק (/admin/subscriptions ובכרטיס החשבון). התוויות נקבו
+// ב-₪149/₪199, מסלולים שאינם קיימים מאז המעבר למנוי אחד.
 const PLAN_OPTIONS = [
-  { value: "basic", label: "בסיס — ₪149/חודש" },
-  { value: "pro", label: "פרו — ₪199/חודש" },
+  { value: "basic", label: "בסיס (סיווג ישן)" },
+  { value: "pro", label: "פרו (סיווג ישן)" },
 ];
 
 const DISCOUNT_TYPE_OPTIONS = [
@@ -54,7 +58,7 @@ export function SubscriptionForm({ businessId, subscription }: Props) {
   const [plan, setPlan] = useState(subscription?.plan ?? "basic");
   const [status, setStatus] = useState(subscription?.status ?? "trial");
   const [monthlyPrice, setMonthlyPrice] = useState(
-    String(subscription?.monthlyPrice ?? 149),
+    String(subscription?.monthlyPrice ?? PLAN_PRICE),
   );
   const [discountType, setDiscountType] = useState(subscription?.discountType ?? "none");
   const [discountValue, setDiscountValue] = useState(

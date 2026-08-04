@@ -103,7 +103,7 @@ async function syncSubscriptionBilling(
   return false;
 }
 
-/** "₪149" / "₪99.50" — an agorot amount for Hebrew copy. */
+/** "₪199" / "₪99.50" — an agorot amount for Hebrew copy. */
 function shekels(minor: number): string {
   return `₪${minor % 100 === 0 ? minor / 100 : (minor / 100).toFixed(2)}`;
 }

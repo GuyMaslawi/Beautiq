@@ -62,7 +62,7 @@ function addDaysISO(days: number): string {
 /** Free-trial duration presets (days). */
 const TRIAL_PRESETS = [14, 30, 60];
 
-/** "₪149" from an agorot amount. */
+/** "₪199" from an agorot amount. */
 function shekels(minor: number): string {
   return `₪${minor % 100 === 0 ? minor / 100 : (minor / 100).toFixed(2)}`;
 }
@@ -269,7 +269,7 @@ export function GodControls({
               step={1}
               value={customPrice}
               onChange={(e) => setCustomPrice(e.target.value)}
-              placeholder={listPriceMinor != null ? String(listPriceMinor / 100) : "149"}
+              placeholder={String((listPriceMinor ?? PLAN_PRICE * 100) / 100)}
               className="w-28 rounded-xl border border-border bg-surface px-2.5 py-1 text-sm text-foreground"
             />
             <span className="text-xs text-muted">₪ לחודש</span>

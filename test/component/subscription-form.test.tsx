@@ -9,6 +9,7 @@ vi.mock("@/server/admin/actions", () => ({
 }));
 
 import { SubscriptionForm } from "@/app/admin/businesses/[businessId]/_components/subscription-form";
+import { PLAN_PRICE } from "@/lib/plans";
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -16,11 +17,12 @@ beforeEach(() => {
 });
 
 describe("SubscriptionForm", () => {
-  it("seeds defaults when no subscription exists (basic, trial, 149)", () => {
+  it("seeds defaults when no subscription exists (basic, trial, list price)", () => {
     render(<SubscriptionForm businessId="b1" subscription={null} />);
-    expect(screen.getByDisplayValue("בסיס — ₪149/חודש")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("בסיס (סיווג ישן)")).toBeInTheDocument();
     expect(screen.getByDisplayValue("בתקופת ניסיון")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("149")).toBeInTheDocument();
+    // The default follows the one real plan price, not the dead ₪149 tier.
+    expect(screen.getByDisplayValue(String(PLAN_PRICE))).toBeInTheDocument();
     // No discount → discount value field is hidden.
     expect(screen.queryByText(/סכום הנחה|אחוז הנחה/)).not.toBeInTheDocument();
   });
@@ -42,7 +44,11 @@ describe("SubscriptionForm", () => {
 
     expect(updateSub).toHaveBeenCalledWith(
       "b1",
-      expect.objectContaining({ plan: "basic", status: "trial", monthlyPrice: "149" }),
+      expect.objectContaining({
+        plan: "basic",
+        status: "trial",
+        monthlyPrice: String(PLAN_PRICE),
+      }),
     );
     expect(await screen.findByText(/השינויים נשמרו בהצלחה/)).toBeInTheDocument();
   });
@@ -71,7 +77,7 @@ describe("SubscriptionForm", () => {
         }}
       />,
     );
-    expect(screen.getByDisplayValue("פרו — ₪199/חודש")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("פרו (סיווג ישן)")).toBeInTheDocument();
     expect(screen.getByDisplayValue("199")).toBeInTheDocument();
     expect(screen.getByDisplayValue("50")).toBeInTheDocument();
     expect(screen.getByDisplayValue("הנחת השקה")).toBeInTheDocument();

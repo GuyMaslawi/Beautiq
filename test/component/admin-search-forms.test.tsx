@@ -42,7 +42,7 @@ describe("BusinessesSearch", () => {
     render(<BusinessesSearch defaultQ="abc" defaultStatus="trial" defaultPlan="basic" />);
     expect(screen.getByDisplayValue("abc")).toBeInTheDocument();
     expect(screen.getByDisplayValue("בתקופת ניסיון")).toBeInTheDocument();
-    expect(screen.getByDisplayValue("בסיס ₪149")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("בסיס (סיווג ישן)")).toBeInTheDocument();
   });
 });
 

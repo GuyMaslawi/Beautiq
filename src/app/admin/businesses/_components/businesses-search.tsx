@@ -13,10 +13,13 @@ const STATUS_OPTIONS = [
   { value: "pending_payment", label: "ממתין לתשלום" },
 ];
 
+// סיווג פנימי ישן בלבד. אין לו מחיר ואין לו השפעה על חיוב או על גישה — המחיר
+// האמיתי מגיע מהמנוי של בעלת העסק. התוויות נשאו ₪149/₪199 ותיארו מסלולים
+// שכבר לא קיימים מאז המעבר למנוי אחד.
 const PLAN_OPTIONS = [
   { value: "", label: "כל התוכניות" },
-  { value: "basic", label: "בסיס ₪149" },
-  { value: "pro", label: "פרו ₪199" },
+  { value: "basic", label: "בסיס (סיווג ישן)" },
+  { value: "pro", label: "פרו (סיווג ישן)" },
 ];
 
 interface Props {

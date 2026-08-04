@@ -129,6 +129,15 @@ export default async function AdminBusinessesPage({
                 const status: SubscriptionStatus = sub?.status ?? "trial";
                 const plan: SubscriptionPlan = sub?.plan ?? "basic";
 
+                // מה שהיא באמת מחויבת בו: המחיר שנרשם במנוי בפועל, אחרת מחיר
+                // מיוחד שסוכם איתה, אחרת — אין חיוב, ולא ממציאים סכום.
+                const billedMinor =
+                  owner?.subscription?.priceMinor ?? owner?.customPriceMinor ?? null;
+                const billedPrice =
+                  billedMinor != null
+                    ? `₪${(billedMinor / 100).toLocaleString("he-IL")}`
+                    : "—";
+
                 let discountLabel = "—";
                 if (sub?.discountType === "fixed" && sub.discountValue) {
                   discountLabel = `₪${Number(sub.discountValue).toLocaleString("he-IL")}`;
@@ -192,8 +201,11 @@ export default async function AdminBusinessesPage({
                       <span className="rounded bg-background-alt px-1.5 py-0.5 text-xs font-semibold text-foreground-soft">
                         {PLAN_LABELS[plan]}
                       </span>
+                      {/* המחיר האמיתי שבעלת העסק מחויבת בו, מהמנוי שלה. קודם
+                          הוצג כאן `monthlyPrice ?? 149` מהשורה הישנה — כלומר כל
+                          עסק בלי שורה כזו הופיע כ-₪149, מחיר שכבר לא קיים. */}
                       <span className="mr-1 text-xs text-muted">
-                        ₪{Number(sub?.monthlyPrice ?? 149).toLocaleString("he-IL")}
+                        {billedPrice}
                       </span>
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">

@@ -131,10 +131,27 @@ export async function getAdminBusinesses(filters: AdminBusinessFilters = {}) {
       ...(planFilter && { subscription: { plan: planFilter } }),
     },
     include: {
+      // NOTE: `Business.subscription` is the legacy admin-only bookkeeping row
+      // (SubscriptionPlan basic/pro). It charges nothing and gates nothing. The
+      // money lives on the OWNER: `User.subscription` (AccountSubscription) and
+      // `User.customPriceMinor`. The two are pulled together here so the list
+      // can show what the owner is actually billed rather than the legacy
+      // row's decorative `monthlyPrice`.
       subscription: true,
       members: {
         where: { role: "owner" },
-        include: { user: { select: { id: true, name: true, email: true } } },
+        include: {
+          user: {
+            select: {
+              id: true,
+              name: true,
+              email: true,
+              plan: true,
+              customPriceMinor: true,
+              subscription: { select: { priceMinor: true, status: true } },
+            },
+          },
+        },
         take: 1,
         orderBy: { createdAt: "asc" },
       },
