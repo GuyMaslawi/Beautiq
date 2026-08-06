@@ -6,7 +6,7 @@ import {
   LEGAL_ENTITY_NAME,
   SUPPORT_EMAIL,
 } from "@/lib/config";
-import { ALLURA_PLAN } from "@/lib/plans";
+import { ALLURA_PLAN, PLAN_PRICE_VAT_NOTE } from "@/lib/plans";
 import { PublicBrandFooter } from "@/components/public/brand-footer";
 
 // עמוד ציבורי — תנאי שימוש. אינו דורש התחברות ואינו משתמש
@@ -114,12 +114,12 @@ export default function TermsPage() {
           <ul className="list-disc space-y-2 pr-5">
             <li>
               <span className="font-medium">{ALLURA_PLAN.name}</span> —{" "}
-              {ALLURA_PLAN.price} ₪ לחודש.
+              {ALLURA_PLAN.price} ₪ לחודש, {PLAN_PRICE_VAT_NOTE}.
             </li>
           </ul>
           <p>
-            המחירים נקובים בשקלים חדשים. פירוט המס יופיע במסמך (חשבונית/קבלה)
-            שיונפק לך עבור כל חיוב. אנו רשאים לעדכן את המחיר מעת לעת; עדכון
+            המחירים נקובים בשקלים חדשים וכוללים מע״מ. עבור כל חיוב תונפק לך
+            חשבונית מס קבלה, ובה יופיע פירוט המס. אנו רשאים לעדכן את המחיר מעת לעת; עדכון
             מחיר למנוי קיים ייכנס לתוקף רק לאחר הודעה מראש, ולא יחול על תקופה
             ששולמה כבר. מחיר מיוחד שסוכם עמך באופן פרטני גובר על
             המחיר המוצג.

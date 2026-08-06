@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { Sparkles, Check, ShieldCheck, Flower2, Loader2 } from "lucide-react";
-import { ALLURA_PLAN } from "@/lib/plans";
+import { ALLURA_PLAN, PLAN_PRICE_VAT_NOTE } from "@/lib/plans";
 import { PlanCheckout } from "@/components/plans/plan-checkout";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
@@ -62,7 +62,8 @@ function SubscribeHeader({
         {userName ? `${userName}, ` : ""}מנוי אחד. כל הכלים.
       </h1>
       <p className="mx-auto mt-2 max-w-lg text-sm leading-6" style={{ color: "rgba(255,255,255,0.60)" }}>
-        ניהול מלא של העסק בעברית, בלי מדרגות ובלי תוספות — ₪{ALLURA_PLAN.price} לחודש.
+        ניהול מלא של העסק בעברית, בלי מדרגות ובלי תוספות — ₪{ALLURA_PLAN.price} לחודש,{" "}
+        {PLAN_PRICE_VAT_NOTE}.
         אפשר לבטל בכל רגע, ללא התחייבות.
       </p>
 

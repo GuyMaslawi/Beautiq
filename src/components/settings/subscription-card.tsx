@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { cancelSubscriptionAction, startSubscriptionCheckoutAction } from "@/server/subscription/actions";
-import { ALLURA_PLAN } from "@/lib/plans";
+import { ALLURA_PLAN, PLAN_PRICE_VAT_NOTE } from "@/lib/plans";
 import { SUBSCRIPTION } from "@/lib/constants/he";
 import { isTrialActive, trialDaysLeft } from "@/lib/subscription/trial";
 import type { SubscriptionOverview } from "@/server/subscription/queries";
@@ -143,7 +143,10 @@ export function SubscriptionCard({ overview }: { overview: SubscriptionOverview 
                 </>
               ) : (
                 <>
-                  ₪{price} <span className="font-normal" style={{ color: "var(--muted)" }}>/ {SUBSCRIPTION.perMonth}</span>
+                  ₪{price}{" "}
+                  <span className="font-normal" style={{ color: "var(--muted)" }}>
+                    / {SUBSCRIPTION.perMonth} · {PLAN_PRICE_VAT_NOTE}
+                  </span>
                   {overview.cardSuffix ? (
                     <span className="font-normal" style={{ color: "var(--muted)" }}> · {SUBSCRIPTION.card} •••• {overview.cardSuffix}</span>
                   ) : null}

@@ -51,3 +51,13 @@ export const ALLURA_PLAN: PlanInfo = {
 
 /** Authoritative monthly list price in shekels (also enforced server-side). */
 export const PLAN_PRICE = ALLURA_PLAN.price;
+
+/**
+ * The price is what Grow actually charges the card, and Grow issues a
+ * חשבונית מס קבלה for exactly that amount — so the figure shown IS the total,
+ * VAT included. Saying so is not decoration: our customers are business owners
+ * who read a price as a deductible expense, and a bare "₪199" leaves them to
+ * guess whether VAT lands on top. One constant so the wording cannot drift
+ * between the paywall, the settings card and the terms.
+ */
+export const PLAN_PRICE_VAT_NOTE = "כולל מע״מ";

@@ -13,7 +13,7 @@ import {
   CreditCard,
 } from "lucide-react";
 import { startSubscriptionCheckoutAction } from "@/server/subscription/actions";
-import type { PlanInfo } from "@/lib/plans";
+import { PLAN_PRICE_VAT_NOTE, type PlanInfo } from "@/lib/plans";
 
 const EASE = [0.22, 1, 0.36, 1] as const;
 
@@ -99,8 +99,14 @@ export function PlanCheckout({
             style={{ borderColor: "rgba(255,255,255,0.10)" }}
           >
             <span className="text-sm" style={{ color: "rgba(255,255,255,0.60)" }}>חיוב חודשי</span>
-            <span className="font-display text-4xl font-bold tabular-nums" style={{ color: "#e5bd6a" }}>
-              ₪{plan.price}
+            {/* הסכום שיחויב בפועל, ולכן גם הסכום שיופיע בחשבונית — לא מחיר לפני מס. */}
+            <span className="text-left">
+              <span className="font-display block text-4xl font-bold tabular-nums" style={{ color: "#e5bd6a" }}>
+                ₪{plan.price}
+              </span>
+              <span className="block text-xs" style={{ color: "rgba(255,255,255,0.55)" }}>
+                {PLAN_PRICE_VAT_NOTE}
+              </span>
             </span>
           </div>
 
