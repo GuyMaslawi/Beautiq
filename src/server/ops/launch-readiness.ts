@@ -11,8 +11,10 @@
 
 import { getCronHealth, type CronHealthRow } from "@/server/ops/cron-heartbeat";
 import { getMetaTokenStatus } from "@/server/ops/meta-token";
-import { countOverdueRenewals } from "@/server/subscription/service";
-import { isDirectDebitCancelConfigured } from "@/lib/subscription/grow";
+import {
+  countOverdueRenewals,
+  countDirectDebitsAwaitingStop,
+} from "@/server/subscription/service";
 
 function isSet(name: string): boolean {
   const v = process.env[name];
@@ -207,18 +209,30 @@ export async function getLaunchReadiness(): Promise<LaunchReadiness> {
         : undefined,
   });
 
-  // 4ג. ביטול הוראת הקבע. בלי זה ביטול מנוי סוגר את הגישה אבל לא את החיוב.
-  const cancelWired = isDirectDebitCancelConfigured();
+  // 4ג. עצירת החיוב בביטול מנוי. Grow מציינת בתיעוד של אפליקציית Make שלה
+  // שביטול תשלום חוזר אינו אפשרי דרך Make ויש לבצעו באתר שלה — כלומר זו פעולה
+  // ידנית מעצם הגדרתה, ולא פער תצורה שאפשר לסגור במשתנה סביבה. מה שנמדד כאן
+  // הוא לכן לא "האם זה מוגדר" אלא "כמה לקוחות מחויבות בזה הרגע".
+  let awaitingStop = 0;
+  let stopCheckFailed = false;
+  try {
+    awaitingStop = await countDirectDebitsAwaitingStop();
+  } catch {
+    stopCheckFailed = true;
+  }
   checks.push({
     key: "billing-cancel",
     label: "עצירת חיוב בביטול מנוי",
-    level: cancelWired ? "ok" : "warn",
-    detail: cancelWired
-      ? "מוגדר — ביטול מנוי עוצר גם את החיוב החודשי ב-Grow."
-      : "לא מוגדר — כשבעלת עסק מבטלת מנוי הגישה נסגרת בסוף התקופה, אבל הוראת הקבע ב-Grow ממשיכה לחייב את הכרטיס שלה עד שתיעצר ידנית.",
-    action: cancelWired
-      ? undefined
-      : "להגדיר MAKE_GROW_CANCEL_WEBHOOK_URL, או לעצור כל ביטול ידנית ב-Grow (נשלחת התראה במייל על כל ביטול שלא נעצר).",
+    level: stopCheckFailed ? "warn" : awaitingStop > 0 ? "blocker" : "ok",
+    detail: stopCheckFailed
+      ? "לא הצלחנו לבדוק — שגיאה בקריאה מהמסד."
+      : awaitingStop > 0
+        ? `${awaitingStop} הוראות קבע עדיין פעילות ב-Grow למנויים שכבר בוטלו — כלומר לקוחות שביטלו וממשיכות להיות מחויבות.`
+        : "אין הוראות קבע שממתינות לעצירה.",
+    action:
+      awaitingStop > 0
+        ? "לעצור אותן בלוח הבקרה של Grow ולסמן ברשימה שבתחתית המסך."
+        : undefined,
   });
 
   // 5. שם הישות המשפטית — מוצג בעמודים הציבוריים ובמסמכים המשפטיים.

@@ -13,7 +13,12 @@
  * Server-only.
  */
 
-import { AccountPlan, AccountSubscriptionStatus, type AccountSubscription } from "@prisma/client";
+import {
+  AccountPlan,
+  AccountSubscriptionStatus,
+  Prisma,
+  type AccountSubscription,
+} from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
 import { PLAN_PRICE } from "@/lib/plans";
 
@@ -102,6 +107,61 @@ export async function findOverdueRenewals(now: Date, limit = 100) {
     orderBy: { currentPeriodEnd: "asc" },
     take: limit,
   });
+}
+
+/**
+ * Standing orders that are still live at Grow behind a subscription nobody has
+ * access to any more.
+ *
+ * Grow's Make app cannot stop a recurring payment — the vendor says it has to be
+ * done on the Grow site — so cancelling in Allura closes access and leaves the
+ * direct debit charging the customer's card. That made the whole safety net one
+ * email: miss it, and someone who cancelled keeps paying with nothing anywhere
+ * to remind you. These rows are the open task list, and they stay open until an
+ * admin confirms the standing order was stopped.
+ */
+const AWAITING_STOP_FILTER: Prisma.AccountSubscriptionWhereInput = {
+  status: {
+    in: [AccountSubscriptionStatus.cancelled, AccountSubscriptionStatus.expired],
+  },
+  directDebitId: { not: null },
+  directDebitStoppedAt: null,
+};
+
+/** How many standing orders still need stopping by hand in Grow. */
+export async function countDirectDebitsAwaitingStop(): Promise<number> {
+  return prisma.accountSubscription.count({ where: AWAITING_STOP_FILTER });
+}
+
+/** The rows themselves — oldest cancellation first, since it bills the longest. */
+export async function findDirectDebitsAwaitingStop(limit = 50) {
+  return prisma.accountSubscription.findMany({
+    where: AWAITING_STOP_FILTER,
+    select: {
+      id: true,
+      status: true,
+      directDebitId: true,
+      priceMinor: true,
+      cancelledAt: true,
+      currentPeriodEnd: true,
+      user: { select: { email: true, name: true } },
+    },
+    orderBy: { cancelledAt: "asc" },
+    take: limit,
+  });
+}
+
+/**
+ * Record that the standing order was stopped in Grow. Idempotent, and refuses to
+ * "stop" a subscription that is still live — marking an active one would hide a
+ * paying customer's direct debit from the list that exists to catch it.
+ */
+export async function markDirectDebitStopped(subscriptionId: string): Promise<boolean> {
+  const { count } = await prisma.accountSubscription.updateMany({
+    where: { id: subscriptionId, ...AWAITING_STOP_FILTER },
+    data: { directDebitStoppedAt: new Date() },
+  });
+  return count > 0;
 }
 
 function addMonths(date: Date, n: number): Date {

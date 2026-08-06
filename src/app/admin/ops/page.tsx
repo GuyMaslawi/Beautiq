@@ -1,6 +1,8 @@
 import { CheckCircle2, AlertTriangle, XCircle, Clock, RefreshCw } from "lucide-react";
 import { requirePlatformAdmin } from "@/server/admin/auth";
 import { getLaunchReadiness, type CheckLevel } from "@/server/ops/launch-readiness";
+import { findDirectDebitsAwaitingStop } from "@/server/subscription/service";
+import { DirectDebitStops } from "./_components/direct-debit-stops";
 
 /**
  * מצב המערכת — התצוגה היחידה שאומרת אם ההשקה באמת מוכנה.
@@ -74,6 +76,18 @@ export default async function AdminOpsPage() {
   await requirePlatformAdmin();
   const { checks, crons, blockers, warnings, checkedAt } = await getLaunchReadiness();
 
+  // הוראות קבע שעדיין גובות כסף ממי שכבר ביטלה. הבדיקה למעלה סופרת אותן;
+  // כאן מגיעות השורות עצמן, עם המזהה שצריך כדי לעצור אותן ב-Grow.
+  const awaitingStop = await findDirectDebitsAwaitingStop();
+  const awaitingStopRows = awaitingStop.map((s) => ({
+    id: s.id,
+    email: s.user.email,
+    name: s.user.name,
+    directDebitId: s.directDebitId ?? "",
+    priceMinor: s.priceMinor,
+    since: s.cancelledAt ? absoluteHe(s.cancelledAt) : null,
+  }));
+
   return (
     <div className="space-y-6">
       <div className="min-w-0">
@@ -140,6 +154,8 @@ export default async function AdminOpsPage() {
           );
         })}
       </div>
+
+      <DirectDebitStops rows={awaitingStopRows} />
 
       {/* משימות מתוזמנות */}
       <div>

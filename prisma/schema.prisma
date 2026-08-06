@@ -359,6 +359,16 @@ model AccountSubscription {
   lastChargeAt       DateTime?
   lastFailureReason  String?
 
+  /// When the Grow standing order behind this subscription was confirmed stopped.
+  ///
+  /// Grow's own Make app cannot cancel a recurring payment — the vendor states it
+  /// must be done on the Grow site — so cancelling in Allura closes access but
+  /// leaves the direct debit charging the customer's card until a human stops it.
+  /// Null on a cancelled/expired subscription that still has a `directDebitId`
+  /// means exactly that: someone is still being billed. An admin sets this from
+  /// /admin/ops once the standing order is stopped in Grow.
+  directDebitStoppedAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
