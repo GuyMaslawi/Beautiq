@@ -2,7 +2,9 @@ import { CheckCircle2, AlertTriangle, XCircle, Clock, RefreshCw } from "lucide-r
 import { requirePlatformAdmin } from "@/server/admin/auth";
 import { getLaunchReadiness, type CheckLevel } from "@/server/ops/launch-readiness";
 import { findDirectDebitsAwaitingStop } from "@/server/subscription/service";
+import { findRecentGrowCallbacks } from "@/server/subscription/callback-log";
 import { DirectDebitStops } from "./_components/direct-debit-stops";
+import { GrowCallbacks } from "./_components/grow-callbacks";
 
 /**
  * מצב המערכת — התצוגה היחידה שאומרת אם ההשקה באמת מוכנה.
@@ -78,7 +80,10 @@ export default async function AdminOpsPage() {
 
   // הוראות קבע שעדיין גובות כסף ממי שכבר ביטלה. הבדיקה למעלה סופרת אותן;
   // כאן מגיעות השורות עצמן, עם המזהה שצריך כדי לעצור אותן ב-Grow.
-  const awaitingStop = await findDirectDebitsAwaitingStop();
+  const [awaitingStop, growCallbacks] = await Promise.all([
+    findDirectDebitsAwaitingStop(),
+    findRecentGrowCallbacks(),
+  ]);
   const awaitingStopRows = awaitingStop.map((s) => ({
     id: s.id,
     email: s.user.email,
@@ -156,6 +161,8 @@ export default async function AdminOpsPage() {
       </div>
 
       <DirectDebitStops rows={awaitingStopRows} />
+
+      <GrowCallbacks rows={growCallbacks} />
 
       {/* משימות מתוזמנות */}
       <div>

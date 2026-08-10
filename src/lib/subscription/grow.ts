@@ -21,6 +21,8 @@
  * Server-only — never import from a client component.
  */
 
+import { secretEquals } from "@/lib/secret-compare";
+
 // ---------------------------------------------------------------------------
 // Configuration & env gating
 // ---------------------------------------------------------------------------
@@ -225,12 +227,23 @@ export function isDirectDebitCancelConfigured(): boolean {
 // Server-to-server callback normalization
 // ---------------------------------------------------------------------------
 
+/**
+ * What the notification says happened to the money.
+ *
+ * `unknown` is not a formality — it is the only honest answer for a payload
+ * that carries neither an approval status nor a failure reason, and both
+ * alternatives are dangerous: calling it paid grants a free month, calling it
+ * failed puts a paying customer into `past_due` and eventually locks her out.
+ * The route parks such an event and alerts instead of guessing.
+ */
+export type GrowChargeOutcome = "paid" | "failed" | "unknown";
+
 export interface GrowCallbackEvent {
   processId?: string;
   processToken?: string;
   /** Our nonce echoed back via cField1 — matched against the stored value. */
   nonce?: string;
-  paid: boolean;
+  outcome: GrowChargeOutcome;
   transactionId?: string;
   /** Grow direct-debit id (הוראת קבע), present once a standing order exists. */
   directDebitId?: string;
@@ -239,13 +252,14 @@ export interface GrowCallbackEvent {
   cardSuffix?: string;
   sumMinor?: number;
   statusCode?: string;
+  /** Grow's own words on a failed direct-debit run (`error_message`). */
+  failureReason?: string;
+  /** How many times Grow has already retried this standing order. */
+  attempts?: number;
 }
 
 /** A Grow "success" status code. Approved transactions report statusCode 2 (1 also seen). */
-function isPaidStatus(statusCode: unknown): boolean {
-  const code = String(statusCode ?? "").trim();
-  return code === "2" || code === "1";
-}
+const SUCCESS_STATUS_CODES = new Set(["1", "2"]);
 
 function toMinor(sum: unknown): number | undefined {
   const n = typeof sum === "number" ? sum : parseFloat(String(sum ?? ""));
@@ -259,8 +273,22 @@ function str(v: unknown): string | undefined {
 }
 
 /**
- * Parse Grow's server-to-server callback body into a normalized event. Grow
- * nests the payload under a `data` object; the route flattens JSON- and
+ * Parse Grow's server-to-server callback body into a normalized event.
+ *
+ * Grow speaks to us over THREE channels, and each one names the same things
+ * differently — the field lists below are the union, not redundancy:
+ *
+ *  1. the per-link `notifyUrl` we pass when creating the payment link
+ *     (PaymentLinks shape: `processId`, `statusCode`, `sum`);
+ *  2. the account-level webhook of type "עדכון לאחר ביצוע עסקה", which is the
+ *     ONLY channel that reports the automatic monthly direct-debit runs — and
+ *     only when the "ריצות הוראת קבע" report is ticked (transaction shape:
+ *     `paymentSum`, `transactionCode`, `asmachta`, `directDebitId`);
+ *  3. the account-level webhook of type "עדכון עבור הוראת קבע שנכשלה", which
+ *     fires only on a failed standing order and identifies it by
+ *     `regular_payment_id`, with `error_message` / `charges_attempts`.
+ *
+ * Grow nests the payload under a `data` object; the route flattens JSON- and
  * form-encoded bodies into this record before calling us.
  */
 export function parseCallback(payload: Record<string, unknown>): GrowCallbackEvent | null {
@@ -269,8 +297,12 @@ export function parseCallback(payload: Record<string, unknown>): GrowCallbackEve
     : payload) as Record<string, unknown>;
 
   const processId = str(data.processId);
-  const directDebitId = str(data.directDebitId ?? data.directDebit ?? data.hkId);
-  const transactionId = str(data.transactionId);
+  // `regular_payment_id` is how the failed-standing-order webhook names the
+  // authorization; every other channel calls it `directDebitId`.
+  const regularPaymentId = str(data.regular_payment_id ?? data.regularPaymentId);
+  const directDebitId =
+    str(data.directDebitId ?? data.directDebit ?? data.hkId) ?? regularPaymentId;
+  const transactionId = str(data.transactionId ?? data.transactionCode);
 
   // We must be able to tie the event back to a subscription somehow.
   if (!processId && !directDebitId && !transactionId) return null;
@@ -280,18 +312,78 @@ export function parseCallback(payload: Record<string, unknown>): GrowCallbackEve
   const isRecurringRun =
     paymentSource.includes("הוראת קבע") ||
     paymentType.includes("הוראת קבע") ||
-    str(data.isRecurringRun) === "true";
+    str(data.isRecurringRun) === "true" ||
+    !!regularPaymentId ||
+    str(data.periodicalPaymentSum) !== undefined ||
+    // No processId of ours + a standing order id can only be an automatic run:
+    // the first charge always carries the processId we created the link with.
+    (!processId && !!directDebitId);
+
+  const failureReason = str(data.error_message ?? data.errorMessage);
+  const statusCode = str(data.statusCode ?? data.status);
+
+  // Failure evidence wins over a status code: the failed-standing-order webhook
+  // fires ONLY on a failure, and may well carry the attempt's own status.
+  let outcome: GrowChargeOutcome;
+  if (failureReason) outcome = "failed";
+  else if (statusCode && SUCCESS_STATUS_CODES.has(statusCode)) outcome = "paid";
+  else if (statusCode) outcome = "failed";
+  else outcome = "unknown";
+
+  const attempts = Number(str(data.charges_attempts ?? data.chargesAttempts));
 
   return {
     processId,
     processToken: str(data.processToken),
     nonce: str(data.cField1 ?? data.customFields),
-    paid: isPaidStatus(data.statusCode ?? data.status),
+    outcome,
     transactionId,
     directDebitId,
     isRecurringRun,
     cardSuffix: str(data.cardSuffix),
-    sumMinor: toMinor(data.sum),
+    sumMinor: toMinor(data.sum ?? data.paymentSum ?? data.periodicalPaymentSum),
     statusCode: str(data.statusCode),
+    failureReason,
+    attempts: Number.isFinite(attempts) && attempts > 0 ? attempts : undefined,
   };
+}
+
+// ---------------------------------------------------------------------------
+// Sender authentication — the constant "פרמטר מזהה" Grow echoes in every body
+// ---------------------------------------------------------------------------
+
+/**
+ * True when the notification body carries our shared secret anywhere in it.
+ *
+ * Grow's account-level webhooks authenticate by ECHOING a constant we configure
+ * ("פרמטר מזהה" — "ערך קבוע שיישלח עם כל עדכון... שמאפשר לזהות את מקור
+ * הקריאה"), plus a `webhookKey`. Neither is a header and neither is a query
+ * parameter, so the `?t=` check that guards the per-link callback rejects this
+ * entire channel — which is every monthly renewal we will ever receive.
+ *
+ * We deliberately do not hard-code the key name: Grow's docs and its dashboard
+ * disagree about what the identifying parameter is called, and a wrong guess
+ * fails closed on real money. Scanning the values instead is not weaker — a
+ * caller who does not hold the secret cannot put it anywhere in the body.
+ */
+export function bodyCarriesSecret(
+  payload: Record<string, unknown>,
+  secret: string | undefined,
+): boolean {
+  if (!secret) return false;
+
+  const nested = payload.data && typeof payload.data === "object" ? payload.data : {};
+  const values = [
+    ...Object.values(payload),
+    ...Object.values(nested as Record<string, unknown>),
+  ];
+
+  for (const value of values) {
+    if (typeof value !== "string" && typeof value !== "number") continue;
+    // Bound the work: a hostile body cannot make us hash a megabyte per field.
+    const candidate = String(value);
+    if (candidate.length > 256) continue;
+    if (secretEquals(candidate, secret)) return true;
+  }
+  return false;
 }

@@ -43,6 +43,7 @@ const SUB = {
   providerTransactionId: null,
   currentPeriodEnd: null,
   activatedAt: null,
+  lastChargeAt: null,
 };
 
 beforeEach(() => {

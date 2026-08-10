@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseCallback, isGrowConfigured } from "@/lib/subscription/grow";
+import { parseCallback, isGrowConfigured, bodyCarriesSecret } from "@/lib/subscription/grow";
 
 /**
  * Grow server-to-server callback parsing — the security-critical bit. The
@@ -31,7 +31,7 @@ describe("parseCallback", () => {
       processId: "12345",
       processToken: "ptok",
       nonce: "nonce-abc",
-      paid: true,
+      outcome: "paid",
       transactionId: "tx-9",
       directDebitId: "dd-777",
       cardSuffix: "4242",
@@ -53,7 +53,7 @@ describe("parseCallback", () => {
     expect(event).toMatchObject({
       directDebitId: "dd-777",
       isRecurringRun: true,
-      paid: true,
+      outcome: "paid",
     });
     // No processId on recurring runs — matched by directDebitId instead.
     expect(event?.processId).toBeUndefined();
@@ -63,7 +63,7 @@ describe("parseCallback", () => {
     const event = parseCallback({
       data: { processId: "1", processToken: "t", statusCode: "0" },
     });
-    expect(event?.paid).toBe(false);
+    expect(event?.outcome).toBe("failed");
   });
 
   it("reads identifiers from a flat (non-nested) payload too", () => {
@@ -73,7 +73,92 @@ describe("parseCallback", () => {
       statusCode: "2",
       sum: 249,
     });
-    expect(event).toMatchObject({ processId: "77", paid: true, sumMinor: 24900 });
+    expect(event).toMatchObject({ processId: "77", outcome: "paid", sumMinor: 24900 });
+  });
+
+  // ── The account-level webhook channel ────────────────────────────────────
+  // Grow's dashboard webhooks name the same things differently, and this is the
+  // ONLY channel that reports the automatic monthly renewals ("ריצות הוראת
+  // קבע"). Reading `sum`/`transactionId` alone made every renewal unmatchable.
+
+  it("parses a renewal reported by the account-level transaction webhook", () => {
+    const event = parseCallback({
+      data: {
+        transactionCode: "TR-556",
+        asmachta: "9911",
+        directDebitId: "dd-777",
+        paymentSum: 199,
+        paymentsNum: 2,
+        cardSuffix: "4242",
+        statusCode: "2",
+      },
+    });
+    expect(event).toMatchObject({
+      transactionId: "TR-556",
+      directDebitId: "dd-777",
+      sumMinor: 19900,
+      outcome: "paid",
+      // No processId of ours: it can only be an automatic run.
+      isRecurringRun: true,
+    });
+  });
+
+  it("parses a failed standing order, which identifies it as regular_payment_id", () => {
+    const event = parseCallback({
+      data: {
+        regular_payment_id: "dd-777",
+        error_message: "כרטיס פג תוקף",
+        charges_attempts: "3",
+      },
+    });
+    expect(event).toMatchObject({
+      directDebitId: "dd-777",
+      outcome: "failed",
+      failureReason: "כרטיס פג תוקף",
+      attempts: 3,
+      isRecurringRun: true,
+    });
+  });
+
+  it("reports `unknown` rather than guessing when there is no outcome at all", () => {
+    // Neither an approval status nor a failure reason. Calling this paid grants
+    // a free month; calling it failed locks out a paying customer. Both are
+    // worse than stopping and asking a human.
+    const event = parseCallback({ data: { directDebitId: "dd-777", paymentSum: 199 } });
+    expect(event?.outcome).toBe("unknown");
+  });
+
+  it("treats an explicit error message as failure even alongside an approved status", () => {
+    // The "failed standing order" webhook fires only on failure and may carry
+    // the attempt's own status code.
+    const event = parseCallback({
+      data: { regular_payment_id: "dd-1", statusCode: "2", error_message: "אין יתרה" },
+    });
+    expect(event?.outcome).toBe("failed");
+  });
+});
+
+/**
+ * Sender authentication for the account-level channel. It cannot carry our
+ * `?t=` query string — Grow echoes a constant we configure ("פרמטר מזהה")
+ * inside the body instead.
+ */
+describe("bodyCarriesSecret", () => {
+  const SECRET = "s3cret-value-long-enough";
+
+  it("accepts the secret wherever Grow chooses to put it", () => {
+    expect(bodyCarriesSecret({ customParam: SECRET }, SECRET)).toBe(true);
+    expect(bodyCarriesSecret({ data: { identifier: SECRET } }, SECRET)).toBe(true);
+  });
+
+  it("rejects a body without it, and fails closed with no secret configured", () => {
+    expect(bodyCarriesSecret({ data: { identifier: "wrong" } }, SECRET)).toBe(false);
+    expect(bodyCarriesSecret({ customParam: SECRET }, undefined)).toBe(false);
+    expect(bodyCarriesSecret({ customParam: "" }, "")).toBe(false);
+  });
+
+  it("ignores oversized values so a hostile body cannot burn CPU", () => {
+    expect(bodyCarriesSecret({ blob: "x".repeat(5000) }, SECRET)).toBe(false);
   });
 });
 

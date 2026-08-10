@@ -26,6 +26,13 @@ import { PLAN_PRICE } from "@/lib/plans";
 export const RENEWAL_GRACE_DAYS = 3;
 
 /**
+ * Two confirmations this close together are the same charge reaching us twice,
+ * not two payments. Wide enough to absorb a webhook retry hours later, far
+ * narrower than the monthly cycle it must never swallow.
+ */
+export const DUPLICATE_CHARGE_WINDOW_MS = 6 * 60 * 60 * 1000;
+
+/**
  * The list monthly price, in agorot (₪1 = 100). One plan means one price —
  * legacy `premium` / `platinum` rows are billed at it too.
  */
@@ -236,6 +243,7 @@ export async function confirmSubscriptionPayment(
     | "providerTransactionId"
     | "currentPeriodEnd"
     | "activatedAt"
+    | "lastChargeAt"
   >,
   payment: ConfirmedPayment,
 ): Promise<{ alreadyApplied: boolean }> {
@@ -248,6 +256,20 @@ export async function confirmSubscriptionPayment(
   }
 
   const now = new Date();
+
+  // The same charge reported twice under two DIFFERENT ids. Grow reaches this
+  // endpoint over several channels and they do not agree on what a transaction
+  // is called (`transactionId` on the payment-link callback, `transactionCode`
+  // on the account-level webhook), so the id check above cannot catch it — and
+  // the cost is a second free month, silently, on every payment. A subscription
+  // billed monthly is never legitimately charged twice within hours; a fresh
+  // checkout clears `lastChargeAt` so a re-authorization is not caught here.
+  if (
+    subscription.lastChargeAt &&
+    now.getTime() - subscription.lastChargeAt.getTime() < DUPLICATE_CHARGE_WINDOW_MS
+  ) {
+    return { alreadyApplied: true };
+  }
   const base =
     subscription.currentPeriodEnd && subscription.currentPeriodEnd > now
       ? subscription.currentPeriodEnd

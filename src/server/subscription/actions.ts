@@ -188,6 +188,11 @@ export async function startSubscriptionCheckoutAction(): Promise<CheckoutResult>
       // come back and re-activate the account at the wrong price (the old direct
       // debit is only stopped best-effort, below), so it must not survive.
       directDebitId: null,
+      // Cleared so the duplicate-charge window in confirmSubscriptionPayment
+      // measures only against THIS checkout. Otherwise an owner re-authorizing
+      // hours after her last renewal would pay, be read as a duplicate, and get
+      // no access for it.
+      lastChargeAt: null,
     },
   });
 

@@ -30,6 +30,7 @@ const SUB = {
   providerTransactionId: null,
   currentPeriodEnd: null,
   activatedAt: null,
+  lastChargeAt: null,
 };
 
 beforeEach(() => {
@@ -83,6 +84,33 @@ describe("subscription charge ledger", () => {
     );
 
     expect(prisma.subscriptionCharge.create).not.toHaveBeenCalled();
+  });
+
+  it("writes nothing when the same charge arrives twice under DIFFERENT ids", async () => {
+    // Grow reports one transaction over several channels and names its id
+    // differently in each (`transactionId` vs `transactionCode`), so the id
+    // check cannot catch this. Unguarded it is a second free month on every
+    // payment — the period would be extended twice for one charge.
+    await confirmSubscriptionPayment(
+      { ...SUB, providerTransactionId: "txn_abc", lastChargeAt: new Date() },
+      { transactionId: "TR-556" },
+    );
+
+    expect(prisma.subscriptionCharge.create).not.toHaveBeenCalled();
+    expect(prisma.$transaction).not.toHaveBeenCalled();
+  });
+
+  it("still applies a genuine renewal a month after the last charge", async () => {
+    await confirmSubscriptionPayment(
+      {
+        ...SUB,
+        providerTransactionId: "txn_abc",
+        lastChargeAt: new Date(Date.now() - 30 * 86_400_000),
+      },
+      { transactionId: "txn_next_month", isRecurring: true },
+    );
+
+    expect(prisma.subscriptionCharge.create).toHaveBeenCalledTimes(1);
   });
 
   it("records a failed renewal so a later success cannot erase it", async () => {

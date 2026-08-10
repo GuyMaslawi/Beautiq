@@ -4,23 +4,33 @@
  *   POST /api/subscription/webhook
  *
  * This is the SOURCE OF TRUTH for activating a paid plan — never a browser
- * redirect. Grow POSTs here directly (the notifyUrl we passed when the payment
- * link was created), both for the first charge and for every automatic monthly
- * direct-debit (הוראת קבע) run. Flow:
- *   1. parse Grow's callback (JSON or form-encoded `data[...]`),
- *   2. locate our subscription — by processId (first charge) or directDebitId
- *      (recurring run),
- *   3. authenticate it (first charge: processToken + our nonce must match),
- *   4. approved → activate / extend the plan (idempotently); a failed recurring
- *      run → past_due, then lapse after the grace window,
- *   5. acknowledge back to Grow (best-effort, via the optional Make approve webhook).
+ * redirect. Grow reaches this one endpoint over three different channels, and
+ * they do not look alike (see `parseCallback` for the field-name union):
+ *
+ *   - the per-link `notifyUrl` passed at checkout — the FIRST charge,
+ *     authenticated by the `?t=` secret we embedded in that URL;
+ *   - the account-level webhook "עדכון לאחר ביצוע עסקה" with the
+ *     "ריצות הוראת קבע" report ticked — the ONLY channel that reports the
+ *     automatic monthly renewals;
+ *   - the account-level webhook "עדכון עבור הוראת קבע שנכשלה" — a declined
+ *     standing order.
+ *
+ * The account-level channels cannot carry a query string of ours: they
+ * authenticate by echoing a constant we configure in Grow ("פרמטר מזהה"),
+ * inside the body. Both forms are accepted below; anything else is rejected.
+ *
+ * Flow: parse → authenticate the sender → locate the subscription (processId
+ * for a first charge, directDebitId for a renewal) → authenticate the charge
+ * itself → activate / extend / lapse, idempotently. Every call is written to
+ * the callback log first, including rejected ones.
  */
 
 import { NextResponse } from "next/server";
 import { AccountSubscriptionStatus, type AccountSubscription } from "@prisma/client";
 import { prisma } from "@/server/db/prisma";
-import { parseCallback, approveTransaction } from "@/lib/subscription/grow";
+import { parseCallback, approveTransaction, bodyCarriesSecret } from "@/lib/subscription/grow";
 import { confirmSubscriptionPayment, markRenewalFailed } from "@/server/subscription/service";
+import { recordGrowCallback } from "@/server/subscription/callback-log";
 import { secretEquals } from "@/lib/secret-compare";
 import { logger, captureError } from "@/lib/logger";
 
@@ -48,21 +58,42 @@ function parseBody(raw: string, contentType: string): Record<string, unknown> {
   return flat;
 }
 
+function webhookSecret(): string | undefined {
+  return process.env.SUBSCRIPTION_WEBHOOK_SECRET?.trim() || undefined;
+}
+
 /**
- * The endpoint secret every notification must present.
+ * The `webhook key` values Grow generated for our account-level webhooks.
  *
- * Grow itself signs nothing, so the sender is authenticated with a secret we
- * embed in the notifyUrl when the payment link is created (`?t=<secret>`) — Grow
- * POSTs back to exactly that URL, so no Make-scenario change is needed. A header
- * is also accepted for scenarios that prefer to send one explicitly.
+ * A list, because Grow mints a separate key per webhook and we register more
+ * than one (the renewal runs and the failed standing orders are different
+ * webhooks, and their reports are mutually exclusive in Grow's form). A single
+ * key would authenticate only one of them. Comma-separated in the env var.
+ */
+function growWebhookKeys(): string[] {
+  return (process.env.GROW_WEBHOOK_KEY ?? "")
+    .split(",")
+    .map((k) => k.trim())
+    .filter(Boolean);
+}
+
+/**
+ * The endpoint secret every notification must present, in whichever form its
+ * channel allows.
+ *
+ * Grow signs nothing, so the sender is authenticated with a shared secret:
+ * embedded in the per-link notifyUrl as `?t=<secret>`, or echoed inside the
+ * body as the constant "פרמטר מזהה" configured on the account-level webhook. A
+ * header is accepted too, for a Make scenario that prefers to send one.
  *
  * Fails CLOSED: with no secret configured every notification is rejected, and
  * checkEnv() makes the variable a hard startup error whenever SUBSCRIPTIONS_ENABLED
  * is on, so a misconfiguration surfaces at boot rather than as silent free access.
  */
-function isAuthenticSender(req: Request): boolean {
-  const secret = process.env.SUBSCRIPTION_WEBHOOK_SECRET?.trim();
-  if (!secret) return false;
+function isAuthenticSender(req: Request, body: Record<string, unknown>): boolean {
+  const secret = webhookSecret();
+  const keys = growWebhookKeys();
+  if (!secret && keys.length === 0) return false;
 
   // Read the query via the standard URL API rather than `nextUrl`, so the check
   // behaves identically for any Request shape reaching this handler.
@@ -75,29 +106,56 @@ function isAuthenticSender(req: Request): boolean {
 
   return (
     secretEquals(token, secret) ||
-    secretEquals(req.headers.get("x-allura-webhook-secret"), secret)
+    secretEquals(req.headers.get("x-allura-webhook-secret"), secret) ||
+    bodyCarriesSecret(body, secret) ||
+    keys.some((key) => bodyCarriesSecret(body, key))
   );
 }
 
+/** Raise a human alert — these are the failures nobody would otherwise see. */
+function alert(message: string, context: Record<string, unknown>): void {
+  captureError("subscription.webhook", new Error(message), context);
+}
+
 export async function POST(req: Request) {
+  const rawBody = await req.text();
+  const contentType = req.headers.get("content-type") ?? "";
+  const body = parseBody(rawBody, contentType);
+  const secrets = [webhookSecret(), ...growWebhookKeys()];
+
   // ── Gate 1: authenticate the SENDER, for every notification type ───────────
   // Without this, anyone who learns or guesses a Grow directDebitId can POST a
   // forged "paid" renewal (free plan forever) or a forged "failed" one (lapsing
   // a paying customer). The per-transaction processToken check below only ever
   // covered the FIRST charge, leaving every recurring run unauthenticated.
-  if (!isAuthenticSender(req)) {
+  if (!isAuthenticSender(req, body)) {
     logger.warn("[subscription.webhook] rejected — sender not authenticated");
+    // Recorded, not discarded: a misconfigured "פרמטר מזהה" in Grow looks
+    // exactly like an attack from here, and the raw body is the only thing that
+    // tells the two apart.
+    await recordGrowCallback({ result: "unauthenticated", raw: rawBody, contentType, secrets });
     return new NextResponse("Unauthorized", { status: 401 });
   }
 
-  const rawBody = await req.text();
-  const contentType = req.headers.get("content-type") ?? "";
-
-  const event = parseCallback(parseBody(rawBody, contentType));
+  const event = parseCallback(body);
   if (!event) {
     logger.warn("[subscription.webhook] unparseable callback");
+    await recordGrowCallback({ result: "unparseable", raw: rawBody, contentType, secrets });
+    alert("Grow callback could not be parsed", { contentType });
     return new NextResponse("Bad Request", { status: 400 });
   }
+
+  const trace = {
+    raw: rawBody,
+    contentType,
+    secrets,
+    processId: event.processId,
+    directDebitId: event.directDebitId,
+    transactionId: event.transactionId,
+    statusCode: event.statusCode,
+    sumMinor: event.sumMinor,
+    isRecurringRun: event.isRecurringRun,
+  };
 
   // Locate the subscription: first charge carries our processId; automatic
   // monthly runs carry only the direct-debit id.
@@ -116,10 +174,20 @@ export async function POST(req: Request) {
   }
 
   if (!subscription) {
-    // Ack so Grow does not retry a notification we cannot match.
+    // Ack so Grow does not retry a notification we cannot match — but never
+    // silently. An unmatched RENEWAL is the exact shape of the failure this
+    // whole endpoint exists to prevent: money left the customer's card and no
+    // subscription was extended, because we stored the standing-order id under
+    // a name Grow does not use.
     logger.warn("[subscription.webhook] no subscription for notification", {
       processId: event.processId,
       directDebitId: event.directDebitId,
+    });
+    await recordGrowCallback({ ...trace, result: "unmatched" });
+    alert("Grow notification matched no subscription", {
+      processId: event.processId,
+      directDebitId: event.directDebitId,
+      isRecurringRun: event.isRecurringRun,
     });
     return new NextResponse("OK", { status: 200 });
   }
@@ -140,6 +208,12 @@ export async function POST(req: Request) {
         tokenOk,
         nonceMismatch,
       });
+      await recordGrowCallback({
+        ...trace,
+        result: "unauthenticated",
+        subscriptionId: subscription.id,
+        note: tokenOk ? "nonce mismatch" : "process token mismatch",
+      });
       return new NextResponse("Unauthorized", { status: 401 });
     }
   }
@@ -159,6 +233,13 @@ export async function POST(req: Request) {
       status: subscription.status,
       recurring: event.isRecurringRun,
     });
+    await recordGrowCallback({
+      ...trace,
+      result: "ignored_cancelled",
+      subscriptionId: subscription.id,
+      userId: subscription.userId,
+      note: `status ${subscription.status}`,
+    });
     return new NextResponse("OK", { status: 200 });
   }
 
@@ -172,19 +253,63 @@ export async function POST(req: Request) {
       expected: subscription.priceMinor,
       received: event.sumMinor,
     });
+    await recordGrowCallback({
+      ...trace,
+      result: "amount_mismatch",
+      subscriptionId: subscription.id,
+      userId: subscription.userId,
+      note: `expected ${subscription.priceMinor}, received ${event.sumMinor}`,
+    });
+    // Alerted, because the innocent explanation is as damaging as the hostile
+    // one: if this channel reports sums in agorot rather than shekels, EVERY
+    // real payment lands here and is ignored, and the customer sees nothing.
+    alert("Grow charge amount does not match the subscription", {
+      subscriptionId: subscription.id,
+      expected: subscription.priceMinor,
+      received: event.sumMinor,
+    });
     return new NextResponse("OK", { status: 200 });
   }
 
-  if (!event.paid) {
+  // Neither approval nor failure evidence. Guessing costs either a free month
+  // or a wrongly locked-out paying customer, so we change nothing and ask a
+  // human to read the captured body.
+  if (event.outcome === "unknown") {
+    logger.warn("[subscription.webhook] outcome unknown — no state change", {
+      subscriptionId: subscription.id,
+    });
+    await recordGrowCallback({
+      ...trace,
+      result: "outcome_unknown",
+      subscriptionId: subscription.id,
+      userId: subscription.userId,
+    });
+    alert("Grow notification carried no payment outcome", {
+      subscriptionId: subscription.id,
+      isRecurringRun: event.isRecurringRun,
+    });
+    return new NextResponse("OK", { status: 200 });
+  }
+
+  if (event.outcome === "failed") {
+    const reason =
+      event.failureReason ?? `direct debit not approved (status ${event.statusCode ?? "?"})`;
     // A failed automatic renewal lapses the sub after the grace window; a failed
     // first charge just leaves it pending (the owner can retry checkout).
     if (!matchedByProcess || event.isRecurringRun) {
-      const { lapsed } = await markRenewalFailed(
-        subscription,
-        `direct debit not approved (status ${event.statusCode ?? "?"})`,
-      );
+      const { lapsed } = await markRenewalFailed(subscription, reason);
       logger.info("[subscription.webhook] renewal charge failed", {
         subscriptionId: subscription.id,
+        lapsed,
+        attempts: event.attempts,
+      });
+      // A declined renewal is money that stopped arriving. Nothing else in the
+      // product would ever say so out loud.
+      alert("Grow renewal charge failed", {
+        subscriptionId: subscription.id,
+        userId: subscription.userId,
+        reason,
+        attempts: event.attempts,
         lapsed,
       });
     } else {
@@ -193,6 +318,13 @@ export async function POST(req: Request) {
         statusCode: event.statusCode,
       });
     }
+    await recordGrowCallback({
+      ...trace,
+      result: "failed",
+      subscriptionId: subscription.id,
+      userId: subscription.userId,
+      note: reason,
+    });
     return new NextResponse("OK", { status: 200 });
   }
 
@@ -211,6 +343,13 @@ export async function POST(req: Request) {
       plan: subscription.plan,
       recurring: event.isRecurringRun,
       alreadyApplied,
+    });
+    await recordGrowCallback({
+      ...trace,
+      result: "paid",
+      subscriptionId: subscription.id,
+      userId: subscription.userId,
+      note: alreadyApplied ? "duplicate — already applied" : undefined,
     });
   } catch (err) {
     captureError("subscription.webhook", err, { subscriptionId: subscription.id });
