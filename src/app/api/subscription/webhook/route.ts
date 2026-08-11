@@ -90,7 +90,7 @@ function growWebhookKeys(): string[] {
  * checkEnv() makes the variable a hard startup error whenever SUBSCRIPTIONS_ENABLED
  * is on, so a misconfiguration surfaces at boot rather than as silent free access.
  */
-function isAuthenticSender(req: Request, body: Record<string, unknown>): boolean {
+function carriesSharedSecret(req: Request, body: Record<string, unknown>): boolean {
   const secret = webhookSecret();
   const keys = growWebhookKeys();
   if (!secret && keys.length === 0) return false;
@@ -123,22 +123,24 @@ export async function POST(req: Request) {
   const body = parseBody(rawBody, contentType);
   const secrets = [webhookSecret(), ...growWebhookKeys()];
 
-  // ── Gate 1: authenticate the SENDER, for every notification type ───────────
-  // Without this, anyone who learns or guesses a Grow directDebitId can POST a
-  // forged "paid" renewal (free plan forever) or a forged "failed" one (lapsing
-  // a paying customer). The per-transaction processToken check below only ever
-  // covered the FIRST charge, leaving every recurring run unauthenticated.
-  if (!isAuthenticSender(req, body)) {
-    logger.warn("[subscription.webhook] rejected — sender not authenticated");
-    // Recorded, not discarded: a misconfigured "פרמטר מזהה" in Grow looks
-    // exactly like an attack from here, and the raw body is the only thing that
-    // tells the two apart.
-    await recordGrowCallback({ result: "unauthenticated", raw: rawBody, contentType, secrets });
-    return new NextResponse("Unauthorized", { status: 401 });
-  }
+  // A notification is authentic if it carries the shared secret OR — for the
+  // first charge — the per-transaction process token Grow handed us privately
+  // when the payment link was created. Both are proof; requiring the secret
+  // alone made activation depend on the notifyUrl surviving a hand-typed field
+  // in a Make scenario, and it did not: real payments arrived with no secret at
+  // all and were rejected 15 times over two hours while the customer waited.
+  const secretOk = carriesSharedSecret(req, body);
 
   const event = parseCallback(body);
   if (!event) {
+    // With nothing parseable there is no token to fall back on, so the shared
+    // secret is the only thing that can distinguish a broken sender from a
+    // stranger.
+    if (!secretOk) {
+      logger.warn("[subscription.webhook] rejected — sender not authenticated");
+      await recordGrowCallback({ result: "unauthenticated", raw: rawBody, contentType, secrets });
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
     logger.warn("[subscription.webhook] unparseable callback");
     await recordGrowCallback({ result: "unparseable", raw: rawBody, contentType, secrets });
     alert("Grow callback could not be parsed", { contentType });
@@ -157,23 +159,38 @@ export async function POST(req: Request) {
     isRecurringRun: event.isRecurringRun,
   };
 
-  // Locate the subscription: first charge carries our processId; automatic
-  // monthly runs carry only the direct-debit id.
+  // Locate the subscription: the first charge carries the payment-link process
+  // id we stored at checkout; automatic monthly runs carry only the standing
+  // order's id. Both id families are tried, because Grow sends more than one
+  // name for each and picking the wrong one loses the payment silently.
   let subscription: AccountSubscription | null = null;
   let matchedByProcess = false;
-  if (event.processId) {
+  if (event.processIds.length > 0) {
     subscription = await prisma.accountSubscription.findFirst({
-      where: { processId: event.processId },
+      where: { processId: { in: event.processIds } },
     });
     matchedByProcess = !!subscription;
   }
-  if (!subscription && event.directDebitId) {
-    subscription = await prisma.accountSubscription.findFirst({
-      where: { directDebitId: event.directDebitId },
-    });
+  if (!subscription) {
+    const debitIds = [event.directDebitId, event.recurringDebitId].filter(
+      (v): v is string => !!v,
+    );
+    if (debitIds.length > 0) {
+      subscription = await prisma.accountSubscription.findFirst({
+        where: { directDebitId: { in: debitIds } },
+      });
+    }
   }
 
   if (!subscription) {
+    // Nothing matched AND no shared secret: this is a stranger, not a broken
+    // integration. Reject rather than acknowledge, so an unauthenticated caller
+    // learns nothing about which ids exist.
+    if (!secretOk) {
+      logger.warn("[subscription.webhook] rejected — unauthenticated and unmatched");
+      await recordGrowCallback({ ...trace, result: "unauthenticated" });
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
     // Ack so Grow does not retry a notification we cannot match — but never
     // silently. An unmatched RENEWAL is the exact shape of the failure this
     // whole endpoint exists to prevent: money left the customer's card and no
@@ -192,30 +209,36 @@ export async function POST(req: Request) {
     return new NextResponse("OK", { status: 200 });
   }
 
-  // Authenticate the first charge with the process token — a per-transaction
-  // secret Grow returned to us at creation and echoes back here. The optional
-  // nonce (cField1) is a bonus check when present, but the token alone is
-  // sufficient, so a scenario that does not round-trip cField1 still works.
-  if (matchedByProcess) {
-    const tokenOk = secretEquals(subscription.processToken, event.processToken);
-    const nonceMismatch =
-      !!subscription.checkoutNonce &&
-      !!event.nonce &&
-      !secretEquals(subscription.checkoutNonce, event.nonce);
-    if (!tokenOk || nonceMismatch) {
-      logger.warn("[subscription.webhook] authentication failed", {
-        processId: event.processId,
-        tokenOk,
-        nonceMismatch,
-      });
-      await recordGrowCallback({
-        ...trace,
-        result: "unauthenticated",
-        subscriptionId: subscription.id,
-        note: tokenOk ? "nonce mismatch" : "process token mismatch",
-      });
-      return new NextResponse("Unauthorized", { status: 401 });
-    }
+  // The per-transaction process token: a secret Grow returned to us privately
+  // when the link was created and echoes back here. Matching it proves the
+  // sender is Grow just as well as the shared secret does — and unlike the
+  // shared secret it cannot be lost to a mis-typed field in a Make scenario.
+  const tokenOk =
+    matchedByProcess &&
+    event.processTokens.some((t) => secretEquals(subscription!.processToken, t));
+
+  // The optional nonce (cField1) is a bonus check when present; Grow returns it
+  // empty unless the scenario maps it, so its absence must never block.
+  const nonceMismatch =
+    matchedByProcess &&
+    !!subscription.checkoutNonce &&
+    !!event.nonce &&
+    !secretEquals(subscription.checkoutNonce, event.nonce);
+
+  if ((!secretOk && !tokenOk) || nonceMismatch) {
+    logger.warn("[subscription.webhook] authentication failed", {
+      processId: event.processId,
+      secretOk,
+      tokenOk,
+      nonceMismatch,
+    });
+    await recordGrowCallback({
+      ...trace,
+      result: "unauthenticated",
+      subscriptionId: subscription.id,
+      note: nonceMismatch ? "nonce mismatch" : "no shared secret and no matching process token",
+    });
+    return new NextResponse("Unauthorized", { status: 401 });
   }
 
   // A cancelled/expired subscription must never be revived — not by a late

@@ -102,8 +102,65 @@ describe("POST /api/subscription/webhook — sender authentication", () => {
     const res = await POST(req(recurringPaidBody(), { withSecret: false }));
     expect(res.status).toBe(401);
     expect(confirmSubscriptionPayment).not.toHaveBeenCalled();
-    // Not even looked up — the gate runs before any DB work.
-    expect(prisma.accountSubscription.findFirst).not.toHaveBeenCalled();
+    // The row IS looked up first now — a first charge may authenticate with the
+    // per-transaction process token instead of the shared secret, and that
+    // cannot be checked without reading the row. A recurring run carries no
+    // such token, so finding the subscription changes nothing: still 401,
+    // still no activation. Knowing a directDebitId must never be enough.
+    expect(prisma.accountSubscription.update).not.toHaveBeenCalled();
+  });
+
+  // The failure this fallback exists for, reproduced from production: the real
+  // first charge arrived with no secret anywhere — the notifyUrl reaching Grow
+  // had been typed by hand into the Make scenario without it — and was rejected
+  // 15 times while the paying customer sat behind the paywall.
+  it("activates a first charge that proves itself with the process token alone", async () => {
+    prisma.accountSubscription.findFirst.mockResolvedValue(
+      activeSub({
+        status: "pending",
+        priceMinor: 100,
+        // What "Create Payment Link" returned to us and we stored.
+        processId: "63984",
+        processToken: "7c25af2ad67a4276a726ee16f29042fd",
+        directDebitId: null,
+      }),
+    );
+
+    const body = new URLSearchParams({
+      "data[statusCode]": "2",
+      "data[sum]": "1",
+      // Grow's own ids for the transaction — NOT the ones we stored.
+      "data[processId]": "774449",
+      "data[processToken]": "1fd4e4f21dccfae1d636433ea46822b9",
+      "data[paymentLinkProcessId]": "63984",
+      "data[paymentLinkProcessToken]": "7c25af2ad67a4276a726ee16f29042fd",
+      "data[directDebitId]": "236680",
+      "data[customFields]": "",
+    }).toString();
+
+    const res = await POST(req(body, { withSecret: false }));
+
+    expect(res.status).toBe(200);
+    expect(confirmSubscriptionPayment).toHaveBeenCalledTimes(1);
+    expect(confirmSubscriptionPayment.mock.calls[0][1]).toMatchObject({
+      directDebitId: "236680",
+    });
+  });
+
+  it("401s a first charge whose process token does not match the stored one", async () => {
+    prisma.accountSubscription.findFirst.mockResolvedValue(
+      activeSub({ status: "pending", processId: "63984", processToken: "the-real-token" }),
+    );
+    const body = new URLSearchParams({
+      "data[statusCode]": "2",
+      "data[sum]": "249.00",
+      "data[paymentLinkProcessId]": "63984",
+      "data[paymentLinkProcessToken]": "forged",
+    }).toString();
+
+    const res = await POST(req(body, { withSecret: false }));
+    expect(res.status).toBe(401);
+    expect(confirmSubscriptionPayment).not.toHaveBeenCalled();
   });
 
   it("401s a callback presenting the wrong secret", async () => {

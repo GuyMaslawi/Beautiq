@@ -239,6 +239,21 @@ export function isDirectDebitCancelConfigured(): boolean {
 export type GrowChargeOutcome = "paid" | "failed" | "unknown";
 
 export interface GrowCallbackEvent {
+  /**
+   * Every id in the callback that could match the `processId` we stored at
+   * checkout, most likely first.
+   *
+   * Grow's callback carries TWO process pairs and they are not interchangeable:
+   * `paymentLinkProcessId` is the payment LINK (what "Create Payment Link"
+   * returned to us and what we stored), while `processId` identifies the
+   * transaction that link produced. Matching only on `processId` looked right
+   * and found nothing — the payment was received, authenticated, and then
+   * dropped as "no subscription for notification".
+   */
+  processIds: string[];
+  /** The tokens paired with `processIds`, in the same order. */
+  processTokens: string[];
+  /** Primary process id — first of `processIds`, for logging and lookups. */
   processId?: string;
   processToken?: string;
   /** Our nonce echoed back via cField1 — matched against the stored value. */
@@ -247,6 +262,8 @@ export interface GrowCallbackEvent {
   transactionId?: string;
   /** Grow direct-debit id (הוראת קבע), present once a standing order exists. */
   directDebitId?: string;
+  /** Grow's second handle on the same standing order, sent alongside it. */
+  recurringDebitId?: string;
   /** True when this notification is an automatic monthly direct-debit run. */
   isRecurringRun: boolean;
   cardSuffix?: string;
@@ -296,12 +313,25 @@ export function parseCallback(payload: Record<string, unknown>): GrowCallbackEve
     ? (payload.data as Record<string, unknown>)
     : payload) as Record<string, unknown>;
 
-  const processId = str(data.processId);
+  // The payment-link pair first: that is the one we stored at checkout. The
+  // transaction-level pair is kept as a fallback for any channel that sends
+  // only it.
+  const processIds = [str(data.paymentLinkProcessId), str(data.processId)].filter(
+    (v): v is string => !!v,
+  );
+  const processTokens = [str(data.paymentLinkProcessToken), str(data.processToken)].filter(
+    (v): v is string => !!v,
+  );
+  const processId = processIds[0];
+
   // `regular_payment_id` is how the failed-standing-order webhook names the
-  // authorization; every other channel calls it `directDebitId`.
+  // authorization; every other channel calls it `directDebitId`. Grow also
+  // sends `recurringDebitId` alongside — a second handle on the same standing
+  // order, kept as a lookup candidate for the monthly runs.
   const regularPaymentId = str(data.regular_payment_id ?? data.regularPaymentId);
   const directDebitId =
     str(data.directDebitId ?? data.directDebit ?? data.hkId) ?? regularPaymentId;
+  const recurringDebitId = str(data.recurringDebitId);
   const transactionId = str(data.transactionId ?? data.transactionCode);
 
   // We must be able to tie the event back to a subscription somehow.
@@ -333,12 +363,15 @@ export function parseCallback(payload: Record<string, unknown>): GrowCallbackEve
   const attempts = Number(str(data.charges_attempts ?? data.chargesAttempts));
 
   return {
+    processIds,
+    processTokens,
     processId,
-    processToken: str(data.processToken),
+    processToken: processTokens[0],
     nonce: str(data.cField1 ?? data.customFields),
     outcome,
     transactionId,
     directDebitId,
+    recurringDebitId,
     isRecurringRun,
     cardSuffix: str(data.cardSuffix),
     sumMinor: toMinor(data.sum ?? data.paymentSum ?? data.periodicalPaymentSum),

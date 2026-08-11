@@ -120,6 +120,52 @@ describe("parseCallback", () => {
     });
   });
 
+  // The first real ₪1 charge, captured verbatim from production on 11.8.2026.
+  // Two things it settled that no amount of reading the docs could: Grow reports
+  // `sum` in SHEKELS, and the id we stored at checkout comes back as
+  // `paymentLinkProcessId` — `processId` is a different id belonging to the
+  // transaction. Matching on `processId` found nothing, so a real payment was
+  // received and dropped.
+  it("matches the payment-link process pair, not the transaction's", () => {
+    const event = parseCallback({
+      data: {
+        status: "שולם",
+        statusCode: "2",
+        paymentType: "1",
+        sum: "1",
+        processId: "774449",
+        processToken: "1fd4e4f21dccfae1d636433ea46822b9",
+        transactionId: "535585",
+        directDebitId: "236680",
+        paymentLinkProcessId: "63984",
+        paymentLinkProcessToken: "7c25af2ad67a4276a726ee16f29042fd",
+        recurringDebitId: "9051",
+        asmachta: "7096419",
+        cardSuffix: "1398",
+        customFields: "",
+      },
+    });
+
+    // The link's id first — that is the one stored on the subscription row.
+    expect(event?.processIds).toEqual(["63984", "774449"]);
+    expect(event?.processTokens).toEqual([
+      "7c25af2ad67a4276a726ee16f29042fd",
+      "1fd4e4f21dccfae1d636433ea46822b9",
+    ]);
+    expect(event).toMatchObject({
+      processId: "63984",
+      processToken: "7c25af2ad67a4276a726ee16f29042fd",
+      outcome: "paid",
+      directDebitId: "236680",
+      recurringDebitId: "9051",
+      cardSuffix: "1398",
+      // ₪1 reported as "1" — shekels, not agorot.
+      sumMinor: 100,
+    });
+    // An empty customFields must not become a nonce that fails the match.
+    expect(event?.nonce).toBeUndefined();
+  });
+
   it("reports `unknown` rather than guessing when there is no outcome at all", () => {
     // Neither an approval status nor a failure reason. Calling this paid grants
     // a free month; calling it failed locks out a paying customer. Both are
