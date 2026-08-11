@@ -283,6 +283,12 @@ function toMinor(sum: unknown): number | undefined {
   return Number.isFinite(n) ? Math.round(n * 100) : undefined;
 }
 
+/** True only for a value that parses to a number greater than zero. */
+function positive(v: unknown): boolean {
+  const n = typeof v === "number" ? v : parseFloat(String(v ?? ""));
+  return Number.isFinite(n) && n > 0;
+}
+
 function str(v: unknown): string | undefined {
   if (v === undefined || v === null) return undefined;
   const s = String(v).trim();
@@ -344,7 +350,12 @@ export function parseCallback(payload: Record<string, unknown>): GrowCallbackEve
     paymentType.includes("הוראת קבע") ||
     str(data.isRecurringRun) === "true" ||
     !!regularPaymentId ||
-    str(data.periodicalPaymentSum) !== undefined ||
+    // Only a NON-ZERO periodical sum is evidence. Grow sends
+    // `periodicalPaymentSum=0` on every callback including a first purchase, so
+    // testing for the field's presence marked every payment as a renewal — and
+    // a failed FIRST charge would then have been treated as a failed renewal
+    // and lapsed the account instead of leaving it pending to retry.
+    positive(data.periodicalPaymentSum) ||
     // No processId of ours + a standing order id can only be an automatic run:
     // the first charge always carries the processId we created the link with.
     (!processId && !!directDebitId);

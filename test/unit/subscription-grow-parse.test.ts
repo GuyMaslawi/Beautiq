@@ -166,6 +166,34 @@ describe("parseCallback", () => {
     expect(event?.nonce).toBeUndefined();
   });
 
+  it("does not call a first purchase a renewal because of a zero periodical sum", () => {
+    // Grow sends `periodicalPaymentSum=0` on every callback, first purchase
+    // included. Reading its mere presence as evidence labelled every payment a
+    // renewal in the ledger — and would have sent a FAILED first charge down
+    // the renewal path, lapsing an account that should simply stay pending.
+    const event = parseCallback({
+      data: {
+        statusCode: "2",
+        sum: "1",
+        paymentType: "1",
+        paymentLinkProcessId: "64126",
+        paymentLinkProcessToken: "090a3e90d6a76c59ccd6aa2be29cebab",
+        processId: "774781",
+        directDebitId: "236854",
+        firstPaymentSum: "0",
+        periodicalPaymentSum: "0",
+      },
+    });
+    expect(event?.isRecurringRun).toBe(false);
+  });
+
+  it("still flags a run that carries a real periodical sum", () => {
+    const event = parseCallback({
+      data: { directDebitId: "236854", statusCode: "2", periodicalPaymentSum: "199" },
+    });
+    expect(event?.isRecurringRun).toBe(true);
+  });
+
   it("reports `unknown` rather than guessing when there is no outcome at all", () => {
     // Neither an approval status nor a failure reason. Calling this paid grants
     // a free month; calling it failed locks out a paying customer. Both are
