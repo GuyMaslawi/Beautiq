@@ -1,4 +1,4 @@
-import { growPayerName } from "@/lib/subscription/grow";
+import { growPayerName, growPayerPhone } from "@/lib/subscription/grow";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 /**
@@ -19,6 +19,32 @@ describe("growPayerName", () => {
     expect(growPayerName("א ב")).toBe("לקוחת Allura");
     expect(growPayerName("")).toBe("לקוחת Allura");
     expect(growPayerName(null)).toBe("לקוחת Allura");
+  });
+});
+
+/**
+ * Phone is required by Grow — and the paywall runs BEFORE onboarding, so the
+ * ordinary first-time payer has no business and no phone at all. Sending the
+ * empty string failed link creation for every new signup.
+ */
+describe("growPayerPhone", () => {
+  it("uses the owner's own mobile whenever it is usable", () => {
+    expect(growPayerPhone("0521234567")).toBe("0521234567");
+    expect(growPayerPhone("052-123-4567")).toBe("0521234567");
+    expect(growPayerPhone("+972521234567")).toBe("0521234567");
+  });
+
+  it("falls back rather than sending a value Grow rejects", () => {
+    expect(growPayerPhone("")).toBe("0500000000");
+    expect(growPayerPhone(null)).toBe("0500000000");
+    // A landline is not a mobile — Grow refuses it.
+    expect(growPayerPhone("035551234")).toBe("0500000000");
+  });
+
+  it("prefers a configured fallback over the neutral default", () => {
+    vi.stubEnv("GROW_FALLBACK_PHONE", "0529998877");
+    expect(growPayerPhone(null)).toBe("0529998877");
+    vi.unstubAllEnvs();
   });
 });
 import { createPaymentLink } from "@/lib/subscription/grow";

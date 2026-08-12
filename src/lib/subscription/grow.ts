@@ -65,6 +65,29 @@ export function growPayerName(name: string | null | undefined): string {
   return parts.length >= 2 ? parts.join(" ") : "לקוחת Allura";
 }
 
+/**
+ * A phone Grow's payment page will accept: a valid Israeli mobile.
+ *
+ * The paywall sits BEFORE onboarding, so the ordinary case — a brand-new signup
+ * paying for the first time — has no business yet and therefore no phone at all.
+ * Grow marks the field required and refuses to create the link without it, which
+ * would fail checkout for every new owner, i.e. all of them.
+ *
+ * Like the name, this is a prefill the payer can change on Grow's own page, and
+ * no SMS is sent (Sending Mode is `none`). `GROW_FALLBACK_PHONE` lets the
+ * placeholder be a real reachable number instead of the neutral default.
+ */
+export function growPayerPhone(phone: string | null | undefined): string {
+  const valid = (candidate: string): string | undefined => {
+    const digits = candidate.replace(/\D/g, "");
+    // Accept the international form the owner may have saved (+972-52-…).
+    const local = digits.startsWith("972") ? `0${digits.slice(3)}` : digits;
+    return /^05\d{8}$/.test(local) ? local : undefined;
+  };
+
+  return valid(phone ?? "") ?? valid(process.env.GROW_FALLBACK_PHONE ?? "") ?? "0500000000";
+}
+
 export interface CreateLinkInput {
   /** Amount in agorot (₪1 = 100). Sent to Make in shekels. */
   amountMinor: number;

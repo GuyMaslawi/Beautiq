@@ -11,6 +11,7 @@ import {
   cancelDirectDebit,
   isDirectDebitCancelConfigured,
   growPayerName,
+  growPayerPhone,
 } from "@/lib/subscription/grow";
 import { ALLURA_PLAN } from "@/lib/plans";
 import { SUPPORT_EMAIL } from "@/lib/config";
@@ -237,7 +238,7 @@ export async function startSubscriptionCheckoutAction(): Promise<CheckoutResult>
       amountMinor: priceMinor,
       description: `${ALLURA_PLAN.name} — מנוי חודשי`,
       fullName: growPayerName(user.name),
-      phone: ownerPhone,
+      phone: growPayerPhone(ownerPhone),
       email: user.email,
       successUrl: `${base}/api/subscription/return`,
       // Abandoning Grow's page returns her to the plan screen with an
