@@ -10,6 +10,7 @@ import {
   createPaymentLink,
   cancelDirectDebit,
   isDirectDebitCancelConfigured,
+  growPayerName,
 } from "@/lib/subscription/grow";
 import { ALLURA_PLAN } from "@/lib/plans";
 import { SUPPORT_EMAIL } from "@/lib/config";
@@ -235,7 +236,7 @@ export async function startSubscriptionCheckoutAction(): Promise<CheckoutResult>
     const { paymentUrl, processId, processToken } = await createPaymentLink({
       amountMinor: priceMinor,
       description: `${ALLURA_PLAN.name} — מנוי חודשי`,
-      fullName: user.name ?? user.email.split("@")[0],
+      fullName: growPayerName(user.name),
       phone: ownerPhone,
       email: user.email,
       successUrl: `${base}/api/subscription/return`,

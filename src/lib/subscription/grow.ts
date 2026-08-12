@@ -48,6 +48,23 @@ export function isGrowConfigured(): boolean {
 // createPaymentLink — ask the Make scenario to build a Grow payment page
 // ---------------------------------------------------------------------------
 
+/**
+ * A name Grow's payment page will accept: two parts, each at least 2 characters.
+ *
+ * Grow validates this and refuses to create the link otherwise, which would fail
+ * checkout entirely — and a single-word name is completely ordinary here ("יעל",
+ * "מיכל"). The name is a prefill for the payer, not the invoice: Grow bills to
+ * whatever she types on its own page. So when the real name cannot satisfy the
+ * rule, a neutral placeholder is far better than a blocked payment.
+ */
+export function growPayerName(name: string | null | undefined): string {
+  const parts = (name ?? "")
+    .split(/\s+/)
+    .map((p) => p.trim())
+    .filter((p) => p.length >= 2);
+  return parts.length >= 2 ? parts.join(" ") : "לקוחת Allura";
+}
+
 export interface CreateLinkInput {
   /** Amount in agorot (₪1 = 100). Sent to Make in shekels. */
   amountMinor: number;

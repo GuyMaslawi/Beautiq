@@ -28,11 +28,19 @@ vi.mock("@/server/auth/session", () => ({
 const isGrowConfigured = vi.fn();
 const createPaymentLink = vi.fn();
 const cancelDirectDebit = vi.fn();
-vi.mock("@/lib/subscription/grow", () => ({
-  isGrowConfigured: () => isGrowConfigured(),
-  createPaymentLink: (...a: unknown[]) => createPaymentLink(...(a as [])),
-  cancelDirectDebit: (...a: unknown[]) => cancelDirectDebit(...(a as [])),
-}));
+// Only the three functions that talk to Make are stubbed; everything else keeps
+// its real implementation, so a new pure helper added to the module (payload
+// shaping, name validation) cannot silently become `undefined` here.
+vi.mock("@/lib/subscription/grow", async () => {
+  const actual =
+    await vi.importActual<typeof import("@/lib/subscription/grow")>("@/lib/subscription/grow");
+  return {
+    ...actual,
+    isGrowConfigured: () => isGrowConfigured(),
+    createPaymentLink: (...a: unknown[]) => createPaymentLink(...(a as [])),
+    cancelDirectDebit: (...a: unknown[]) => cancelDirectDebit(...(a as [])),
+  };
+});
 
 const confirmSubscriptionPayment = vi.fn();
 vi.mock("@/server/subscription/service", () => ({

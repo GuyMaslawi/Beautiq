@@ -1,4 +1,26 @@
+import { growPayerName } from "@/lib/subscription/grow";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+
+/**
+ * Grow refuses to create a payment link unless the payer name has two parts of
+ * at least two characters each — and a one-word name is completely ordinary for
+ * the owners this product serves. Getting this wrong blocks checkout outright.
+ */
+describe("growPayerName", () => {
+  it("passes a real two-part name through untouched", () => {
+    expect(growPayerName("מיכל כהן")).toBe("מיכל כהן");
+    expect(growPayerName("  שרה   לוי  ")).toBe("שרה לוי");
+  });
+
+  it("substitutes a neutral placeholder when Grow would reject the name", () => {
+    // The name is only a prefill — Grow invoices whatever the payer types on
+    // its own page — so a placeholder is far better than a failed checkout.
+    expect(growPayerName("יעל")).toBe("לקוחת Allura");
+    expect(growPayerName("א ב")).toBe("לקוחת Allura");
+    expect(growPayerName("")).toBe("לקוחת Allura");
+    expect(growPayerName(null)).toBe("לקוחת Allura");
+  });
+});
 import { createPaymentLink } from "@/lib/subscription/grow";
 
 /**
