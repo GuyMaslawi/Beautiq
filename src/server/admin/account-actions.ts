@@ -312,6 +312,58 @@ export async function adminSetCustomPriceAction(
   const owner = await getOwnerUser(businessId, targetUserId);
   if (!owner) return { success: false, error: "לא נמצאה בעלת העסק." };
 
+  return applyCustomPrice(owner, priceShekels, businessId);
+}
+
+/**
+ * The same, addressed by account rather than by business.
+ *
+ * A price agreed BEFORE she has a business is the ordinary case, not an edge
+ * one: the paywall stands between signup and onboarding, so an owner you
+ * negotiated with is sitting at /subscribe with no business to hang a price on.
+ * Through the business-scoped path above she could not be priced at all, and if
+ * she paid before you got to her she was charged the full list price.
+ */
+export async function adminSetCustomPriceByUserAction(
+  targetUserId: string,
+  priceShekels: number | null,
+): Promise<AdminActionResult> {
+  await requirePlatformAdmin();
+
+  const target = await prisma.user.findUnique({
+    where: { id: targetUserId },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      plan: true,
+      customPriceMinor: true,
+      // Only for the audit entry — absent until she finishes onboarding.
+      memberships: {
+        where: { role: "owner" },
+        orderBy: { createdAt: "asc" },
+        take: 1,
+        select: { businessId: true },
+      },
+    },
+  });
+  if (!target) return { success: false, error: "לא נמצא משתמש." };
+
+  return applyCustomPrice(target, priceShekels, target.memberships[0]?.businessId ?? null);
+}
+
+/** Shared core of both pricing paths. `businessId` is only used for the audit log. */
+async function applyCustomPrice(
+  owner: {
+    id: string;
+    name: string | null;
+    email: string;
+    plan: AccountPlan | null;
+    customPriceMinor: number | null;
+  },
+  priceShekels: number | null,
+  businessId: string | null,
+): Promise<AdminActionResult> {
   let customPriceMinor: number | null = null;
   if (priceShekels !== null) {
     if (typeof priceShekels !== "number" || !Number.isFinite(priceShekels)) {
@@ -358,7 +410,8 @@ export async function adminSetCustomPriceAction(
     metadata: { targetUserId: owner.id, customPriceMinor },
   });
 
-  revalidatePath(`/admin/businesses/${businessId}`);
+  if (businessId) revalidatePath(`/admin/businesses/${businessId}`);
+  revalidatePath("/admin/accounts");
   revalidatePath("/admin");
   revalidatePath("/admin/subscriptions");
 

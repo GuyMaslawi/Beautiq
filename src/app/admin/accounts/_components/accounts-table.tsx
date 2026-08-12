@@ -3,8 +3,11 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Gift, Ban, Gem, ExternalLink, ShieldAlert } from "lucide-react";
-import { adminSetAccountPlanByUserAction } from "@/server/admin/account-actions";
+import { Gift, Ban, Gem, ExternalLink, ShieldAlert, Tag } from "lucide-react";
+import {
+  adminSetAccountPlanByUserAction,
+  adminSetCustomPriceByUserAction,
+} from "@/server/admin/account-actions";
 import { trialDaysLeft } from "@/lib/subscription/trial";
 
 export interface AccountRow {
@@ -41,6 +44,69 @@ function addDaysISO(days: number): string {
 }
 
 
+
+/**
+ * מחיר חודשי מוסכם, ברמת החשבון.
+ *
+ * הכפתור המקביל בכרטיס העסק דורש `businessId`, ולכן לא ניתן היה להשתמש בו
+ * בדיוק ברגע שבו הוא נחוץ: השער לתשלום עומד בין ההרשמה לאונבורדינג, כך שבעלת
+ * עסק שסיכמת איתה מחיר יושבת ב-/subscribe בלי עסק. אם היא שילמה לפני שהספקת
+ * להגיע אליה דרך כרטיס העסק — היא חויבה במחיר המחירון המלא.
+ */
+function PriceControl({
+  row,
+  busy,
+  onSet,
+}: {
+  row: AccountRow;
+  busy: boolean;
+  onSet: (shekels: number | null) => void;
+}) {
+  const [value, setValue] = useState(
+    row.customPriceMinor != null ? String(Math.round(row.customPriceMinor / 100)) : "",
+  );
+  const num = Number(value);
+  const valid =
+    value.trim() !== "" && Number.isInteger(num) && num >= 1 && num <= 10000;
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <div className="relative">
+        <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-sm text-muted">
+          ₪
+        </span>
+        <input
+          type="number"
+          inputMode="numeric"
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="מחיר"
+          aria-label="מחיר חודשי מוסכם"
+          className="w-24 rounded-xl border border-border bg-surface py-1.5 pr-6 pl-2 text-sm text-foreground"
+        />
+      </div>
+      <button
+        type="button"
+        disabled={busy || !valid}
+        onClick={() => onSet(num)}
+        className="flex items-center gap-1.5 rounded-xl border border-border bg-surface px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-background-alt disabled:opacity-60"
+      >
+        <Tag className="h-3.5 w-3.5" />
+        קביעת מחיר
+      </button>
+      {row.customPriceMinor != null && (
+        <button
+          type="button"
+          disabled={busy}
+          onClick={() => onSet(null)}
+          className="rounded-xl px-2 py-1.5 text-sm text-muted transition-colors hover:text-foreground disabled:opacity-60"
+        >
+          ביטול
+        </button>
+      )}
+    </div>
+  );
+}
 
 export function AccountsTable({ rows }: { rows: AccountRow[] }) {
   const router = useRouter();
@@ -253,6 +319,20 @@ export function AccountsTable({ rows }: { rows: AccountRow[] }) {
                       סגירת גישה
                     </button>
                   )}
+
+                  <PriceControl
+                    row={row}
+                    busy={busy}
+                    onSet={(shekels) =>
+                      run(
+                        row.id,
+                        () => adminSetCustomPriceByUserAction(row.id, shekels),
+                        shekels === null
+                          ? `לבטל את המחיר המוסכם של ${row.name ?? row.email} ולחזור למחיר המחירון?`
+                          : `לקבוע ל${row.name ?? row.email} חשבון חודשי קבוע של ₪${shekels}? זה יהיה הסכום שייגבה ממנה בכל חודש עד לשינוי.`,
+                      )
+                    }
+                  />
                 </div>
               </div>
             </div>
