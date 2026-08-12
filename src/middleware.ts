@@ -35,6 +35,7 @@ const PUBLIC_EXACT = new Set([
   "/forgot-password",
   "/reset-password",
   "/about",
+  "/launch", // עמוד פתיחת העונה — שיווקי, ללא נתוני עסק
   "/contact",
   "/privacy",
   "/terms",
