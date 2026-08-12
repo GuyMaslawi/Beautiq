@@ -53,11 +53,15 @@ export const ALLURA_PLAN: PlanInfo = {
 export const PLAN_PRICE = ALLURA_PLAN.price;
 
 /**
- * The price is what Grow actually charges the card, and Grow issues a
- * חשבונית מס קבלה for exactly that amount — so the figure shown IS the total,
- * VAT included. Saying so is not decoration: our customers are business owners
- * who read a price as a deductible expense, and a bare "₪199" leaves them to
- * guess whether VAT lands on top. One constant so the wording cannot drift
- * between the paywall, the settings card and the terms.
+ * Allura is billed by an עוסק פטור, which by law charges no VAT and issues a
+ * קבלה rather than a חשבונית מס. So the figure shown is simply the whole
+ * amount, with nothing added and no VAT to reclaim.
+ *
+ * This previously read "כולל מע״מ", which was wrong in both directions: it
+ * implied VAT had been charged, and it implied a tax invoice our customers
+ * would never receive — and they are business owners who read a price as a
+ * deductible expense. Saying something is not decoration; saying the right
+ * thing is the point. One constant so the wording cannot drift between the
+ * paywall, the settings card and the terms.
  */
-export const PLAN_PRICE_VAT_NOTE = "כולל מע״מ";
+export const PLAN_PRICE_VAT_NOTE = "מחיר סופי";
