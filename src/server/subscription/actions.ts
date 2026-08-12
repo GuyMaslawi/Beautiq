@@ -236,7 +236,9 @@ export async function startSubscriptionCheckoutAction(): Promise<CheckoutResult>
 
     const { paymentUrl, processId, processToken } = await createPaymentLink({
       amountMinor: priceMinor,
-      description: `${ALLURA_PLAN.name} — מנוי חודשי`,
+      // No em dash: Grow strips it from the title it renders, leaving a gap in
+      // the middle of the line the owner reads while deciding to pay.
+      description: `${ALLURA_PLAN.name} חודשי`,
       fullName: growPayerName(user.name),
       phone: growPayerPhone(ownerPhone),
       email: user.email,

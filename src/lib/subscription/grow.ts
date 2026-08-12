@@ -323,6 +323,24 @@ function toMinor(sum: unknown): number | undefined {
   return Number.isFinite(n) ? Math.round(n * 100) : undefined;
 }
 
+/**
+ * Our checkout nonce, echoed back by Grow.
+ *
+ * Grow returns the custom fields NESTED — `customFields.cField1` — not as a flat
+ * `cField1`, and an older empty-scenario shape put a bare string there instead.
+ * Reading the container itself stringified an object into "[object Object]",
+ * so the value we deliberately round-trip for authentication never once took
+ * part in it.
+ */
+function readNonce(data: Record<string, unknown>): string | undefined {
+  const custom = data.customFields;
+  if (custom && typeof custom === "object") {
+    const nested = str((custom as Record<string, unknown>).cField1);
+    if (nested) return nested;
+  }
+  return str(data.cField1) ?? (typeof custom === "string" ? str(custom) : undefined);
+}
+
 /** True only for a value that parses to a number greater than zero. */
 function positive(v: unknown): boolean {
   const n = typeof v === "number" ? v : parseFloat(String(v ?? ""));
@@ -418,7 +436,7 @@ export function parseCallback(payload: Record<string, unknown>): GrowCallbackEve
     processTokens,
     processId,
     processToken: processTokens[0],
-    nonce: str(data.cField1 ?? data.customFields),
+    nonce: readNonce(data),
     outcome,
     transactionId,
     directDebitId,

@@ -194,6 +194,24 @@ describe("parseCallback", () => {
     expect(event?.isRecurringRun).toBe(true);
   });
 
+  it("reads the nonce Grow returns nested under customFields", () => {
+    // Grow echoes the custom fields as `customFields.cField1`, not as a flat
+    // `cField1`. Reading the container itself stringified the object, so the
+    // value we round-trip specifically to authenticate never took part.
+    const event = parseCallback({
+      data: {
+        paymentLinkProcessId: "3829492",
+        statusCode: "2",
+        sum: "1",
+        customFields: {
+          cField1: "e1f4a377-018c-4f50-9add-197562ab076c",
+          cField2: "cmspq46cq0000i304i5hsb18z",
+        },
+      },
+    });
+    expect(event?.nonce).toBe("e1f4a377-018c-4f50-9add-197562ab076c");
+  });
+
   it("reports `unknown` rather than guessing when there is no outcome at all", () => {
     // Neither an approval status nor a failure reason. Calling this paid grants
     // a free month; calling it failed locks out a paying customer. Both are

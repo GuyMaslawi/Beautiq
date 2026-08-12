@@ -147,6 +147,34 @@ describe("POST /api/subscription/webhook — sender authentication", () => {
     });
   });
 
+  it("matches the nonce Grow returns under a nested form key", async () => {
+    // Real shape: data[customFields][cField1]=…  A greedy one-level parse folded
+    // that into a single meaningless key, so the round-tripped nonce was never
+    // compared against the stored one.
+    prisma.accountSubscription.findFirst.mockResolvedValue(
+      activeSub({
+        status: "pending",
+        priceMinor: 100,
+        processId: "3829492",
+        processToken: "3a59e7a7851b2a859a51922c2d9270f4",
+        checkoutNonce: "the-real-nonce",
+        directDebitId: null,
+      }),
+    );
+    const body = new URLSearchParams({
+      "data[statusCode]": "2",
+      "data[sum]": "1",
+      "data[paymentLinkProcessId]": "3829492",
+      "data[paymentLinkProcessToken]": "3a59e7a7851b2a859a51922c2d9270f4",
+      "data[customFields][cField1]": "a-forged-nonce",
+    }).toString();
+
+    const res = await POST(req(body, { withSecret: false }));
+
+    expect(res.status).toBe(401);
+    expect(confirmSubscriptionPayment).not.toHaveBeenCalled();
+  });
+
   it("401s a first charge whose process token does not match the stored one", async () => {
     prisma.accountSubscription.findFirst.mockResolvedValue(
       activeSub({ status: "pending", processId: "63984", processToken: "the-real-token" }),

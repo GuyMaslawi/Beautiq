@@ -45,14 +45,25 @@ function parseBody(raw: string, contentType: string): Record<string, unknown> {
       return {};
     }
   }
-  // Form-encoded, possibly with bracketed keys like data[processId]=...
+  // Form-encoded, with bracketed keys like data[processId]=… and a second level
+  // for the custom fields we round-trip: data[customFields][cField1]=…
   const params = new URLSearchParams(raw);
   const flat: Record<string, unknown> = {};
   const nested: Record<string, unknown> = {};
   for (const [key, value] of params.entries()) {
-    const m = key.match(/^data\[(.+)\]$/);
-    if (m) nested[m[1]] = value;
-    else flat[key] = value;
+    const m = key.match(/^data\[([^\]]+)\](?:\[([^\]]+)\])?$/);
+    if (!m) {
+      flat[key] = value;
+      continue;
+    }
+    if (m[2] === undefined) {
+      nested[m[1]] = value;
+      continue;
+    }
+    // A greedy single-level match used to fold "customFields][cField1" into one
+    // meaningless key, which is why our own nonce came back and was ignored.
+    const child = (nested[m[1]] ??= {}) as Record<string, unknown>;
+    child[m[2]] = value;
   }
   if (Object.keys(nested).length > 0) return { ...flat, data: nested };
   return flat;
