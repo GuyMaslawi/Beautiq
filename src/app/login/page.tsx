@@ -18,13 +18,13 @@ export default async function LoginPage() {
         <p className="text-muted mt-1">{AUTH.login.subtitle}</p>
       </div>
 
-      <LoginForm />
-
       {process.env.AUTH_GOOGLE_ID ? (
-        <div className="mt-6">
+        <div className="mb-6">
           <GoogleButton mode="login" />
         </div>
       ) : null}
+
+      <LoginForm />
 
       <p className="text-muted mt-6 text-sm">
         {AUTH.login.noAccount}{" "}

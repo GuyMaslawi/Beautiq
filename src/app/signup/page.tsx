@@ -18,13 +18,13 @@ export default async function SignupPage() {
         <p className="text-muted mt-1">{AUTH.signup.subtitle}</p>
       </div>
 
-      <SignupForm />
-
       {process.env.AUTH_GOOGLE_ID ? (
-        <div className="mt-6">
+        <div className="mb-6">
           <GoogleButton mode="signup" />
         </div>
       ) : null}
+
+      <SignupForm />
 
       <p className="text-muted mt-6 text-sm">
         {AUTH.signup.haveAccount}{" "}

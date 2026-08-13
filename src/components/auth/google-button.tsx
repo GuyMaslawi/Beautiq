@@ -46,6 +46,7 @@ function GoogleSubmit({ label }: { label: string }) {
  * כפתור התחברות/הרשמה עם Google. מפעיל את googleSignInAction, שמפנה למסך
  * ההסכמה של Google וחוזר דרך ה-callback שמאתר/יוצר את המשתמש אצלנו.
  * `mode` קובע רק את הטקסט (התחברות מול הרשמה) — הזרימה זהה.
+ * הכפתור מוצג ראשון, ומתחתיו מפריד "או" שמפריד אותו מטופס האימייל.
  */
 export function GoogleButton({ mode }: { mode: "login" | "signup" }) {
   const label =
@@ -53,14 +54,14 @@ export function GoogleButton({ mode }: { mode: "login" | "signup" }) {
 
   return (
     <div className="space-y-5">
+      <form action={googleSignInAction}>
+        <GoogleSubmit label={label} />
+      </form>
       <div className="flex items-center gap-3">
         <span className="bg-border h-px flex-1" />
         <span className="text-muted text-xs">{AUTH.social.divider}</span>
         <span className="bg-border h-px flex-1" />
       </div>
-      <form action={googleSignInAction}>
-        <GoogleSubmit label={label} />
-      </form>
     </div>
   );
 }
