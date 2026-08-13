@@ -20,6 +20,7 @@
     "db:studio": "prisma studio",
     "db:reset": "prisma migrate reset",
     "db:demo": "tsx prisma/demo.ts",
+    "brand:icons": "tsx scripts/generate-brand-icons.ts",
     "docker:db:up": "docker compose up -d postgres",
     "docker:db:down": "docker compose down",
     "docker:db:logs": "docker compose logs -f postgres"

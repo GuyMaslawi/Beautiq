@@ -17,11 +17,12 @@
   <g clip-path="url(#squircle)">
     <rect x="0" y="0" width="1024" height="1024" fill="url(#bg)"/>
     <rect x="0" y="0" width="1024" height="1024" fill="url(#glow)"/>
-
+<g transform="translate(512 512) scale(1.12) translate(-512 -512)">
     <g fill="#ffffff" stroke="#ffffff" stroke-width="26" stroke-linejoin="round" stroke-linecap="round">
       <path d="M 512 238 C 468 392, 386 622, 244 786 L 346 786 C 428 622, 492 404, 512 306 Z"/>
       <path d="M 512 238 C 556 392, 638 622, 780 786 L 678 786 C 596 622, 532 404, 512 306 Z"/>
       <rect x="384" y="600" width="256" height="54" rx="27"/>
+    </g>
     </g>
   </g>
   <rect x="4" y="4" width="1016" height="1016" rx="230" ry="230"
