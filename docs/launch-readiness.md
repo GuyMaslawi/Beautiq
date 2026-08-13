@@ -88,19 +88,33 @@ curl -s -H "Authorization: Bearer $CRON_SECRET" \
 # מצופה: whatsAppTestMode=false, realWhatsAppSend=true
 ```
 
-### 2. טוקן Meta קבוע
+### 2. ~~טוקן Meta קבוע~~ ✅ אומת (13.8.2026)
 
 טוקן משתמש רגיל פג אחרי 60 יום, וכשזה קורה ההודעות מפסיקות להישלח באמצע
-החודש (זה כבר קרה — שגיאה 190). לוודא ש-`META_WHATSAPP_ACCESS_TOKEN` בפרודקשן
-הוא טוקן של **System User** ללא תפוגה (Meta Business Settings → System Users →
-Generate Token).
+החודש (זה כבר קרה — שגיאה 190). `META_WHATSAPP_ACCESS_TOKEN` בפרודקשן הוא טוקן
+של **System User** (`allura-prod`, Admin access, גישה מלאה לאפליקציה ולחשבון
+ה-WhatsApp).
+
+שתי ראיות: המשתנה הוגדר לפני 64 יום ועדיין עובד — כלומר הוא עבר את חלון
+ה-60 יום של טוקן משתמש; ובפאנל האדמין `lastVerifiedAt` התעדכן לזמן אמת, והוא
+נכתב **רק** אחרי קריאה מוצלחת ל-Graph API
+([whatsapp-actions.ts](../src/server/admin/whatsapp-actions.ts)).
+
+⚠️ הטוקן שיושב ב-`.env` המקומי **מת** (`code 190 · subcode 467`). זה לא משפיע
+על פרודקשן, אבל כל בדיקה מקומית מול Meta תיכשל עד שיוחלף.
 
 ### 3. Meta App במצב Live ותבניות מאושרות
 
 - [ ] האפליקציה ב-Live ולא ב-Development
 - [ ] תבניות תפעוליות ב-APPROVED: אישור תור, תזכורת, `business_new_booking_he`
 - [ ] Webhook רשום ל-`https://app.allura.info/api/whatsapp/webhook`, מנוי לאירועי סטטוס
-- [ ] המספר המחובר אינו מספר בדיקה של Meta (`+1 555…`)
+- [x] המספר המחובר אינו מספר בדיקה של Meta — `+972 50-603-4514` (נבדק 13.8.2026)
+
+**מה קורה כשאחד מאלה נשבר (13.8.2026):** כשל שליחה שולח עכשיו התראת מייל ל-
+`ERROR_ALERT_EMAIL`, מסווגת לפי סוג התקלה — טוקן, מכסת נמענים, הרשאות, חשבון
+מוגבל, תבנית, או Meta לא זמינה. כשל ברמת נמען בודד (לקוחה שאינה בוואטסאפ)
+לעולם אינו מתריע. עד לשינוי הזה כשל שליחה נכתב ללוג בלבד
+([meta-cloud-api.ts](../src/lib/whatsapp/meta-cloud-api.ts)).
 
 ### 4. גיבוי מסד נתונים — ולוודא שחזור
 
