@@ -35,6 +35,7 @@ const PUBLIC_EXACT = new Set([
   "/forgot-password",
   "/reset-password",
   "/about",
+  "/intro", // סרטון הסברה אינטראקטיבי ללקוחות פוטנציאליות
   "/contact",
   "/privacy",
   "/terms",
