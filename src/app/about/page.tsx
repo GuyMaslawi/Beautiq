@@ -4,7 +4,6 @@ import {
   CalendarDays,
   CheckCircle2,
   MessageCircle,
-  PlayCircle,
   Sparkles,
   TrendingUp,
   Users,
@@ -142,13 +141,6 @@ export default function AboutPage() {
                 className="ring-soft text-foreground rounded-xl bg-white/70 px-7 py-3 text-sm font-semibold backdrop-blur transition-colors hover:bg-white"
               >
                 כניסה למערכת
-              </Link>
-              <Link
-                href="/intro"
-                className="text-primary flex items-center gap-1.5 rounded-xl px-4 py-3 text-sm font-semibold transition-opacity hover:opacity-75"
-              >
-                <PlayCircle className="h-4 w-4" />
-                איך זה עובד? הצצה של דקה
               </Link>
             </div>
 
