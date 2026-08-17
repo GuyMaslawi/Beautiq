@@ -23,6 +23,7 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { href: "/revenue-forecast", label: NAV.revenueForecast },
   { href: "/finance", label: NAV.finance },
   { href: "/public-page", label: NAV.publicPage },
+  { href: "/guide", label: NAV.guide },
   { href: "/settings", label: NAV.settings },
 ];
 
@@ -57,6 +58,7 @@ export const NAV_GROUPS: readonly NavGroup[] = [
   {
     label: "מערכת",
     items: [
+      { href: "/guide", label: NAV.guide },
       { href: "/settings", label: NAV.settings },
     ],
   },

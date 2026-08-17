@@ -16,6 +16,7 @@ import {
   TrendingUp,
   Wallet,
   Globe,
+  BookOpen,
   Settings,
   type LucideIcon,
 } from "lucide-react";
@@ -32,6 +33,7 @@ const ICONS: Record<string, LucideIcon> = {
   "/revenue-forecast": TrendingUp,
   "/finance": Wallet,
   "/public-page": Globe,
+  "/guide": BookOpen,
   "/settings": Settings,
 };
 
