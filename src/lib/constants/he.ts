@@ -43,7 +43,6 @@ export const NAV = {
   assistant: "עוזר AI",
   publicPage: "עמוד הזמנות",
   settings: "הגדרות",
-  guide: "מדריך שימוש",
   // Legacy routes — kept accessible but no longer in sidebar
   messages: "הודעות",
   retention: "שימור לקוחות",
