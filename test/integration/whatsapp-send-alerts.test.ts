@@ -21,6 +21,7 @@ import {
   createMetaCloudApiProvider,
   alertScopeForMetaError,
 } from "@/lib/whatsapp/meta-cloud-api";
+import type { SendMessageParams } from "@/lib/whatsapp/provider";
 
 function metaErrorResponse(code: number, status = 400): Response {
   return {
@@ -40,12 +41,18 @@ function provider() {
   });
 }
 
-const SEND_PARAMS = {
+// Typed against SendMessageParams on purpose: if the provider contract grows a
+// required field, this fixture fails to compile instead of silently drifting.
+// fallbackText deliberately holds no phone number or token — the last test in
+// this file asserts neither ever reaches an alert payload.
+const SEND_PARAMS: SendMessageParams = {
   toPhone: "+972501234567",
   templateId: "custom_template",
   templateLanguage: "he",
   businessId: "biz-1",
   clientId: "client-1",
+  fallbackText: "הודעת בדיקה",
+  automationRunId: "run-1",
 };
 
 beforeEach(() => {
