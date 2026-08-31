@@ -7,7 +7,13 @@ import { withCronHeartbeat } from "@/server/ops/cron-heartbeat";
 // Cron backstop for bulk WhatsApp campaigns. Owner-driven sending drives most
 // progress in real time; this tick keeps queued campaigns moving (and processes
 // retries) even when no owner tab is open. Protected by CRON_SECRET exactly like
-// the other cron routes; runs every 10 minutes (vercel.json).
+// the other cron routes; runs at :00 and :30 (vercel.json).
+//
+// Cadence is deliberately coarse: the production DB (Neon) scales to zero after
+// ~5 idle minutes, so every extra wakeup costs ~5 minutes of compute no matter
+// how little work it does. Keep cron wakeups clustered into few, widely spaced
+// windows — spreading them across the hour once burned the entire monthly
+// compute allowance and took the site down.
 export const dynamic = "force-dynamic";
 export const maxDuration = 300;
 
